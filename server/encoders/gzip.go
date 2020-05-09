@@ -33,8 +33,8 @@ type Gzip struct{}
 func (g Gzip) Encode(data []byte) []byte {
 	var buf bytes.Buffer
 	gzipWriter, _ := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
-	defer gzipWriter.Close()
 	gzipWriter.Write(data)
+	gzipWriter.Close()
 	return buf.Bytes()
 }
 
