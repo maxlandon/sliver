@@ -60,7 +60,7 @@ func TestGzipEnglish(t *testing.T) {
 	}
 	if !bytes.Equal(sample, data3) {
 		t.Logf("sample  = %#v", sample)
-		t.Logf("output  = %#v", output2)
+		t.Logf("output2 = %#v", output2)
 		t.Logf("  data3 = %#v", data3)
 		t.Errorf("gzEnglish does not match returned\n%#v != %#v", sample, data3)
 	}
@@ -73,7 +73,7 @@ func TestGzipEnglish(t *testing.T) {
 	if !bytes.Equal(sample, data4) {
 		t.Logf("sample  = %#v", sample)
 		t.Logf("output4  = %#v", output4)
-		t.Logf("  data3 = %#v", data4)
+		t.Logf("  data4 = %#v", data4)
 		t.Errorf("gzEnglish does not match returned\n%#v != %#v", sample, data3)
 	}
 }

