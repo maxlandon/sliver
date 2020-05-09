@@ -22,8 +22,6 @@ import (
 	insecureRand "math/rand"
 	"strings"
 	"time"
-
-	"github.com/bishopfox/sliver/server/assets"
 )
 
 // EnglishEncoderID - EncoderID
@@ -66,7 +64,7 @@ func (e English) Decode(words []byte) ([]byte, error) {
 
 func buildDictionary() {
 	dictionary = &map[int][]string{}
-	for _, word := range assets.English() {
+	for _, word := range getEnglishDictionary() {
 		word = strings.TrimSpace(word)
 		sum := sumWord(word)
 		(*dictionary)[sum] = append((*dictionary)[sum], word)

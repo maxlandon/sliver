@@ -26,9 +26,15 @@ package generate
 var (
 	srcFiles = []string{
 		"constants/constants.go",
+
+		"encoders/base64.go",
+		"encoders/combos.go",
 		"encoders/encoders.go",
+		"encoders/english-words.go",
 		"encoders/english.go",
-		"encoders/english_words.go",
+		"encoders/gzip.go",
+		"encoders/hex.go",
+		"encoders/images.go",
 
 		"evasion/evasion.go",
 		"evasion/evasion_darwin.go",

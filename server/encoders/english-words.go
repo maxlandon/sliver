@@ -1,3 +1,7 @@
 package encoders
 
-var englishWordData = []byte{}
+import "github.com/bishopfox/sliver/server/assets"
+
+func getEnglishDictionary() []string {
+	return assets.English()
+}
