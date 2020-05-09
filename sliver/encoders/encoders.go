@@ -19,13 +19,15 @@ package encoders
 */
 
 import (
+	"errors"
 	insecureRand "math/rand"
 )
 
 const (
 	// EncoderModulus - Nonce % EncoderModulus = EncoderID, and needs to be equal
-	//                  to or greater than the number of supported encoders.
-	EncoderModulus = 32
+	//                  to or greater than the largest EncoderID value.
+	EncoderModulus = 101
+	maxN           = 999999
 )
 
 // Encoder - Can losslessly encode arbitrary binary data to ASCII
@@ -36,28 +38,37 @@ type Encoder interface {
 
 // EncoderMap - Maps EncoderIDs to Encoders
 var EncoderMap = map[int]Encoder{
-	Base64EncoderID:      Base64{},      // 0
-	HexEncoderID:         Hex{},         // 1
-	EnglishEncoderID:     English{},     // 2
-	GzipEncoderID:        Gzip{},        // 3
-	GzipEnglishEncoderID: GzipEnglish{}, // 4
-	Base64GzipEncoderID:  Base64Gzip{},  // 5
+	Base64EncoderID:      Base64{},
+	HexEncoderID:         Hex{},
+	EnglishEncoderID:     English{},
+	GzipEncoderID:        Gzip{},
+	GzipEnglishEncoderID: GzipEnglish{},
+	Base64GzipEncoderID:  Base64Gzip{},
 }
 
 // EncoderFromNonce - Convert a nonce into an encoder
-func EncoderFromNonce(nonce int) (int, Encoder) {
+func EncoderFromNonce(nonce int) (int, Encoder, error) {
 	encoderID := nonce % EncoderModulus
-	if encoder, ok := EncoderMap[encoderID]; ok {
-		return encoderID, encoder
+	if encoderID == 0 {
+		return 0, NoEncoder{}, nil
 	}
-	return -1, NoEncoder{}
+	if encoder, ok := EncoderMap[encoderID]; ok {
+		return encoderID, encoder, nil
+	}
+	return -1, nil, errors.New("{{if .Debug}}Invalid encoder nonce{{end}}")
 }
 
-// RandomEncoder - Get a random nonce and encoder
+// RandomEncoder - Get a random nonce identifier and a matching encoder
 func RandomEncoder() (int, Encoder) {
 	encoderID := insecureRand.Intn(len(EncoderMap))
-	nonce := (insecureRand.Intn(99999) * EncoderModulus) + encoderID
+	nonce := (insecureRand.Intn(maxN) * EncoderModulus) + encoderID
 	return nonce, EncoderMap[encoderID]
+}
+
+// NopNonce - A NOP nonce identifies a request with no encoder/payload
+//                  any value where mod = 0
+func NopNonce() int {
+	return insecureRand.Intn(maxN) * EncoderModulus
 }
 
 // NoEncoder - A NOP encoder

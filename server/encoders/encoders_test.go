@@ -22,6 +22,8 @@ import (
 	"bytes"
 	"crypto/rand"
 	"testing"
+
+	implantEncoders "github.com/bishopfox/sliver/sliver/encoders"
 )
 
 func randomData() []byte {
@@ -46,6 +48,8 @@ func TestEnglish(t *testing.T) {
 
 func TestHex(t *testing.T) {
 	sample := randomData()
+
+	// Server-side
 	x := new(Hex)
 	output := x.Encode(sample)
 	data, err := x.Decode(output)
@@ -54,6 +58,30 @@ func TestHex(t *testing.T) {
 	}
 	if !bytes.Equal(sample, data) {
 		t.Errorf("sample does not match returned\n%#v != %#v", sample, data)
+	}
+
+	// Implant-side
+	implantHex := new(implantEncoders.Hex)
+	output2 := implantHex.Encode(sample)
+	data2, err := implantHex.Decode(output2)
+	if err != nil {
+		t.Errorf("implant hex decode returned an error %v", err)
+	}
+	if !bytes.Equal(sample, data2) {
+		t.Errorf("sample does not match returned\n%#v != %#v", sample, data)
+	}
+
+	// Interoperability
+	if bytes.Compare(output, output2) != 0 {
+		t.Errorf("impant encoder does not match server-side encoder %s", err)
+	}
+
+	data3, err := implantHex.Decode(output)
+	if err != nil {
+		t.Errorf("implant hex decode could not decode server data %v", err)
+	}
+	if !bytes.Equal(sample, data3) {
+		t.Errorf("implant decoded sample of server data does not match returned\n%#v != %#v", sample, data)
 	}
 }
 
@@ -70,5 +98,24 @@ func TestBase64(t *testing.T) {
 		t.Logf("output = %#v", output)
 		t.Logf("  data = %#v", data)
 		t.Errorf("sample does not match returned\n%#v != %#v", sample, data)
+	}
+
+	implantBase64 := new(implantEncoders.Base64)
+	data2, err := implantBase64.Decode(output)
+	if err != nil {
+		t.Errorf("implant b64 decode returned an error %v", err)
+	}
+	if !bytes.Equal(sample, data2) {
+		t.Logf("sample  = %#v", sample)
+		t.Logf("output  = %#v", output)
+		t.Logf("  data2 = %#v", data2)
+		t.Errorf("sample does not match returned\n%#v != %#v", sample, data)
+	}
+	output2 := implantBase64.Encode(sample)
+	if !bytes.Equal(output, output2) {
+		t.Logf("sample  = %#v", sample)
+		t.Logf("output1 = %#v", output)
+		t.Logf("output2 = %#v", output2)
+		t.Errorf("server and implant outputs differ\n%#v != %#v", sample, data)
 	}
 }

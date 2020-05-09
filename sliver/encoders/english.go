@@ -19,28 +19,34 @@ package encoders
 */
 
 import (
+	insecureRand "math/rand"
 	"strings"
+	"time"
+
+	"github.com/bishopfox/sliver/server/assets"
 )
 
 // EnglishEncoderID - EncoderID
-const EnglishEncoderID = 2
+const EnglishEncoderID = 31
 
 var dictionary *map[int][]string
-
-func sumWord(word string) int {
-	sum := 0
-	for _, char := range word {
-		sum += int(char)
-	}
-	return sum % 256
-}
 
 // English Encoder - An ASCIIEncoder for binary to english text
 type English struct{}
 
 // Encode - Binary => English
 func (e English) Encode(data []byte) []byte {
-	return []byte{} // Not implemented in implant
+	if dictionary == nil {
+		buildDictionary()
+	}
+	insecureRand.Seed(time.Now().Unix())
+	words := []string{}
+	for _, b := range data {
+		possibleWords := (*dictionary)[int(b)]
+		index := insecureRand.Intn(len(possibleWords))
+		words = append(words, possibleWords[index])
+	}
+	return []byte(strings.Join(words, " "))
 }
 
 // Decode - English => Binary
@@ -56,4 +62,21 @@ func (e English) Decode(words []byte) ([]byte, error) {
 		data = append(data, byte(byteValue))
 	}
 	return data, nil
+}
+
+func buildDictionary() {
+	dictionary = &map[int][]string{}
+	for _, word := range assets.English() {
+		word = strings.TrimSpace(word)
+		sum := sumWord(word)
+		(*dictionary)[sum] = append((*dictionary)[sum], word)
+	}
+}
+
+func sumWord(word string) int {
+	sum := 0
+	for _, char := range word {
+		sum += int(char)
+	}
+	return sum % 256
 }

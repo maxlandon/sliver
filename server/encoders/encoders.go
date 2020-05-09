@@ -19,48 +19,67 @@ package encoders
 */
 
 import (
-	"encoding/base64"
-	"encoding/hex"
-	"io"
+	"errors"
+	insecureRand "math/rand"
 )
 
-// BinaryEncoder - Encodes data in binary format(s)
-type BinaryEncoder interface {
-	Encode(w io.Writer, data []byte) error
+const (
+	// EncoderModulus - Nonce % EncoderModulus = EncoderID, and needs to be equal
+	//                  to or greater than the largest EncoderID value.
+	EncoderModulus = 101
+	maxN           = 999999
+)
+
+// Encoder - Can losslessly encode arbitrary binary data to ASCII
+type Encoder interface {
+	Encode([]byte) []byte
 	Decode([]byte) ([]byte, error)
 }
 
-// ASCIIEncoder - Can losslessly encode arbitrary binary data to ASCII
-type ASCIIEncoder interface {
-	Encode([]byte) string
-	Decode(string) ([]byte, error)
+// EncoderMap - Maps EncoderIDs to Encoders
+var EncoderMap = map[int]Encoder{
+	Base64EncoderID:      Base64{},
+	HexEncoderID:         Hex{},
+	EnglishEncoderID:     English{},
+	GzipEncoderID:        Gzip{},
+	GzipEnglishEncoderID: GzipEnglish{},
+	Base64GzipEncoderID:  Base64Gzip{},
 }
 
-// Hex Encoder
-type Hex struct{}
-
-// Encode - Hex Encode
-func (e Hex) Encode(data []byte) string {
-	return hex.EncodeToString(data)
+// EncoderFromNonce - Convert a nonce into an encoder
+func EncoderFromNonce(nonce int) (int, Encoder, error) {
+	encoderID := nonce % EncoderModulus
+	if encoderID == 0 {
+		return 0, new(NoEncoder), nil
+	}
+	if encoder, ok := EncoderMap[encoderID]; ok {
+		return encoderID, encoder, nil
+	}
+	return -1, nil, errors.New("{{if .Debug}}Invalid encoder nonce{{end}}")
 }
 
-// Decode - Hex Decode
-func (e Hex) Decode(data string) ([]byte, error) {
-	return hex.DecodeString(data)
+// RandomEncoder - Get a random nonce identifier and a matching encoder
+func RandomEncoder() (int, Encoder) {
+	encoderID := insecureRand.Intn(len(EncoderMap))
+	nonce := (insecureRand.Intn(maxN) * EncoderModulus) + encoderID
+	return nonce, EncoderMap[encoderID]
 }
 
-// Base64 Encoder
-type Base64 struct{}
-
-var base64Alphabet = "a0b2c5def6hijklmnopqr_st-uvwxyzA1B3C4DEFGHIJKLM7NO9PQR8ST+UVWXYZ"
-var sliverBase64 = base64.NewEncoding(base64Alphabet)
-
-// Encode - Base64 Encode
-func (e Base64) Encode(data []byte) string {
-	return sliverBase64.EncodeToString(data)
+// NopNonce - A NOP nonce identifies a request with no encoder/payload
+//                  any value where mod = 0
+func NopNonce() int {
+	return insecureRand.Intn(maxN) * EncoderModulus
 }
 
-// Decode - Base64 Decode
-func (e Base64) Decode(data string) ([]byte, error) {
-	return sliverBase64.DecodeString(data)
+// NoEncoder - A NOP encoder
+type NoEncoder struct{}
+
+// Encode - Don't do anything
+func (n NoEncoder) Encode(data []byte) []byte {
+	return data
+}
+
+// Decode - Don't do anything
+func (n NoEncoder) Decode(data []byte) ([]byte, error) {
+	return data, nil
 }
