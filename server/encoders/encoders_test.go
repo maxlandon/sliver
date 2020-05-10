@@ -21,11 +21,12 @@ package encoders
 import (
 	"bytes"
 	"crypto/rand"
+	insecureRand "math/rand"
 	"testing"
 )
 
 func randomData() []byte {
-	buf := make([]byte, 128)
+	buf := make([]byte, insecureRand.Intn(1024))
 	rand.Read(buf)
 	return buf
 }
