@@ -60,7 +60,11 @@ func EncoderFromNonce(nonce int) (int, Encoder, error) {
 
 // RandomEncoder - Get a random nonce identifier and a matching encoder
 func RandomEncoder() (int, Encoder) {
-	encoderID := insecureRand.Intn(len(EncoderMap))
+	keys := make([]int, 0, len(EncoderMap))
+	for k := range EncoderMap {
+		keys = append(keys, k)
+	}
+	encoderID := keys[insecureRand.Intn(len(keys))]
 	nonce := (insecureRand.Intn(maxN) * EncoderModulus) + encoderID
 	return nonce, EncoderMap[encoderID]
 }
