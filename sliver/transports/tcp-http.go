@@ -122,7 +122,9 @@ func (s *SliverHTTPClient) newHTTPRequest(method, uri string, encoderNonce int, 
 	req, _ := http.NewRequest(method, uri, body)
 	req.Header.Set("User-Agent", defaultUserAgent)
 	req.Header.Set("Accept-Language", "en-US")
-	req.URL.Query().Add("_", fmt.Sprintf("%d", encoderNonce))
+	query := req.URL.Query()
+	query.Set("_", fmt.Sprintf("%d", encoderNonce))
+	req.URL.RawQuery = query.Encode()
 	return req
 }
 
@@ -171,10 +173,17 @@ func (s *SliverHTTPClient) getPublicKey() *rsa.PublicKey {
 func (s *SliverHTTPClient) getSessionID(sessionInit []byte) error {
 
 	nonce, encoder := encoders.RandomEncoder()
-	reader := bytes.NewReader(encoder.Encode(sessionInit)) // Already RSA encrypted
+	// {{if .Debug}}
+	log.Printf("[http] sessionInit = %v", sessionInit)
+	// {{end}}
+	payload := encoder.Encode(sessionInit)
+	// {{if .Debug}}
+	log.Printf("[http] Encoded payload (%d) %v", nonce, payload)
+	// {{end}}
+	reqBody := bytes.NewReader(payload) // Already RSA encrypted
 
 	uri := s.jspURL()
-	req := s.newHTTPRequest(http.MethodPost, uri, nonce, reader)
+	req := s.newHTTPRequest(http.MethodPost, uri, nonce, reqBody)
 	// {{if .Debug}}
 	log.Printf("[http] POST -> %s", uri)
 	// {{end}}

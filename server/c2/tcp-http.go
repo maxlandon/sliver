@@ -269,10 +269,12 @@ func filterNonce(req *http.Request, rm *mux.RouteMatch) bool {
 	qNonce := req.URL.Query().Get("_")
 	nonce, err := strconv.Atoi(qNonce)
 	if err != nil {
+		httpLog.Debugf("Invalid nonce '%s' ignore request", qNonce)
 		return false // NaN
 	}
 	_, _, err = encoders.EncoderFromNonce(nonce)
 	if err != nil {
+		httpLog.Debugf("Invalid nonce (%d) ignore request", nonce)
 		return false // Not a valid encoder
 	}
 	return true
