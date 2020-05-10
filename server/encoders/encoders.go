@@ -70,7 +70,7 @@ func RandomEncoder() (int, Encoder) {
 }
 
 // NopNonce - A NOP nonce identifies a request with no encoder/payload
-//                  any value where mod = 0
+//            any value where mod = 0
 func NopNonce() int {
 	return insecureRand.Intn(maxN) * EncoderModulus
 }
