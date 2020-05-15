@@ -57,11 +57,7 @@ jobs:
         && make install
 
     - name: Packr
-      run: |
-        wget -O packr.tar.gz https://github.com/gobuffalo/packr/archive/v${PACKR_VER}.tar.gz \
-        && tar xvf packr.tar.gz \
-        && cd packr-${PACKR_VER} \
-        && make install
+      run: go get -u github.com/gobuffalo/packr/packr
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
