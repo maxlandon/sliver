@@ -29,7 +29,6 @@ import (
 	"sort"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/bishopfox/sliver/server/generate"
 
 	"encoding/base32"
 	"encoding/base64"
@@ -46,6 +45,7 @@ import (
 	"time"
 
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/server/builder/generate"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/cryptography"

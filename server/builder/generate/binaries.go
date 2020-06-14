@@ -35,9 +35,9 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/assets"
+	"github.com/bishopfox/sliver/server/builder/gobfuscate"
+	"github.com/bishopfox/sliver/server/builder/gogo"
 	"github.com/bishopfox/sliver/server/certs"
-	"github.com/bishopfox/sliver/server/gobfuscate"
-	"github.com/bishopfox/sliver/server/gogo"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/util"
 
@@ -81,117 +81,6 @@ const (
 	SliverCC32EnvVar = "SLIVER_CC_32"
 )
 
-// ImplantConfig - Parameters when generating a implant
-type ImplantConfig struct {
-	// Go
-	GOOS   string `json:"go_os"`
-	GOARCH string `json:"go_arch"`
-
-	// Standard
-	Name                string `json:"name"`
-	CACert              string `json:"ca_cert"`
-	Cert                string `json:"cert"`
-	Key                 string `json:"key"`
-	Debug               bool   `json:"debug"`
-	ObfuscateSymbols    bool   `json:"obfuscate_symbols"`
-	ReconnectInterval   int    `json:"reconnect_interval"`
-	MaxConnectionErrors int    `json:"max_connection_errors"`
-
-	C2                []ImplantC2 `json:"c2s"`
-	MTLSc2Enabled     bool        `json:"c2_mtls_enabled"`
-	HTTPc2Enabled     bool        `json:"c2_http_enabled"`
-	DNSc2Enabled      bool        `json:"c2_dns_enabled"`
-	CanaryDomains     []string    `json:"canary_domains"`
-	NamePipec2Enabled bool        `json:"c2_namedpipe_enabled"`
-	TCPPivotc2Enabled bool        `json:"c2_tcppivot_enabled"`
-
-	// Limits
-	LimitDomainJoined bool   `json:"limit_domainjoined"`
-	LimitHostname     string `json:"limit_hostname"`
-	LimitUsername     string `json:"limit_username"`
-	LimitDatetime     string `json:"limit_datetime"`
-
-	// Output Format
-	Format clientpb.ImplantConfig_OutputFormat `json:"format"`
-
-	// For 	IsSharedLib bool `json:"is_shared_lib"`
-	IsSharedLib bool `json:"is_shared_lib"`
-	IsService   bool `json:"is_service"`
-
-	FileName string
-}
-
-// ToProtobuf - Convert ImplantConfig to protobuf equiv
-func (c *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
-	config := &clientpb.ImplantConfig{
-		GOOS:             c.GOOS,
-		GOARCH:           c.GOARCH,
-		Name:             c.Name,
-		CACert:           c.CACert,
-		Cert:             c.Cert,
-		Key:              c.Key,
-		Debug:            c.Debug,
-		ObfuscateSymbols: c.ObfuscateSymbols,
-		CanaryDomains:    c.CanaryDomains,
-
-		ReconnectInterval:   uint32(c.ReconnectInterval),
-		MaxConnectionErrors: uint32(c.MaxConnectionErrors),
-
-		LimitDatetime:     c.LimitDatetime,
-		LimitDomainJoined: c.LimitDomainJoined,
-		LimitHostname:     c.LimitHostname,
-		LimitUsername:     c.LimitUsername,
-
-		IsSharedLib: c.IsSharedLib,
-		IsService:   c.IsService,
-		Format:      c.Format,
-
-		FileName: c.FileName,
-	}
-	config.C2 = []*clientpb.ImplantC2{}
-	for _, c2 := range c.C2 {
-		config.C2 = append(config.C2, c2.ToProtobuf())
-	}
-	return config
-}
-
-// ImplantConfigFromProtobuf - Create a native config struct from Protobuf
-func ImplantConfigFromProtobuf(pbConfig *clientpb.ImplantConfig) *ImplantConfig {
-	cfg := &ImplantConfig{}
-
-	cfg.GOOS = pbConfig.GOOS
-	cfg.GOARCH = pbConfig.GOARCH
-	cfg.Name = pbConfig.Name
-	cfg.CACert = pbConfig.CACert
-	cfg.Cert = pbConfig.Cert
-	cfg.Key = pbConfig.Key
-	cfg.Debug = pbConfig.Debug
-	cfg.ObfuscateSymbols = pbConfig.ObfuscateSymbols
-	cfg.CanaryDomains = pbConfig.CanaryDomains
-
-	cfg.ReconnectInterval = int(pbConfig.ReconnectInterval)
-	cfg.MaxConnectionErrors = int(pbConfig.MaxConnectionErrors)
-
-	cfg.LimitDomainJoined = pbConfig.LimitDomainJoined
-	cfg.LimitDatetime = pbConfig.LimitDatetime
-	cfg.LimitUsername = pbConfig.LimitUsername
-	cfg.LimitHostname = pbConfig.LimitHostname
-
-	cfg.Format = pbConfig.Format
-	cfg.IsSharedLib = pbConfig.IsSharedLib
-	cfg.IsService = pbConfig.IsService
-
-	cfg.C2 = copyC2List(pbConfig.C2)
-	cfg.MTLSc2Enabled = isC2Enabled([]string{"mtls"}, cfg.C2)
-	cfg.HTTPc2Enabled = isC2Enabled([]string{"http", "https"}, cfg.C2)
-	cfg.DNSc2Enabled = isC2Enabled([]string{"dns"}, cfg.C2)
-	cfg.NamePipec2Enabled = isC2Enabled([]string{"namedpipe"}, cfg.C2)
-	cfg.TCPPivotc2Enabled = isC2Enabled([]string{"tcppivot"}, cfg.C2)
-
-	cfg.FileName = pbConfig.FileName
-	return cfg
-}
-
 func copyC2List(src []*clientpb.ImplantC2) []ImplantC2 {
 	c2s := []ImplantC2{}
 	for _, srcC2 := range src {
@@ -224,26 +113,6 @@ func isC2Enabled(schemes []string, c2s []ImplantC2) bool {
 	}
 	buildLog.Debugf("No %v URLs found in %v", schemes, c2s)
 	return false
-}
-
-// ImplantC2 - C2 struct
-type ImplantC2 struct {
-	Priority uint32 `json:"priority"`
-	URL      string `json:"url"`
-	Options  string `json:"options"`
-}
-
-// ToProtobuf - Convert to protobuf version
-func (s ImplantC2) ToProtobuf() *clientpb.ImplantC2 {
-	return &clientpb.ImplantC2{
-		Priority: s.Priority,
-		URL:      s.URL,
-		Options:  s.Options,
-	}
-}
-
-func (s ImplantC2) String() string {
-	return s.URL
 }
 
 // GetSliversDir - Get the binary directory

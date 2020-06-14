@@ -1,4 +1,4 @@
-package generate
+package profiles
 
 /*
 	Sliver Implant Framework
@@ -20,11 +20,13 @@ package generate
 
 import (
 	"testing"
+
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 func TestProfileByName(t *testing.T) {
 	name := "foobar"
-	config := &ImplantConfig{
+	config := &clientpb.ImplantConfig{
 		GOOS:   "windows",
 		GOARCH: "amd64",
 	}

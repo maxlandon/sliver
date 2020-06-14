@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/server/assets"
-	gogo "github.com/bishopfox/sliver/server/gogo"
+	"github.com/bishopfox/sliver/server/builder/gogo"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/util"
 )
@@ -30,8 +30,9 @@ func Gobfuscate(config gogo.GoConfig, encKey string, pkgName string, outPath str
 	// there's a functional `go` binary on the system PATH. Since we want to be
 	// portable, we don't really know if there's an existing version of go on the
 	// PATH. So we append our internal version to the PATH temporarily and then
-	// restore the orignal when we're done. This is super fucking hacky, and if
+	// restore the original when we're done. This is super fucking hacky, and if
 	// you know a better way to do it please let me know.
+
 	origPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", origPath)
 	newpath := os.Getenv("PATH") + ":"

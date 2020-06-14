@@ -94,7 +94,7 @@ func TestSliverExecutableDarwin(t *testing.T) {
 
 func mtlsExe(t *testing.T, goos string, goarch string, debug bool) {
 	t.Logf("[mtls] EXE %s/%s - debug: %v", goos, goarch, debug)
-	config := &ImplantConfig{
+	config := &clientpb.ImplantConfig{
 		GOOS:   goos,
 		GOARCH: goarch,
 		C2: []ImplantC2{

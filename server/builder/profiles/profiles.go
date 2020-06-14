@@ -1,4 +1,4 @@
-package generate
+package profiles
 
 /*
 	Sliver Implant Framework
@@ -21,6 +21,7 @@ package generate
 import (
 	"encoding/json"
 
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/db"
 )
 
@@ -29,7 +30,7 @@ const (
 )
 
 // ProfileSave - Save a sliver profile to disk
-func ProfileSave(name string, config *ImplantConfig) error {
+func ProfileSave(name string, config *clientpb.ImplantConfig) error {
 	bucket, err := db.GetBucket(profilesBucketName)
 	if err != nil {
 		return err
@@ -42,19 +43,19 @@ func ProfileSave(name string, config *ImplantConfig) error {
 }
 
 // ProfileByName - Fetch a single profile from the database
-func ProfileByName(name string) (*ImplantConfig, error) {
+func ProfileByName(name string) (*clientpb.ImplantConfig, error) {
 	bucket, err := db.GetBucket(profilesBucketName)
 	if err != nil {
 		return nil, err
 	}
 	rawProfile, err := bucket.Get(name)
-	config := &ImplantConfig{}
+	config := &clientpb.ImplantConfig{}
 	err = json.Unmarshal(rawProfile, config)
 	return config, err
 }
 
 // Profiles - Fetch a map of name<->profiles current in the database
-func Profiles() map[string]*ImplantConfig {
+func Profiles() map[string]*clientpb.ImplantConfig {
 	bucket, err := db.GetBucket(profilesBucketName)
 	if err != nil {
 		return nil
@@ -64,9 +65,9 @@ func Profiles() map[string]*ImplantConfig {
 		return nil
 	}
 
-	profiles := map[string]*ImplantConfig{}
+	profiles := map[string]*clientpb.ImplantConfig{}
 	for name, rawProfile := range rawProfiles {
-		config := &ImplantConfig{}
+		config := &clientpb.ImplantConfig{}
 		err := json.Unmarshal(rawProfile, config)
 		if err != nil {
 			continue // We should probably log these failures ...
