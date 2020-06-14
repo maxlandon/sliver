@@ -30,7 +30,7 @@ import (
 )
 
 // Generate - Generate a new implant
-func (rpc *Server) Generate(ctx context.Context, req *clientpb.GenerateReq) (*clientpb.Generate, error) {
+func (rpc *SliverServer) Generate(ctx context.Context, req *clientpb.GenerateReq) (*clientpb.Generate, error) {
 	var fPath string
 	var err error
 	config := generate.ImplantConfigFromProtobuf(req.Config)
@@ -64,7 +64,7 @@ func (rpc *Server) Generate(ctx context.Context, req *clientpb.GenerateReq) (*cl
 }
 
 // Regenerate - Regenerate a previously generated implant
-func (rpc *Server) Regenerate(ctx context.Context, req *clientpb.RegenerateReq) (*clientpb.Generate, error) {
+func (rpc *SliverServer) Regenerate(ctx context.Context, req *clientpb.RegenerateReq) (*clientpb.Generate, error) {
 
 	config, err := generate.ImplantConfigByName(req.ImplantName)
 	if err != nil {
@@ -85,7 +85,7 @@ func (rpc *Server) Regenerate(ctx context.Context, req *clientpb.RegenerateReq) 
 }
 
 // ImplantBuilds - List existing implant builds
-func (rpc *Server) ImplantBuilds(ctx context.Context, _ *commonpb.Empty) (*clientpb.ImplantBuilds, error) {
+func (rpc *SliverServer) ImplantBuilds(ctx context.Context, _ *commonpb.Empty) (*clientpb.ImplantBuilds, error) {
 	configs, err := generate.ImplantConfigMap()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (rpc *Server) ImplantBuilds(ctx context.Context, _ *commonpb.Empty) (*clien
 }
 
 // Canaries - List existing canaries
-func (rpc *Server) Canaries(ctx context.Context, _ *commonpb.Empty) (*clientpb.Canaries, error) {
+func (rpc *SliverServer) Canaries(ctx context.Context, _ *commonpb.Empty) (*clientpb.Canaries, error) {
 	jsonCanaries, err := generate.ListCanaries()
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (rpc *Server) Canaries(ctx context.Context, _ *commonpb.Empty) (*clientpb.C
 }
 
 // ImplantProfiles - List profiles
-func (rpc *Server) ImplantProfiles(ctx context.Context, _ *commonpb.Empty) (*clientpb.ImplantProfiles, error) {
+func (rpc *SliverServer) ImplantProfiles(ctx context.Context, _ *commonpb.Empty) (*clientpb.ImplantProfiles, error) {
 	implantProfiles := &clientpb.ImplantProfiles{
 		Profiles: []*clientpb.ImplantProfile{},
 	}
@@ -132,7 +132,7 @@ func (rpc *Server) ImplantProfiles(ctx context.Context, _ *commonpb.Empty) (*cli
 }
 
 // SaveImplantProfile - Save a new profile
-func (rpc *Server) SaveImplantProfile(ctx context.Context, profile *clientpb.ImplantProfile) (*clientpb.ImplantProfile, error) {
+func (rpc *SliverServer) SaveImplantProfile(ctx context.Context, profile *clientpb.ImplantProfile) (*clientpb.ImplantProfile, error) {
 	config := generate.ImplantConfigFromProtobuf(profile.Config)
 	profile.Name = path.Base(profile.Name)
 	if 0 < len(profile.Name) && profile.Name != "." {
@@ -147,7 +147,7 @@ func (rpc *Server) SaveImplantProfile(ctx context.Context, profile *clientpb.Imp
 }
 
 // ShellcodeRDI - Generates a RDI shellcode from a given DLL
-func (rpc *Server) ShellcodeRDI(ctx context.Context, req *clientpb.ShellcodeRDIReq) (*clientpb.ShellcodeRDI, error) {
+func (rpc *SliverServer) ShellcodeRDI(ctx context.Context, req *clientpb.ShellcodeRDIReq) (*clientpb.ShellcodeRDI, error) {
 	shellcode, err := generate.ShellcodeRDIFromBytes(req.GetData(), req.GetFunctionName(), req.GetArguments())
 	return &clientpb.ShellcodeRDI{Data: shellcode}, err
 }

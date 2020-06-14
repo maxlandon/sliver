@@ -36,7 +36,7 @@ import (
 )
 
 // Msf - Helper function to execute MSF payloads on the remote system
-func (rpc *Server) Msf(ctx context.Context, req *clientpb.MSFReq) (*commonpb.Empty, error) {
+func (rpc *SliverServer) Msf(ctx context.Context, req *clientpb.MSFReq) (*commonpb.Empty, error) {
 	session := core.Sessions.Get(req.Request.SessionID)
 	if session == nil {
 		return nil, ErrInvalidSessionID
@@ -71,7 +71,7 @@ func (rpc *Server) Msf(ctx context.Context, req *clientpb.MSFReq) (*commonpb.Emp
 }
 
 // MsfRemote - Inject an MSF payload into a remote process
-func (rpc *Server) MsfRemote(ctx context.Context, req *clientpb.MSFRemoteReq) (*commonpb.Empty, error) {
+func (rpc *SliverServer) MsfRemote(ctx context.Context, req *clientpb.MSFRemoteReq) (*commonpb.Empty, error) {
 	session := core.Sessions.Get(req.Request.SessionID)
 	if session == nil {
 		return nil, ErrInvalidSessionID
@@ -106,7 +106,7 @@ func (rpc *Server) MsfRemote(ctx context.Context, req *clientpb.MSFRemoteReq) (*
 }
 
 // MsfStage - Generate a MSF compatible stage
-func (rpc *Server) MsfStage(ctx context.Context, req *clientpb.MsfStagerReq) (*clientpb.MsfStager, error) {
+func (rpc *SliverServer) MsfStage(ctx context.Context, req *clientpb.MsfStagerReq) (*clientpb.MsfStager, error) {
 	var (
 		MSFStage = &clientpb.MsfStager{
 			File: &commonpb.File{},

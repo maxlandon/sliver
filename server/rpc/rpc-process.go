@@ -25,7 +25,7 @@ import (
 )
 
 // Ps - List the processes on the remote machine
-func (rpc *Server) Ps(ctx context.Context, req *sliverpb.PsReq) (*sliverpb.Ps, error) {
+func (rpc *SliverServer) Ps(ctx context.Context, req *sliverpb.PsReq) (*sliverpb.Ps, error) {
 	resp := &sliverpb.Ps{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -35,7 +35,7 @@ func (rpc *Server) Ps(ctx context.Context, req *sliverpb.PsReq) (*sliverpb.Ps, e
 }
 
 // ProcessDump - Dump the memory of a remote process
-func (rpc *Server) ProcessDump(ctx context.Context, req *sliverpb.ProcessDumpReq) (*sliverpb.ProcessDump, error) {
+func (rpc *SliverServer) ProcessDump(ctx context.Context, req *sliverpb.ProcessDumpReq) (*sliverpb.ProcessDump, error) {
 	resp := &sliverpb.ProcessDump{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -45,7 +45,7 @@ func (rpc *Server) ProcessDump(ctx context.Context, req *sliverpb.ProcessDumpReq
 }
 
 // Terminate - Terminate a remote process
-func (rpc *Server) Terminate(ctx context.Context, req *sliverpb.TerminateReq) (*sliverpb.Terminate, error) {
+func (rpc *SliverServer) Terminate(ctx context.Context, req *sliverpb.TerminateReq) (*sliverpb.Terminate, error) {
 	resp := &sliverpb.Terminate{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {

@@ -24,7 +24,7 @@ import (
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-func (rpc *Server) NamedPipes(ctx context.Context, req *sliverpb.NamedPipesReq) (*sliverpb.NamedPipes, error) {
+func (rpc *SliverServer) NamedPipes(ctx context.Context, req *sliverpb.NamedPipesReq) (*sliverpb.NamedPipes, error) {
 	resp := &sliverpb.NamedPipes{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -33,7 +33,7 @@ func (rpc *Server) NamedPipes(ctx context.Context, req *sliverpb.NamedPipesReq) 
 	return resp, nil
 }
 
-func (rpc *Server) TCPListener(ctx context.Context, req *sliverpb.TCPPivotReq) (*sliverpb.TCPPivot, error) {
+func (rpc *SliverServer) TCPListener(ctx context.Context, req *sliverpb.TCPPivotReq) (*sliverpb.TCPPivot, error) {
 	resp := &sliverpb.TCPPivot{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {

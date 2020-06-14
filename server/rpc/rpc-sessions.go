@@ -30,7 +30,7 @@ import (
 )
 
 // GetSessions - Get a list of sessions
-func (rpc *Server) GetSessions(ctx context.Context, _ *commonpb.Empty) (*clientpb.Sessions, error) {
+func (rpc *SliverServer) GetSessions(ctx context.Context, _ *commonpb.Empty) (*clientpb.Sessions, error) {
 	resp := &clientpb.Sessions{
 		Sessions: []*clientpb.Session{},
 	}
@@ -41,7 +41,7 @@ func (rpc *Server) GetSessions(ctx context.Context, _ *commonpb.Empty) (*clientp
 }
 
 // KillSession - Kill a session
-func (rpc *Server) KillSession(ctx context.Context, kill *sliverpb.KillSessionReq) (*commonpb.Empty, error) {
+func (rpc *SliverServer) KillSession(ctx context.Context, kill *sliverpb.KillSessionReq) (*commonpb.Empty, error) {
 	session := core.Sessions.Get(kill.Request.SessionID)
 	if session == nil {
 		return &commonpb.Empty{}, ErrInvalidSessionID

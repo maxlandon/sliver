@@ -31,7 +31,7 @@ import (
 )
 
 // StartTCPStagerListener starts a TCP stager listener
-func (rpc *Server) StartTCPStagerListener(ctx context.Context, req *clientpb.StagerListenerReq) (*clientpb.StagerListener, error) {
+func (rpc *SliverServer) StartTCPStagerListener(ctx context.Context, req *clientpb.StagerListenerReq) (*clientpb.StagerListener, error) {
 	host := req.GetHost()
 	if !checkInterface(req.GetHost()) {
 		host = "0.0.0.0"
@@ -41,7 +41,7 @@ func (rpc *Server) StartTCPStagerListener(ctx context.Context, req *clientpb.Sta
 }
 
 // StartHTTPStagerListener starts a HTTP(S) stager listener
-func (rpc *Server) StartHTTPStagerListener(ctx context.Context, req *clientpb.StagerListenerReq) (*clientpb.StagerListener, error) {
+func (rpc *SliverServer) StartHTTPStagerListener(ctx context.Context, req *clientpb.StagerListenerReq) (*clientpb.StagerListener, error) {
 	var secure bool = false
 	if req.GetProtocol() == clientpb.StageProtocol_HTTPS {
 		secure = true

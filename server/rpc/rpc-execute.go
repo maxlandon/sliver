@@ -7,7 +7,7 @@ import (
 )
 
 // Execute - Execute a remote process
-func (rpc *Server) Execute(ctx context.Context, req *sliverpb.ExecuteReq) (*sliverpb.Execute, error) {
+func (rpc *SliverServer) Execute(ctx context.Context, req *sliverpb.ExecuteReq) (*sliverpb.Execute, error) {
 	resp := &sliverpb.Execute{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {

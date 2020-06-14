@@ -40,7 +40,7 @@ import (
 )
 
 // Task - Execute shellcode in-memory
-func (rpc *Server) Task(ctx context.Context, req *sliverpb.TaskReq) (*sliverpb.Task, error) {
+func (rpc *SliverServer) Task(ctx context.Context, req *sliverpb.TaskReq) (*sliverpb.Task, error) {
 	resp := &sliverpb.Task{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -50,7 +50,7 @@ func (rpc *Server) Task(ctx context.Context, req *sliverpb.TaskReq) (*sliverpb.T
 }
 
 // Migrate - Migrate to a new process on the remote system (Windows only)
-func (rpc *Server) Migrate(ctx context.Context, req *clientpb.MigrateReq) (*sliverpb.Migrate, error) {
+func (rpc *SliverServer) Migrate(ctx context.Context, req *clientpb.MigrateReq) (*sliverpb.Migrate, error) {
 	var shellcode []byte
 	session := core.Sessions.Get(req.Request.SessionID)
 	if session == nil {
@@ -90,7 +90,7 @@ func (rpc *Server) Migrate(ctx context.Context, req *clientpb.MigrateReq) (*sliv
 }
 
 // ExecuteAssembly - Execute a .NET assembly on the remote system in-memory (Windows only)
-func (rpc *Server) ExecuteAssembly(ctx context.Context, req *sliverpb.ExecuteAssemblyReq) (*sliverpb.ExecuteAssembly, error) {
+func (rpc *SliverServer) ExecuteAssembly(ctx context.Context, req *sliverpb.ExecuteAssemblyReq) (*sliverpb.ExecuteAssembly, error) {
 	session := core.Sessions.Get(req.Request.SessionID)
 	if session == nil {
 		return nil, ErrInvalidSessionID
@@ -135,7 +135,7 @@ func (rpc *Server) ExecuteAssembly(ctx context.Context, req *sliverpb.ExecuteAss
 }
 
 // Sideload - Sideload a DLL on the remote system (Windows only)
-func (rpc *Server) Sideload(ctx context.Context, req *sliverpb.SideloadReq) (*sliverpb.Sideload, error) {
+func (rpc *SliverServer) Sideload(ctx context.Context, req *sliverpb.SideloadReq) (*sliverpb.Sideload, error) {
 	session := core.Sessions.Get(req.Request.SessionID)
 	if session == nil {
 		return nil, ErrInvalidSessionID
@@ -183,7 +183,7 @@ func (rpc *Server) Sideload(ctx context.Context, req *sliverpb.SideloadReq) (*sl
 }
 
 // SpawnDll - Spawn a DLL on the remote system (Windows only)
-func (rpc *Server) SpawnDll(ctx context.Context, req *sliverpb.SpawnDllReq) (*sliverpb.SpawnDll, error) {
+func (rpc *SliverServer) SpawnDll(ctx context.Context, req *sliverpb.SpawnDllReq) (*sliverpb.SpawnDll, error) {
 	resp := &sliverpb.SpawnDll{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {

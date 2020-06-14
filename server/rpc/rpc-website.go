@@ -33,7 +33,7 @@ var (
 )
 
 // Websites - List existing websites
-func (rpc *Server) Websites(ctx context.Context, _ *commonpb.Empty) (*clientpb.Websites, error) {
+func (rpc *SliverServer) Websites(ctx context.Context, _ *commonpb.Empty) (*clientpb.Websites, error) {
 	websiteNames, err := website.ListWebsites()
 	if err != nil {
 		rpcWebsiteLog.Warnf("Failed to find website %s", err)
@@ -52,7 +52,7 @@ func (rpc *Server) Websites(ctx context.Context, _ *commonpb.Empty) (*clientpb.W
 }
 
 // WebsiteRemove - Delete an entire website
-func (rpc *Server) WebsiteRemove(ctx context.Context, req *clientpb.Website) (*commonpb.Empty, error) {
+func (rpc *SliverServer) WebsiteRemove(ctx context.Context, req *clientpb.Website) (*commonpb.Empty, error) {
 	web, err := website.ListContent(req.Name)
 	if err != nil {
 		return nil, err
@@ -68,12 +68,12 @@ func (rpc *Server) WebsiteRemove(ctx context.Context, req *clientpb.Website) (*c
 }
 
 // Website - Get one website
-func (rpc *Server) Website(ctx context.Context, req *clientpb.Website) (*clientpb.Website, error) {
+func (rpc *SliverServer) Website(ctx context.Context, req *clientpb.Website) (*clientpb.Website, error) {
 	return website.ListContent(req.Name)
 }
 
 // WebsiteAddContent - Add content to a website, the website is created if `name` does not exist
-func (rpc *Server) WebsiteAddContent(ctx context.Context, req *clientpb.WebsiteAddContent) (*clientpb.Website, error) {
+func (rpc *SliverServer) WebsiteAddContent(ctx context.Context, req *clientpb.WebsiteAddContent) (*clientpb.Website, error) {
 	for _, content := range req.Contents {
 		rpcLog.Infof("Add website content (%s) %s -> %s", req.Name, content.Path, content.ContentType)
 		err := website.AddContent(req.Name, content.Path, content.ContentType, content.Content)
@@ -86,7 +86,7 @@ func (rpc *Server) WebsiteAddContent(ctx context.Context, req *clientpb.WebsiteA
 }
 
 // WebsiteRemoveContent - Remove specific content from a website
-func (rpc *Server) WebsiteRemoveContent(ctx context.Context, req *clientpb.WebsiteRemoveContent) (*clientpb.Website, error) {
+func (rpc *SliverServer) WebsiteRemoveContent(ctx context.Context, req *clientpb.WebsiteRemoveContent) (*clientpb.Website, error) {
 	for _, path := range req.Paths {
 		err := website.RemoveContent(req.Name, path)
 		if err != nil {

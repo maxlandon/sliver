@@ -33,7 +33,7 @@ var (
 )
 
 // Shell - Open an interactive shell
-func (s *Server) Shell(ctx context.Context, req *sliverpb.ShellReq) (*sliverpb.Shell, error) {
+func (s *SliverServer) Shell(ctx context.Context, req *sliverpb.ShellReq) (*sliverpb.Shell, error) {
 	session := core.Sessions.Get(req.Request.SessionID)
 	if session == nil {
 		return nil, ErrInvalidSessionID

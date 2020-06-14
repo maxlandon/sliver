@@ -37,7 +37,7 @@ var (
 // CreateTunnel - Create a new tunnel on the server, however based on only this request there's
 //                no way to associate the tunnel with the correct client, so the client must send
 //                a zero-byte message over TunnelData to bind itself to the newly created tunnel.
-func (s *Server) CreateTunnel(ctx context.Context, req *sliverpb.Tunnel) (*sliverpb.Tunnel, error) {
+func (s *SliverServer) CreateTunnel(ctx context.Context, req *sliverpb.Tunnel) (*sliverpb.Tunnel, error) {
 	session := core.Sessions.Get(req.SessionID)
 	if session == nil {
 		return nil, ErrInvalidSessionID
@@ -53,7 +53,7 @@ func (s *Server) CreateTunnel(ctx context.Context, req *sliverpb.Tunnel) (*slive
 }
 
 // CloseTunnel - Client requests we close a tunnel
-func (s *Server) CloseTunnel(ctx context.Context, req *sliverpb.Tunnel) (*commonpb.Empty, error) {
+func (s *SliverServer) CloseTunnel(ctx context.Context, req *sliverpb.Tunnel) (*commonpb.Empty, error) {
 	err := core.Tunnels.Close(req.TunnelID)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (s *Server) CloseTunnel(ctx context.Context, req *sliverpb.Tunnel) (*common
 }
 
 // TunnelData - Streams tunnel data back and forth from the client<->server<->implant
-func (s *Server) TunnelData(stream rpcpb.SliverRPC_TunnelDataServer) error {
+func (s *SliverServer) TunnelData(stream rpcpb.SliverRPC_TunnelDataServer) error {
 	for {
 		fromClient, err := stream.Recv()
 		if err == io.EOF {

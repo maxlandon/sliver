@@ -48,8 +48,8 @@ const (
 	defaultTimeout = time.Duration(30 * time.Second)
 )
 
-// Server - gRPC server
-type Server struct{}
+// SliverServer - gRPC server
+type SliverServer struct{}
 
 // GenericRequest - Generic request interface to use with generic handlers
 type GenericRequest interface {
@@ -65,13 +65,13 @@ type GenericResponse interface {
 	GetResponse() *commonpb.Response
 }
 
-// NewServer - Create new server instance
-func NewServer() *Server {
-	return &Server{}
+// NewSliverServer - Create new server instance
+func NewSliverServer() *SliverServer {
+	return &SliverServer{}
 }
 
 // GetVersion - Get the server version
-func (rpc *Server) GetVersion(ctx context.Context, _ *commonpb.Empty) (*clientpb.Version, error) {
+func (rpc *SliverServer) GetVersion(ctx context.Context, _ *commonpb.Empty) (*clientpb.Version, error) {
 	dirty := version.GitDirty != ""
 	semVer := version.SemanticVersion()
 	compiled, _ := version.Compiled()
@@ -88,7 +88,7 @@ func (rpc *Server) GetVersion(ctx context.Context, _ *commonpb.Empty) (*clientpb
 }
 
 // GenericHandler - Pass the request to the Sliver/Session
-func (rpc *Server) GenericHandler(req GenericRequest, resp proto.Message) error {
+func (rpc *SliverServer) GenericHandler(req GenericRequest, resp proto.Message) error {
 	request := req.GetRequest()
 	if request == nil {
 		return ErrMissingRequestField
@@ -114,7 +114,7 @@ func (rpc *Server) GenericHandler(req GenericRequest, resp proto.Message) error 
 	return rpc.getError(resp.(GenericResponse))
 }
 
-func (rpc *Server) getClientCommonName(ctx context.Context) string {
+func (rpc *SliverServer) getClientCommonName(ctx context.Context) string {
 	client, ok := peer.FromContext(ctx)
 	if !ok {
 		return ""
@@ -133,7 +133,7 @@ func (rpc *Server) getClientCommonName(ctx context.Context) string {
 }
 
 // getTimeout - Get the specified timeout from the request or the default
-func (rpc *Server) getTimeout(req GenericRequest) time.Duration {
+func (rpc *SliverServer) getTimeout(req GenericRequest) time.Duration {
 	timeout := req.GetRequest().Timeout
 	if time.Duration(timeout) < time.Second {
 		return defaultTimeout
@@ -142,7 +142,7 @@ func (rpc *Server) getTimeout(req GenericRequest) time.Duration {
 }
 
 // getError - Check an implant's response for Err and convert it to an `error` type
-func (rpc *Server) getError(resp GenericResponse) error {
+func (rpc *SliverServer) getError(resp GenericResponse) error {
 	respHeader := resp.GetResponse()
 	if respHeader != nil && respHeader.Err != "" {
 		return errors.New(respHeader.Err)

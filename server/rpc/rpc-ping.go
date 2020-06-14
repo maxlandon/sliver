@@ -7,7 +7,7 @@ import (
 )
 
 // Ping - Try to send a round trip message to the implant
-func (rpc *Server) Ping(ctx context.Context, req *sliverpb.Ping) (*sliverpb.Ping, error) {
+func (rpc *SliverServer) Ping(ctx context.Context, req *sliverpb.Ping) (*sliverpb.Ping, error) {
 	resp := &sliverpb.Ping{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {

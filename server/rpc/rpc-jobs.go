@@ -49,7 +49,7 @@ var (
 )
 
 // GetJobs - List jobs
-func (rpc *Server) GetJobs(ctx context.Context, _ *commonpb.Empty) (*clientpb.Jobs, error) {
+func (rpc *SliverServer) GetJobs(ctx context.Context, _ *commonpb.Empty) (*clientpb.Jobs, error) {
 	jobs := &clientpb.Jobs{
 		Active: []*clientpb.Job{},
 	}
@@ -67,7 +67,7 @@ func (rpc *Server) GetJobs(ctx context.Context, _ *commonpb.Empty) (*clientpb.Jo
 }
 
 // KillJob - Kill a server-side job
-func (rpc *Server) KillJob(ctx context.Context, kill *clientpb.KillJobReq) (*clientpb.KillJob, error) {
+func (rpc *SliverServer) KillJob(ctx context.Context, kill *clientpb.KillJobReq) (*clientpb.KillJob, error) {
 	job := core.Jobs.Get(int(kill.ID))
 	// killJob := &clientpb.KillJob{ID: uint32(job.ID)}
 	killJob := &clientpb.KillJob{}
@@ -84,7 +84,7 @@ func (rpc *Server) KillJob(ctx context.Context, kill *clientpb.KillJobReq) (*cli
 }
 
 // StartMTLSListener - Start an MTLS listener
-func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSListenerReq) (*clientpb.MTLSListener, error) {
+func (rpc *SliverServer) StartMTLSListener(ctx context.Context, req *clientpb.MTLSListenerReq) (*clientpb.MTLSListener, error) {
 
 	if 65535 <= req.Port {
 		return nil, ErrInvalidPort
@@ -120,7 +120,7 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 }
 
 // StartDNSListener - Start a DNS listener TODO: respect request's Host specification
-func (rpc *Server) StartDNSListener(ctx context.Context, req *clientpb.DNSListenerReq) (*clientpb.DNSListener, error) {
+func (rpc *SliverServer) StartDNSListener(ctx context.Context, req *clientpb.DNSListenerReq) (*clientpb.DNSListener, error) {
 	if 65535 <= req.Port {
 		return nil, ErrInvalidPort
 	}
@@ -179,7 +179,7 @@ func jobStartDNSListener(domains []string, canaries bool, listenPort uint16) (in
 }
 
 // StartHTTPSListener - Start an HTTPS listener
-func (rpc *Server) StartHTTPSListener(ctx context.Context, req *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
+func (rpc *SliverServer) StartHTTPSListener(ctx context.Context, req *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
 
 	if 65535 <= req.Port {
 		return nil, ErrInvalidPort
@@ -207,7 +207,7 @@ func (rpc *Server) StartHTTPSListener(ctx context.Context, req *clientpb.HTTPLis
 }
 
 // StartHTTPListener - Start an HTTP listener
-func (rpc *Server) StartHTTPListener(ctx context.Context, req *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
+func (rpc *SliverServer) StartHTTPListener(ctx context.Context, req *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
 	if 65535 <= req.Port {
 		return nil, ErrInvalidPort
 	}

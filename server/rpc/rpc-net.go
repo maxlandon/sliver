@@ -25,7 +25,7 @@ import (
 */
 
 // Ifconfig - Get remote interface configurations
-func (rpc *Server) Ifconfig(ctx context.Context, req *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error) {
+func (rpc *SliverServer) Ifconfig(ctx context.Context, req *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error) {
 	resp := &sliverpb.Ifconfig{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -35,7 +35,7 @@ func (rpc *Server) Ifconfig(ctx context.Context, req *sliverpb.IfconfigReq) (*sl
 }
 
 // Netstat - List network connections on the remote system
-func (rpc *Server) Netstat(ctx context.Context, req *sliverpb.NetstatReq) (*sliverpb.Netstat, error) {
+func (rpc *SliverServer) Netstat(ctx context.Context, req *sliverpb.NetstatReq) (*sliverpb.Netstat, error) {
 	resp := &sliverpb.Netstat{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {

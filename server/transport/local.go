@@ -43,7 +43,7 @@ func LocalListener() (*grpc.Server, *bufconn.Listener, error) {
 	}
 	options = append(options, initLoggerMiddleware()...)
 	grpcServer := grpc.NewServer(options...)
-	rpcpb.RegisterSliverRPCServer(grpcServer, rpc.NewServer())
+	rpcpb.RegisterSliverRPCServer(grpcServer, rpc.NewSliverServer())
 	go func() {
 		if err := grpcServer.Serve(ln); err != nil {
 			pipeLog.Fatalf("gRPC local listener error: %v", err)

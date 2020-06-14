@@ -63,7 +63,7 @@ func StartClientListener(host string, port uint16) (*grpc.Server, net.Listener, 
 	}
 	options = append(options, initLoggerMiddleware()...)
 	grpcServer := grpc.NewServer(options...)
-	rpcpb.RegisterSliverRPCServer(grpcServer, rpc.NewServer())
+	rpcpb.RegisterSliverRPCServer(grpcServer, rpc.NewSliverServer())
 	go func() {
 		if err := grpcServer.Serve(ln); err != nil {
 			mtlsLog.Warnf("gRPC server exited with error: %v", err)

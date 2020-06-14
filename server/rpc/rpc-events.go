@@ -13,7 +13,7 @@ var (
 )
 
 // Events - Stream events to client
-func (s *Server) Events(_ *commonpb.Empty, stream rpcpb.SliverRPC_EventsServer) error {
+func (s *SliverServer) Events(_ *commonpb.Empty, stream rpcpb.SliverRPC_EventsServer) error {
 	commonName := s.getClientCommonName(stream.Context())
 	client := core.NewClient(commonName)
 	core.Clients.Add(client)

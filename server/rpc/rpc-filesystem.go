@@ -25,7 +25,7 @@ import (
 )
 
 // Ls - List a directory
-func (rpc *Server) Ls(ctx context.Context, req *sliverpb.LsReq) (*sliverpb.Ls, error) {
+func (rpc *SliverServer) Ls(ctx context.Context, req *sliverpb.LsReq) (*sliverpb.Ls, error) {
 	resp := &sliverpb.Ls{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -35,7 +35,7 @@ func (rpc *Server) Ls(ctx context.Context, req *sliverpb.LsReq) (*sliverpb.Ls, e
 }
 
 // Rm - Remove file or directory
-func (rpc *Server) Rm(ctx context.Context, req *sliverpb.RmReq) (*sliverpb.Rm, error) {
+func (rpc *SliverServer) Rm(ctx context.Context, req *sliverpb.RmReq) (*sliverpb.Rm, error) {
 	resp := &sliverpb.Rm{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -45,7 +45,7 @@ func (rpc *Server) Rm(ctx context.Context, req *sliverpb.RmReq) (*sliverpb.Rm, e
 }
 
 // Mkdir - Make a directory
-func (rpc *Server) Mkdir(ctx context.Context, req *sliverpb.MkdirReq) (*sliverpb.Mkdir, error) {
+func (rpc *SliverServer) Mkdir(ctx context.Context, req *sliverpb.MkdirReq) (*sliverpb.Mkdir, error) {
 	resp := &sliverpb.Mkdir{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -55,7 +55,7 @@ func (rpc *Server) Mkdir(ctx context.Context, req *sliverpb.MkdirReq) (*sliverpb
 }
 
 // Cd - Change directory
-func (rpc *Server) Cd(ctx context.Context, req *sliverpb.CdReq) (*sliverpb.Pwd, error) {
+func (rpc *SliverServer) Cd(ctx context.Context, req *sliverpb.CdReq) (*sliverpb.Pwd, error) {
 	resp := &sliverpb.Pwd{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -65,7 +65,7 @@ func (rpc *Server) Cd(ctx context.Context, req *sliverpb.CdReq) (*sliverpb.Pwd, 
 }
 
 // Pwd - Change directory
-func (rpc *Server) Pwd(ctx context.Context, req *sliverpb.PwdReq) (*sliverpb.Pwd, error) {
+func (rpc *SliverServer) Pwd(ctx context.Context, req *sliverpb.PwdReq) (*sliverpb.Pwd, error) {
 	resp := &sliverpb.Pwd{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -75,7 +75,7 @@ func (rpc *Server) Pwd(ctx context.Context, req *sliverpb.PwdReq) (*sliverpb.Pwd
 }
 
 // Download - Download a file from the remote file system
-func (rpc *Server) Download(ctx context.Context, req *sliverpb.DownloadReq) (*sliverpb.Download, error) {
+func (rpc *SliverServer) Download(ctx context.Context, req *sliverpb.DownloadReq) (*sliverpb.Download, error) {
 	resp := &sliverpb.Download{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -85,7 +85,7 @@ func (rpc *Server) Download(ctx context.Context, req *sliverpb.DownloadReq) (*sl
 }
 
 // Upload - Upload a file from the remote file system
-func (rpc *Server) Upload(ctx context.Context, req *sliverpb.UploadReq) (*sliverpb.Upload, error) {
+func (rpc *SliverServer) Upload(ctx context.Context, req *sliverpb.UploadReq) (*sliverpb.Upload, error) {
 	resp := &sliverpb.Upload{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {

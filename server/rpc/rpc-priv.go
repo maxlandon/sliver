@@ -31,7 +31,7 @@ import (
 )
 
 // Impersonate - Impersonate a remote user
-func (rpc *Server) Impersonate(ctx context.Context, req *sliverpb.ImpersonateReq) (*sliverpb.Impersonate, error) {
+func (rpc *SliverServer) Impersonate(ctx context.Context, req *sliverpb.ImpersonateReq) (*sliverpb.Impersonate, error) {
 	resp := &sliverpb.Impersonate{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -41,7 +41,7 @@ func (rpc *Server) Impersonate(ctx context.Context, req *sliverpb.ImpersonateReq
 }
 
 // RunAs - Run a remote process as a specific user
-func (rpc *Server) RunAs(ctx context.Context, req *sliverpb.RunAsReq) (*sliverpb.RunAs, error) {
+func (rpc *SliverServer) RunAs(ctx context.Context, req *sliverpb.RunAsReq) (*sliverpb.RunAs, error) {
 	resp := &sliverpb.RunAs{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -51,7 +51,7 @@ func (rpc *Server) RunAs(ctx context.Context, req *sliverpb.RunAsReq) (*sliverpb
 }
 
 // RevToSelf - Revert process context to self
-func (rpc *Server) RevToSelf(ctx context.Context, req *sliverpb.RevToSelfReq) (*sliverpb.RevToSelf, error) {
+func (rpc *SliverServer) RevToSelf(ctx context.Context, req *sliverpb.RevToSelfReq) (*sliverpb.RevToSelf, error) {
 	resp := &sliverpb.RevToSelf{}
 	err := rpc.GenericHandler(req, resp)
 	if err != nil {
@@ -61,7 +61,7 @@ func (rpc *Server) RevToSelf(ctx context.Context, req *sliverpb.RevToSelfReq) (*
 }
 
 // GetSystem - Attempt to get 'NT AUTHORITY/SYSTEM' access on a remote Windows system
-func (rpc *Server) GetSystem(ctx context.Context, req *clientpb.GetSystemReq) (*sliverpb.GetSystem, error) {
+func (rpc *SliverServer) GetSystem(ctx context.Context, req *clientpb.GetSystemReq) (*sliverpb.GetSystem, error) {
 	var shellcode []byte
 	session := core.Sessions.Get(req.Request.SessionID)
 	if session == nil {
