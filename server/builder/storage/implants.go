@@ -1,4 +1,4 @@
-package generate
+package storage
 
 /*
 	Sliver Implant Framework
@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/assets"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/log"
@@ -50,7 +51,7 @@ var (
 )
 
 // ImplantConfigByName - Get a implant's config by it's codename
-func ImplantConfigByName(name string) (*ImplantConfig, error) {
+func ImplantConfigByName(name string) (*clientpb.ImplantConfig, error) {
 	bucket, err := db.GetBucket(implantBucketName)
 	if err != nil {
 		return nil, err
@@ -59,19 +60,19 @@ func ImplantConfigByName(name string) (*ImplantConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	config := &ImplantConfig{}
+	config := &clientpb.ImplantConfig{}
 	err = json.Unmarshal(rawConfig, config)
 	return config, err
 }
 
 // ImplantConfigMap - Get a sliver's config by it's codename
-func ImplantConfigMap() (map[string]*ImplantConfig, error) {
+func ImplantConfigMap() (map[string]*clientpb.ImplantConfig, error) {
 	bucket, err := db.GetBucket(implantBucketName)
 	if err != nil {
 		return nil, err
 	}
 	ls, err := bucket.List(implantConfigNamespace)
-	configs := map[string]*ImplantConfig{}
+	configs := map[string]*clientpb.ImplantConfig{}
 	for _, config := range ls {
 		sliverName := config[len(implantConfigNamespace)+1:]
 		config, err := ImplantConfigByName(sliverName)
@@ -84,7 +85,7 @@ func ImplantConfigMap() (map[string]*ImplantConfig, error) {
 }
 
 // ImplantConfigSave - Save a configuration to the database
-func ImplantConfigSave(config *ImplantConfig) error {
+func ImplantConfigSave(config *clientpb.ImplantConfig) error {
 	bucket, err := db.GetBucket(implantBucketName)
 	if err != nil {
 		return err

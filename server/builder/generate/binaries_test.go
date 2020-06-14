@@ -88,23 +88,20 @@ func TestSliverExecutableDarwin(t *testing.T) {
 	tcpPivotExe(t, "darwin", "amd64", false)
 }
 
-// func TestSymbolObfuscation(t *testing.T) {
-// 	symbolObfuscation(t, "windows", "amd64")
-// }
-
 func mtlsExe(t *testing.T, goos string, goarch string, debug bool) {
 	t.Logf("[mtls] EXE %s/%s - debug: %v", goos, goarch, debug)
-	config := &clientpb.ImplantConfig{
+
+	implantConfig := &clientpb.ImplantConfig{
 		GOOS:   goos,
 		GOARCH: goarch,
-		C2: []ImplantC2{
-			ImplantC2{URL: "mtls://1.example.com"},
+		C2: []*clientpb.ImplantC2{
+			{URL: "mtls://1.example.com"},
 		},
-		MTLSc2Enabled:    true,
 		Debug:            debug,
 		ObfuscateSymbols: false,
 	}
-	_, err := SliverExecutable(config)
+
+	_, err := SliverExecutable(implantConfig)
 	if err != nil {
 		t.Errorf(fmt.Sprintf("%v", err))
 	}
@@ -112,17 +109,16 @@ func mtlsExe(t *testing.T, goos string, goarch string, debug bool) {
 
 func dnsExe(t *testing.T, goos string, goarch string, debug bool) {
 	t.Logf("[dns] EXE %s/%s - debug: %v", goos, goarch, debug)
-	config := &ImplantConfig{
+	implantConfig := &clientpb.ImplantConfig{
 		GOOS:   goos,
 		GOARCH: goarch,
-		C2: []ImplantC2{
-			ImplantC2{URL: "dns://3.example.com"},
+		C2: []*clientpb.ImplantC2{
+			{URL: "dns://3.example.com"},
 		},
-		DNSc2Enabled:     true,
 		Debug:            debug,
 		ObfuscateSymbols: false,
 	}
-	_, err := SliverExecutable(config)
+	_, err := SliverExecutable(implantConfig)
 	if err != nil {
 		t.Errorf(fmt.Sprintf("%v", err))
 	}
@@ -130,21 +126,20 @@ func dnsExe(t *testing.T, goos string, goarch string, debug bool) {
 
 func httpExe(t *testing.T, goos string, goarch string, debug bool) {
 	t.Logf("[http] EXE %s/%s - debug: %v", goos, goarch, debug)
-	config := &ImplantConfig{
+	implantConfig := &clientpb.ImplantConfig{
 		GOOS:   goos,
 		GOARCH: goarch,
-		C2: []ImplantC2{
-			ImplantC2{
+		C2: []*clientpb.ImplantC2{
+			{
 				Priority: 1,
 				URL:      "http://4.example.com",
 				Options:  "asdf",
 			},
 		},
-		HTTPc2Enabled:    true,
 		Debug:            debug,
 		ObfuscateSymbols: false,
 	}
-	_, err := SliverExecutable(config)
+	_, err := SliverExecutable(implantConfig)
 	if err != nil {
 		t.Errorf(fmt.Sprintf("%v", err))
 	}
@@ -152,19 +147,15 @@ func httpExe(t *testing.T, goos string, goarch string, debug bool) {
 
 func multiExe(t *testing.T, goos string, goarch string, debug bool) {
 	t.Logf("[multi] %s/%s - debug: %v", goos, goarch, debug)
-	config := &ImplantConfig{
+	config := &clientpb.ImplantConfig{
 		GOOS:   goos,
 		GOARCH: goarch,
-
-		C2: []ImplantC2{
-			ImplantC2{URL: "mtls://1.example.com"},
-			ImplantC2{URL: "mtls://2.example.com", Options: "asdf"},
-			ImplantC2{URL: "https://3.example.com"},
-			ImplantC2{Priority: 3, URL: "dns://4.example.com"},
+		C2: []*clientpb.ImplantC2{
+			{URL: "mtls://1.example.com"},
+			{URL: "mtls://2.example.com", Options: "asdf"},
+			{URL: "https://3.example.com"},
+			{Priority: 3, URL: "dns://4.example.com"},
 		},
-		MTLSc2Enabled:    true,
-		HTTPc2Enabled:    true,
-		DNSc2Enabled:     true,
 		Debug:            debug,
 		ObfuscateSymbols: false,
 	}
@@ -176,19 +167,18 @@ func multiExe(t *testing.T, goos string, goarch string, debug bool) {
 
 func tcpPivotExe(t *testing.T, goos string, goarch string, debug bool) {
 	t.Logf("[tcppivot] EXE %s/%s - debug: %v", goos, goarch, debug)
-	config := &ImplantConfig{
+	config := &clientpb.ImplantConfig{
 		GOOS:   goos,
 		GOARCH: goarch,
-		C2: []ImplantC2{
-			ImplantC2{
+		C2: []*clientpb.ImplantC2{
+			{
 				Priority: 1,
 				URL:      "tcppivot://127.0.0.1:8080",
 				Options:  "asdf",
 			},
 		},
-		NamePipec2Enabled: true,
-		Debug:             debug,
-		ObfuscateSymbols:  false,
+		Debug:            debug,
+		ObfuscateSymbols: false,
 	}
 	_, err := SliverExecutable(config)
 	if err != nil {
@@ -198,19 +188,18 @@ func tcpPivotExe(t *testing.T, goos string, goarch string, debug bool) {
 
 func namedPipeExe(t *testing.T, goos string, goarch string, debug bool) {
 	t.Logf("[namedpipe] EXE %s/%s - debug: %v", goos, goarch, debug)
-	config := &ImplantConfig{
+	config := &clientpb.ImplantConfig{
 		GOOS:   goos,
 		GOARCH: goarch,
-		C2: []ImplantC2{
-			ImplantC2{
+		C2: []*clientpb.ImplantC2{
+			{
 				Priority: 1,
 				URL:      "namedpipe://./pipe/test",
 				Options:  "asdf",
 			},
 		},
-		NamePipec2Enabled: true,
-		Debug:             debug,
-		ObfuscateSymbols:  false,
+		Debug:            debug,
+		ObfuscateSymbols: false,
 	}
 	_, err := SliverExecutable(config)
 	if err != nil {
@@ -220,15 +209,15 @@ func namedPipeExe(t *testing.T, goos string, goarch string, debug bool) {
 
 func multiLibrary(t *testing.T, goos string, goarch string, debug bool) {
 	t.Logf("[multi] LIB %s/%s - debug: %v", goos, goarch, debug)
-	config := &ImplantConfig{
+	config := &clientpb.ImplantConfig{
 		GOOS:   goos,
 		GOARCH: goarch,
 
-		C2: []ImplantC2{
-			ImplantC2{URL: "mtls://1.example.com"},
-			ImplantC2{Priority: 2, URL: "mtls://2.example.com"},
-			ImplantC2{URL: "https://3.example.com"},
-			ImplantC2{URL: "dns://4.example.com", Options: "asdf"},
+		C2: []*clientpb.ImplantC2{
+			{URL: "mtls://1.example.com"},
+			{Priority: 2, URL: "mtls://2.example.com"},
+			{URL: "https://3.example.com"},
+			{URL: "dns://4.example.com", Options: "asdf"},
 		},
 
 		Debug:            debug,
@@ -244,15 +233,15 @@ func multiLibrary(t *testing.T, goos string, goarch string, debug bool) {
 
 func symbolObfuscation(t *testing.T, goos string, goarch string) {
 	t.Logf("[symbol obfuscation] %s/%s ...", goos, goarch)
-	config := &ImplantConfig{
+	config := &clientpb.ImplantConfig{
 		GOOS:   goos,
 		GOARCH: goarch,
 
-		C2: []ImplantC2{
-			ImplantC2{URL: "mtls://1.example.com"},
-			ImplantC2{Priority: 2, URL: "mtls://2.example.com"},
-			ImplantC2{URL: "https://3.example.com"},
-			ImplantC2{URL: "dns://4.example.com", Options: "asdf"},
+		C2: []*clientpb.ImplantC2{
+			{URL: "mtls://1.example.com"},
+			{Priority: 2, URL: "mtls://2.example.com"},
+			{URL: "https://3.example.com"},
+			{URL: "dns://4.example.com", Options: "asdf"},
 		},
 
 		Debug:            false,
