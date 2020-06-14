@@ -26,7 +26,6 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/bishopfox/sliver/server/generate"
 )
 
 // Generate - Generate a new implant

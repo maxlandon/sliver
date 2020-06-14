@@ -35,6 +35,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/assets"
+	"github.com/bishopfox/sliver/server/builder/canaries"
 	"github.com/bishopfox/sliver/server/builder/gobfuscate"
 	"github.com/bishopfox/sliver/server/builder/gogo"
 	"github.com/bishopfox/sliver/server/builder/storage"
@@ -46,7 +47,7 @@ import (
 )
 
 var (
-	buildLog = log.NamedLogger("generate", "build")
+	buildLog = log.NamedLogger("builder", "generate")
 	// Fix #67: use an arch specific compiler
 	defaultMingwPath = map[string]string{
 		"386":   "/usr/bin/i686-w64-mingw32-gcc",
@@ -422,7 +423,7 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 		// Render canaries
 		buildLog.Infof("Canary domain(s): %v", implantConfig.CanaryDomains)
 		canaryTmpl := template.New("canary").Delims("[[", "]]")
-		canaryGenerator := &CanaryGenerator{
+		canaryGenerator := &canaries.CanaryGenerator{
 			ImplantName:   implantConfig.Name,
 			ParentDomains: implantConfig.CanaryDomains,
 		}

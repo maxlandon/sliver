@@ -45,7 +45,7 @@ import (
 	"time"
 
 	consts "github.com/bishopfox/sliver/client/constants"
-	"github.com/bishopfox/sliver/server/builder/generate"
+	"github.com/bishopfox/sliver/server/builder/canaries"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/cryptography"
@@ -200,7 +200,7 @@ func handleCanary(req *dns.Msg) *dns.Msg {
 		reqDomain += "." // Ensure we have the FQDN
 	}
 
-	canary, err := generate.CheckCanary(reqDomain)
+	canary, err := canaries.CheckCanary(reqDomain)
 	if err != nil {
 		return nil
 	}
@@ -223,7 +223,7 @@ func handleCanary(req *dns.Msg) *dns.Msg {
 		}
 		canary.LatestTrigger = time.Now().Format(time.RFC1123)
 		canary.Count++
-		generate.UpdateCanary(canary)
+		canaries.UpdateCanary(canary)
 	}
 
 	// Respond with random IPs

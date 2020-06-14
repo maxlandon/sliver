@@ -1,4 +1,4 @@
-package generate
+package canaries
 
 /*
 	Sliver Implant Framework
@@ -27,6 +27,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/log"
 )
 
 const (
@@ -37,6 +38,7 @@ const (
 )
 
 var (
+	canaryLog  = log.NamedLogger("builder", "canaries")
 	dnsCharSet = []rune("abcdefghijklmnopqrstuvwxyz0123456789-_")
 )
 
@@ -86,7 +88,7 @@ func ListCanaries() ([]*DNSCanary, error) {
 		canary := &DNSCanary{}
 		err := json.Unmarshal(rawCanary, canary)
 		if err != nil {
-			buildLog.Errorf("Failed to parse canary")
+			canaryLog.Errorf("Failed to parse canary")
 			continue
 		}
 		canaries = append(canaries, canary)
@@ -134,11 +136,11 @@ func (g *CanaryGenerator) GenerateCanary() string {
 
 	bucket, err := db.GetBucket(CanaryBucketName)
 	if err != nil {
-		buildLog.Warnf("Failed to fetch canary bucket")
+		canaryLog.Warnf("Failed to fetch canary bucket")
 		return ""
 	}
 	if len(g.ParentDomains) < 1 {
-		buildLog.Warnf("No parent domains")
+		canaryLog.Warnf("No parent domains")
 		return ""
 	}
 
@@ -156,7 +158,7 @@ func (g *CanaryGenerator) GenerateCanary() string {
 
 	subdomain := canarySubDomain()
 	canaryDomain := fmt.Sprintf("%s.%s", subdomain, parentDomain)
-	buildLog.Infof("Generated new canary domain %s", canaryDomain)
+	canaryLog.Infof("Generated new canary domain %s", canaryDomain)
 	canary, err := json.Marshal(&DNSCanary{
 		ImplantName: g.ImplantName,
 		Domain:      canaryDomain,
@@ -168,7 +170,7 @@ func (g *CanaryGenerator) GenerateCanary() string {
 	}
 	err = bucket.Set(canaryDomain, canary)
 	if err != nil {
-		buildLog.Errorf("Failed to save canary %s", err)
+		canaryLog.Errorf("Failed to save canary %s", err)
 		return ""
 	}
 	return fmt.Sprintf("%s%s", canaryPrefix, canaryDomain)
