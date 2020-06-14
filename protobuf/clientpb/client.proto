@@ -72,6 +72,7 @@ message ImplantConfig {
     EXECUTABLE = 2;
     SERVICE = 3;
   }
+
   OutputFormat Format = 25;
   bool IsSharedLib = 26;
 

@@ -1,0 +1,30 @@
+syntax = "proto3";
+package builderpb;
+option go_package = "github.com/bishopfox/sliver/protobuf/builderpb";
+
+import "commonpb/common.proto";
+import "clientpb/client.proto";
+
+
+message Target  {
+    string GOOS = 1;
+    string GOARCH = 2;
+}
+
+
+message Artifact {
+    clientpb.ImplantConfig ImplantConfig = 1;
+    commonpb.File File = 2;
+}
+
+message BuilderManifest {
+    string Name = 1;
+    string HostOS = 2;
+    string HostArch = 3;
+    
+    repeated Target Targets = 4;
+}
+
+message Builders {
+    map<string, BuilderManifest> Builders = 1;
+}

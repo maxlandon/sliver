@@ -1,10 +1,12 @@
 syntax = "proto3";
 package rpcpb;
+
 option go_package = "github.com/bishopfox/sliver/protobuf/rpcpb";
 
 import "commonpb/common.proto";
 import "sliverpb/sliver.proto";
 import "clientpb/client.proto";
+import "builderpb/builder.proto";
 
 
 service SliverRPC {
@@ -93,4 +95,18 @@ service SliverRPC {
 
     // *** Events ***
     rpc Events(commonpb.Empty) returns (stream clientpb.Event);
+}
+
+
+
+service BuilderRPC {
+
+    // Builders call this method and get a stream of ImplantConfigs to build.
+    // Generated artifacts are passed back to the server via the Built() callback
+    // Builders may also call other builders via Build()
+    rpc Register(builderpb.BuilderManifest) returns (stream clientpb.ImplantConfig);
+
+    rpc Builders(commonpb.Empty) returns (builderpb.Builders);
+    rpc Build(clientpb.ImplantConfig) returns (builderpb.Artifact);
+    rpc Built(builderpb.Artifact) returns (commonpb.Empty);
 }

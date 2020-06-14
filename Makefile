@@ -16,7 +16,6 @@ K := $(foreach exec,$(EXECUTABLES),\
         $(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH")))
 
 SED_INPLACE := sed -i
-
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
 	SED_INPLACE := sed -i ''
@@ -85,6 +84,7 @@ static-linux: clean pb packr
 .PHONY: pb
 pb:
 	protoc -I protobuf/ protobuf/commonpb/common.proto --go_out=paths=source_relative:protobuf/
+	protoc -I protobuf/ protobuf/builderpb/builder.proto --go_out=paths=source_relative:protobuf/
 	protoc -I protobuf/ protobuf/sliverpb/sliver.proto --go_out=paths=source_relative:protobuf/
 	protoc -I protobuf/ protobuf/clientpb/client.proto --go_out=paths=source_relative:protobuf/
 	protoc -I protobuf/ protobuf/rpcpb/services.proto --go_out=plugins=grpc,paths=source_relative:protobuf/
