@@ -23,6 +23,8 @@ package handlers
 */
 
 import (
+	"path"
+
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/log"
@@ -50,7 +52,6 @@ func AddSessionHandlers(key uint32, value interface{}) {
 	sessionHandlers[key] = value
 }
 
-
 func registerSessionHandler(session *core.Session, data []byte) {
 	register := &sliverpb.Register{}
 	err := proto.Unmarshal(data, register)
@@ -63,17 +64,13 @@ func registerSessionHandler(session *core.Session, data []byte) {
 		return
 	}
 
-
-	handlerLog.Warnf("%v", session)
-	handlerLog.Warnf("%v", register)
-
-	session.Name = register.Name
-	session.Hostname = register.Hostname
-	session.Username = register.Username
-	session.UID = register.Uid
-	session.GID = register.Gid
-	session.Os = register.Os
-	session.Arch = register.Arch
+	session.Name = path.Base(register.Name)
+	session.Hostname = path.Base(register.Hostname)
+	session.Username = path.Base(register.Username)
+	session.UID = path.Base(register.Uid)
+	session.GID = path.Base(register.Gid)
+	session.Os = path.Base(register.Os)
+	session.Arch = path.Base(register.Arch)
 	session.PID = register.Pid
 	session.Filename = register.Filename
 	session.ActiveC2 = register.ActiveC2
