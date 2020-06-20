@@ -26,26 +26,25 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/server/builder/canaries"
+	"github.com/bishopfox/sliver/server/builder/profiles"
 )
 
 // Generate - Generate a new implant
 func (rpc *SliverServer) Generate(ctx context.Context, req *clientpb.GenerateReq) (*clientpb.Generate, error) {
 	var fPath string
 	var err error
-	config := generate.ImplantConfigFromProtobuf(req.Config)
-	if config == nil {
-		return nil, errors.New("Invalid implant config")
-	}
+
 	switch req.Config.Format {
 	case clientpb.ImplantConfig_SERVICE:
 		fallthrough
 	case clientpb.ImplantConfig_EXECUTABLE:
-		fPath, err = generate.SliverExecutable(config)
+		fPath, err = generate.SliverExecutable(req.Config)
 		break
 	case clientpb.ImplantConfig_SHARED_LIB:
-		fPath, err = generate.SliverSharedLibrary(config)
+		fPath, err = generate.SliverSharedLibrary(req.Config)
 	case clientpb.ImplantConfig_SHELLCODE:
-		fPath, err = generate.SliverShellcode(config)
+		fPath, err = generate.SliverShellcode(req.Config)
 	}
 
 	filename := path.Base(fPath)
@@ -65,12 +64,12 @@ func (rpc *SliverServer) Generate(ctx context.Context, req *clientpb.GenerateReq
 // Regenerate - Regenerate a previously generated implant
 func (rpc *SliverServer) Regenerate(ctx context.Context, req *clientpb.RegenerateReq) (*clientpb.Generate, error) {
 
-	config, err := generate.ImplantConfigByName(req.ImplantName)
+	config, err := profiles.ImplantConfigByName(req.ImplantName)
 	if err != nil {
 		return nil, err
 	}
 
-	fileData, err := generate.ImplantFileByName(req.ImplantName)
+	fileData, err := profiles.ImplantFileByName(req.ImplantName)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +99,7 @@ func (rpc *SliverServer) ImplantBuilds(ctx context.Context, _ *commonpb.Empty) (
 
 // Canaries - List existing canaries
 func (rpc *SliverServer) Canaries(ctx context.Context, _ *commonpb.Empty) (*clientpb.Canaries, error) {
-	jsonCanaries, err := generate.ListCanaries()
+	jsonCanaries, err := canaries.ListCanaries()
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +120,7 @@ func (rpc *SliverServer) ImplantProfiles(ctx context.Context, _ *commonpb.Empty)
 	implantProfiles := &clientpb.ImplantProfiles{
 		Profiles: []*clientpb.ImplantProfile{},
 	}
-	for name, config := range generate.Profiles() {
+	for name, config := range profiles.Profiles() {
 		implantProfiles.Profiles = append(implantProfiles.Profiles, &clientpb.ImplantProfile{
 			Name:   name,
 			Config: config.ToProtobuf(),
@@ -136,7 +135,7 @@ func (rpc *SliverServer) SaveImplantProfile(ctx context.Context, profile *client
 	profile.Name = path.Base(profile.Name)
 	if 0 < len(profile.Name) && profile.Name != "." {
 		rpcLog.Infof("Saving new profile with name %#v", profile.Name)
-		err := generate.ProfileSave(profile.Name, config)
+		err := profiles.ProfileSave(profile.Name, config)
 		if err != nil {
 			return nil, err
 		}

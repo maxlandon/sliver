@@ -22,6 +22,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/server/rpc"
+	"github.com/bishopfox/sliver/server/rpc/buildserver"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 )
@@ -29,13 +30,13 @@ import (
 const bufSize = 2 * mb
 
 var (
-	pipeLog = log.NamedLogger("transport", "local")
+	localLog = log.NamedLogger("transport", "local")
 )
 
-// LocalListener - Bind gRPC server to an in-memory listener, which is
+// LocalRPCServerListener - Bind gRPC server to an in-memory listener, which is
 //                 typically used for unit testing, but ... it should be fine
-func LocalListener() (*grpc.Server, *bufconn.Listener, error) {
-	pipeLog.Infof("Binding gRPC to listener ...")
+func LocalRPCServerListener() (*grpc.Server, *bufconn.Listener, error) {
+	localLog.Infof("Binding RPC server to listener ...")
 	ln := bufconn.Listen(bufSize)
 	options := []grpc.ServerOption{
 		grpc.MaxRecvMsgSize(ServerMaxMessageSize),
@@ -46,7 +47,26 @@ func LocalListener() (*grpc.Server, *bufconn.Listener, error) {
 	rpcpb.RegisterSliverRPCServer(grpcServer, rpc.NewSliverServer())
 	go func() {
 		if err := grpcServer.Serve(ln); err != nil {
-			pipeLog.Fatalf("gRPC local listener error: %v", err)
+			localLog.Fatalf("gRPC local rpc server listener error: %v", err)
+		}
+	}()
+	return grpcServer, ln, nil
+}
+
+// LocalBuildServerListener - In-memory build server transport
+func LocalBuildServerListener() (*grpc.Server, *bufconn.Listener, error) {
+	localLog.Infof("Binding build server to listener ...")
+	ln := bufconn.Listen(bufSize)
+	options := []grpc.ServerOption{
+		grpc.MaxRecvMsgSize(ServerMaxMessageSize),
+		grpc.MaxSendMsgSize(ServerMaxMessageSize),
+	}
+	options = append(options, initLoggerMiddleware()...)
+	grpcServer := grpc.NewServer(options...)
+	rpcpb.RegisterBuilderRPCServer(grpcServer, buildserver.NewBuildServer())
+	go func() {
+		if err := grpcServer.Serve(ln); err != nil {
+			localLog.Fatalf("gRPC local build server listener error: %v", err)
 		}
 	}()
 	return grpcServer, ln, nil

@@ -28,8 +28,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/builder/generate"
 	"github.com/bishopfox/sliver/server/core"
-	"github.com/bishopfox/sliver/server/generate"
 	"github.com/bishopfox/sliver/server/msf"
 
 	"github.com/golang/protobuf/proto"
