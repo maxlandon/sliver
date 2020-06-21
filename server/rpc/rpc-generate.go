@@ -21,44 +21,17 @@ package rpc
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"path"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/bishopfox/sliver/server/builder/canaries"
-	"github.com/bishopfox/sliver/server/builder/profiles"
+	"github.com/bishopfox/sliver/server/build/canaries"
+	"github.com/bishopfox/sliver/server/build/profiles"
 )
 
 // Generate - Generate a new implant
 func (rpc *SliverServer) Generate(ctx context.Context, req *clientpb.GenerateReq) (*clientpb.Generate, error) {
-	var fPath string
-	var err error
-
-	switch req.Config.Format {
-	case clientpb.ImplantConfig_SERVICE:
-		fallthrough
-	case clientpb.ImplantConfig_EXECUTABLE:
-		fPath, err = generate.SliverExecutable(req.Config)
-		break
-	case clientpb.ImplantConfig_SHARED_LIB:
-		fPath, err = generate.SliverSharedLibrary(req.Config)
-	case clientpb.ImplantConfig_SHELLCODE:
-		fPath, err = generate.SliverShellcode(req.Config)
-	}
-
-	filename := path.Base(fPath)
-	filedata, err := ioutil.ReadFile(fPath)
-	if err != nil {
-		return nil, err
-	}
-
-	return &clientpb.Generate{
-		File: &commonpb.File{
-			Name: filename,
-			Data: filedata,
-		},
-	}, err
+	return nil, nil
 }
 
 // Regenerate - Regenerate a previously generated implant
@@ -84,17 +57,18 @@ func (rpc *SliverServer) Regenerate(ctx context.Context, req *clientpb.Regenerat
 
 // ImplantBuilds - List existing implant builds
 func (rpc *SliverServer) ImplantBuilds(ctx context.Context, _ *commonpb.Empty) (*clientpb.ImplantBuilds, error) {
-	configs, err := generate.ImplantConfigMap()
-	if err != nil {
-		return nil, err
-	}
-	builds := &clientpb.ImplantBuilds{
-		Configs: map[string]*clientpb.ImplantConfig{},
-	}
-	for name, config := range configs {
-		builds.Configs[name] = config.ToProtobuf()
-	}
-	return builds, nil
+	return nil, nil
+	// configs, err := generate.ImplantConfigMap()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// builds := &clientpb.ImplantBuilds{
+	// 	Configs: map[string]*clientpb.ImplantConfig{},
+	// }
+	// for name, config := range configs {
+	// 	builds.Configs[name] = config.ToProtobuf()
+	// }
+	// return builds, nil
 }
 
 // Canaries - List existing canaries
@@ -131,7 +105,7 @@ func (rpc *SliverServer) ImplantProfiles(ctx context.Context, _ *commonpb.Empty)
 
 // SaveImplantProfile - Save a new profile
 func (rpc *SliverServer) SaveImplantProfile(ctx context.Context, profile *clientpb.ImplantProfile) (*clientpb.ImplantProfile, error) {
-	config := generate.ImplantConfigFromProtobuf(profile.Config)
+	config := profiles.ImplantConfigFromProtobuf(profile.Config)
 	profile.Name = path.Base(profile.Name)
 	if 0 < len(profile.Name) && profile.Name != "." {
 		rpcLog.Infof("Saving new profile with name %#v", profile.Name)
@@ -146,6 +120,7 @@ func (rpc *SliverServer) SaveImplantProfile(ctx context.Context, profile *client
 
 // ShellcodeRDI - Generates a RDI shellcode from a given DLL
 func (rpc *SliverServer) ShellcodeRDI(ctx context.Context, req *clientpb.ShellcodeRDIReq) (*clientpb.ShellcodeRDI, error) {
-	shellcode, err := generate.ShellcodeRDIFromBytes(req.GetData(), req.GetFunctionName(), req.GetArguments())
-	return &clientpb.ShellcodeRDI{Data: shellcode}, err
+	return nil, nil
+	// shellcode, err := generate.ShellcodeRDIFromBytes(req.GetData(), req.GetFunctionName(), req.GetArguments())
+	// return &clientpb.ShellcodeRDI{Data: shellcode}, err
 }

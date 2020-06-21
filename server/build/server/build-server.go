@@ -2,15 +2,22 @@ package buildserver
 
 import (
 	"context"
+	"errors"
 
 	"github.com/bishopfox/sliver/protobuf/builderpb"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
+	"github.com/bishopfox/sliver/server/core"
 )
 
 // BuildServer - gRPC server
 type BuildServer struct{}
+
+var (
+	// ErrBuilderInitializationFailure - Returned if we failed to create the Builder object
+	ErrBuilderInitializationFailure = errors.New("Failed to add builder to core")
+)
 
 // NewBuildServer - Create new server instance
 func NewBuildServer() *BuildServer {
@@ -19,7 +26,17 @@ func NewBuildServer() *BuildServer {
 
 // Register - Register a new builder
 func (b *BuildServer) Register(manifest *builderpb.BuilderManifest, stream rpcpb.BuilderRPC_RegisterServer) error {
-
+	builder := core.Builders.Add(manifest, stream)
+	if builder == nil {
+		return ErrBuilderInitializationFailure
+	}
+	defer core.Builders.Remove(builder.ID)
+	for config := range builder.Builds {
+		err := stream.Send(config)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
