@@ -33,8 +33,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/assets"
+	"github.com/bishopfox/sliver/server/build/implants"
 	"github.com/bishopfox/sliver/server/core"
-	"github.com/bishopfox/sliver/server/generate"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -51,42 +51,43 @@ func (rpc *SliverServer) Task(ctx context.Context, req *sliverpb.TaskReq) (*sliv
 
 // Migrate - Migrate to a new process on the remote system (Windows only)
 func (rpc *SliverServer) Migrate(ctx context.Context, req *clientpb.MigrateReq) (*sliverpb.Migrate, error) {
-	var shellcode []byte
-	session := core.Sessions.Get(req.Request.SessionID)
-	if session == nil {
-		return nil, ErrInvalidSessionID
-	}
-	shellcode, err := getSliverShellcode(req.Config.GetName())
-	if err != nil {
-		config := generate.ImplantConfigFromProtobuf(req.Config)
-		config.Name = ""
-		config.Format = clientpb.ImplantConfig_SHELLCODE
-		config.ObfuscateSymbols = false
-		shellcodePath, err := generate.SliverShellcode(config)
-		if err != nil {
-			return nil, err
-		}
-		shellcode, err = ioutil.ReadFile(shellcodePath)
-	}
-	reqData, err := proto.Marshal(&sliverpb.InvokeMigrateReq{
-		Request: req.Request,
-		Data:    shellcode,
-		Pid:     req.Pid,
-	})
-	if err != nil {
-		return nil, err
-	}
-	timeout := rpc.getTimeout(req)
-	respData, err := session.Request(sliverpb.MsgInvokeMigrateReq, timeout, reqData)
-	if err != nil {
-		return nil, err
-	}
-	resp := &sliverpb.Migrate{}
-	err = proto.Unmarshal(respData, resp)
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
+	return nil, nil
+	// var shellcode []byte
+	// session := core.Sessions.Get(req.Request.SessionID)
+	// if session == nil {
+	// 	return nil, ErrInvalidSessionID
+	// }
+	// shellcode, err := getSliverShellcode(req.Config.GetName())
+	// if err != nil {
+	// 	config := generate.ImplantConfigFromProtobuf(req.Config)
+	// 	config.Name = ""
+	// 	config.Format = clientpb.ImplantConfig_SHELLCODE
+	// 	config.ObfuscateSymbols = false
+	// 	shellcodePath, err := generate.SliverShellcode(config)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	shellcode, err = ioutil.ReadFile(shellcodePath)
+	// }
+	// reqData, err := proto.Marshal(&sliverpb.InvokeMigrateReq{
+	// 	Request: req.Request,
+	// 	Data:    shellcode,
+	// 	Pid:     req.Pid,
+	// })
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// timeout := rpc.getTimeout(req)
+	// respData, err := session.Request(sliverpb.MsgInvokeMigrateReq, timeout, reqData)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// resp := &sliverpb.Migrate{}
+	// err = proto.Unmarshal(respData, resp)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return resp, nil
 }
 
 // ExecuteAssembly - Execute a .NET assembly on the remote system in-memory (Windows only)
@@ -136,50 +137,51 @@ func (rpc *SliverServer) ExecuteAssembly(ctx context.Context, req *sliverpb.Exec
 
 // Sideload - Sideload a DLL on the remote system (Windows only)
 func (rpc *SliverServer) Sideload(ctx context.Context, req *sliverpb.SideloadReq) (*sliverpb.Sideload, error) {
-	session := core.Sessions.Get(req.Request.SessionID)
-	if session == nil {
-		return nil, ErrInvalidSessionID
-	}
+	return nil, nil
+	// session := core.Sessions.Get(req.Request.SessionID)
+	// if session == nil {
+	// 	return nil, ErrInvalidSessionID
+	// }
 
-	var err error
-	var respData []byte
-	timeout := rpc.getTimeout(req)
-	switch session.ToProtobuf().GetOS() {
-	case "windows":
-		shellcode, err := generate.ShellcodeRDIFromBytes(req.Data, req.EntryPoint, req.Args)
-		if err != nil {
-			return nil, err
-		}
-		data, err := proto.Marshal(&sliverpb.SideloadReq{
-			Request:     req.Request,
-			Data:        shellcode,
-			ProcessName: req.ProcessName,
-		})
-		if err != nil {
-			return nil, err
-		}
-		respData, err = session.Request(sliverpb.MsgSideloadReq, timeout, data)
-	case "darwin":
-		fallthrough
-	case "linux":
-		reqData, err := proto.Marshal(req)
-		if err != nil {
-			return nil, err
-		}
-		respData, err = session.Request(sliverpb.MsgSideloadReq, timeout, reqData)
-	default:
-		err = fmt.Errorf("%s does not support sideloading", session.ToProtobuf().GetOS())
-	}
-	if err != nil {
-		return nil, err
-	}
+	// var err error
+	// var respData []byte
+	// timeout := rpc.getTimeout(req)
+	// switch session.ToProtobuf().GetOS() {
+	// case "windows":
+	// 	shellcode, err := generate.ShellcodeRDIFromBytes(req.Data, req.EntryPoint, req.Args)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	data, err := proto.Marshal(&sliverpb.SideloadReq{
+	// 		Request:     req.Request,
+	// 		Data:        shellcode,
+	// 		ProcessName: req.ProcessName,
+	// 	})
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	respData, err = session.Request(sliverpb.MsgSideloadReq, timeout, data)
+	// case "darwin":
+	// 	fallthrough
+	// case "linux":
+	// 	reqData, err := proto.Marshal(req)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	respData, err = session.Request(sliverpb.MsgSideloadReq, timeout, reqData)
+	// default:
+	// 	err = fmt.Errorf("%s does not support sideloading", session.ToProtobuf().GetOS())
+	// }
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	resp := &sliverpb.Sideload{}
-	err = proto.Unmarshal(respData, resp)
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
+	// resp := &sliverpb.Sideload{}
+	// err = proto.Unmarshal(respData, resp)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return resp, nil
 }
 
 // SpawnDll - Spawn a DLL on the remote system (Windows only)
@@ -196,14 +198,14 @@ func (rpc *SliverServer) SpawnDll(ctx context.Context, req *sliverpb.SpawnDllReq
 func getSliverShellcode(name string) ([]byte, error) {
 	var data []byte
 	// get implants builds
-	configs, err := generate.ImplantConfigMap()
+	configs, err := implants.ImplantConfigMap()
 	if err != nil {
 		return data, err
 	}
 	// get the implant with the same name
 	if conf, ok := configs[name]; ok {
 		if conf.Format == clientpb.ImplantConfig_SHELLCODE {
-			fileData, err := generate.ImplantFileByName(name)
+			fileData, err := implants.ImplantFileByName(name)
 			if err != nil {
 				return data, err
 			}

@@ -26,6 +26,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/server/build/canaries"
+	"github.com/bishopfox/sliver/server/build/implants"
 	"github.com/bishopfox/sliver/server/build/profiles"
 )
 
@@ -37,12 +38,12 @@ func (rpc *SliverServer) Generate(ctx context.Context, req *clientpb.GenerateReq
 // Regenerate - Regenerate a previously generated implant
 func (rpc *SliverServer) Regenerate(ctx context.Context, req *clientpb.RegenerateReq) (*clientpb.Generate, error) {
 
-	config, err := profiles.ImplantConfigByName(req.ImplantName)
+	config, err := implants.ImplantConfigByName(req.ImplantName)
 	if err != nil {
 		return nil, err
 	}
 
-	fileData, err := profiles.ImplantFileByName(req.ImplantName)
+	fileData, err := implants.ImplantFileByName(req.ImplantName)
 	if err != nil {
 		return nil, err
 	}
@@ -57,18 +58,17 @@ func (rpc *SliverServer) Regenerate(ctx context.Context, req *clientpb.Regenerat
 
 // ImplantBuilds - List existing implant builds
 func (rpc *SliverServer) ImplantBuilds(ctx context.Context, _ *commonpb.Empty) (*clientpb.ImplantBuilds, error) {
-	return nil, nil
-	// configs, err := generate.ImplantConfigMap()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// builds := &clientpb.ImplantBuilds{
-	// 	Configs: map[string]*clientpb.ImplantConfig{},
-	// }
-	// for name, config := range configs {
-	// 	builds.Configs[name] = config.ToProtobuf()
-	// }
-	// return builds, nil
+	configs, err := implants.ImplantConfigMap()
+	if err != nil {
+		return nil, err
+	}
+	builds := &clientpb.ImplantBuilds{
+		Configs: map[string]*clientpb.ImplantConfig{},
+	}
+	for name, config := range configs {
+		builds.Configs[name] = config.ToProtobuf()
+	}
+	return builds, nil
 }
 
 // Canaries - List existing canaries

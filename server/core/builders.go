@@ -91,7 +91,7 @@ func (b *builder) GetBuilderFor(config *clientpb.ImplantConfig) *Builder {
 
 	availableBuilders := []*Builder{}
 	for builder := range *b.active {
-		for target := builder.Manifest.Targets {
+		for _, target := builder.Manifest.Targets {
 			if target.GOOS == config.GOOS && target.GOARCH == config.GOARCH {
 				availableBuilders = append(availableBuilders, builder)
 			}

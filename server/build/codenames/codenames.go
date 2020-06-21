@@ -1,4 +1,4 @@
-package generate
+package codename
 
 /*
 	Sliver Implant Framework
@@ -35,8 +35,8 @@ import (
 
 var (
 	codenameLog = log.RootLogger.WithFields(logrus.Fields{
-		"pkg":    "generate",
-		"stream": "codenames",
+		"pkg":    "build",
+		"stream": "codename",
 	})
 )
 

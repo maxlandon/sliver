@@ -45,7 +45,7 @@ import (
 	"time"
 
 	consts "github.com/bishopfox/sliver/client/constants"
-	"github.com/bishopfox/sliver/server/builder/canaries"
+	"github.com/bishopfox/sliver/server/build/canaries"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/cryptography"

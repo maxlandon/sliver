@@ -28,7 +28,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/bishopfox/sliver/server/builder/generate"
+
+	"github.com/bishopfox/sliver/server/build/codenames"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/msf"
 
@@ -138,7 +139,7 @@ func (rpc *SliverServer) MsfStage(ctx context.Context, req *clientpb.MsfStagerRe
 
 	// We only support windows at the moment
 	if req.GetOS() != "windows" {
-		return MSFStage, fmt.Errorf("%s is currently not suppoprted", req.GetOS())
+		return MSFStage, fmt.Errorf("%s is currently not supported", req.GetOS())
 	}
 
 	venomConfig := msf.VenomConfig{
@@ -158,7 +159,7 @@ func (rpc *SliverServer) MsfStage(ctx context.Context, req *clientpb.MsfStagerRe
 		return MSFStage, err
 	}
 	MSFStage.File.Data = stage
-	MSFStage.File.Name = generate.GetCodename()
+	MSFStage.File.Name = codenames.GetCodename()
 	return MSFStage, nil
 }
 
@@ -179,7 +180,7 @@ func generateCallbackURI() string {
 func randomPath(segments []string, filenames []string) []string {
 	seed := rand.NewSource(time.Now().UnixNano())
 	insecureRand := rand.New(seed)
-	n := insecureRand.Intn(3) // How many segements?
+	n := insecureRand.Intn(3) // How many segments?
 	genSegments := []string{}
 	for index := 0; index < n; index++ {
 		seg := segments[insecureRand.Intn(len(segments))]
