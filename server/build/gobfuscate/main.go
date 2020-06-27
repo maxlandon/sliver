@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/server/assets"
-	"github.com/bishopfox/sliver/server/builder/gogo"
+	"github.com/bishopfox/sliver/server/build/gogo"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/util"
 )
