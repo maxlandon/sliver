@@ -35,10 +35,11 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/assets"
-	"github.com/bishopfox/sliver/server/builder/canaries"
-	"github.com/bishopfox/sliver/server/builder/gobfuscate"
-	"github.com/bishopfox/sliver/server/builder/gogo"
-	"github.com/bishopfox/sliver/server/builder/storage"
+	"github.com/bishopfox/sliver/server/build/canaries"
+	"github.com/bishopfox/sliver/server/build/codenames"
+	"github.com/bishopfox/sliver/server/build/gobfuscate"
+	"github.com/bishopfox/sliver/server/build/gogo"
+	"github.com/bishopfox/sliver/server/build/implants"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/util"
@@ -196,8 +197,8 @@ func SliverShellcode(config *clientpb.ImplantConfig) (string, error) {
 	}
 	config.Format = clientpb.ImplantConfig_SHELLCODE
 	// Save to database
-	saveFileErr := storage.ImplantFileSave(config.Name, dest)
-	saveCfgErr := storage.ImplantConfigSave(config)
+	saveFileErr := implants.ImplantFileSave(config.Name, dest)
+	saveCfgErr := implants.ImplantConfigSave(config)
 	if saveFileErr != nil || saveCfgErr != nil {
 		buildLog.Errorf("Failed to save file to db %s %s", saveFileErr, saveCfgErr)
 	}
@@ -253,8 +254,8 @@ func SliverSharedLibrary(config *clientpb.ImplantConfig) (string, error) {
 	trimpath := "-trimpath"
 	_, err = gogo.GoBuild(*goConfig, pkgPath, dest, "c-shared", tags, ldflags, gcflags, asmflags, trimpath)
 	config.FileName = path.Base(dest)
-	saveFileErr := storage.ImplantFileSave(config.Name, dest)
-	saveCfgErr := storage.ImplantConfigSave(config)
+	saveFileErr := implants.ImplantFileSave(config.Name, dest)
+	saveCfgErr := implants.ImplantConfigSave(config)
 	if saveFileErr != nil || saveCfgErr != nil {
 		buildLog.Errorf("Failed to save file to db %s %s", saveFileErr, saveCfgErr)
 	}
@@ -296,8 +297,8 @@ func SliverExecutable(config *clientpb.ImplantConfig) (string, error) {
 	trimpath := "-trimpath"
 	_, err = gogo.GoBuild(*goConfig, pkgPath, dest, "", tags, ldflags, gcflags, asmflags, trimpath)
 	config.FileName = path.Base(dest)
-	saveFileErr := storage.ImplantFileSave(config.Name, dest)
-	saveCfgErr := storage.ImplantConfigSave(config)
+	saveFileErr := implants.ImplantFileSave(config.Name, dest)
+	saveCfgErr := implants.ImplantConfigSave(config)
 	if saveFileErr != nil || saveCfgErr != nil {
 		buildLog.Errorf("Failed to save file to db %s %s", saveFileErr, saveCfgErr)
 	}
@@ -312,7 +313,7 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 	}
 
 	if implantConfig.Name == "" {
-		implantConfig.Name = GetCodename()
+		implantConfig.Name = codenames.GetCodename()
 	}
 	buildLog.Infof("Generating new sliver binary '%s'", implantConfig.Name)
 
@@ -336,9 +337,9 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 	if err != nil {
 		return "", err
 	}
-	implantConfig.CACert = string(serverCACert)
-	implantConfig.Cert = string(sliverCert)
-	implantConfig.Key = string(sliverKey)
+	implantConfig.ECC_CACert = string(serverCACert)
+	implantConfig.ECC_ClientCert = string(sliverCert)
+	implantConfig.ECC_ClientKey = string(sliverKey)
 
 	// binDir - ~/.sliver/slivers/<os>/<arch>/<name>/bin
 	binDir := path.Join(projectGoPathDir, "bin")

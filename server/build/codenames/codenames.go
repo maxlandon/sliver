@@ -1,4 +1,4 @@
-package codename
+package codenames
 
 /*
 	Sliver Implant Framework
