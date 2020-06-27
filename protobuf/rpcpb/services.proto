@@ -101,12 +101,17 @@ service SliverRPC {
 
 service BuilderRPC {
 
+    // *** Version ***
+    rpc GetVersion(commonpb.Empty) returns (clientpb.Version);
+
+
+    // *** Builders ***
     // Builders call this method and get a stream of ImplantConfigs to build.
     // Generated artifacts are passed back to the server via the Built() callback
     // Builders may also call other builders via Build()
-    rpc Register(builderpb.BuilderManifest) returns (stream builderpb.BuildTask);
+    rpc Register(builderpb.FactoryManifest) returns (stream builderpb.BuildTask);
 
-    rpc Builders(commonpb.Empty) returns (builderpb.Builders);
+    rpc Factories(commonpb.Empty) returns (builderpb.Factories);
     rpc Build(clientpb.ImplantConfig) returns (builderpb.Artifact);
     rpc Built(builderpb.Artifact) returns (commonpb.Empty);
 }

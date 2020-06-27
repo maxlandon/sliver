@@ -27,6 +27,7 @@ import (
 	"github.com/bishopfox/sliver/client/version"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/log"
@@ -49,7 +50,9 @@ const (
 )
 
 // SliverServer - gRPC server
-type SliverServer struct{}
+type SliverServer struct {
+	buildRPC rpcpb.BuilderRPCClient
+}
 
 // GenericRequest - Generic request interface to use with generic handlers
 type GenericRequest interface {
@@ -66,8 +69,8 @@ type GenericResponse interface {
 }
 
 // NewSliverServer - Create new server instance
-func NewSliverServer() *SliverServer {
-	return &SliverServer{}
+func NewSliverServer(buildRPC rpcpb.BuilderRPCClient) *SliverServer {
+	return &SliverServer{buildRPC: buildRPC}
 }
 
 // GetVersion - Get the server version

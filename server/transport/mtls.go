@@ -19,6 +19,7 @@ package transport
 */
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -48,6 +49,26 @@ var (
 
 // StartClientListener - Start a mutual TLS listener
 func StartClientListener(host string, port uint16) (*grpc.Server, net.Listener, error) {
+	// Setup local build server
+	_, buildServerLn, err := LocalBuildServerListener()
+	if err != nil {
+		return nil, nil, err
+	}
+	ctxDialer := grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+		return buildServerLn.Dial()
+	})
+	buildServerOptions := []grpc.DialOption{
+		ctxDialer,
+		grpc.WithInsecure(), // This is an in-memory listener, no need for secure transport
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(ServerMaxMessageSize)),
+	}
+	buildServerConn, err := grpc.DialContext(context.Background(), "bufnet", buildServerOptions...)
+	if err != nil {
+		return nil, nil, err
+	}
+	builderRPC := rpcpb.NewBuilderRPCClient(buildServerConn)
+
+	// RPC Server
 	mtlsLog.Infof("Starting gRPC listener on %s:%d", host, port)
 	tlsConfig := getOperatorServerTLSConfig(host)
 	creds := credentials.NewTLS(tlsConfig)
@@ -63,7 +84,7 @@ func StartClientListener(host string, port uint16) (*grpc.Server, net.Listener, 
 	}
 	options = append(options, initLoggerMiddleware()...)
 	grpcServer := grpc.NewServer(options...)
-	rpcpb.RegisterSliverRPCServer(grpcServer, rpc.NewSliverServer())
+	rpcpb.RegisterSliverRPCServer(grpcServer, rpc.NewSliverServer(builderRPC))
 	go func() {
 		if err := grpcServer.Serve(ln); err != nil {
 			mtlsLog.Warnf("gRPC server exited with error: %v", err)

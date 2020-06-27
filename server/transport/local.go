@@ -19,10 +19,13 @@ package transport
 */
 
 import (
+	"context"
+	"net"
+
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
+	buildserver "github.com/bishopfox/sliver/server/build/server"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/server/rpc"
-	"github.com/bishopfox/sliver/server/rpc/buildserver"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 )
@@ -36,6 +39,25 @@ var (
 // LocalRPCServerListener - Bind gRPC server to an in-memory listener, which is
 //                 typically used for unit testing, but ... it should be fine
 func LocalRPCServerListener() (*grpc.Server, *bufconn.Listener, error) {
+	_, buildServerLn, err := LocalBuildServerListener()
+	if err != nil {
+		return nil, nil, err
+	}
+	ctxDialer := grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+		return buildServerLn.Dial()
+	})
+	buildServerOptions := []grpc.DialOption{
+		ctxDialer,
+		grpc.WithInsecure(), // This is an in-memory listener, no need for secure transport
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(ServerMaxMessageSize)),
+	}
+	buildServerConn, err := grpc.DialContext(context.Background(), "bufnet", buildServerOptions...)
+	if err != nil {
+		return nil, nil, err
+	}
+	builderRPC := rpcpb.NewBuilderRPCClient(buildServerConn)
+
+	// Local RPC Server
 	localLog.Infof("Binding RPC server to listener ...")
 	ln := bufconn.Listen(bufSize)
 	options := []grpc.ServerOption{
@@ -44,7 +66,7 @@ func LocalRPCServerListener() (*grpc.Server, *bufconn.Listener, error) {
 	}
 	options = append(options, initLoggerMiddleware()...)
 	grpcServer := grpc.NewServer(options...)
-	rpcpb.RegisterSliverRPCServer(grpcServer, rpc.NewSliverServer())
+	rpcpb.RegisterSliverRPCServer(grpcServer, rpc.NewSliverServer(builderRPC))
 	go func() {
 		if err := grpcServer.Serve(ln); err != nil {
 			localLog.Fatalf("gRPC local rpc server listener error: %v", err)

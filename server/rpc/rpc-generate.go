@@ -20,8 +20,6 @@ package rpc
 
 import (
 	"context"
-	"errors"
-	"path"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -32,6 +30,7 @@ import (
 
 // Generate - Generate a new implant
 func (rpc *SliverServer) Generate(ctx context.Context, req *clientpb.GenerateReq) (*clientpb.Generate, error) {
+
 	return nil, nil
 }
 
@@ -66,7 +65,7 @@ func (rpc *SliverServer) ImplantBuilds(ctx context.Context, _ *commonpb.Empty) (
 		Configs: map[string]*clientpb.ImplantConfig{},
 	}
 	for name, config := range configs {
-		builds.Configs[name] = config.ToProtobuf()
+		builds.Configs[name] = config
 	}
 	return builds, nil
 }
@@ -97,7 +96,7 @@ func (rpc *SliverServer) ImplantProfiles(ctx context.Context, _ *commonpb.Empty)
 	for name, config := range profiles.Profiles() {
 		implantProfiles.Profiles = append(implantProfiles.Profiles, &clientpb.ImplantProfile{
 			Name:   name,
-			Config: config.ToProtobuf(),
+			Config: config,
 		})
 	}
 	return implantProfiles, nil
@@ -105,17 +104,18 @@ func (rpc *SliverServer) ImplantProfiles(ctx context.Context, _ *commonpb.Empty)
 
 // SaveImplantProfile - Save a new profile
 func (rpc *SliverServer) SaveImplantProfile(ctx context.Context, profile *clientpb.ImplantProfile) (*clientpb.ImplantProfile, error) {
-	config := profiles.ImplantConfigFromProtobuf(profile.Config)
-	profile.Name = path.Base(profile.Name)
-	if 0 < len(profile.Name) && profile.Name != "." {
-		rpcLog.Infof("Saving new profile with name %#v", profile.Name)
-		err := profiles.ProfileSave(profile.Name, config)
-		if err != nil {
-			return nil, err
-		}
-		return profile, nil
-	}
-	return nil, errors.New("Invalid profile name")
+	return nil, nil
+	// config := profiles.ImplantConfigFromProtobuf(profile.Config)
+	// profile.Name = path.Base(profile.Name)
+	// if 0 < len(profile.Name) && profile.Name != "." {
+	// 	rpcLog.Infof("Saving new profile with name %#v", profile.Name)
+	// 	err := profiles.ProfileSave(profile.Name, config)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	return profile, nil
+	// }
+	// return nil, errors.New("Invalid profile name")
 }
 
 // ShellcodeRDI - Generates a RDI shellcode from a given DLL

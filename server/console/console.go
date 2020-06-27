@@ -36,23 +36,26 @@ import (
 
 // Start - Starts the server console
 func Start() {
-	_, ln, _ := transport.LocalListener()
-	ctxDialer := grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
-		return ln.Dial()
-	})
 
-	options := []grpc.DialOption{
+	// Local RPC Server
+	_, rpcLn, _ := transport.LocalRPCServerListener()
+	ctxDialer := grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+		return rpcLn.Dial()
+	})
+	rpcOptions := []grpc.DialOption{
 		ctxDialer,
 		grpc.WithInsecure(), // This is an in-memory listener, no need for secure transport
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(clienttransport.ClientMaxReceiveMessageSize)),
 	}
-	conn, err := grpc.DialContext(context.Background(), "bufnet", options...)
+	rpcConn, err := grpc.DialContext(context.Background(), "bufnet", rpcOptions...)
 	if err != nil {
 		fmt.Printf(Warn+"Failed to dial bufnet: %s", err)
 		return
 	}
-	defer conn.Close()
-	localRPC := rpcpb.NewSliverRPCClient(conn)
+	defer rpcConn.Close()
+	localRPC := rpcpb.NewSliverRPCClient(rpcConn)
+
+	// Start the console
 	clientconsole.Start(localRPC, serverOnlyCmds)
 }
 

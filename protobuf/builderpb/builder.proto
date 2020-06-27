@@ -18,11 +18,11 @@ message Artifact {
 }
 
 message BuildTask {
-    string GUID = 1;
+    string GUID = 1; // Corresponds to an Artifact GUID
     clientpb.ImplantConfig ImplantConfig = 2;
 }
 
-message BuilderManifest {
+message FactoryManifest {
     string Name = 1;
     string HostOS = 2;
     string HostArch = 3;
@@ -30,6 +30,6 @@ message BuilderManifest {
     repeated Target Targets = 4;
 }
 
-message Builders {
-    repeated BuilderManifest Builders = 1;
+message Factories {
+    repeated FactoryManifest Manifests = 1;
 }

@@ -3,8 +3,10 @@ package buildserver
 import (
 	"context"
 	"errors"
+	"runtime"
 	"time"
 
+	"github.com/bishopfox/sliver/client/version"
 	"github.com/bishopfox/sliver/protobuf/builderpb"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -33,60 +35,77 @@ func NewBuildServer() *BuildServer {
 	return &BuildServer{}
 }
 
+// GetVersion - Get the server version
+func (server *BuildServer) GetVersion(ctx context.Context, _ *commonpb.Empty) (*clientpb.Version, error) {
+	dirty := version.GitDirty != ""
+	semVer := version.SemanticVersion()
+	compiled, _ := version.Compiled()
+	return &clientpb.Version{
+		Major:      int32(semVer[0]),
+		Minor:      int32(semVer[1]),
+		Patch:      int32(semVer[2]),
+		Commit:     version.GitCommit,
+		Dirty:      dirty,
+		CompiledAt: compiled.Unix(),
+		OS:         runtime.GOOS,
+		Arch:       runtime.GOARCH,
+	}, nil
+}
+
 // Register - Register a new builder
-func (b *BuildServer) Register(manifest *builderpb.BuilderManifest, stream rpcpb.BuilderRPC_RegisterServer) error {
-	builder := core.Builders.Add(manifest, stream)
-	if builder == nil {
+func (server *BuildServer) Register(manifest *builderpb.FactoryManifest, stream rpcpb.BuilderRPC_RegisterServer) error {
+	factory := core.Factories.Add(manifest, stream)
+	if factory == nil {
 		buildServerLog.Error("Failed to initialize builder")
 		return ErrBuilderInitializationFailure
 	}
-	buildServerLog.Infof("Builder registered (%d): %v", builder.ID, manifest)
-	defer core.Builders.Remove(builder.ID)
-	for buildTask := range builder.Builds {
+	buildServerLog.Infof("Builder registered (%d): %v", factory.ID, manifest)
+	defer core.Factories.Remove(factory.ID)
+	for buildTask := range factory.Builds {
 		err := stream.Send(buildTask)
 		if err != nil {
 			buildServerLog.Errorf("Failed to send build task to builder %s", err)
 			return err
 		}
 	}
-	buildServerLog.Infof("Closing connection to builder %d", builder.ID)
+	buildServerLog.Infof("Closing connection to builder %d", factory.ID)
 	return nil
 }
 
-// Builders - List builders
-func (b *BuildServer) Builders(ctx context.Context, _ *commonpb.Empty) (*builderpb.Builders, error) {
-	builders := []*builderpb.BuilderManifest{}
-	for _, builder := range core.Builders.List() {
-		builders = append(builders, builder.Manifest)
+// Factories - List builders
+func (server *BuildServer) Factories(ctx context.Context, _ *commonpb.Empty) (*builderpb.Factories, error) {
+	factoryManifests := []*builderpb.FactoryManifest{}
+	for _, factory := range core.Factories.List() {
+		factoryManifests = append(factoryManifests, factory.Manifest)
 	}
-	return &builderpb.Builders{Builders: builders}, nil
+	return &builderpb.Factories{Manifests: factoryManifests}, nil
 }
 
 // Build - Build an implant using a given config
-func (b *BuildServer) Build(ctx context.Context, config *clientpb.ImplantConfig) (*builderpb.Artifact, error) {
-	builder := core.Builders.GetBuilderFor(config)
-	if builder == nil {
+func (server *BuildServer) Build(ctx context.Context, config *clientpb.ImplantConfig) (*builderpb.Artifact, error) {
+	factory := core.Factories.GetFactoryFor(config)
+	if factory == nil {
 		return nil, ErrNoBuildersForTarget
 	}
-	artifactChan, guid, err := builder.Build(config)
+	artifactChan, guid, err := factory.Build(config)
 	if err != nil {
 		return nil, err
 	}
 	buildServerLog.Infof("Started build task %s", guid)
 	select {
 	case artifact := <-artifactChan:
-		buildServerLog.Infof("Builder returned artifact for build task %s", guid)
+		buildServerLog.Infof("Factory produced artifact for build task %s", guid)
 		return artifact, nil
 	case <-time.After(time.Duration(config.BuildTimeout)):
 		buildServerLog.Warnf("Build task %s exceeded timeout", guid)
-		builder.Cancel(guid)
+		factory.Cancel(guid)
 		return nil, ErrBuildTaskTimeout
 	}
 }
 
 // Built - Upload a built artifact
-func (b *BuildServer) Built(ctx context.Context, artifact *builderpb.Artifact) (*commonpb.Empty, error) {
-	err := core.Builders.BuiltArtifact(artifact)
+func (server *BuildServer) Built(ctx context.Context, artifact *builderpb.Artifact) (*commonpb.Empty, error) {
+	err := core.Factories.BuiltArtifact(artifact)
 	if err != nil {
 		buildServerLog.Warnf("Error handling build artifact %s", err)
 	}
