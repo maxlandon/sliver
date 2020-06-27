@@ -4,12 +4,27 @@ import (
 	"context"
 	"io"
 	"net"
+	"os"
+	"runtime"
 
 	"github.com/bishopfox/sliver/protobuf/builderpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
+	"github.com/bishopfox/sliver/server/build/generate"
+	"github.com/bishopfox/sliver/server/build/gogo"
 	"github.com/bishopfox/sliver/server/log"
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
+)
+
+const (
+	kb = 1024
+	mb = 1024 * kb
+	gb = 1024 * mb
+	// FactoryClientMaxMessageSize - Max size of a factory client message
+	FactoryClientMaxMessageSize = 2 * gb
+
+	localName = "local"
 )
 
 var (
@@ -23,43 +38,142 @@ type Factory struct {
 }
 
 // NewFactory - Initialize a new build factory
-func NewFactory(builderRPC rpcpb.BuilderRPCClient) *BuildFactory {
-	return &BuildFactory{builderRPC: builderRPC}
+func NewFactory() *Factory {
+	return &Factory{}
 }
 
-// StartLocalFactory - Start the factory via local connection
-func (f *Factory) StartLocalFactory(localLn *bufconn.Listener) error {
+// StartLocal - Start the factory via local connection
+func (f *Factory) StartLocal(localLn *bufconn.Listener) error {
 	ctxDialer := grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
 		return localLn.Dial()
 	})
-	buildServerOptions := []grpc.DialOption{
+	options := []grpc.DialOption{
 		ctxDialer,
 		grpc.WithInsecure(), // This is an in-memory listener, no need for secure transport
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(ServerMaxMessageSize)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(FactoryClientMaxMessageSize)),
 	}
-	conn, err := grpc.DialContext(context.Background(), "bufnet", buildServerOptions...)
+	conn, err := grpc.DialContext(context.Background(), "bufnet", options...)
 	if err != nil {
 		return err
 	}
-	builderRPC := rpcpb.NewBuilderRPCClient(conn)
-	manifest, err := f.GenerateManifest()
-	if err != nil {
-		return err
-	}
-	taskStream, err := builderRPC.Register(context.Background(), manifest)
+	f.builderRPC = rpcpb.NewBuilderRPCClient(conn)
+	manifest := f.GenerateManifest(true)
+	taskStream, err := f.builderRPC.Register(context.Background(), manifest)
 	if err != nil {
 		return err
 	}
 	for {
 		task, err := taskStream.Recv()
-		if err == io.EOF || event == nil {
-			return
+		if err == io.EOF || task == nil {
+			return nil
+		}
+		if err != nil {
+			return err
 		}
 		factoryLog.Infof("Received build task %v", task)
 	}
 }
 
 // GenerateManifest - Generate a manifest for the factory
-func (f *Factory) GenerateManifest() (*builderpb.FactoryManifest, error) {
-	return nil, nil
+func (f *Factory) GenerateManifest(isLocal bool) *builderpb.FactoryManifest {
+	factoryLog.Infof("Generating manifest ...")
+	name, err := os.Hostname()
+	if err != nil {
+		factoryLog.Warnf("Failed to determine hostname %s", err)
+		name = uuid.New().String()
+	}
+	if isLocal {
+		name = localName
+	}
+
+	return &builderpb.FactoryManifest{
+		Name:     name,
+		HostArch: runtime.GOARCH,
+		HostOS:   runtime.GOOS,
+		Targets: []*builderpb.Target{
+			f.getWindowsX86Targets(),
+			f.getWindowsAMD64Targets(),
+			f.getLinuxX86Targets(),
+			f.getLinuxAMD64Targets(),
+			f.getDarwinAMD64Targets(),
+		},
+	}
+}
+
+func (f *Factory) getWindowsX86Targets() *builderpb.Target {
+	target := &builderpb.Target{
+		GOOS:   gogo.Windows,
+		GOARCH: gogo.X86,
+		Formats: []builderpb.Target_OutputFormat{
+			builderpb.Target_EXECUTABLE,
+		},
+	}
+	cc := generate.GetCCompiler(gogo.X86)
+	if cc != "" {
+		factoryLog.Infof("Found %s cc = %s", gogo.X86, cc)
+		target.Formats = append(target.Formats, builderpb.Target_SHARED_LIB)
+		target.Formats = append(target.Formats, builderpb.Target_SHELLCODE)
+		target.Formats = append(target.Formats, builderpb.Target_SERVICE)
+	}
+	return target
+}
+
+func (f *Factory) getWindowsAMD64Targets() *builderpb.Target {
+	target := &builderpb.Target{
+		GOOS:   gogo.Windows,
+		GOARCH: gogo.AMD64,
+		Formats: []builderpb.Target_OutputFormat{
+			builderpb.Target_EXECUTABLE,
+		},
+	}
+	cc := generate.GetCCompiler(gogo.AMD64)
+	if cc != "" {
+		factoryLog.Infof("Found %s cc = %s", gogo.AMD64, cc)
+		target.Formats = append(target.Formats, builderpb.Target_SHARED_LIB)
+		target.Formats = append(target.Formats, builderpb.Target_SHELLCODE)
+		target.Formats = append(target.Formats, builderpb.Target_SERVICE)
+	}
+	return target
+}
+
+func (f *Factory) getLinuxX86Targets() *builderpb.Target {
+	target := &builderpb.Target{
+		GOOS:   gogo.Linux,
+		GOARCH: gogo.X86,
+		Formats: []builderpb.Target_OutputFormat{
+			builderpb.Target_EXECUTABLE,
+		},
+	}
+	if runtime.GOOS == gogo.Linux {
+		target.Formats = append(target.Formats, builderpb.Target_SHARED_LIB)
+	}
+	return target
+}
+
+func (f *Factory) getLinuxAMD64Targets() *builderpb.Target {
+	target := &builderpb.Target{
+		GOOS:   gogo.Linux,
+		GOARCH: gogo.AMD64,
+		Formats: []builderpb.Target_OutputFormat{
+			builderpb.Target_EXECUTABLE,
+		},
+	}
+	if runtime.GOOS == gogo.Linux {
+		target.Formats = append(target.Formats, builderpb.Target_SHARED_LIB)
+	}
+	return target
+}
+
+func (f *Factory) getDarwinAMD64Targets() *builderpb.Target {
+	target := &builderpb.Target{
+		GOOS:   gogo.Darwin,
+		GOARCH: gogo.AMD64,
+		Formats: []builderpb.Target_OutputFormat{
+			builderpb.Target_EXECUTABLE,
+		},
+	}
+	if runtime.GOOS == gogo.Darwin {
+		target.Formats = append(target.Formats, builderpb.Target_SHARED_LIB)
+	}
+	return target
 }

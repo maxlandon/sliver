@@ -23,6 +23,7 @@ import (
 	"net"
 
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
+	"github.com/bishopfox/sliver/server/build/factory"
 	buildserver "github.com/bishopfox/sliver/server/build/server"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/server/rpc"
@@ -55,6 +56,13 @@ func LocalRPCServerListener() (*grpc.Server, *bufconn.Listener, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
+	go func() {
+		if err := factory.NewFactory().StartLocal(buildServerLn); err != nil {
+			localLog.Fatalf("Local build factory closed %s", err)
+		}
+	}()
+
 	builderRPC := rpcpb.NewBuilderRPCClient(buildServerConn)
 
 	// Local RPC Server

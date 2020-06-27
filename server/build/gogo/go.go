@@ -32,14 +32,29 @@ import (
 const (
 	goDirName     = "go"
 	goPathDirName = "gopath"
+
+	// Darwin - OS
+	Darwin = "darwin"
+	// Linux - OS
+	Linux = "linux"
+	// Windows - OS
+	Windows = "windows"
+
+	// X86 - Arch
+	X86 = "386"
+	// AMD64 - Arch
+	AMD64 = "amd64"
+	// ARM - Arch
+	ARM = "arm"
+	// ARM64 - Arch
+	ARM64 = "arm64"
 )
 
 var (
 	gogoLog = log.NamedLogger("build", "gogo")
 
-	// ValidCompilerTargets - Supported compiler targets
-	ValidCompilerTargets = map[string]bool{
-		"darwin/386":    true,
+	// SupportedCompilerTargets - Supported compiler targets
+	SupportedCompilerTargets = map[string]bool{
 		"darwin/amd64":  true,
 		"linux/386":     true,
 		"linux/amd64":   true,
@@ -77,7 +92,7 @@ func GetTempDir() string {
 // GoCmd - Execute a go command
 func GoCmd(config GoConfig, cwd string, command []string) ([]byte, error) {
 	target := fmt.Sprintf("%s/%s", config.GOOS, config.GOARCH)
-	if _, ok := ValidCompilerTargets[target]; !ok {
+	if _, ok := SupportedCompilerTargets[target]; !ok {
 		return nil, fmt.Errorf(fmt.Sprintf("Invalid compiler target: %s", target))
 	}
 	goBinPath := path.Join(config.GOROOT, "bin", "go")

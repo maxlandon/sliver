@@ -9,6 +9,14 @@ import "clientpb/client.proto";
 message Target  {
     string GOOS = 1;
     string GOARCH = 2;
+
+    enum OutputFormat {
+        SHARED_LIB = 0;
+        SHELLCODE = 1;
+        EXECUTABLE = 2;
+        SERVICE = 3;
+    };
+    repeated OutputFormat Formats = 3;
 }
 
 message Artifact {

@@ -76,6 +76,7 @@ func (f *Factory) Cancel(guid string) {
 
 // factories - Manage active clients
 type factories struct {
+	Local  *Factory
 	mutex  *sync.RWMutex
 	active *map[int]*Factory
 }

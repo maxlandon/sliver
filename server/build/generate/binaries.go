@@ -155,7 +155,7 @@ func SliverShellcode(config *clientpb.ImplantConfig) (string, error) {
 	// Don't use a cross-compiler if the target bin is built on the same platform
 	// as the sliver-server.
 	if runtime.GOOS != config.GOOS {
-		crossCompiler = getCCompiler(config.GOARCH)
+		crossCompiler = GetCCompiler(config.GOARCH)
 		if crossCompiler == "" {
 			return "", errors.New("No cross-compiler (mingw) found")
 		}
@@ -214,7 +214,7 @@ func SliverSharedLibrary(config *clientpb.ImplantConfig) (string, error) {
 	// Don't use a cross-compiler if the target bin is built on the same platform
 	// as the sliver-server.
 	if runtime.GOOS != config.GOOS {
-		crossCompiler = getCCompiler(config.GOARCH)
+		crossCompiler = GetCCompiler(config.GOARCH)
 		if crossCompiler == "" {
 			return "", errors.New("No cross-compiler (mingw) found")
 		}
@@ -308,7 +308,7 @@ func SliverExecutable(config *clientpb.ImplantConfig) (string, error) {
 // This function is a little too long, we should probably refactor it as some point
 func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.GoConfig) (string, error) {
 	target := fmt.Sprintf("%s/%s", implantConfig.GOOS, implantConfig.GOARCH)
-	if _, ok := gogo.ValidCompilerTargets[target]; !ok {
+	if _, ok := gogo.SupportedCompilerTargets[target]; !ok {
 		return "", fmt.Errorf("Invalid compiler target: %s", target)
 	}
 
@@ -461,25 +461,26 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 	return sliverPkgDir, nil
 }
 
-func getCCompiler(arch string) string {
+// GetCCompiler - Get path to cross-compiler for arch
+func GetCCompiler(arch string) string {
 	var found bool // meh, ugly
 	var compiler string
-	if arch == "amd64" {
+	if arch == gogo.AMD64 {
 		compiler = os.Getenv(SliverCC64EnvVar)
 	}
-	if arch == "386" {
+	if arch == gogo.X86 {
 		compiler = os.Getenv(SliverCC32EnvVar)
 	}
 	if compiler == "" {
 		if compiler, found = defaultMingwPath[arch]; !found {
-			compiler = defaultMingwPath["amd64"] // should not happen, but just in case ...
+			compiler = defaultMingwPath[gogo.AMD64] // should not happen, but just in case ...
 		}
 	}
 	if _, err := os.Stat(compiler); os.IsNotExist(err) {
 		buildLog.Warnf("CC path %v does not exist", compiler)
 		return ""
 	}
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == gogo.Windows {
 		compiler = "" // TODO: Add windows mingw support
 	}
 	buildLog.Infof("CC = %v", compiler)
