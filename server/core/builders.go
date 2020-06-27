@@ -19,11 +19,15 @@ package core
 */
 
 import (
+	"errors"
 	"sync"
+
+	insecureRand "math/rand"
 
 	"github.com/bishopfox/sliver/protobuf/builderpb"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
+	"github.com/google/uuid"
 )
 
 var (
@@ -33,14 +37,41 @@ var (
 		mutex:  &sync.RWMutex{},
 	}
 	builderID = new(int)
+
+	// ErrBuildTaskNotFound - We got an artifact for a task that no longer exists
+	ErrBuildTaskNotFound = errors.New("Build task not found")
 )
 
 // Builder - Single builder connection
 type Builder struct {
-	ID       int
-	Manifest *builderpb.BuilderManifest
-	Stream   rpcpb.BuilderRPC_RegisterServer
-	Builds   chan *clientpb.ImplantConfig
+	ID             int
+	Manifest       *builderpb.BuilderManifest
+	Builds         chan *builderpb.BuildTask
+	stream         rpcpb.BuilderRPC_RegisterServer
+	artifactsMutex *sync.Mutex
+	artifacts      map[string]chan *builderpb.Artifact
+}
+
+// Build - Build an implant based on a config
+func (b *Builder) Build(config *clientpb.ImplantConfig) (<-chan *builderpb.Artifact, string, error) {
+	b.artifactsMutex.Lock()
+	defer b.artifactsMutex.Unlock()
+	guid := uuid.New().String()
+	buildTask := &builderpb.BuildTask{
+		GUID:          guid,
+		ImplantConfig: config,
+	}
+	artifactChan := make(chan *builderpb.Artifact)
+	b.artifacts[guid] = artifactChan
+	b.Builds <- buildTask
+	return artifactChan, buildTask.GUID, nil
+}
+
+// Cancel - Cancel a build task and ignore result
+func (b *Builder) Cancel(guid string) {
+	b.artifactsMutex.Lock()
+	defer b.artifactsMutex.Unlock()
+	delete(b.artifacts, guid)
 }
 
 // builders - Manage active clients
@@ -54,10 +85,12 @@ func (b *builders) Add(manifest *builderpb.BuilderManifest, stream rpcpb.Builder
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	builder := &Builder{
-		ID:       nextBuilderID(),
-		Manifest: manifest,
-		Stream:   stream,
-		Builds:   make(chan *clientpb.ImplantConfig),
+		ID:             nextBuilderID(),
+		Manifest:       manifest,
+		Builds:         make(chan *builderpb.BuildTask),
+		stream:         stream,
+		artifactsMutex: &sync.Mutex{},
+		artifacts:      map[string]chan *builderpb.Artifact{},
 	}
 	(*b.active)[builder.ID] = builder
 	return builder
@@ -75,7 +108,7 @@ func (b builders) List() []*Builder {
 }
 
 // Get - Get a specific builder
-func (b *builder) Get(builderID int) *Builder {
+func (b *builders) Get(builderID int) *Builder {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	if builder, ok := (*b.active)[builderID]; ok {
@@ -85,13 +118,12 @@ func (b *builder) Get(builderID int) *Builder {
 }
 
 // GetBuilderFor - Get a builder for a specific target
-func (b *builder) GetBuilderFor(config *clientpb.ImplantConfig) *Builder {
+func (b *builders) GetBuilderFor(config *clientpb.ImplantConfig) *Builder {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-
 	availableBuilders := []*Builder{}
-	for builder := range *b.active {
-		for _, target := builder.Manifest.Targets {
+	for _, builder := range *b.active {
+		for _, target := range builder.Manifest.Targets {
 			if target.GOOS == config.GOOS && target.GOARCH == config.GOARCH {
 				availableBuilders = append(availableBuilders, builder)
 			}
@@ -100,8 +132,24 @@ func (b *builder) GetBuilderFor(config *clientpb.ImplantConfig) *Builder {
 	if len(availableBuilders) < 1 {
 		return nil
 	}
-	index := insecureRand.Intn(0, len(avavailableBuilders))
+	index := insecureRand.Intn(len(availableBuilders))
 	return availableBuilders[index]
+}
+
+func (b *builders) BuiltArtifact(artifact *builderpb.Artifact) error {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	for _, builder := range *b.active {
+		if artifactChan, ok := builder.artifacts[artifact.GUID]; ok {
+			builder.artifactsMutex.Lock()
+			defer builder.artifactsMutex.Unlock()
+			artifactChan <- artifact
+			delete(builder.artifacts, artifact.GUID)
+			close(artifactChan)
+			return nil
+		}
+	}
+	return ErrBuildTaskNotFound
 }
 
 // RemoveClient - Remove a client struct atomically

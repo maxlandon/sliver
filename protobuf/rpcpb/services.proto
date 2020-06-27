@@ -104,7 +104,7 @@ service BuilderRPC {
     // Builders call this method and get a stream of ImplantConfigs to build.
     // Generated artifacts are passed back to the server via the Built() callback
     // Builders may also call other builders via Build()
-    rpc Register(builderpb.BuilderManifest) returns (stream clientpb.ImplantConfig);
+    rpc Register(builderpb.BuilderManifest) returns (stream builderpb.BuildTask);
 
     rpc Builders(commonpb.Empty) returns (builderpb.Builders);
     rpc Build(clientpb.ImplantConfig) returns (builderpb.Artifact);

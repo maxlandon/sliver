@@ -47,7 +47,7 @@ import (
 )
 
 var (
-	buildLog = log.NamedLogger("builder", "generate")
+	buildLog = log.NamedLogger("build", "generate")
 	// Fix #67: use an arch specific compiler
 	defaultMingwPath = map[string]string{
 		"386":   "/usr/bin/i686-w64-mingw32-gcc",

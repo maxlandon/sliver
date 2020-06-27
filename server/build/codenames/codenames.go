@@ -29,15 +29,10 @@ import (
 
 	"github.com/bishopfox/sliver/server/assets"
 	"github.com/bishopfox/sliver/server/log"
-
-	"github.com/sirupsen/logrus"
 )
 
 var (
-	codenameLog = log.RootLogger.WithFields(logrus.Fields{
-		"pkg":    "build",
-		"stream": "codename",
-	})
+	codenameLog = log.NamedLogger("build", "codenames")
 )
 
 // readlines - Read lines of a text file into a slice

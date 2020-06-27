@@ -44,7 +44,7 @@ const (
 )
 
 var (
-	storageLog = log.NamedLogger("generate", "storage")
+	storageLog = log.NamedLogger("build", "implants")
 
 	// ErrImplantNotFound - More descriptive 'key not found' error
 	ErrImplantNotFound = errors.New("Implant not found")

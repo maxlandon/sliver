@@ -38,7 +38,7 @@ const (
 )
 
 var (
-	canaryLog  = log.NamedLogger("builder", "canaries")
+	canaryLog  = log.NamedLogger("build", "canaries")
 	dnsCharSet = []rune("abcdefghijklmnopqrstuvwxyz0123456789-_")
 )
 

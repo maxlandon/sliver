@@ -48,23 +48,26 @@ message ImplantConfig {
   string GOOS = 1;
   string GOARCH = 2;
   string Name = 3;
-  string CACert = 4;
-  string Cert = 5;
-  string Key = 6;
-  bool Debug = 7;
-  bool ObfuscateSymbols = 30;
+  
+  string ECC_CACert = 4;
+  string ECC_ClientCert = 5;
+  string ECC_ClientKey = 6;
 
-  uint32 ReconnectInterval = 8;
-  uint32 MaxConnectionErrors = 9;
+  string RSA_Cert = 7;
+
+  bool Debug = 10;
+  bool ObfuscateSymbols = 11;
+  uint32 ReconnectInterval = 12;
+  uint32 MaxConnectionErrors = 13;
 
   // c2
-  repeated ImplantC2 C2 = 10;
-  repeated string CanaryDomains = 11;
+  repeated ImplantC2 C2 = 20;
+  repeated string CanaryDomains = 21;
 
-  bool LimitDomainJoined = 20;
-  string LimitDatetime = 21;
-  string LimitHostname = 22;
-  string LimitUsername = 23;
+  bool LimitDomainJoined = 30;
+  string LimitDatetime = 31;
+  string LimitHostname = 32;
+  string LimitUsername = 33;
 
   enum OutputFormat {
     SHARED_LIB = 0;
@@ -73,11 +76,12 @@ message ImplantConfig {
     SERVICE = 3;
   }
 
-  OutputFormat Format = 25;
-  bool IsSharedLib = 26;
+  OutputFormat Format = 45;
+  bool IsSharedLib = 46;
+  string FileName = 47;
+  bool IsService = 48;
 
-  string FileName = 27;
-  bool IsService = 28;
+  int64 BuildTimeout = 50;
 }
 
 // Configs of previously built implants

@@ -11,10 +11,15 @@ message Target  {
     string GOARCH = 2;
 }
 
-
 message Artifact {
-    clientpb.ImplantConfig ImplantConfig = 1;
-    commonpb.File File = 2;
+    string GUID = 1;
+    clientpb.ImplantConfig ImplantConfig = 2;
+    commonpb.File File = 3;
+}
+
+message BuildTask {
+    string GUID = 1;
+    clientpb.ImplantConfig ImplantConfig = 2;
 }
 
 message BuilderManifest {
@@ -26,5 +31,5 @@ message BuilderManifest {
 }
 
 message Builders {
-    map<string, BuilderManifest> Builders = 1;
+    repeated BuilderManifest Builders = 1;
 }

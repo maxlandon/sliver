@@ -35,7 +35,7 @@ const (
 )
 
 var (
-	gogoLog = log.NamedLogger("gogo", "compiler")
+	gogoLog = log.NamedLogger("build", "gogo")
 
 	// ValidCompilerTargets - Supported compiler targets
 	ValidCompilerTargets = map[string]bool{

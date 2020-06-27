@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	obfuscateLog = log.NamedLogger("gobfuscate", "obfuscator")
+	obfuscateLog = log.NamedLogger("build", "gobfuscate")
 )
 
 // Gobfuscate - Obfuscate Go code
