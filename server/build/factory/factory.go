@@ -86,7 +86,10 @@ func (f *Factory) executeTask(task *builderpb.BuildTask) {
 	case clientpb.ImplantConfig_SHARED_LIB:
 		path, err = generate.SliverSharedLibrary(task.ImplantConfig)
 	}
-	artifact := &builderpb.Artifact{ImplantConfig: task.ImplantConfig}
+	artifact := &builderpb.Artifact{
+		GUID:          task.GUID,
+		ImplantConfig: task.ImplantConfig,
+	}
 	if err == nil {
 		data, err := ioutil.ReadFile(path)
 		if err == nil {
