@@ -3,11 +3,14 @@ package factory
 import (
 	"context"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"runtime"
 
 	"github.com/bishopfox/sliver/protobuf/builderpb"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/server/build/generate"
 	"github.com/bishopfox/sliver/server/build/gogo"
@@ -70,8 +73,28 @@ func (f *Factory) StartLocal(localLn *bufconn.Listener) error {
 		if err != nil {
 			return err
 		}
-		factoryLog.Infof("Received build task %v", task)
+		go f.executeTask(task)
 	}
+}
+
+func (f *Factory) executeTask(task *builderpb.BuildTask) {
+	var path string
+	var err error
+	switch task.ImplantConfig.Format {
+	case clientpb.ImplantConfig_EXECUTABLE:
+		path, err = generate.SliverExecutable(task.ImplantConfig)
+	case clientpb.ImplantConfig_SHARED_LIB:
+		path, err = generate.SliverSharedLibrary(task.ImplantConfig)
+	}
+	artifact := &builderpb.Artifact{ImplantConfig: task.ImplantConfig}
+	if err == nil {
+		data, err := ioutil.ReadFile(path)
+		if err == nil {
+			artifact.File = &commonpb.File{Data: data}
+		}
+	}
+	factoryLog.Infof("Build completed: %s", path)
+	f.builderRPC.Built(context.Background(), artifact)
 }
 
 // GenerateManifest - Generate a manifest for the factory

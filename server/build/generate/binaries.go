@@ -40,7 +40,6 @@ import (
 	"github.com/bishopfox/sliver/server/build/gobfuscate"
 	"github.com/bishopfox/sliver/server/build/gogo"
 	"github.com/bishopfox/sliver/server/build/implants"
-	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/util"
 
@@ -331,24 +330,14 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 	os.MkdirAll(projectGoPathDir, 0700)
 	goConfig.GOPATH = projectGoPathDir
 
-	// Cert PEM encoded certificates
-	serverCACert, _, _ := certs.GetCertificateAuthorityPEM(certs.ServerCA)
-	sliverCert, sliverKey, err := certs.SliverGenerateECCCertificate(implantConfig.Name)
-	if err != nil {
-		return "", err
-	}
-	implantConfig.ECC_CACert = string(serverCACert)
-	implantConfig.ECC_ClientCert = string(sliverCert)
-	implantConfig.ECC_ClientKey = string(sliverKey)
-
 	// binDir - ~/.sliver/slivers/<os>/<arch>/<name>/bin
 	binDir := path.Join(projectGoPathDir, "bin")
 	os.MkdirAll(binDir, 0700)
 
 	// srcDir - ~/.sliver/slivers/<os>/<arch>/<name>/src
 	srcDir := path.Join(projectGoPathDir, "src")
-	assets.SetupGoPath(srcDir)            // Extract GOPATH dependency files
-	err = util.ChmodR(srcDir, 0600, 0700) // Ensures src code files are writable
+	assets.SetupGoPath(srcDir)             // Extract GOPATH dependency files
+	err := util.ChmodR(srcDir, 0600, 0700) // Ensures src code files are writable
 	if err != nil {
 		buildLog.Errorf("fs perms: %v", err)
 		return "", err

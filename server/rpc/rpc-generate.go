@@ -20,18 +20,36 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/server/build/canaries"
+	"github.com/bishopfox/sliver/server/build/codenames"
 	"github.com/bishopfox/sliver/server/build/implants"
 	"github.com/bishopfox/sliver/server/build/profiles"
+	"github.com/bishopfox/sliver/server/certs"
 )
 
 // Generate - Generate a new implant
 func (rpc *SliverServer) Generate(ctx context.Context, req *clientpb.GenerateReq) (*clientpb.Generate, error) {
-
-	return nil, nil
+	// Cert PEM encoded certificates
+	if req.Config.Name == "" {
+		req.Config.Name = codenames.GetCodename()
+	}
+	caCert, _, _ := certs.GetCertificateAuthorityPEM(certs.ServerCA)
+	clientCert, clientKey, err := certs.SliverGenerateECCCertificate(req.Config.Name)
+	rsaKey, _, _ := certs.SliverGenerateRSACertificate(req.Config.Name)
+	if err != nil {
+		return nil, err
+	}
+	req.Config.ECC_CACert = string(caCert)
+	req.Config.ECC_ClientCert = string(clientCert)
+	req.Config.ECC_ClientKey = string(clientKey)
+	req.Config.RSA_Cert = string(rsaKey)
+	req.Config.BuildTimeout = int64(time.Hour)
+	artifact, err := rpc.buildRPC.Build(ctx, req.Config)
+	return &clientpb.Generate{File: artifact.File}, err
 }
 
 // Regenerate - Regenerate a previously generated implant
