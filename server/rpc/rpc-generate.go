@@ -22,6 +22,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/bishopfox/sliver/protobuf/builderpb"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/server/build/canaries"
@@ -29,6 +30,7 @@ import (
 	"github.com/bishopfox/sliver/server/build/implants"
 	"github.com/bishopfox/sliver/server/build/profiles"
 	"github.com/bishopfox/sliver/server/certs"
+	"github.com/google/uuid"
 )
 
 // Generate - Generate a new implant
@@ -39,7 +41,10 @@ func (rpc *SliverServer) Generate(ctx context.Context, req *clientpb.GenerateReq
 	}
 	caCert, _, _ := certs.GetCertificateAuthorityPEM(certs.ServerCA)
 	clientCert, clientKey, err := certs.SliverGenerateECCCertificate(req.Config.Name)
-	rsaKey, _, _ := certs.SliverGenerateRSACertificate(req.Config.Name)
+	if err != nil {
+		return nil, err
+	}
+	rsaKey, _, err := certs.SliverGenerateRSACertificate(req.Config.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +53,12 @@ func (rpc *SliverServer) Generate(ctx context.Context, req *clientpb.GenerateReq
 	req.Config.ECC_ClientKey = string(clientKey)
 	req.Config.RSA_Cert = string(rsaKey)
 	req.Config.BuildTimeout = int64(time.Hour)
-	artifact, err := rpc.buildRPC.Build(ctx, req.Config)
+	guid := uuid.New().String()
+	buildTask := &builderpb.BuildTask{
+		GUID:          guid,
+		ImplantConfig: req.Config,
+	}
+	artifact, err := rpc.buildRPC.Build(ctx, buildTask)
 	return &clientpb.Generate{File: artifact.File}, err
 }
 

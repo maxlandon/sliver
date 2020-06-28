@@ -27,7 +27,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/builderpb"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
-	"github.com/google/uuid"
 )
 
 var (
@@ -53,18 +52,13 @@ type Factory struct {
 }
 
 // Build - Build an implant based on a config
-func (f *Factory) Build(config *clientpb.ImplantConfig) (<-chan *builderpb.Artifact, string, error) {
+func (f *Factory) Build(task *builderpb.BuildTask) (<-chan *builderpb.Artifact, error) {
 	f.artifactsMutex.Lock()
 	defer f.artifactsMutex.Unlock()
-	guid := uuid.New().String()
-	buildTask := &builderpb.BuildTask{
-		GUID:          guid,
-		ImplantConfig: config,
-	}
 	artifactChan := make(chan *builderpb.Artifact)
-	f.artifacts[guid] = artifactChan
-	f.Builds <- buildTask
-	return artifactChan, buildTask.GUID, nil
+	f.artifacts[task.GUID] = artifactChan
+	f.Builds <- task
+	return artifactChan, nil
 }
 
 // Cancel - Cancel a build task and ignore result

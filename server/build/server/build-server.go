@@ -82,23 +82,23 @@ func (server *BuildServer) Factories(ctx context.Context, _ *commonpb.Empty) (*b
 }
 
 // Build - Build an implant using a given config
-func (server *BuildServer) Build(ctx context.Context, config *clientpb.ImplantConfig) (*builderpb.Artifact, error) {
-	factory := core.Factories.GetFactoryFor(config)
+func (server *BuildServer) Build(ctx context.Context, task *builderpb.BuildTask) (*builderpb.Artifact, error) {
+	factory := core.Factories.GetFactoryFor(task.ImplantConfig)
 	if factory == nil {
 		return nil, ErrNoBuildersForTarget
 	}
-	artifactChan, guid, err := factory.Build(config)
+	artifactChan, err := factory.Build(task)
 	if err != nil {
 		return nil, err
 	}
-	buildServerLog.Infof("Started build task %s", guid)
+	buildServerLog.Infof("Started build task %s", task.GUID)
 	select {
 	case artifact := <-artifactChan:
-		buildServerLog.Infof("Factory produced artifact for build task %s", guid)
+		buildServerLog.Infof("Factory produced artifact for build task %s", task.GUID)
 		return artifact, nil
-	case <-time.After(time.Duration(config.BuildTimeout)):
-		buildServerLog.Warnf("Build task %s exceeded timeout", guid)
-		factory.Cancel(guid)
+	case <-time.After(time.Duration(task.ImplantConfig.BuildTimeout)):
+		buildServerLog.Warnf("Build task %s exceeded timeout", task.GUID)
+		factory.Cancel(task.GUID)
 		return nil, ErrBuildTaskTimeout
 	}
 }

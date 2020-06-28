@@ -112,6 +112,6 @@ service BuilderRPC {
     rpc Register(builderpb.FactoryManifest) returns (stream builderpb.BuildTask);
 
     rpc Factories(commonpb.Empty) returns (builderpb.Factories);
-    rpc Build(clientpb.ImplantConfig) returns (builderpb.Artifact);
+    rpc Build(builderpb.BuildTask) returns (builderpb.Artifact);
     rpc Built(builderpb.Artifact) returns (commonpb.Empty);
 }
