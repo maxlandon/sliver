@@ -77,9 +77,7 @@ message ImplantConfig {
   }
 
   OutputFormat Format = 45;
-  bool IsSharedLib = 46;
-  string FileName = 47;
-  bool IsService = 48;
+  string FileName = 46;
 
   int64 BuildTimeout = 50;
 }

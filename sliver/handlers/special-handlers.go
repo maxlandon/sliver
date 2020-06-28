@@ -24,7 +24,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/sliver/transports"
 
-	// {{if .IsSharedLib}}
+	// {{if IsSharedLib}}
 	// {{if eq .GOOS "windows"}}
 	"runtime"
 	"syscall"
@@ -53,7 +53,7 @@ func killHandler(data []byte, connection *transports.Connection) error {
 	if err != nil {
 		return err
 	}
-	// {{if .IsSharedLib}}
+	// {{if IsSharedLib}}
 	// {{if eq .GOOS "windows"}}
 	if runtime.GOOS == "windows" {
 		// Windows only: ExitThread() instead of os.Exit() for DLL/shellcode slivers

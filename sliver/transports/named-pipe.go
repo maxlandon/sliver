@@ -18,22 +18,22 @@ package transports
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// {{if .NamePipec2Enabled}}
+// {{if IsNamePipeEnabled}}
 
 import (
+	"bytes"
+	"encoding/binary"
 	"net"
 	"net/url"
 	"strings"
-	"bytes"
-	"encoding/binary"
 
 	// {{if .Debug}}
 	"log"
 	// {{end}}
 
-	"github.com/golang/protobuf/proto"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/sliver/3rdparty/winio"
+	"github.com/golang/protobuf/proto"
 )
 
 const (

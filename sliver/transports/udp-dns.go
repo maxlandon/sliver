@@ -18,7 +18,7 @@ package transports
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// {{if .DNSc2Enabled}}
+// {{if IsDNSEnabled}}
 
 import (
 	"bytes"

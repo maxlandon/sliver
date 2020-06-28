@@ -83,17 +83,6 @@ const (
 	SliverCC32EnvVar = "SLIVER_CC_32"
 )
 
-// BuildConfig - Helper values determined at runtime but not included in ImplantConfig
-type BuildConfig struct {
-	Cfg *clientpb.ImplantConfig
-
-	MTLSC2Enabled     bool
-	HTTPC2Enabled     bool
-	DNSC2Enabled      bool
-	NamePipeC2Enabled bool
-	TCPPivotC2Enabled bool
-}
-
 func copyC2List(src []*clientpb.ImplantC2) []*clientpb.ImplantC2 {
 	c2s := []*clientpb.ImplantC2{}
 	for _, srcC2 := range src {
@@ -264,10 +253,12 @@ func SliverSharedLibrary(config *clientpb.ImplantConfig) (string, error) {
 // SliverExecutable - Generates a sliver executable binary
 func SliverExecutable(config *clientpb.ImplantConfig) (string, error) {
 
+	buildLog.Debugf("ImplantConfig: %v", config)
+
 	// Compile go code
 	appDir := assets.GetRootAppDir()
 	cgo := "0"
-	if config.IsSharedLib {
+	if isSharedLib(config) {
 		cgo = "1"
 	}
 	goConfig := &gogo.GoConfig{
@@ -316,13 +307,15 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 	}
 	buildLog.Infof("Generating new sliver binary '%s'", implantConfig.Name)
 
-	buildConfig := &BuildConfig{
-		Cfg:               implantConfig,
-		MTLSC2Enabled:     isC2Enabled([]string{"mtls"}, implantConfig.C2),
-		HTTPC2Enabled:     isC2Enabled([]string{"http", "https"}, implantConfig.C2),
-		DNSC2Enabled:      isC2Enabled([]string{"dns"}, implantConfig.C2),
-		NamePipeC2Enabled: isC2Enabled([]string{"namedpipe"}, implantConfig.C2),
-		TCPPivotC2Enabled: isC2Enabled([]string{"tcppivot"}, implantConfig.C2),
+	// These are called from the template do determine if we should include the c2 code for a protocol
+	renderFuncs := template.FuncMap{
+		"IsMTLSEnabled":     func() bool { return isC2Enabled([]string{"mtls"}, implantConfig.C2) },
+		"IsHTTPEnabled":     func() bool { return isC2Enabled([]string{"http", "https"}, implantConfig.C2) },
+		"IsDNSEnabled":      func() bool { return isC2Enabled([]string{"dns"}, implantConfig.C2) },
+		"IsNamePipeEnabled": func() bool { return isC2Enabled([]string{"namedpipe"}, implantConfig.C2) },
+		"IsTCPPivotEnabled": func() bool { return isC2Enabled([]string{"tcppivot"}, implantConfig.C2) },
+		"IsService":         func() bool { return isService(implantConfig) },
+		"IsSharedLib":       func() bool { return isSharedLib(implantConfig) },
 	}
 
 	sliversDir := GetSliversDir() // ~/.sliver/slivers
@@ -346,8 +339,8 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 	sliverPkgDir := path.Join(srcDir, "github.com", "bishopfox", "sliver") // "main"
 	os.MkdirAll(sliverPkgDir, 0700)
 
-	// Load code template
-	sliverBox := packr.NewBox("../../sliver")
+	// Render each source code file
+	sliverBox := packr.NewBox("../../../sliver")
 	for index, boxName := range srcFiles {
 
 		// Gobfuscate doesn't handle all the platform specific code
@@ -370,7 +363,11 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 			}
 		}
 
-		implantGoCode, _ := sliverBox.FindString(boxName)
+		implantGoCode, err := sliverBox.FindString(boxName)
+		if err != nil {
+			buildLog.Errorf("SliverBox error: %s", err)
+			return "", err
+		}
 
 		// We need to correct for the "github.com/bishopfox/sliver/sliver/foo" imports, since Go
 		// doesn't allow relative imports and "sliver" is a subdirectory of
@@ -381,7 +378,7 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 		var fileName string
 		// Skip dllmain files for anything non windows
 		if boxName == "sliver.h" || boxName == "sliver.c" {
-			if !implantConfig.IsSharedLib {
+			if !isSharedLib(implantConfig) {
 				continue
 			}
 		}
@@ -407,8 +404,17 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 		buildLog.Infof("[render] %s -> %s", boxName, implantCodePath)
 
 		// Render code
-		sliverCodeTmpl, _ := template.New("sliver").Parse(implantGoCode)
-		sliverCodeTmpl.Execute(buf, buildConfig)
+		sliverCodeTmpl, err := template.New("sliver").Funcs(renderFuncs).Parse(implantGoCode)
+		if err != nil {
+			buildLog.Errorf("Failed to parse go code template %s", err)
+			return "", err
+		}
+		err = sliverCodeTmpl.Execute(buf, implantConfig)
+		if err != nil {
+			buildLog.Errorf("Failed to render go code (%s) %s", boxName, err)
+			buildLog.Debugf("----\n%s\n----\n", buf.String())
+			return "", err
+		}
 
 		// Render canaries
 		buildLog.Infof("Canary domain(s): %v", implantConfig.CanaryDomains)
@@ -417,7 +423,7 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 			ImplantName:   implantConfig.Name,
 			ParentDomains: implantConfig.CanaryDomains,
 		}
-		canaryTmpl, err := canaryTmpl.Funcs(template.FuncMap{
+		canaryTmpl, err = canaryTmpl.Funcs(template.FuncMap{
 			"GenerateCanary": canaryGenerator.GenerateCanary,
 		}).Parse(buf.String())
 		canaryTmpl.Execute(fSliver, canaryGenerator)
@@ -427,6 +433,8 @@ func renderSliverGoCode(implantConfig *clientpb.ImplantConfig, goConfig *gogo.Go
 			return "", err
 		}
 	}
+
+	// Obfuscate Code
 
 	if !implantConfig.Debug {
 		buildLog.Infof("Obfuscating source code ...")
@@ -481,4 +489,18 @@ func randomObfuscationKey() string {
 	rand.Read(randBuf)
 	digest := sha256.Sum256(randBuf)
 	return fmt.Sprintf("%x", digest[:encryptKeySize])
+}
+
+func isService(implantConfig *clientpb.ImplantConfig) bool {
+	return implantConfig.Format == clientpb.ImplantConfig_SERVICE
+}
+
+func isSharedLib(implantConfig *clientpb.ImplantConfig) bool {
+	if implantConfig.Format == clientpb.ImplantConfig_SHARED_LIB {
+		return true
+	}
+	if implantConfig.Format == clientpb.ImplantConfig_SHELLCODE {
+		return true
+	}
+	return false
 }

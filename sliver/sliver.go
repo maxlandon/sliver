@@ -7,7 +7,7 @@ package main
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
 	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+	(at your option) any later version
 
 	This program is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,7 +18,7 @@ package main
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// {{if .IsSharedLib}}
+// {{if IsSharedLib}}
 //#include "sliver.h"
 import "C"
 
@@ -45,12 +45,12 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	// {{if .IsService}}
+	// {{if IsService}}
 	"golang.org/x/sys/windows/svc"
 	// {{end}}
 )
 
-// {{if .IsService}}
+// {{if IsService}}
 
 type sliverService struct{}
 
@@ -84,7 +84,7 @@ func (serv *sliverService) Execute(args []string, r <-chan svc.ChangeRequest, ch
 
 // {{end}}
 
-// {{if .IsSharedLib}}
+// {{if IsSharedLib}}
 
 var isRunning bool = false
 
@@ -136,7 +136,7 @@ func main() {
 
 	limits.ExecLimits() // Check to see if we should execute
 
-	// {{if .IsService}}
+	// {{if IsService}}
 	svc.Run(os.Args[1], &sliverService{})
 	// {{else}}
 	for {

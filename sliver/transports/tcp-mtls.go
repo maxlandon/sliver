@@ -18,7 +18,7 @@ package transports
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// {{if .MTLSc2Enabled}}
+// {{if IsMTLSEnabled}}
 
 import (
 	"bytes"
