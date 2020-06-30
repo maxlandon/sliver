@@ -9,9 +9,7 @@ import (
 
 	"github.com/bishopfox/sliver/server/db/ent/migrate"
 
-	"github.com/bishopfox/sliver/server/db/ent/buildtask"
-	"github.com/bishopfox/sliver/server/db/ent/implantconfig"
-	"github.com/bishopfox/sliver/server/db/ent/implantprofile"
+	"github.com/bishopfox/sliver/server/db/ent/implant"
 
 	"github.com/facebookincubator/ent/dialect"
 	"github.com/facebookincubator/ent/dialect/sql"
@@ -22,12 +20,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
-	// BuildTask is the client for interacting with the BuildTask builders.
-	BuildTask *BuildTaskClient
-	// ImplantConfig is the client for interacting with the ImplantConfig builders.
-	ImplantConfig *ImplantConfigClient
-	// ImplantProfile is the client for interacting with the ImplantProfile builders.
-	ImplantProfile *ImplantProfileClient
+	// Implant is the client for interacting with the Implant builders.
+	Implant *ImplantClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -41,9 +35,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
-	c.BuildTask = NewBuildTaskClient(c.config)
-	c.ImplantConfig = NewImplantConfigClient(c.config)
-	c.ImplantProfile = NewImplantProfileClient(c.config)
+	c.Implant = NewImplantClient(c.config)
 }
 
 // Open opens a database/sql.DB specified by the driver name and
@@ -73,10 +65,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	}
 	cfg := config{driver: tx, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
-		config:         cfg,
-		BuildTask:      NewBuildTaskClient(cfg),
-		ImplantConfig:  NewImplantConfigClient(cfg),
-		ImplantProfile: NewImplantProfileClient(cfg),
+		config:  cfg,
+		Implant: NewImplantClient(cfg),
 	}, nil
 }
 
@@ -91,17 +81,15 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	}
 	cfg := config{driver: &txDriver{tx: tx, drv: c.driver}, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
-		config:         cfg,
-		BuildTask:      NewBuildTaskClient(cfg),
-		ImplantConfig:  NewImplantConfigClient(cfg),
-		ImplantProfile: NewImplantProfileClient(cfg),
+		config:  cfg,
+		Implant: NewImplantClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		BuildTask.
+//		Implant.
 //		Query().
 //		Count(ctx)
 //
@@ -123,256 +111,88 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.BuildTask.Use(hooks...)
-	c.ImplantConfig.Use(hooks...)
-	c.ImplantProfile.Use(hooks...)
+	c.Implant.Use(hooks...)
 }
 
-// BuildTaskClient is a client for the BuildTask schema.
-type BuildTaskClient struct {
+// ImplantClient is a client for the Implant schema.
+type ImplantClient struct {
 	config
 }
 
-// NewBuildTaskClient returns a client for the BuildTask from the given config.
-func NewBuildTaskClient(c config) *BuildTaskClient {
-	return &BuildTaskClient{config: c}
+// NewImplantClient returns a client for the Implant from the given config.
+func NewImplantClient(c config) *ImplantClient {
+	return &ImplantClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `buildtask.Hooks(f(g(h())))`.
-func (c *BuildTaskClient) Use(hooks ...Hook) {
-	c.hooks.BuildTask = append(c.hooks.BuildTask, hooks...)
+// A call to `Use(f, g, h)` equals to `implant.Hooks(f(g(h())))`.
+func (c *ImplantClient) Use(hooks ...Hook) {
+	c.hooks.Implant = append(c.hooks.Implant, hooks...)
 }
 
-// Create returns a create builder for BuildTask.
-func (c *BuildTaskClient) Create() *BuildTaskCreate {
-	mutation := newBuildTaskMutation(c.config, OpCreate)
-	return &BuildTaskCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a create builder for Implant.
+func (c *ImplantClient) Create() *ImplantCreate {
+	mutation := newImplantMutation(c.config, OpCreate)
+	return &ImplantCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Update returns an update builder for BuildTask.
-func (c *BuildTaskClient) Update() *BuildTaskUpdate {
-	mutation := newBuildTaskMutation(c.config, OpUpdate)
-	return &BuildTaskUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *BuildTaskClient) UpdateOne(bt *BuildTask) *BuildTaskUpdateOne {
-	mutation := newBuildTaskMutation(c.config, OpUpdateOne, withBuildTask(bt))
-	return &BuildTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *BuildTaskClient) UpdateOneID(id int) *BuildTaskUpdateOne {
-	mutation := newBuildTaskMutation(c.config, OpUpdateOne, withBuildTaskID(id))
-	return &BuildTaskUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for BuildTask.
-func (c *BuildTaskClient) Delete() *BuildTaskDelete {
-	mutation := newBuildTaskMutation(c.config, OpDelete)
-	return &BuildTaskDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a delete builder for the given entity.
-func (c *BuildTaskClient) DeleteOne(bt *BuildTask) *BuildTaskDeleteOne {
-	return c.DeleteOneID(bt.ID)
-}
-
-// DeleteOneID returns a delete builder for the given id.
-func (c *BuildTaskClient) DeleteOneID(id int) *BuildTaskDeleteOne {
-	builder := c.Delete().Where(buildtask.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &BuildTaskDeleteOne{builder}
-}
-
-// Create returns a query builder for BuildTask.
-func (c *BuildTaskClient) Query() *BuildTaskQuery {
-	return &BuildTaskQuery{config: c.config}
-}
-
-// Get returns a BuildTask entity by its id.
-func (c *BuildTaskClient) Get(ctx context.Context, id int) (*BuildTask, error) {
-	return c.Query().Where(buildtask.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *BuildTaskClient) GetX(ctx context.Context, id int) *BuildTask {
-	bt, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return bt
-}
-
-// Hooks returns the client hooks.
-func (c *BuildTaskClient) Hooks() []Hook {
-	return c.hooks.BuildTask
-}
-
-// ImplantConfigClient is a client for the ImplantConfig schema.
-type ImplantConfigClient struct {
-	config
-}
-
-// NewImplantConfigClient returns a client for the ImplantConfig from the given config.
-func NewImplantConfigClient(c config) *ImplantConfigClient {
-	return &ImplantConfigClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `implantconfig.Hooks(f(g(h())))`.
-func (c *ImplantConfigClient) Use(hooks ...Hook) {
-	c.hooks.ImplantConfig = append(c.hooks.ImplantConfig, hooks...)
-}
-
-// Create returns a create builder for ImplantConfig.
-func (c *ImplantConfigClient) Create() *ImplantConfigCreate {
-	mutation := newImplantConfigMutation(c.config, OpCreate)
-	return &ImplantConfigCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Update returns an update builder for ImplantConfig.
-func (c *ImplantConfigClient) Update() *ImplantConfigUpdate {
-	mutation := newImplantConfigMutation(c.config, OpUpdate)
-	return &ImplantConfigUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for Implant.
+func (c *ImplantClient) Update() *ImplantUpdate {
+	mutation := newImplantMutation(c.config, OpUpdate)
+	return &ImplantUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *ImplantConfigClient) UpdateOne(ic *ImplantConfig) *ImplantConfigUpdateOne {
-	mutation := newImplantConfigMutation(c.config, OpUpdateOne, withImplantConfig(ic))
-	return &ImplantConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *ImplantClient) UpdateOne(i *Implant) *ImplantUpdateOne {
+	mutation := newImplantMutation(c.config, OpUpdateOne, withImplant(i))
+	return &ImplantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *ImplantConfigClient) UpdateOneID(id int) *ImplantConfigUpdateOne {
-	mutation := newImplantConfigMutation(c.config, OpUpdateOne, withImplantConfigID(id))
-	return &ImplantConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *ImplantClient) UpdateOneID(id int) *ImplantUpdateOne {
+	mutation := newImplantMutation(c.config, OpUpdateOne, withImplantID(id))
+	return &ImplantUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for ImplantConfig.
-func (c *ImplantConfigClient) Delete() *ImplantConfigDelete {
-	mutation := newImplantConfigMutation(c.config, OpDelete)
-	return &ImplantConfigDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a delete builder for the given entity.
-func (c *ImplantConfigClient) DeleteOne(ic *ImplantConfig) *ImplantConfigDeleteOne {
-	return c.DeleteOneID(ic.ID)
-}
-
-// DeleteOneID returns a delete builder for the given id.
-func (c *ImplantConfigClient) DeleteOneID(id int) *ImplantConfigDeleteOne {
-	builder := c.Delete().Where(implantconfig.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &ImplantConfigDeleteOne{builder}
-}
-
-// Create returns a query builder for ImplantConfig.
-func (c *ImplantConfigClient) Query() *ImplantConfigQuery {
-	return &ImplantConfigQuery{config: c.config}
-}
-
-// Get returns a ImplantConfig entity by its id.
-func (c *ImplantConfigClient) Get(ctx context.Context, id int) (*ImplantConfig, error) {
-	return c.Query().Where(implantconfig.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *ImplantConfigClient) GetX(ctx context.Context, id int) *ImplantConfig {
-	ic, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return ic
-}
-
-// Hooks returns the client hooks.
-func (c *ImplantConfigClient) Hooks() []Hook {
-	return c.hooks.ImplantConfig
-}
-
-// ImplantProfileClient is a client for the ImplantProfile schema.
-type ImplantProfileClient struct {
-	config
-}
-
-// NewImplantProfileClient returns a client for the ImplantProfile from the given config.
-func NewImplantProfileClient(c config) *ImplantProfileClient {
-	return &ImplantProfileClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `implantprofile.Hooks(f(g(h())))`.
-func (c *ImplantProfileClient) Use(hooks ...Hook) {
-	c.hooks.ImplantProfile = append(c.hooks.ImplantProfile, hooks...)
-}
-
-// Create returns a create builder for ImplantProfile.
-func (c *ImplantProfileClient) Create() *ImplantProfileCreate {
-	mutation := newImplantProfileMutation(c.config, OpCreate)
-	return &ImplantProfileCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Update returns an update builder for ImplantProfile.
-func (c *ImplantProfileClient) Update() *ImplantProfileUpdate {
-	mutation := newImplantProfileMutation(c.config, OpUpdate)
-	return &ImplantProfileUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *ImplantProfileClient) UpdateOne(ip *ImplantProfile) *ImplantProfileUpdateOne {
-	mutation := newImplantProfileMutation(c.config, OpUpdateOne, withImplantProfile(ip))
-	return &ImplantProfileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *ImplantProfileClient) UpdateOneID(id int) *ImplantProfileUpdateOne {
-	mutation := newImplantProfileMutation(c.config, OpUpdateOne, withImplantProfileID(id))
-	return &ImplantProfileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for ImplantProfile.
-func (c *ImplantProfileClient) Delete() *ImplantProfileDelete {
-	mutation := newImplantProfileMutation(c.config, OpDelete)
-	return &ImplantProfileDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for Implant.
+func (c *ImplantClient) Delete() *ImplantDelete {
+	mutation := newImplantMutation(c.config, OpDelete)
+	return &ImplantDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a delete builder for the given entity.
-func (c *ImplantProfileClient) DeleteOne(ip *ImplantProfile) *ImplantProfileDeleteOne {
-	return c.DeleteOneID(ip.ID)
+func (c *ImplantClient) DeleteOne(i *Implant) *ImplantDeleteOne {
+	return c.DeleteOneID(i.ID)
 }
 
 // DeleteOneID returns a delete builder for the given id.
-func (c *ImplantProfileClient) DeleteOneID(id int) *ImplantProfileDeleteOne {
-	builder := c.Delete().Where(implantprofile.ID(id))
+func (c *ImplantClient) DeleteOneID(id int) *ImplantDeleteOne {
+	builder := c.Delete().Where(implant.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &ImplantProfileDeleteOne{builder}
+	return &ImplantDeleteOne{builder}
 }
 
-// Create returns a query builder for ImplantProfile.
-func (c *ImplantProfileClient) Query() *ImplantProfileQuery {
-	return &ImplantProfileQuery{config: c.config}
+// Create returns a query builder for Implant.
+func (c *ImplantClient) Query() *ImplantQuery {
+	return &ImplantQuery{config: c.config}
 }
 
-// Get returns a ImplantProfile entity by its id.
-func (c *ImplantProfileClient) Get(ctx context.Context, id int) (*ImplantProfile, error) {
-	return c.Query().Where(implantprofile.ID(id)).Only(ctx)
+// Get returns a Implant entity by its id.
+func (c *ImplantClient) Get(ctx context.Context, id int) (*Implant, error) {
+	return c.Query().Where(implant.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *ImplantProfileClient) GetX(ctx context.Context, id int) *ImplantProfile {
-	ip, err := c.Get(ctx, id)
+func (c *ImplantClient) GetX(ctx context.Context, id int) *Implant {
+	i, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
-	return ip
+	return i
 }
 
 // Hooks returns the client hooks.
-func (c *ImplantProfileClient) Hooks() []Hook {
-	return c.hooks.ImplantProfile
+func (c *ImplantClient) Hooks() []Hook {
+	return c.hooks.Implant
 }

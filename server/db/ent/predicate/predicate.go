@@ -6,11 +6,5 @@ import (
 	"github.com/facebookincubator/ent/dialect/sql"
 )
 
-// BuildTask is the predicate function for buildtask builders.
-type BuildTask func(*sql.Selector)
-
-// ImplantConfig is the predicate function for implantconfig builders.
-type ImplantConfig func(*sql.Selector)
-
-// ImplantProfile is the predicate function for implantprofile builders.
-type ImplantProfile func(*sql.Selector)
+// Implant is the predicate function for implant builders.
+type Implant func(*sql.Selector)

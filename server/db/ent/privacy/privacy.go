@@ -210,74 +210,26 @@ func DenyMutationOperationRule(op ent.Op) MutationRule {
 	return OnMutationOperation(rule, op)
 }
 
-// The BuildTaskQueryRuleFunc type is an adapter to allow the use of ordinary
+// The ImplantQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
-type BuildTaskQueryRuleFunc func(context.Context, *ent.BuildTaskQuery) error
+type ImplantQueryRuleFunc func(context.Context, *ent.ImplantQuery) error
 
 // EvalQuery return f(ctx, q).
-func (f BuildTaskQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
-	if q, ok := q.(*ent.BuildTaskQuery); ok {
+func (f ImplantQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ImplantQuery); ok {
 		return f(ctx, q)
 	}
-	return Denyf("ent/privacy: unexpected query type %T, expect *ent.BuildTaskQuery", q)
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ImplantQuery", q)
 }
 
-// The BuildTaskMutationRuleFunc type is an adapter to allow the use of ordinary
+// The ImplantMutationRuleFunc type is an adapter to allow the use of ordinary
 // functions as a mutation rule.
-type BuildTaskMutationRuleFunc func(context.Context, *ent.BuildTaskMutation) error
+type ImplantMutationRuleFunc func(context.Context, *ent.ImplantMutation) error
 
 // EvalMutation calls f(ctx, m).
-func (f BuildTaskMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
-	if m, ok := m.(*ent.BuildTaskMutation); ok {
+func (f ImplantMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.ImplantMutation); ok {
 		return f(ctx, m)
 	}
-	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.BuildTaskMutation", m)
-}
-
-// The ImplantConfigQueryRuleFunc type is an adapter to allow the use of ordinary
-// functions as a query rule.
-type ImplantConfigQueryRuleFunc func(context.Context, *ent.ImplantConfigQuery) error
-
-// EvalQuery return f(ctx, q).
-func (f ImplantConfigQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
-	if q, ok := q.(*ent.ImplantConfigQuery); ok {
-		return f(ctx, q)
-	}
-	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ImplantConfigQuery", q)
-}
-
-// The ImplantConfigMutationRuleFunc type is an adapter to allow the use of ordinary
-// functions as a mutation rule.
-type ImplantConfigMutationRuleFunc func(context.Context, *ent.ImplantConfigMutation) error
-
-// EvalMutation calls f(ctx, m).
-func (f ImplantConfigMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
-	if m, ok := m.(*ent.ImplantConfigMutation); ok {
-		return f(ctx, m)
-	}
-	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ImplantConfigMutation", m)
-}
-
-// The ImplantProfileQueryRuleFunc type is an adapter to allow the use of ordinary
-// functions as a query rule.
-type ImplantProfileQueryRuleFunc func(context.Context, *ent.ImplantProfileQuery) error
-
-// EvalQuery return f(ctx, q).
-func (f ImplantProfileQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
-	if q, ok := q.(*ent.ImplantProfileQuery); ok {
-		return f(ctx, q)
-	}
-	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ImplantProfileQuery", q)
-}
-
-// The ImplantProfileMutationRuleFunc type is an adapter to allow the use of ordinary
-// functions as a mutation rule.
-type ImplantProfileMutationRuleFunc func(context.Context, *ent.ImplantProfileMutation) error
-
-// EvalMutation calls f(ctx, m).
-func (f ImplantProfileMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
-	if m, ok := m.(*ent.ImplantProfileMutation); ok {
-		return f(ctx, m)
-	}
-	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ImplantProfileMutation", m)
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ImplantMutation", m)
 }

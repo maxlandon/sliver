@@ -3,22 +3,26 @@ package schema
 import (
 	"github.com/facebookincubator/ent"
 	"github.com/facebookincubator/ent/schema/field"
+	"github.com/google/uuid"
 )
 
-// ImplantProfile holds the schema definition for the ImplantProfile entity.
-type ImplantProfile struct {
+// Implant holds the schema definition for the Implant entity.
+type Implant struct {
 	ent.Schema
 }
 
-// Fields - of the ImplantProfile.
-func (ImplantProfile) Fields() []ent.Field {
+// Fields of the Implant.
+func (Implant) Fields() []ent.Field {
 	return []ent.Field{
+		field.UUID("ID", uuid.UUID{}),
+
 		field.String("GOOS"),
 		field.String("GOARCH"),
-		field.String("Name"),
+
 		field.String("ECC_ClientCert"),
 		field.String("ECC_ClientKey"),
 		field.String("RSA_Cert"),
+
 		field.Bool("Debug"),
 		field.Bool("ObfuscateSymbols"),
 		field.Uint32("ReconnectInterval"),
@@ -30,13 +34,10 @@ func (ImplantProfile) Fields() []ent.Field {
 		field.String("LimitUsername"),
 
 		field.Int("OutputFormat"),
-		field.String("FileName"),
-
-		field.Int64("BuildTimeout")
 	}
 }
 
-// Edges of the ImplantProfile.
-func (ImplantProfile) Edges() []ent.Edge {
+// Edges of the Implant.
+func (Implant) Edges() []ent.Edge {
 	return nil
 }

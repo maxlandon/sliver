@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/bishopfox/sliver/server/db/ent/buildtask"
+	"github.com/bishopfox/sliver/server/db/ent/implant"
 	"github.com/google/uuid"
 
 	"github.com/facebookincubator/ent"
@@ -22,35 +22,51 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeBuildTask      = "BuildTask"
-	TypeImplantConfig  = "ImplantConfig"
-	TypeImplantProfile = "ImplantProfile"
+	TypeImplant = "Implant"
 )
 
-// BuildTaskMutation represents an operation that mutate the BuildTasks
+// ImplantMutation represents an operation that mutate the Implants
 // nodes in the graph.
-type BuildTaskMutation struct {
+type ImplantMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int
-	guid          *uuid.UUID
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*BuildTask, error)
+	op                      Op
+	typ                     string
+	id                      *int
+	_ID                     *uuid.UUID
+	_GOOS                   *string
+	_GOARCH                 *string
+	_ECC_ClientCert         *string
+	_ECC_ClientKey          *string
+	_RSA_Cert               *string
+	_Debug                  *bool
+	_ObfuscateSymbols       *bool
+	_ReconnectInterval      *uint32
+	add_ReconnectInterval   *uint32
+	_MaxConnectionErrors    *uint32
+	add_MaxConnectionErrors *uint32
+	_LimitDomainJoined      *bool
+	_LimitDatetime          *int64
+	add_LimitDatetime       *int64
+	_LimitHostname          *string
+	_LimitUsername          *string
+	_OutputFormat           *int
+	add_OutputFormat        *int
+	clearedFields           map[string]struct{}
+	done                    bool
+	oldValue                func(context.Context) (*Implant, error)
 }
 
-var _ ent.Mutation = (*BuildTaskMutation)(nil)
+var _ ent.Mutation = (*ImplantMutation)(nil)
 
-// buildtaskOption allows to manage the mutation configuration using functional options.
-type buildtaskOption func(*BuildTaskMutation)
+// implantOption allows to manage the mutation configuration using functional options.
+type implantOption func(*ImplantMutation)
 
-// newBuildTaskMutation creates new mutation for $n.Name.
-func newBuildTaskMutation(c config, op Op, opts ...buildtaskOption) *BuildTaskMutation {
-	m := &BuildTaskMutation{
+// newImplantMutation creates new mutation for $n.Name.
+func newImplantMutation(c config, op Op, opts ...implantOption) *ImplantMutation {
+	m := &ImplantMutation{
 		config:        c,
 		op:            op,
-		typ:           TypeBuildTask,
+		typ:           TypeImplant,
 		clearedFields: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
@@ -59,20 +75,20 @@ func newBuildTaskMutation(c config, op Op, opts ...buildtaskOption) *BuildTaskMu
 	return m
 }
 
-// withBuildTaskID sets the id field of the mutation.
-func withBuildTaskID(id int) buildtaskOption {
-	return func(m *BuildTaskMutation) {
+// withImplantID sets the id field of the mutation.
+func withImplantID(id int) implantOption {
+	return func(m *ImplantMutation) {
 		var (
 			err   error
 			once  sync.Once
-			value *BuildTask
+			value *Implant
 		)
-		m.oldValue = func(ctx context.Context) (*BuildTask, error) {
+		m.oldValue = func(ctx context.Context) (*Implant, error) {
 			once.Do(func() {
 				if m.done {
 					err = fmt.Errorf("querying old values post mutation is not allowed")
 				} else {
-					value, err = m.Client().BuildTask.Get(ctx, id)
+					value, err = m.Client().Implant.Get(ctx, id)
 				}
 			})
 			return value, err
@@ -81,10 +97,10 @@ func withBuildTaskID(id int) buildtaskOption {
 	}
 }
 
-// withBuildTask sets the old BuildTask of the mutation.
-func withBuildTask(node *BuildTask) buildtaskOption {
-	return func(m *BuildTaskMutation) {
-		m.oldValue = func(context.Context) (*BuildTask, error) {
+// withImplant sets the old Implant of the mutation.
+func withImplant(node *Implant) implantOption {
+	return func(m *ImplantMutation) {
+		m.oldValue = func(context.Context) (*Implant, error) {
 			return node, nil
 		}
 		m.id = &node.ID
@@ -93,7 +109,7 @@ func withBuildTask(node *BuildTask) buildtaskOption {
 
 // Client returns a new `ent.Client` from the mutation. If the mutation was
 // executed in a transaction (ent.Tx), a transactional client is returned.
-func (m BuildTaskMutation) Client() *Client {
+func (m ImplantMutation) Client() *Client {
 	client := &Client{config: m.config}
 	client.init()
 	return client
@@ -101,7 +117,7 @@ func (m BuildTaskMutation) Client() *Client {
 
 // Tx returns an `ent.Tx` for mutations that were executed in transactions;
 // it returns an error otherwise.
-func (m BuildTaskMutation) Tx() (*Tx, error) {
+func (m ImplantMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
 		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
 	}
@@ -112,67 +128,707 @@ func (m BuildTaskMutation) Tx() (*Tx, error) {
 
 // ID returns the id value in the mutation. Note that, the id
 // is available only if it was provided to the builder.
-func (m *BuildTaskMutation) ID() (id int, exists bool) {
+func (m *ImplantMutation) ID() (id int, exists bool) {
 	if m.id == nil {
 		return
 	}
 	return *m.id, true
 }
 
-// SetGUID sets the guid field.
-func (m *BuildTaskMutation) SetGUID(u uuid.UUID) {
-	m.guid = &u
+// SetID sets the ID field.
+func (m *ImplantMutation) SetID(u uuid.UUID) {
+	m._ID = &u
 }
 
-// GUID returns the guid value in the mutation.
-func (m *BuildTaskMutation) GUID() (r uuid.UUID, exists bool) {
-	v := m.guid
+// ID returns the ID value in the mutation.
+func (m *ImplantMutation) ID() (r uuid.UUID, exists bool) {
+	v := m._ID
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldGUID returns the old guid value of the BuildTask.
-// If the BuildTask object wasn't provided to the builder, the object is fetched
+// OldID returns the old ID value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
 // from the database.
 // An error is returned if the mutation operation is not UpdateOne, or database query fails.
-func (m *BuildTaskMutation) OldGUID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *ImplantMutation) OldID(ctx context.Context) (v uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldGUID is allowed only on UpdateOne operations")
+		return v, fmt.Errorf("OldID is allowed only on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldGUID requires an ID field in the mutation")
+		return v, fmt.Errorf("OldID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldGUID: %w", err)
+		return v, fmt.Errorf("querying old value for OldID: %w", err)
 	}
-	return oldValue.GUID, nil
+	return oldValue.ID, nil
 }
 
-// ResetGUID reset all changes of the "guid" field.
-func (m *BuildTaskMutation) ResetGUID() {
-	m.guid = nil
+// ResetID reset all changes of the "ID" field.
+func (m *ImplantMutation) ResetID() {
+	m._ID = nil
+}
+
+// SetGOOS sets the GOOS field.
+func (m *ImplantMutation) SetGOOS(s string) {
+	m._GOOS = &s
+}
+
+// GOOS returns the GOOS value in the mutation.
+func (m *ImplantMutation) GOOS() (r string, exists bool) {
+	v := m._GOOS
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGOOS returns the old GOOS value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldGOOS(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldGOOS is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldGOOS requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGOOS: %w", err)
+	}
+	return oldValue.GOOS, nil
+}
+
+// ResetGOOS reset all changes of the "GOOS" field.
+func (m *ImplantMutation) ResetGOOS() {
+	m._GOOS = nil
+}
+
+// SetGOARCH sets the GOARCH field.
+func (m *ImplantMutation) SetGOARCH(s string) {
+	m._GOARCH = &s
+}
+
+// GOARCH returns the GOARCH value in the mutation.
+func (m *ImplantMutation) GOARCH() (r string, exists bool) {
+	v := m._GOARCH
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGOARCH returns the old GOARCH value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldGOARCH(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldGOARCH is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldGOARCH requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGOARCH: %w", err)
+	}
+	return oldValue.GOARCH, nil
+}
+
+// ResetGOARCH reset all changes of the "GOARCH" field.
+func (m *ImplantMutation) ResetGOARCH() {
+	m._GOARCH = nil
+}
+
+// SetECCClientCert sets the ECC_ClientCert field.
+func (m *ImplantMutation) SetECCClientCert(s string) {
+	m._ECC_ClientCert = &s
+}
+
+// ECCClientCert returns the ECC_ClientCert value in the mutation.
+func (m *ImplantMutation) ECCClientCert() (r string, exists bool) {
+	v := m._ECC_ClientCert
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldECCClientCert returns the old ECC_ClientCert value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldECCClientCert(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldECCClientCert is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldECCClientCert requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldECCClientCert: %w", err)
+	}
+	return oldValue.ECCClientCert, nil
+}
+
+// ResetECCClientCert reset all changes of the "ECC_ClientCert" field.
+func (m *ImplantMutation) ResetECCClientCert() {
+	m._ECC_ClientCert = nil
+}
+
+// SetECCClientKey sets the ECC_ClientKey field.
+func (m *ImplantMutation) SetECCClientKey(s string) {
+	m._ECC_ClientKey = &s
+}
+
+// ECCClientKey returns the ECC_ClientKey value in the mutation.
+func (m *ImplantMutation) ECCClientKey() (r string, exists bool) {
+	v := m._ECC_ClientKey
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldECCClientKey returns the old ECC_ClientKey value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldECCClientKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldECCClientKey is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldECCClientKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldECCClientKey: %w", err)
+	}
+	return oldValue.ECCClientKey, nil
+}
+
+// ResetECCClientKey reset all changes of the "ECC_ClientKey" field.
+func (m *ImplantMutation) ResetECCClientKey() {
+	m._ECC_ClientKey = nil
+}
+
+// SetRSACert sets the RSA_Cert field.
+func (m *ImplantMutation) SetRSACert(s string) {
+	m._RSA_Cert = &s
+}
+
+// RSACert returns the RSA_Cert value in the mutation.
+func (m *ImplantMutation) RSACert() (r string, exists bool) {
+	v := m._RSA_Cert
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRSACert returns the old RSA_Cert value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldRSACert(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldRSACert is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldRSACert requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRSACert: %w", err)
+	}
+	return oldValue.RSACert, nil
+}
+
+// ResetRSACert reset all changes of the "RSA_Cert" field.
+func (m *ImplantMutation) ResetRSACert() {
+	m._RSA_Cert = nil
+}
+
+// SetDebug sets the Debug field.
+func (m *ImplantMutation) SetDebug(b bool) {
+	m._Debug = &b
+}
+
+// Debug returns the Debug value in the mutation.
+func (m *ImplantMutation) Debug() (r bool, exists bool) {
+	v := m._Debug
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDebug returns the old Debug value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldDebug(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldDebug is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldDebug requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDebug: %w", err)
+	}
+	return oldValue.Debug, nil
+}
+
+// ResetDebug reset all changes of the "Debug" field.
+func (m *ImplantMutation) ResetDebug() {
+	m._Debug = nil
+}
+
+// SetObfuscateSymbols sets the ObfuscateSymbols field.
+func (m *ImplantMutation) SetObfuscateSymbols(b bool) {
+	m._ObfuscateSymbols = &b
+}
+
+// ObfuscateSymbols returns the ObfuscateSymbols value in the mutation.
+func (m *ImplantMutation) ObfuscateSymbols() (r bool, exists bool) {
+	v := m._ObfuscateSymbols
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldObfuscateSymbols returns the old ObfuscateSymbols value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldObfuscateSymbols(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldObfuscateSymbols is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldObfuscateSymbols requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldObfuscateSymbols: %w", err)
+	}
+	return oldValue.ObfuscateSymbols, nil
+}
+
+// ResetObfuscateSymbols reset all changes of the "ObfuscateSymbols" field.
+func (m *ImplantMutation) ResetObfuscateSymbols() {
+	m._ObfuscateSymbols = nil
+}
+
+// SetReconnectInterval sets the ReconnectInterval field.
+func (m *ImplantMutation) SetReconnectInterval(u uint32) {
+	m._ReconnectInterval = &u
+	m.add_ReconnectInterval = nil
+}
+
+// ReconnectInterval returns the ReconnectInterval value in the mutation.
+func (m *ImplantMutation) ReconnectInterval() (r uint32, exists bool) {
+	v := m._ReconnectInterval
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReconnectInterval returns the old ReconnectInterval value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldReconnectInterval(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldReconnectInterval is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldReconnectInterval requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReconnectInterval: %w", err)
+	}
+	return oldValue.ReconnectInterval, nil
+}
+
+// AddReconnectInterval adds u to ReconnectInterval.
+func (m *ImplantMutation) AddReconnectInterval(u uint32) {
+	if m.add_ReconnectInterval != nil {
+		*m.add_ReconnectInterval += u
+	} else {
+		m.add_ReconnectInterval = &u
+	}
+}
+
+// AddedReconnectInterval returns the value that was added to the ReconnectInterval field in this mutation.
+func (m *ImplantMutation) AddedReconnectInterval() (r uint32, exists bool) {
+	v := m.add_ReconnectInterval
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetReconnectInterval reset all changes of the "ReconnectInterval" field.
+func (m *ImplantMutation) ResetReconnectInterval() {
+	m._ReconnectInterval = nil
+	m.add_ReconnectInterval = nil
+}
+
+// SetMaxConnectionErrors sets the MaxConnectionErrors field.
+func (m *ImplantMutation) SetMaxConnectionErrors(u uint32) {
+	m._MaxConnectionErrors = &u
+	m.add_MaxConnectionErrors = nil
+}
+
+// MaxConnectionErrors returns the MaxConnectionErrors value in the mutation.
+func (m *ImplantMutation) MaxConnectionErrors() (r uint32, exists bool) {
+	v := m._MaxConnectionErrors
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxConnectionErrors returns the old MaxConnectionErrors value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldMaxConnectionErrors(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldMaxConnectionErrors is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldMaxConnectionErrors requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxConnectionErrors: %w", err)
+	}
+	return oldValue.MaxConnectionErrors, nil
+}
+
+// AddMaxConnectionErrors adds u to MaxConnectionErrors.
+func (m *ImplantMutation) AddMaxConnectionErrors(u uint32) {
+	if m.add_MaxConnectionErrors != nil {
+		*m.add_MaxConnectionErrors += u
+	} else {
+		m.add_MaxConnectionErrors = &u
+	}
+}
+
+// AddedMaxConnectionErrors returns the value that was added to the MaxConnectionErrors field in this mutation.
+func (m *ImplantMutation) AddedMaxConnectionErrors() (r uint32, exists bool) {
+	v := m.add_MaxConnectionErrors
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMaxConnectionErrors reset all changes of the "MaxConnectionErrors" field.
+func (m *ImplantMutation) ResetMaxConnectionErrors() {
+	m._MaxConnectionErrors = nil
+	m.add_MaxConnectionErrors = nil
+}
+
+// SetLimitDomainJoined sets the LimitDomainJoined field.
+func (m *ImplantMutation) SetLimitDomainJoined(b bool) {
+	m._LimitDomainJoined = &b
+}
+
+// LimitDomainJoined returns the LimitDomainJoined value in the mutation.
+func (m *ImplantMutation) LimitDomainJoined() (r bool, exists bool) {
+	v := m._LimitDomainJoined
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLimitDomainJoined returns the old LimitDomainJoined value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldLimitDomainJoined(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldLimitDomainJoined is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldLimitDomainJoined requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLimitDomainJoined: %w", err)
+	}
+	return oldValue.LimitDomainJoined, nil
+}
+
+// ResetLimitDomainJoined reset all changes of the "LimitDomainJoined" field.
+func (m *ImplantMutation) ResetLimitDomainJoined() {
+	m._LimitDomainJoined = nil
+}
+
+// SetLimitDatetime sets the LimitDatetime field.
+func (m *ImplantMutation) SetLimitDatetime(i int64) {
+	m._LimitDatetime = &i
+	m.add_LimitDatetime = nil
+}
+
+// LimitDatetime returns the LimitDatetime value in the mutation.
+func (m *ImplantMutation) LimitDatetime() (r int64, exists bool) {
+	v := m._LimitDatetime
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLimitDatetime returns the old LimitDatetime value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldLimitDatetime(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldLimitDatetime is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldLimitDatetime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLimitDatetime: %w", err)
+	}
+	return oldValue.LimitDatetime, nil
+}
+
+// AddLimitDatetime adds i to LimitDatetime.
+func (m *ImplantMutation) AddLimitDatetime(i int64) {
+	if m.add_LimitDatetime != nil {
+		*m.add_LimitDatetime += i
+	} else {
+		m.add_LimitDatetime = &i
+	}
+}
+
+// AddedLimitDatetime returns the value that was added to the LimitDatetime field in this mutation.
+func (m *ImplantMutation) AddedLimitDatetime() (r int64, exists bool) {
+	v := m.add_LimitDatetime
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetLimitDatetime reset all changes of the "LimitDatetime" field.
+func (m *ImplantMutation) ResetLimitDatetime() {
+	m._LimitDatetime = nil
+	m.add_LimitDatetime = nil
+}
+
+// SetLimitHostname sets the LimitHostname field.
+func (m *ImplantMutation) SetLimitHostname(s string) {
+	m._LimitHostname = &s
+}
+
+// LimitHostname returns the LimitHostname value in the mutation.
+func (m *ImplantMutation) LimitHostname() (r string, exists bool) {
+	v := m._LimitHostname
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLimitHostname returns the old LimitHostname value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldLimitHostname(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldLimitHostname is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldLimitHostname requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLimitHostname: %w", err)
+	}
+	return oldValue.LimitHostname, nil
+}
+
+// ResetLimitHostname reset all changes of the "LimitHostname" field.
+func (m *ImplantMutation) ResetLimitHostname() {
+	m._LimitHostname = nil
+}
+
+// SetLimitUsername sets the LimitUsername field.
+func (m *ImplantMutation) SetLimitUsername(s string) {
+	m._LimitUsername = &s
+}
+
+// LimitUsername returns the LimitUsername value in the mutation.
+func (m *ImplantMutation) LimitUsername() (r string, exists bool) {
+	v := m._LimitUsername
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLimitUsername returns the old LimitUsername value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldLimitUsername(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldLimitUsername is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldLimitUsername requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLimitUsername: %w", err)
+	}
+	return oldValue.LimitUsername, nil
+}
+
+// ResetLimitUsername reset all changes of the "LimitUsername" field.
+func (m *ImplantMutation) ResetLimitUsername() {
+	m._LimitUsername = nil
+}
+
+// SetOutputFormat sets the OutputFormat field.
+func (m *ImplantMutation) SetOutputFormat(i int) {
+	m._OutputFormat = &i
+	m.add_OutputFormat = nil
+}
+
+// OutputFormat returns the OutputFormat value in the mutation.
+func (m *ImplantMutation) OutputFormat() (r int, exists bool) {
+	v := m._OutputFormat
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOutputFormat returns the old OutputFormat value of the Implant.
+// If the Implant object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *ImplantMutation) OldOutputFormat(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldOutputFormat is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldOutputFormat requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutputFormat: %w", err)
+	}
+	return oldValue.OutputFormat, nil
+}
+
+// AddOutputFormat adds i to OutputFormat.
+func (m *ImplantMutation) AddOutputFormat(i int) {
+	if m.add_OutputFormat != nil {
+		*m.add_OutputFormat += i
+	} else {
+		m.add_OutputFormat = &i
+	}
+}
+
+// AddedOutputFormat returns the value that was added to the OutputFormat field in this mutation.
+func (m *ImplantMutation) AddedOutputFormat() (r int, exists bool) {
+	v := m.add_OutputFormat
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetOutputFormat reset all changes of the "OutputFormat" field.
+func (m *ImplantMutation) ResetOutputFormat() {
+	m._OutputFormat = nil
+	m.add_OutputFormat = nil
 }
 
 // Op returns the operation name.
-func (m *BuildTaskMutation) Op() Op {
+func (m *ImplantMutation) Op() Op {
 	return m.op
 }
 
-// Type returns the node type of this mutation (BuildTask).
-func (m *BuildTaskMutation) Type() string {
+// Type returns the node type of this mutation (Implant).
+func (m *ImplantMutation) Type() string {
 	return m.typ
 }
 
 // Fields returns all fields that were changed during
 // this mutation. Note that, in order to get all numeric
 // fields that were in/decremented, call AddedFields().
-func (m *BuildTaskMutation) Fields() []string {
-	fields := make([]string, 0, 1)
-	if m.guid != nil {
-		fields = append(fields, buildtask.FieldGUID)
+func (m *ImplantMutation) Fields() []string {
+	fields := make([]string, 0, 15)
+	if m._ID != nil {
+		fields = append(fields, implant.FieldID)
+	}
+	if m._GOOS != nil {
+		fields = append(fields, implant.FieldGOOS)
+	}
+	if m._GOARCH != nil {
+		fields = append(fields, implant.FieldGOARCH)
+	}
+	if m._ECC_ClientCert != nil {
+		fields = append(fields, implant.FieldECCClientCert)
+	}
+	if m._ECC_ClientKey != nil {
+		fields = append(fields, implant.FieldECCClientKey)
+	}
+	if m._RSA_Cert != nil {
+		fields = append(fields, implant.FieldRSACert)
+	}
+	if m._Debug != nil {
+		fields = append(fields, implant.FieldDebug)
+	}
+	if m._ObfuscateSymbols != nil {
+		fields = append(fields, implant.FieldObfuscateSymbols)
+	}
+	if m._ReconnectInterval != nil {
+		fields = append(fields, implant.FieldReconnectInterval)
+	}
+	if m._MaxConnectionErrors != nil {
+		fields = append(fields, implant.FieldMaxConnectionErrors)
+	}
+	if m._LimitDomainJoined != nil {
+		fields = append(fields, implant.FieldLimitDomainJoined)
+	}
+	if m._LimitDatetime != nil {
+		fields = append(fields, implant.FieldLimitDatetime)
+	}
+	if m._LimitHostname != nil {
+		fields = append(fields, implant.FieldLimitHostname)
+	}
+	if m._LimitUsername != nil {
+		fields = append(fields, implant.FieldLimitUsername)
+	}
+	if m._OutputFormat != nil {
+		fields = append(fields, implant.FieldOutputFormat)
 	}
 	return fields
 }
@@ -180,10 +836,38 @@ func (m *BuildTaskMutation) Fields() []string {
 // Field returns the value of a field with the given name.
 // The second boolean value indicates that this field was
 // not set, or was not define in the schema.
-func (m *BuildTaskMutation) Field(name string) (ent.Value, bool) {
+func (m *ImplantMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case buildtask.FieldGUID:
-		return m.GUID()
+	case implant.FieldID:
+		return m.ID()
+	case implant.FieldGOOS:
+		return m.GOOS()
+	case implant.FieldGOARCH:
+		return m.GOARCH()
+	case implant.FieldECCClientCert:
+		return m.ECCClientCert()
+	case implant.FieldECCClientKey:
+		return m.ECCClientKey()
+	case implant.FieldRSACert:
+		return m.RSACert()
+	case implant.FieldDebug:
+		return m.Debug()
+	case implant.FieldObfuscateSymbols:
+		return m.ObfuscateSymbols()
+	case implant.FieldReconnectInterval:
+		return m.ReconnectInterval()
+	case implant.FieldMaxConnectionErrors:
+		return m.MaxConnectionErrors()
+	case implant.FieldLimitDomainJoined:
+		return m.LimitDomainJoined()
+	case implant.FieldLimitDatetime:
+		return m.LimitDatetime()
+	case implant.FieldLimitHostname:
+		return m.LimitHostname()
+	case implant.FieldLimitUsername:
+		return m.LimitUsername()
+	case implant.FieldOutputFormat:
+		return m.OutputFormat()
 	}
 	return nil, false
 }
@@ -191,591 +875,350 @@ func (m *BuildTaskMutation) Field(name string) (ent.Value, bool) {
 // OldField returns the old value of the field from the database.
 // An error is returned if the mutation operation is not UpdateOne,
 // or the query to the database was failed.
-func (m *BuildTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+func (m *ImplantMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case buildtask.FieldGUID:
-		return m.OldGUID(ctx)
+	case implant.FieldID:
+		return m.OldID(ctx)
+	case implant.FieldGOOS:
+		return m.OldGOOS(ctx)
+	case implant.FieldGOARCH:
+		return m.OldGOARCH(ctx)
+	case implant.FieldECCClientCert:
+		return m.OldECCClientCert(ctx)
+	case implant.FieldECCClientKey:
+		return m.OldECCClientKey(ctx)
+	case implant.FieldRSACert:
+		return m.OldRSACert(ctx)
+	case implant.FieldDebug:
+		return m.OldDebug(ctx)
+	case implant.FieldObfuscateSymbols:
+		return m.OldObfuscateSymbols(ctx)
+	case implant.FieldReconnectInterval:
+		return m.OldReconnectInterval(ctx)
+	case implant.FieldMaxConnectionErrors:
+		return m.OldMaxConnectionErrors(ctx)
+	case implant.FieldLimitDomainJoined:
+		return m.OldLimitDomainJoined(ctx)
+	case implant.FieldLimitDatetime:
+		return m.OldLimitDatetime(ctx)
+	case implant.FieldLimitHostname:
+		return m.OldLimitHostname(ctx)
+	case implant.FieldLimitUsername:
+		return m.OldLimitUsername(ctx)
+	case implant.FieldOutputFormat:
+		return m.OldOutputFormat(ctx)
 	}
-	return nil, fmt.Errorf("unknown BuildTask field %s", name)
+	return nil, fmt.Errorf("unknown Implant field %s", name)
 }
 
 // SetField sets the value for the given name. It returns an
 // error if the field is not defined in the schema, or if the
 // type mismatch the field type.
-func (m *BuildTaskMutation) SetField(name string, value ent.Value) error {
+func (m *ImplantMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case buildtask.FieldGUID:
+	case implant.FieldID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetGUID(v)
+		m.SetID(v)
+		return nil
+	case implant.FieldGOOS:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGOOS(v)
+		return nil
+	case implant.FieldGOARCH:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGOARCH(v)
+		return nil
+	case implant.FieldECCClientCert:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetECCClientCert(v)
+		return nil
+	case implant.FieldECCClientKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetECCClientKey(v)
+		return nil
+	case implant.FieldRSACert:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRSACert(v)
+		return nil
+	case implant.FieldDebug:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDebug(v)
+		return nil
+	case implant.FieldObfuscateSymbols:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetObfuscateSymbols(v)
+		return nil
+	case implant.FieldReconnectInterval:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReconnectInterval(v)
+		return nil
+	case implant.FieldMaxConnectionErrors:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxConnectionErrors(v)
+		return nil
+	case implant.FieldLimitDomainJoined:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLimitDomainJoined(v)
+		return nil
+	case implant.FieldLimitDatetime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLimitDatetime(v)
+		return nil
+	case implant.FieldLimitHostname:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLimitHostname(v)
+		return nil
+	case implant.FieldLimitUsername:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLimitUsername(v)
+		return nil
+	case implant.FieldOutputFormat:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOutputFormat(v)
 		return nil
 	}
-	return fmt.Errorf("unknown BuildTask field %s", name)
+	return fmt.Errorf("unknown Implant field %s", name)
 }
 
 // AddedFields returns all numeric fields that were incremented
 // or decremented during this mutation.
-func (m *BuildTaskMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was in/decremented
-// from a field with the given name. The second value indicates
-// that this field was not set, or was not define in the schema.
-func (m *BuildTaskMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value for the given name. It returns an
-// error if the field is not defined in the schema, or if the
-// type mismatch the field type.
-func (m *BuildTaskMutation) AddField(name string, value ent.Value) error {
-	switch name {
+func (m *ImplantMutation) AddedFields() []string {
+	var fields []string
+	if m.add_ReconnectInterval != nil {
+		fields = append(fields, implant.FieldReconnectInterval)
 	}
-	return fmt.Errorf("unknown BuildTask numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared
-// during this mutation.
-func (m *BuildTaskMutation) ClearedFields() []string {
-	return nil
-}
-
-// FieldCleared returns a boolean indicates if this field was
-// cleared in this mutation.
-func (m *BuildTaskMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value for the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *BuildTaskMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown BuildTask nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation regarding the
-// given field name. It returns an error if the field is not
-// defined in the schema.
-func (m *BuildTaskMutation) ResetField(name string) error {
-	switch name {
-	case buildtask.FieldGUID:
-		m.ResetGUID()
-		return nil
+	if m.add_MaxConnectionErrors != nil {
+		fields = append(fields, implant.FieldMaxConnectionErrors)
 	}
-	return fmt.Errorf("unknown BuildTask field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this
-// mutation.
-func (m *BuildTaskMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
-	return edges
-}
-
-// AddedIDs returns all ids (to other nodes) that were added for
-// the given edge name.
-func (m *BuildTaskMutation) AddedIDs(name string) []ent.Value {
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this
-// mutation.
-func (m *BuildTaskMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
-	return edges
-}
-
-// RemovedIDs returns all ids (to other nodes) that were removed for
-// the given edge name.
-func (m *BuildTaskMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this
-// mutation.
-func (m *BuildTaskMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
-	return edges
-}
-
-// EdgeCleared returns a boolean indicates if this edge was
-// cleared in this mutation.
-func (m *BuildTaskMutation) EdgeCleared(name string) bool {
-	return false
-}
-
-// ClearEdge clears the value for the given name. It returns an
-// error if the edge name is not defined in the schema.
-func (m *BuildTaskMutation) ClearEdge(name string) error {
-	return fmt.Errorf("unknown BuildTask unique edge %s", name)
-}
-
-// ResetEdge resets all changes in the mutation regarding the
-// given edge name. It returns an error if the edge is not
-// defined in the schema.
-func (m *BuildTaskMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown BuildTask edge %s", name)
-}
-
-// ImplantConfigMutation represents an operation that mutate the ImplantConfigs
-// nodes in the graph.
-type ImplantConfigMutation struct {
-	config
-	op            Op
-	typ           string
-	id            *int
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*ImplantConfig, error)
-}
-
-var _ ent.Mutation = (*ImplantConfigMutation)(nil)
-
-// implantconfigOption allows to manage the mutation configuration using functional options.
-type implantconfigOption func(*ImplantConfigMutation)
-
-// newImplantConfigMutation creates new mutation for $n.Name.
-func newImplantConfigMutation(c config, op Op, opts ...implantconfigOption) *ImplantConfigMutation {
-	m := &ImplantConfigMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeImplantConfig,
-		clearedFields: make(map[string]struct{}),
+	if m.add_LimitDatetime != nil {
+		fields = append(fields, implant.FieldLimitDatetime)
 	}
-	for _, opt := range opts {
-		opt(m)
+	if m.add_OutputFormat != nil {
+		fields = append(fields, implant.FieldOutputFormat)
 	}
-	return m
-}
-
-// withImplantConfigID sets the id field of the mutation.
-func withImplantConfigID(id int) implantconfigOption {
-	return func(m *ImplantConfigMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *ImplantConfig
-		)
-		m.oldValue = func(ctx context.Context) (*ImplantConfig, error) {
-			once.Do(func() {
-				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().ImplantConfig.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withImplantConfig sets the old ImplantConfig of the mutation.
-func withImplantConfig(node *ImplantConfig) implantconfigOption {
-	return func(m *ImplantConfigMutation) {
-		m.oldValue = func(context.Context) (*ImplantConfig, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m ImplantConfigMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m ImplantConfigMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the id value in the mutation. Note that, the id
-// is available only if it was provided to the builder.
-func (m *ImplantConfigMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// Op returns the operation name.
-func (m *ImplantConfigMutation) Op() Op {
-	return m.op
-}
-
-// Type returns the node type of this mutation (ImplantConfig).
-func (m *ImplantConfigMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during
-// this mutation. Note that, in order to get all numeric
-// fields that were in/decremented, call AddedFields().
-func (m *ImplantConfigMutation) Fields() []string {
-	fields := make([]string, 0, 0)
 	return fields
 }
 
-// Field returns the value of a field with the given name.
-// The second boolean value indicates that this field was
-// not set, or was not define in the schema.
-func (m *ImplantConfigMutation) Field(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database.
-// An error is returned if the mutation operation is not UpdateOne,
-// or the query to the database was failed.
-func (m *ImplantConfigMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	return nil, fmt.Errorf("unknown ImplantConfig field %s", name)
-}
-
-// SetField sets the value for the given name. It returns an
-// error if the field is not defined in the schema, or if the
-// type mismatch the field type.
-func (m *ImplantConfigMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown ImplantConfig field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented
-// or decremented during this mutation.
-func (m *ImplantConfigMutation) AddedFields() []string {
-	return nil
-}
-
 // AddedField returns the numeric value that was in/decremented
 // from a field with the given name. The second value indicates
 // that this field was not set, or was not define in the schema.
-func (m *ImplantConfigMutation) AddedField(name string) (ent.Value, bool) {
+func (m *ImplantMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case implant.FieldReconnectInterval:
+		return m.AddedReconnectInterval()
+	case implant.FieldMaxConnectionErrors:
+		return m.AddedMaxConnectionErrors()
+	case implant.FieldLimitDatetime:
+		return m.AddedLimitDatetime()
+	case implant.FieldOutputFormat:
+		return m.AddedOutputFormat()
+	}
 	return nil, false
 }
 
 // AddField adds the value for the given name. It returns an
 // error if the field is not defined in the schema, or if the
 // type mismatch the field type.
-func (m *ImplantConfigMutation) AddField(name string, value ent.Value) error {
-	return fmt.Errorf("unknown ImplantConfig numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared
-// during this mutation.
-func (m *ImplantConfigMutation) ClearedFields() []string {
-	return nil
-}
-
-// FieldCleared returns a boolean indicates if this field was
-// cleared in this mutation.
-func (m *ImplantConfigMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value for the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *ImplantConfigMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown ImplantConfig nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation regarding the
-// given field name. It returns an error if the field is not
-// defined in the schema.
-func (m *ImplantConfigMutation) ResetField(name string) error {
-	return fmt.Errorf("unknown ImplantConfig field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this
-// mutation.
-func (m *ImplantConfigMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
-	return edges
-}
-
-// AddedIDs returns all ids (to other nodes) that were added for
-// the given edge name.
-func (m *ImplantConfigMutation) AddedIDs(name string) []ent.Value {
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this
-// mutation.
-func (m *ImplantConfigMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
-	return edges
-}
-
-// RemovedIDs returns all ids (to other nodes) that were removed for
-// the given edge name.
-func (m *ImplantConfigMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this
-// mutation.
-func (m *ImplantConfigMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
-	return edges
-}
-
-// EdgeCleared returns a boolean indicates if this edge was
-// cleared in this mutation.
-func (m *ImplantConfigMutation) EdgeCleared(name string) bool {
-	return false
-}
-
-// ClearEdge clears the value for the given name. It returns an
-// error if the edge name is not defined in the schema.
-func (m *ImplantConfigMutation) ClearEdge(name string) error {
-	return fmt.Errorf("unknown ImplantConfig unique edge %s", name)
-}
-
-// ResetEdge resets all changes in the mutation regarding the
-// given edge name. It returns an error if the edge is not
-// defined in the schema.
-func (m *ImplantConfigMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown ImplantConfig edge %s", name)
-}
-
-// ImplantProfileMutation represents an operation that mutate the ImplantProfiles
-// nodes in the graph.
-type ImplantProfileMutation struct {
-	config
-	op            Op
-	typ           string
-	id            *int
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*ImplantProfile, error)
-}
-
-var _ ent.Mutation = (*ImplantProfileMutation)(nil)
-
-// implantprofileOption allows to manage the mutation configuration using functional options.
-type implantprofileOption func(*ImplantProfileMutation)
-
-// newImplantProfileMutation creates new mutation for $n.Name.
-func newImplantProfileMutation(c config, op Op, opts ...implantprofileOption) *ImplantProfileMutation {
-	m := &ImplantProfileMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeImplantProfile,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withImplantProfileID sets the id field of the mutation.
-func withImplantProfileID(id int) implantprofileOption {
-	return func(m *ImplantProfileMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *ImplantProfile
-		)
-		m.oldValue = func(ctx context.Context) (*ImplantProfile, error) {
-			once.Do(func() {
-				if m.done {
-					err = fmt.Errorf("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().ImplantProfile.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withImplantProfile sets the old ImplantProfile of the mutation.
-func withImplantProfile(node *ImplantProfile) implantprofileOption {
-	return func(m *ImplantProfileMutation) {
-		m.oldValue = func(context.Context) (*ImplantProfile, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m ImplantProfileMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m ImplantProfileMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// ID returns the id value in the mutation. Note that, the id
-// is available only if it was provided to the builder.
-func (m *ImplantProfileMutation) ID() (id int, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// Op returns the operation name.
-func (m *ImplantProfileMutation) Op() Op {
-	return m.op
-}
-
-// Type returns the node type of this mutation (ImplantProfile).
-func (m *ImplantProfileMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during
-// this mutation. Note that, in order to get all numeric
-// fields that were in/decremented, call AddedFields().
-func (m *ImplantProfileMutation) Fields() []string {
-	fields := make([]string, 0, 0)
-	return fields
-}
-
-// Field returns the value of a field with the given name.
-// The second boolean value indicates that this field was
-// not set, or was not define in the schema.
-func (m *ImplantProfileMutation) Field(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database.
-// An error is returned if the mutation operation is not UpdateOne,
-// or the query to the database was failed.
-func (m *ImplantProfileMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	return nil, fmt.Errorf("unknown ImplantProfile field %s", name)
-}
-
-// SetField sets the value for the given name. It returns an
-// error if the field is not defined in the schema, or if the
-// type mismatch the field type.
-func (m *ImplantProfileMutation) SetField(name string, value ent.Value) error {
+func (m *ImplantMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case implant.FieldReconnectInterval:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddReconnectInterval(v)
+		return nil
+	case implant.FieldMaxConnectionErrors:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMaxConnectionErrors(v)
+		return nil
+	case implant.FieldLimitDatetime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLimitDatetime(v)
+		return nil
+	case implant.FieldOutputFormat:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOutputFormat(v)
+		return nil
 	}
-	return fmt.Errorf("unknown ImplantProfile field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented
-// or decremented during this mutation.
-func (m *ImplantProfileMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was in/decremented
-// from a field with the given name. The second value indicates
-// that this field was not set, or was not define in the schema.
-func (m *ImplantProfileMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value for the given name. It returns an
-// error if the field is not defined in the schema, or if the
-// type mismatch the field type.
-func (m *ImplantProfileMutation) AddField(name string, value ent.Value) error {
-	return fmt.Errorf("unknown ImplantProfile numeric field %s", name)
+	return fmt.Errorf("unknown Implant numeric field %s", name)
 }
 
 // ClearedFields returns all nullable fields that were cleared
 // during this mutation.
-func (m *ImplantProfileMutation) ClearedFields() []string {
+func (m *ImplantMutation) ClearedFields() []string {
 	return nil
 }
 
 // FieldCleared returns a boolean indicates if this field was
 // cleared in this mutation.
-func (m *ImplantProfileMutation) FieldCleared(name string) bool {
+func (m *ImplantMutation) FieldCleared(name string) bool {
 	_, ok := m.clearedFields[name]
 	return ok
 }
 
 // ClearField clears the value for the given name. It returns an
 // error if the field is not defined in the schema.
-func (m *ImplantProfileMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown ImplantProfile nullable field %s", name)
+func (m *ImplantMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Implant nullable field %s", name)
 }
 
 // ResetField resets all changes in the mutation regarding the
 // given field name. It returns an error if the field is not
 // defined in the schema.
-func (m *ImplantProfileMutation) ResetField(name string) error {
-	return fmt.Errorf("unknown ImplantProfile field %s", name)
+func (m *ImplantMutation) ResetField(name string) error {
+	switch name {
+	case implant.FieldID:
+		m.ResetID()
+		return nil
+	case implant.FieldGOOS:
+		m.ResetGOOS()
+		return nil
+	case implant.FieldGOARCH:
+		m.ResetGOARCH()
+		return nil
+	case implant.FieldECCClientCert:
+		m.ResetECCClientCert()
+		return nil
+	case implant.FieldECCClientKey:
+		m.ResetECCClientKey()
+		return nil
+	case implant.FieldRSACert:
+		m.ResetRSACert()
+		return nil
+	case implant.FieldDebug:
+		m.ResetDebug()
+		return nil
+	case implant.FieldObfuscateSymbols:
+		m.ResetObfuscateSymbols()
+		return nil
+	case implant.FieldReconnectInterval:
+		m.ResetReconnectInterval()
+		return nil
+	case implant.FieldMaxConnectionErrors:
+		m.ResetMaxConnectionErrors()
+		return nil
+	case implant.FieldLimitDomainJoined:
+		m.ResetLimitDomainJoined()
+		return nil
+	case implant.FieldLimitDatetime:
+		m.ResetLimitDatetime()
+		return nil
+	case implant.FieldLimitHostname:
+		m.ResetLimitHostname()
+		return nil
+	case implant.FieldLimitUsername:
+		m.ResetLimitUsername()
+		return nil
+	case implant.FieldOutputFormat:
+		m.ResetOutputFormat()
+		return nil
+	}
+	return fmt.Errorf("unknown Implant field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this
 // mutation.
-func (m *ImplantProfileMutation) AddedEdges() []string {
+func (m *ImplantMutation) AddedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all ids (to other nodes) that were added for
 // the given edge name.
-func (m *ImplantProfileMutation) AddedIDs(name string) []ent.Value {
+func (m *ImplantMutation) AddedIDs(name string) []ent.Value {
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this
 // mutation.
-func (m *ImplantProfileMutation) RemovedEdges() []string {
+func (m *ImplantMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all ids (to other nodes) that were removed for
 // the given edge name.
-func (m *ImplantProfileMutation) RemovedIDs(name string) []ent.Value {
+func (m *ImplantMutation) RemovedIDs(name string) []ent.Value {
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this
 // mutation.
-func (m *ImplantProfileMutation) ClearedEdges() []string {
+func (m *ImplantMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean indicates if this edge was
 // cleared in this mutation.
-func (m *ImplantProfileMutation) EdgeCleared(name string) bool {
+func (m *ImplantMutation) EdgeCleared(name string) bool {
 	return false
 }
 
 // ClearEdge clears the value for the given name. It returns an
 // error if the edge name is not defined in the schema.
-func (m *ImplantProfileMutation) ClearEdge(name string) error {
-	return fmt.Errorf("unknown ImplantProfile unique edge %s", name)
+func (m *ImplantMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown Implant unique edge %s", name)
 }
 
 // ResetEdge resets all changes in the mutation regarding the
 // given edge name. It returns an error if the edge is not
 // defined in the schema.
-func (m *ImplantProfileMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown ImplantProfile edge %s", name)
+func (m *ImplantMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown Implant edge %s", name)
 }

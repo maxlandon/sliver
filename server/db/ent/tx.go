@@ -12,12 +12,8 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
-	// BuildTask is the client for interacting with the BuildTask builders.
-	BuildTask *BuildTaskClient
-	// ImplantConfig is the client for interacting with the ImplantConfig builders.
-	ImplantConfig *ImplantConfigClient
-	// ImplantProfile is the client for interacting with the ImplantProfile builders.
-	ImplantProfile *ImplantProfileClient
+	// Implant is the client for interacting with the Implant builders.
+	Implant *ImplantClient
 
 	// lazily loaded.
 	client     *Client
@@ -75,9 +71,7 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
-	tx.BuildTask = NewBuildTaskClient(tx.config)
-	tx.ImplantConfig = NewImplantConfigClient(tx.config)
-	tx.ImplantProfile = NewImplantProfileClient(tx.config)
+	tx.Implant = NewImplantClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.
@@ -87,7 +81,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: BuildTask.QueryXXX(), the query will be executed
+// applies a query, for example: Implant.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.
