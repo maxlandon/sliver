@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"github.com/Microsoft/go-winio/pkg/guid"
+	"github.com/bishopfox/sliver/sliver/3rdparty/winio/pkg/guid"
 	"golang.org/x/sys/windows"
 )
 

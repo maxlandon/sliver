@@ -22,14 +22,15 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
 	github.com/mattn/go-colorable v0.1.6 // indirect
+	github.com/mattn/go-sqlite3 v1.13.0
 	github.com/miekg/dns v1.1.29
 	github.com/moloch--/binjection v0.0.0-20200528125518-b8c64539fa3b
+	github.com/pkg/errors v0.9.1
 	github.com/rogpeppe/go-internal v1.5.2 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79
-	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
 	golang.org/x/sys v0.0.0-20200610111108-226ff32320da
 	golang.org/x/tools v0.0.0-20200615222825-6aa8f57aacd9
 	google.golang.org/grpc v1.29.1

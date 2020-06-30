@@ -11,7 +11,6 @@ import (
 	"github.com/facebookincubator/ent/dialect/sql"
 	"github.com/facebookincubator/ent/dialect/sql/sqlgraph"
 	"github.com/facebookincubator/ent/schema/field"
-	"github.com/google/uuid"
 )
 
 // ImplantUpdate is the builder for updating Implant entities.
@@ -25,12 +24,6 @@ type ImplantUpdate struct {
 // Where adds a new predicate for the builder.
 func (iu *ImplantUpdate) Where(ps ...predicate.Implant) *ImplantUpdate {
 	iu.predicates = append(iu.predicates, ps...)
-	return iu
-}
-
-// SetID sets the ID field.
-func (iu *ImplantUpdate) SetID(u uuid.UUID) *ImplantUpdate {
-	iu.mutation.SetID(u)
 	return iu
 }
 
@@ -220,13 +213,6 @@ func (iu *ImplantUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := iu.mutation.ID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeUUID,
-			Value:  value,
-			Column: implant.FieldID,
-		})
-	}
 	if value, ok := iu.mutation.GOOS(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
@@ -369,12 +355,6 @@ type ImplantUpdateOne struct {
 	config
 	hooks    []Hook
 	mutation *ImplantMutation
-}
-
-// SetID sets the ID field.
-func (iuo *ImplantUpdateOne) SetID(u uuid.UUID) *ImplantUpdateOne {
-	iuo.mutation.SetID(u)
-	return iuo
 }
 
 // SetGOOS sets the GOOS field.
@@ -561,13 +541,6 @@ func (iuo *ImplantUpdateOne) sqlSave(ctx context.Context) (i *Implant, err error
 		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Implant.ID for update")}
 	}
 	_spec.Node.ID.Value = id
-	if value, ok := iuo.mutation.ID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeUUID,
-			Value:  value,
-			Column: implant.FieldID,
-		})
-	}
 	if value, ok := iuo.mutation.GOOS(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,

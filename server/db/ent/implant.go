@@ -8,7 +8,6 @@ import (
 
 	"github.com/bishopfox/sliver/server/db/ent/implant"
 	"github.com/facebookincubator/ent/dialect/sql"
-	"github.com/google/uuid"
 )
 
 // Implant is the model entity for the Implant schema.
@@ -16,8 +15,6 @@ type Implant struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// ID holds the value of the "ID" field.
-	ID uuid.UUID `json:"ID,omitempty"`
 	// GOOS holds the value of the "GOOS" field.
 	GOOS string `json:"GOOS,omitempty"`
 	// GOARCH holds the value of the "GOARCH" field.
@@ -45,14 +42,14 @@ type Implant struct {
 	// LimitUsername holds the value of the "LimitUsername" field.
 	LimitUsername string `json:"LimitUsername,omitempty"`
 	// OutputFormat holds the value of the "OutputFormat" field.
-	OutputFormat int `json:"OutputFormat,omitempty"`
+	OutputFormat       int `json:"OutputFormat,omitempty"`
+	build_task_implant *int
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Implant) scanValues() []interface{} {
 	return []interface{}{
 		&sql.NullInt64{},  // id
-		&uuid.UUID{},      // ID
 		&sql.NullString{}, // GOOS
 		&sql.NullString{}, // GOARCH
 		&sql.NullString{}, // ECC_ClientCert
@@ -70,6 +67,13 @@ func (*Implant) scanValues() []interface{} {
 	}
 }
 
+// fkValues returns the types for scanning foreign-keys values from sql.Rows.
+func (*Implant) fkValues() []interface{} {
+	return []interface{}{
+		&sql.NullInt64{}, // build_task_implant
+	}
+}
+
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Implant fields.
 func (i *Implant) assignValues(values ...interface{}) error {
@@ -82,80 +86,84 @@ func (i *Implant) assignValues(values ...interface{}) error {
 	}
 	i.ID = int(value.Int64)
 	values = values[1:]
-	if value, ok := values[0].(*uuid.UUID); !ok {
-		return fmt.Errorf("unexpected type %T for field ID", values[0])
-	} else if value != nil {
-		i.ID = *value
-	}
-	if value, ok := values[1].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field GOOS", values[1])
+	if value, ok := values[0].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field GOOS", values[0])
 	} else if value.Valid {
 		i.GOOS = value.String
 	}
-	if value, ok := values[2].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field GOARCH", values[2])
+	if value, ok := values[1].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field GOARCH", values[1])
 	} else if value.Valid {
 		i.GOARCH = value.String
 	}
-	if value, ok := values[3].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field ECC_ClientCert", values[3])
+	if value, ok := values[2].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field ECC_ClientCert", values[2])
 	} else if value.Valid {
 		i.ECCClientCert = value.String
 	}
-	if value, ok := values[4].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field ECC_ClientKey", values[4])
+	if value, ok := values[3].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field ECC_ClientKey", values[3])
 	} else if value.Valid {
 		i.ECCClientKey = value.String
 	}
-	if value, ok := values[5].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field RSA_Cert", values[5])
+	if value, ok := values[4].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field RSA_Cert", values[4])
 	} else if value.Valid {
 		i.RSACert = value.String
 	}
-	if value, ok := values[6].(*sql.NullBool); !ok {
-		return fmt.Errorf("unexpected type %T for field Debug", values[6])
+	if value, ok := values[5].(*sql.NullBool); !ok {
+		return fmt.Errorf("unexpected type %T for field Debug", values[5])
 	} else if value.Valid {
 		i.Debug = value.Bool
 	}
-	if value, ok := values[7].(*sql.NullBool); !ok {
-		return fmt.Errorf("unexpected type %T for field ObfuscateSymbols", values[7])
+	if value, ok := values[6].(*sql.NullBool); !ok {
+		return fmt.Errorf("unexpected type %T for field ObfuscateSymbols", values[6])
 	} else if value.Valid {
 		i.ObfuscateSymbols = value.Bool
 	}
-	if value, ok := values[8].(*sql.NullInt64); !ok {
-		return fmt.Errorf("unexpected type %T for field ReconnectInterval", values[8])
+	if value, ok := values[7].(*sql.NullInt64); !ok {
+		return fmt.Errorf("unexpected type %T for field ReconnectInterval", values[7])
 	} else if value.Valid {
 		i.ReconnectInterval = uint32(value.Int64)
 	}
-	if value, ok := values[9].(*sql.NullInt64); !ok {
-		return fmt.Errorf("unexpected type %T for field MaxConnectionErrors", values[9])
+	if value, ok := values[8].(*sql.NullInt64); !ok {
+		return fmt.Errorf("unexpected type %T for field MaxConnectionErrors", values[8])
 	} else if value.Valid {
 		i.MaxConnectionErrors = uint32(value.Int64)
 	}
-	if value, ok := values[10].(*sql.NullBool); !ok {
-		return fmt.Errorf("unexpected type %T for field LimitDomainJoined", values[10])
+	if value, ok := values[9].(*sql.NullBool); !ok {
+		return fmt.Errorf("unexpected type %T for field LimitDomainJoined", values[9])
 	} else if value.Valid {
 		i.LimitDomainJoined = value.Bool
 	}
-	if value, ok := values[11].(*sql.NullInt64); !ok {
-		return fmt.Errorf("unexpected type %T for field LimitDatetime", values[11])
+	if value, ok := values[10].(*sql.NullInt64); !ok {
+		return fmt.Errorf("unexpected type %T for field LimitDatetime", values[10])
 	} else if value.Valid {
 		i.LimitDatetime = value.Int64
 	}
-	if value, ok := values[12].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field LimitHostname", values[12])
+	if value, ok := values[11].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field LimitHostname", values[11])
 	} else if value.Valid {
 		i.LimitHostname = value.String
 	}
-	if value, ok := values[13].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field LimitUsername", values[13])
+	if value, ok := values[12].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field LimitUsername", values[12])
 	} else if value.Valid {
 		i.LimitUsername = value.String
 	}
-	if value, ok := values[14].(*sql.NullInt64); !ok {
-		return fmt.Errorf("unexpected type %T for field OutputFormat", values[14])
+	if value, ok := values[13].(*sql.NullInt64); !ok {
+		return fmt.Errorf("unexpected type %T for field OutputFormat", values[13])
 	} else if value.Valid {
 		i.OutputFormat = int(value.Int64)
+	}
+	values = values[14:]
+	if len(values) == len(implant.ForeignKeys) {
+		if value, ok := values[0].(*sql.NullInt64); !ok {
+			return fmt.Errorf("unexpected type %T for edge-field build_task_implant", value)
+		} else if value.Valid {
+			i.build_task_implant = new(int)
+			*i.build_task_implant = int(value.Int64)
+		}
 	}
 	return nil
 }
@@ -183,8 +191,6 @@ func (i *Implant) String() string {
 	var builder strings.Builder
 	builder.WriteString("Implant(")
 	builder.WriteString(fmt.Sprintf("id=%v", i.ID))
-	builder.WriteString(", ID=")
-	builder.WriteString(fmt.Sprintf("%v", i.ID))
 	builder.WriteString(", GOOS=")
 	builder.WriteString(i.GOOS)
 	builder.WriteString(", GOARCH=")

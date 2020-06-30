@@ -3,7 +3,6 @@ package schema
 import (
 	"github.com/facebookincubator/ent"
 	"github.com/facebookincubator/ent/schema/field"
-	"github.com/google/uuid"
 )
 
 // Implant holds the schema definition for the Implant entity.
@@ -14,7 +13,6 @@ type Implant struct {
 // Fields of the Implant.
 func (Implant) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("ID", uuid.UUID{}),
 
 		field.String("GOOS"),
 		field.String("GOARCH"),

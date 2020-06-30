@@ -24,7 +24,9 @@ type config struct {
 
 // hooks per client, for fast access.
 type hooks struct {
-	Implant []ent.Hook
+	BuildTask      []ent.Hook
+	Implant        []ent.Hook
+	ImplantProfile []ent.Hook
 }
 
 // Options applies the options on the config object.

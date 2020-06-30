@@ -210,6 +210,30 @@ func DenyMutationOperationRule(op ent.Op) MutationRule {
 	return OnMutationOperation(rule, op)
 }
 
+// The BuildTaskQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type BuildTaskQueryRuleFunc func(context.Context, *ent.BuildTaskQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f BuildTaskQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.BuildTaskQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.BuildTaskQuery", q)
+}
+
+// The BuildTaskMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type BuildTaskMutationRuleFunc func(context.Context, *ent.BuildTaskMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f BuildTaskMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.BuildTaskMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.BuildTaskMutation", m)
+}
+
 // The ImplantQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type ImplantQueryRuleFunc func(context.Context, *ent.ImplantQuery) error
@@ -232,4 +256,28 @@ func (f ImplantMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutatio
 		return f(ctx, m)
 	}
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ImplantMutation", m)
+}
+
+// The ImplantProfileQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type ImplantProfileQueryRuleFunc func(context.Context, *ent.ImplantProfileQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f ImplantProfileQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ImplantProfileQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ImplantProfileQuery", q)
+}
+
+// The ImplantProfileMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type ImplantProfileMutationRuleFunc func(context.Context, *ent.ImplantProfileMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f ImplantProfileMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.ImplantProfileMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ImplantProfileMutation", m)
 }

@@ -8,10 +8,22 @@ import (
 )
 
 var (
+	// BuildTasksColumns holds the columns for the "build_tasks" table.
+	BuildTasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "started", Type: field.TypeTime},
+		{Name: "completed", Type: field.TypeTime},
+	}
+	// BuildTasksTable holds the schema information for the "build_tasks" table.
+	BuildTasksTable = &schema.Table{
+		Name:        "build_tasks",
+		Columns:     BuildTasksColumns,
+		PrimaryKey:  []*schema.Column{BuildTasksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{},
+	}
 	// ImplantsColumns holds the columns for the "implants" table.
 	ImplantsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "id", Type: field.TypeUUID},
 		{Name: "goos", Type: field.TypeString},
 		{Name: "goarch", Type: field.TypeString},
 		{Name: "ecc_client_cert", Type: field.TypeString},
@@ -26,19 +38,52 @@ var (
 		{Name: "limit_hostname", Type: field.TypeString},
 		{Name: "limit_username", Type: field.TypeString},
 		{Name: "output_format", Type: field.TypeInt},
+		{Name: "build_task_implant", Type: field.TypeInt, Nullable: true},
 	}
 	// ImplantsTable holds the schema information for the "implants" table.
 	ImplantsTable = &schema.Table{
-		Name:        "implants",
-		Columns:     ImplantsColumns,
-		PrimaryKey:  []*schema.Column{ImplantsColumns[0], ImplantsColumns[1]},
-		ForeignKeys: []*schema.ForeignKey{},
+		Name:       "implants",
+		Columns:    ImplantsColumns,
+		PrimaryKey: []*schema.Column{ImplantsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:  "implants_build_tasks_Implant",
+				Columns: []*schema.Column{ImplantsColumns[15]},
+
+				RefColumns: []*schema.Column{BuildTasksColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
+	// ImplantProfilesColumns holds the columns for the "implant_profiles" table.
+	ImplantProfilesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "build_task_implant_profile", Type: field.TypeInt, Nullable: true},
+	}
+	// ImplantProfilesTable holds the schema information for the "implant_profiles" table.
+	ImplantProfilesTable = &schema.Table{
+		Name:       "implant_profiles",
+		Columns:    ImplantProfilesColumns,
+		PrimaryKey: []*schema.Column{ImplantProfilesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:  "implant_profiles_build_tasks_ImplantProfile",
+				Columns: []*schema.Column{ImplantProfilesColumns[1]},
+
+				RefColumns: []*schema.Column{BuildTasksColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		BuildTasksTable,
 		ImplantsTable,
+		ImplantProfilesTable,
 	}
 )
 
 func init() {
+	ImplantsTable.ForeignKeys[0].RefTable = BuildTasksTable
+	ImplantProfilesTable.ForeignKeys[0].RefTable = BuildTasksTable
 }

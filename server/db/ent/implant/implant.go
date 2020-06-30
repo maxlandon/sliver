@@ -7,8 +7,6 @@ const (
 	Label = "implant"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldID holds the string denoting the id field in the database.
-	FieldID = "id"
 	// FieldGOOS holds the string denoting the goos field in the database.
 	FieldGOOS = "goos"
 	// FieldGOARCH holds the string denoting the goarch field in the database.
@@ -45,7 +43,6 @@ const (
 // Columns holds all SQL columns for implant fields.
 var Columns = []string{
 	FieldID,
-	FieldID,
 	FieldGOOS,
 	FieldGOARCH,
 	FieldECCClientCert,
@@ -60,4 +57,9 @@ var Columns = []string{
 	FieldLimitHostname,
 	FieldLimitUsername,
 	FieldOutputFormat,
+}
+
+// ForeignKeys holds the SQL foreign-keys that are owned by the Implant type.
+var ForeignKeys = []string{
+	"build_task_implant",
 }

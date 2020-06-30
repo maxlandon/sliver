@@ -5,7 +5,11 @@ import (
 
 	"github.com/bishopfox/sliver/server/configs"
 	"github.com/bishopfox/sliver/server/db/ent"
+	"github.com/bishopfox/sliver/server/db/ent/migrate"
 	"github.com/bishopfox/sliver/server/log"
+
+	// Always include SQLite
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
@@ -26,7 +30,8 @@ func Client() (*ent.Client, error) {
 	}
 	defer client.Close()
 	// run the auto migration tool.
-	if err := client.Schema.Create(context.Background()); err != nil {
+	ctx := context.Background()
+	if err := client.Schema.Create(ctx, migrate.WithGlobalUniqueID(true)); err != nil {
 		sqlLog.Errorf("failed creating schema resources: %v", err)
 		return nil, err
 	}

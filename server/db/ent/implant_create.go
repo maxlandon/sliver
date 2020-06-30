@@ -10,7 +10,6 @@ import (
 	"github.com/bishopfox/sliver/server/db/ent/implant"
 	"github.com/facebookincubator/ent/dialect/sql/sqlgraph"
 	"github.com/facebookincubator/ent/schema/field"
-	"github.com/google/uuid"
 )
 
 // ImplantCreate is the builder for creating a Implant entity.
@@ -18,12 +17,6 @@ type ImplantCreate struct {
 	config
 	mutation *ImplantMutation
 	hooks    []Hook
-}
-
-// SetID sets the ID field.
-func (ic *ImplantCreate) SetID(u uuid.UUID) *ImplantCreate {
-	ic.mutation.SetID(u)
-	return ic
 }
 
 // SetGOOS sets the GOOS field.
@@ -117,9 +110,6 @@ func (ic *ImplantCreate) Mutation() *ImplantMutation {
 
 // Save creates the Implant in the database.
 func (ic *ImplantCreate) Save(ctx context.Context) (*Implant, error) {
-	if _, ok := ic.mutation.ID(); !ok {
-		return nil, &ValidationError{Name: "ID", err: errors.New("ent: missing required field \"ID\"")}
-	}
 	if _, ok := ic.mutation.GOOS(); !ok {
 		return nil, &ValidationError{Name: "GOOS", err: errors.New("ent: missing required field \"GOOS\"")}
 	}
@@ -209,14 +199,6 @@ func (ic *ImplantCreate) sqlSave(ctx context.Context) (*Implant, error) {
 			},
 		}
 	)
-	if value, ok := ic.mutation.ID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeUUID,
-			Value:  value,
-			Column: implant.FieldID,
-		})
-		i.ID = value
-	}
 	if value, ok := ic.mutation.GOOS(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,

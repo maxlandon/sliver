@@ -5,7 +5,6 @@ package implant
 import (
 	"github.com/bishopfox/sliver/server/db/ent/predicate"
 	"github.com/facebookincubator/ent/dialect/sql"
-	"github.com/google/uuid"
 )
 
 // ID filters vertices based on their identifier.
@@ -88,13 +87,6 @@ func IDLT(id int) predicate.Implant {
 func IDLTE(id int) predicate.Implant {
 	return predicate.Implant(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldID), id))
-	})
-}
-
-// ID applies equality check predicate on the "ID" field. It's identical to IDEQ.
-func ID(v uuid.UUID) predicate.Implant {
-	return predicate.Implant(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), v))
 	})
 }
 
@@ -193,82 +185,6 @@ func LimitUsername(v string) predicate.Implant {
 func OutputFormat(v int) predicate.Implant {
 	return predicate.Implant(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldOutputFormat), v))
-	})
-}
-
-// IDEQ applies the EQ predicate on the "ID" field.
-func IDEQ(v uuid.UUID) predicate.Implant {
-	return predicate.Implant(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), v))
-	})
-}
-
-// IDNEQ applies the NEQ predicate on the "ID" field.
-func IDNEQ(v uuid.UUID) predicate.Implant {
-	return predicate.Implant(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), v))
-	})
-}
-
-// IDIn applies the In predicate on the "ID" field.
-func IDIn(vs ...uuid.UUID) predicate.Implant {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Implant(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
-}
-
-// IDNotIn applies the NotIn predicate on the "ID" field.
-func IDNotIn(vs ...uuid.UUID) predicate.Implant {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Implant(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
-}
-
-// IDGT applies the GT predicate on the "ID" field.
-func IDGT(v uuid.UUID) predicate.Implant {
-	return predicate.Implant(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), v))
-	})
-}
-
-// IDGTE applies the GTE predicate on the "ID" field.
-func IDGTE(v uuid.UUID) predicate.Implant {
-	return predicate.Implant(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), v))
-	})
-}
-
-// IDLT applies the LT predicate on the "ID" field.
-func IDLT(v uuid.UUID) predicate.Implant {
-	return predicate.Implant(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), v))
-	})
-}
-
-// IDLTE applies the LTE predicate on the "ID" field.
-func IDLTE(v uuid.UUID) predicate.Implant {
-	return predicate.Implant(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), v))
 	})
 }
 

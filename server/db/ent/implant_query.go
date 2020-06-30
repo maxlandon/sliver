@@ -23,6 +23,7 @@ type ImplantQuery struct {
 	order      []OrderFunc
 	unique     []string
 	predicates []predicate.Implant
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -237,12 +238,12 @@ func (iq *ImplantQuery) Clone() *ImplantQuery {
 // Example:
 //
 //	var v []struct {
-//		ID uuid.UUID `json:"ID,omitempty"`
+//		GOOS string `json:"GOOS,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Implant.Query().
-//		GroupBy(implant.FieldID).
+//		GroupBy(implant.FieldGOOS).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 //
@@ -263,11 +264,11 @@ func (iq *ImplantQuery) GroupBy(field string, fields ...string) *ImplantGroupBy 
 // Example:
 //
 //	var v []struct {
-//		ID uuid.UUID `json:"ID,omitempty"`
+//		GOOS string `json:"GOOS,omitempty"`
 //	}
 //
 //	client.Implant.Query().
-//		Select(implant.FieldID).
+//		Select(implant.FieldGOOS).
 //		Scan(ctx, &v)
 //
 func (iq *ImplantQuery) Select(field string, fields ...string) *ImplantSelect {
@@ -295,13 +296,20 @@ func (iq *ImplantQuery) prepareQuery(ctx context.Context) error {
 
 func (iq *ImplantQuery) sqlAll(ctx context.Context) ([]*Implant, error) {
 	var (
-		nodes = []*Implant{}
-		_spec = iq.querySpec()
+		nodes   = []*Implant{}
+		withFKs = iq.withFKs
+		_spec   = iq.querySpec()
 	)
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, implant.ForeignKeys...)
+	}
 	_spec.ScanValues = func() []interface{} {
 		node := &Implant{config: iq.config}
 		nodes = append(nodes, node)
 		values := node.scanValues()
+		if withFKs {
+			values = append(values, node.fkValues()...)
+		}
 		return values
 	}
 	_spec.Assign = func(values ...interface{}) error {

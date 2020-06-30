@@ -3,7 +3,7 @@
 package etw
 
 import (
-	"github.com/Microsoft/go-winio/pkg/guid"
+	"github.com/bishopfox/sliver/sliver/3rdparty/winio/pkg/guid"
 )
 
 // NewProviderWithID returns a nil provider on unsupported platforms.

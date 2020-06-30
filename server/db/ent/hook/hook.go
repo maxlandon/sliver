@@ -9,6 +9,19 @@ import (
 	"github.com/bishopfox/sliver/server/db/ent"
 )
 
+// The BuildTaskFunc type is an adapter to allow the use of ordinary
+// function as BuildTask mutator.
+type BuildTaskFunc func(context.Context, *ent.BuildTaskMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BuildTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.BuildTaskMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BuildTaskMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The ImplantFunc type is an adapter to allow the use of ordinary
 // function as Implant mutator.
 type ImplantFunc func(context.Context, *ent.ImplantMutation) (ent.Value, error)
@@ -18,6 +31,19 @@ func (f ImplantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	mv, ok := m.(*ent.ImplantMutation)
 	if !ok {
 		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImplantMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The ImplantProfileFunc type is an adapter to allow the use of ordinary
+// function as ImplantProfile mutator.
+type ImplantProfileFunc func(context.Context, *ent.ImplantProfileMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ImplantProfileFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.ImplantProfileMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImplantProfileMutation", m)
 	}
 	return f(ctx, mv)
 }
