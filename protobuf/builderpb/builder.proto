@@ -23,6 +23,7 @@ message Artifact {
     string GUID = 1;
     clientpb.ImplantConfig ImplantConfig = 2;
     commonpb.File File = 3;
+    commonpb.File SourceCache = 4;
 }
 
 message BuildTask {

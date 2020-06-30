@@ -13,6 +13,7 @@ require (
 	github.com/desertbit/grumble v1.0.5
 	github.com/dgraph-io/badger v1.6.1
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
+	github.com/facebookincubator/ent v0.2.5
 	github.com/fatih/color v1.9.0
 	github.com/gobuffalo/envy v1.9.0 // indirect
 	github.com/gobuffalo/packr v1.30.1
@@ -25,12 +26,12 @@ require (
 	github.com/moloch--/binjection v0.0.0-20200528125518-b8c64539fa3b
 	github.com/rogpeppe/go-internal v1.5.2 // indirect
 	github.com/sirupsen/logrus v1.6.0
-	github.com/spf13/cobra v0.0.5
+	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
 	golang.org/x/sys v0.0.0-20200610111108-226ff32320da
-	golang.org/x/tools v0.0.0-20200501205727-542909fd9944
+	golang.org/x/tools v0.0.0-20200615222825-6aa8f57aacd9
 	google.golang.org/grpc v1.29.1
 	gopkg.in/AlecAivazis/survey.v1 v1.8.8
 	gopkg.in/yaml.v2 v2.2.8 // indirect
