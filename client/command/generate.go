@@ -377,6 +377,9 @@ func parseCompileFlags(ctx *grumble.Context) *clientpb.ImplantConfig {
 		C2:               c2s,
 		CanaryDomains:    canaryDomains,
 
+		// Added routing & mux
+		RouteEnabled: true,
+
 		ReconnectInterval:   uint32(reconnectInterval),
 		MaxConnectionErrors: uint32(maxConnectionErrors),
 

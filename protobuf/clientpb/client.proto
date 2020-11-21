@@ -65,6 +65,9 @@ message ImplantConfig {
   repeated ImplantC2 C2 = 10;
   repeated string CanaryDomains = 11;
 
+  // Routing and Mux
+  bool RouteEnabled = 12;
+
   bool LimitDomainJoined = 20;
   string LimitDatetime = 21;
   string LimitHostname = 22;
