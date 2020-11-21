@@ -25,6 +25,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"net/url"
 	"sync"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -79,7 +80,14 @@ func acceptSliverConnections(ln net.Listener) {
 			mtlsLog.Errorf("Accept failed: %v", err)
 			continue
 		}
-		go handleSliverConnection(conn)
+		url := &url.URL{Host: conn.RemoteAddr().String()}
+		transport := New(url)
+		err = transport.StartFromConn(conn)
+		if err != nil {
+			mtlsLog.Errorf("Error setting up mTLS transport & session: %s", err)
+		}
+
+		// go handleSliverConnection(conn)
 	}
 }
 
@@ -103,6 +111,58 @@ func handleSliverConnection(conn net.Conn) {
 
 	done := make(chan bool)
 
+	go func() {
+		defer func() {
+			done <- true
+		}()
+		handlers := serverHandlers.GetSessionHandlers()
+		for {
+			envelope, err := socketReadEnvelope(conn)
+			if err != nil {
+				mtlsLog.Errorf("Socket read error %v", err)
+				return
+			}
+			session.UpdateCheckin()
+			if envelope.ID != 0 {
+				session.RespMutex.RLock()
+				if resp, ok := session.Resp[envelope.ID]; ok {
+					resp <- envelope // Could deadlock, maybe want to investigate better solutions
+				}
+				session.RespMutex.RUnlock()
+			} else if handler, ok := handlers[envelope.Type]; ok {
+				go handler.(func(*core.Session, []byte))(session, envelope.Data)
+			}
+		}
+	}()
+
+Loop:
+	for {
+		select {
+		case envelope := <-session.Send:
+			err := socketWriteEnvelope(conn, envelope)
+			if err != nil {
+				mtlsLog.Errorf("Socket write failed %v", err)
+				break Loop
+			}
+		case <-done:
+			break Loop
+		}
+	}
+	mtlsLog.Infof("Closing connection to session %s", session.Name)
+}
+
+// handleSessionRPC - Small refactor used by new Transport model.
+func handleSessionRPC(session *core.Session, conn net.Conn) {
+
+	// We will automatically cleanup the session once this function exits.
+	defer func() {
+		mtlsLog.Debugf("Cleaning up for %s", session.Name)
+		core.Sessions.Remove(session.ID)
+		conn.Close()
+	}()
+
+	// Receive messages
+	done := make(chan bool)
 	go func() {
 		defer func() {
 			done <- true
