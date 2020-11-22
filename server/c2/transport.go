@@ -20,14 +20,16 @@ package c2
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"sync"
 
+	"github.com/hashicorp/yamux"
+
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/log"
-	"github.com/hashicorp/yamux"
 )
 
 var (
@@ -107,16 +109,9 @@ func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 		tpLog.Printf("[mux] Error setting up multiplexer client: %s", err)
 	}
 
-	// Finally, mux a first stream and register the session over it.
-	err = t.NewStreamC2()
-
-	return
-}
-
-// NewStreamC2 - The transport has received a new muxed stream (REVERSE).
-// It is for now only an mTLS pivoted implant connection, which needs registration.
-// We therefore add a C2 RPC layer on top of this connection, and register the session.
-func (t *Transport) NewStreamC2() (err error) {
+	// We start handling inbound/outbound streams in the background
+	go t.handleInboundStreams()
+	go t.handleOutboundStreams()
 
 	// Initiate first stream, used by remote end as C2 RPC stream.
 	// The remote is already listening for incoming mux requests.
@@ -125,21 +120,228 @@ func (t *Transport) NewStreamC2() (err error) {
 		tpLog.Printf("[mux] Error opening C2 stream: %s", err)
 		return
 	}
+	t.C2, err = t.NewStreamC2(stream)
+	if err != nil {
+		return t.phyConnFallBack()
+	}
+
+	return
+}
+
+// NewStreamC2 - The transport has received a new muxed stream (REVERSE).
+// It is for now only an mTLS pivoted implant connection, which needs registration.
+// We therefore add a C2 RPC layer on top of this connection, and register the session.
+func (t *Transport) NewStreamC2(stream net.Conn) (sess *core.Session, err error) {
 
 	// Create and register session
-	session := core.Sessions.Add(&core.Session{
+	sess = core.Sessions.Add(&core.Session{
 		Transport:     "mtls",
 		RemoteAddress: fmt.Sprintf("%s", stream.RemoteAddr()),
 		Send:          make(chan *sliverpb.Envelope),
 		RespMutex:     &sync.RWMutex{},
 		Resp:          map[uint64]chan *sliverpb.Envelope{},
 	})
-	session.UpdateCheckin()
+	sess.UpdateCheckin()
 
 	// Concurrently start RPC request/response handling.
-	go handleSessionRPC(session, stream)
+	go handleSessionRPC(sess, stream)
 
 	tpLog.Infof("Done creating RPC C2 stream.")
 
 	return
 }
+
+// Stop - Gracefully shutdowns all components of this transport.
+// The force parameter is used in case we have a mux transport, and
+// that we want to kill it even if there are pending streams in it.
+func (t *Transport) Stop(force bool) (err error) {
+
+	if t.IsMux {
+		activeStreams := t.multiplexer.NumStreams()
+
+		// If there is an active C2, there is at least one open stream,
+		// that we do not count as "important" when stopping the Transport.
+		if (t.C2 != nil && activeStreams > 1) || (t.C2 == nil && activeStreams > 0) && !force {
+			return fmt.Errorf("Cannot stop transport: %d streams still opened", activeStreams)
+		}
+
+		tpLog.Infof("[mux] closing all muxed streams")
+		err = t.multiplexer.GoAway()
+		if err != nil {
+			tpLog.Errorf("[mux] Error sending GoAway: %s", err)
+		}
+		err = t.multiplexer.Close()
+		tpLog.Errorf("[mux] Error closing session: %s", err)
+	}
+
+	// Just check the physical connection is not nil and kill it if necessary.
+	if t.conn != nil {
+		tpLog.Infof("killing physical connection (%s  ->  %s", t.conn.LocalAddr(), t.conn.RemoteAddr())
+		return t.conn.Close()
+	}
+
+	tpLog.Infof("Transport closed (%s)", t.conn.RemoteAddr())
+
+	return
+}
+
+// handleInboundStreams - Each time the other end of the transport asks us to handle
+// a connection, we handle it. However, as opposed to implant's handleInboundStreams()
+// functions, we always assume these streams are REVERSE connections initiated by some
+// implants, and therefore we automatically register a new session. Authentication should
+// have been already performed on the pivot implant's listener.
+func (t *Transport) handleInboundStreams() {
+
+	defer func() {
+		close(t.Inbound)
+		tpLog.Infof("[mux] Stopped processing inbound streams: ")
+	}()
+
+	tpLog.Infof("[mux] Starting inbound stream handling in background...")
+	for {
+		select {
+		default:
+			stream, err := t.multiplexer.Accept()
+			if err != nil {
+				tpLog.Errorf("[mux] Error accepting C2 stream: %s", err)
+				return
+			}
+			tpLog.Infof("[mux] Inbound stream: muxing conn")
+
+			// Register session over this new stream, by default.
+			_, err = t.NewStreamC2(stream)
+			if err != nil {
+				tpLog.Errorf("Failed to register session: %s", err)
+			}
+
+		case <-t.multiplexer.CloseChan():
+			return
+		}
+	}
+}
+
+// handleOutboundStreams - The routing system populates the Outbound
+// stream channel with connections that we need to route to this
+// Transport's other end. We process/pipe these connections here.
+func (t *Transport) handleOutboundStreams() {
+
+	defer func() {
+		close(t.Outbound)
+		tpLog.Infof("[mux] Stopped processing outbound streams: ")
+	}()
+
+	tpLog.Printf("[mux] Starting outbound stream handling in background...")
+
+	for {
+		select {
+		case src := <-t.Outbound:
+			dst, err := t.multiplexer.Open()
+			if err != nil {
+				tpLog.Errorf("[mux] Error opening C2 stream: %s", err)
+				return
+			}
+			// We pipe the output in the background, and go on with the next stream.
+			go transport(src, dst)
+
+			tpLog.Errorf("[mux] Outbound stream: muxing conn and piping")
+
+		case <-t.multiplexer.CloseChan():
+			return
+		}
+	}
+}
+
+// In case we failed to use multiplexing infrastructure, we call here
+// to downgrade to RPC over the transport's physical connection.
+func (t *Transport) phyConnFallBack() (err error) {
+
+	tpLog.Infof("falling back on RPC around physical conn")
+
+	// First make sure all mux code is cleanup correctly.
+	tpLog.Infof("[mux] Cleaning multiplexing code")
+
+	// Create and register session
+	t.C2 = core.Sessions.Add(&core.Session{
+		Transport:     "mtls",
+		RemoteAddress: fmt.Sprintf("%s", t.conn.RemoteAddr()),
+		Send:          make(chan *sliverpb.Envelope),
+		RespMutex:     &sync.RWMutex{},
+		Resp:          map[uint64]chan *sliverpb.Envelope{},
+	})
+	t.C2.UpdateCheckin()
+
+	// Concurrently start RPC request/response handling, but
+	// this time around the transport physical conn
+	go handleSessionRPC(t.C2, t.conn)
+
+	tpLog.Infof("Done downgrading RPC C2 over physical conn.")
+
+	return
+}
+
+// IsRouting - The transport checks if it is routing traffic that does not originate from this implant.
+func (t *Transport) IsRouting() bool {
+
+	if t.IsMux {
+		activeStreams := t.multiplexer.NumStreams()
+		// If there is an active C2, there is at least one open stream,
+		// that we do not count as "important" when stopping the Transport.
+		if (t.C2 != nil && activeStreams > 1) || (t.C2 == nil && activeStreams > 0) {
+			return true
+		}
+		// Else we don't have any non-implant streams.
+		return false
+	}
+	// If no mux, no routing.
+	return false
+}
+
+func transport(rw1, rw2 io.ReadWriter) error {
+	errc := make(chan error, 1)
+	go func() {
+		errc <- copyBuffer(rw1, rw2)
+	}()
+
+	go func() {
+		errc <- copyBuffer(rw2, rw1)
+	}()
+
+	err := <-errc
+	if err != nil && err == io.EOF {
+		err = nil
+	}
+	return err
+}
+
+func copyBuffer(dst io.Writer, src io.Reader) error {
+	buf := lPool.Get().([]byte)
+	defer lPool.Put(buf)
+
+	_, err := io.CopyBuffer(dst, src, buf)
+	return err
+}
+
+var (
+	sPool = sync.Pool{
+		New: func() interface{} {
+			return make([]byte, smallBufferSize)
+		},
+	}
+	mPool = sync.Pool{
+		New: func() interface{} {
+			return make([]byte, mediumBufferSize)
+		},
+	}
+	lPool = sync.Pool{
+		New: func() interface{} {
+			return make([]byte, largeBufferSize)
+		},
+	}
+)
+
+var (
+	tinyBufferSize   = 512
+	smallBufferSize  = 2 * 1024  // 2KB small buffer
+	mediumBufferSize = 8 * 1024  // 8KB medium buffer
+	largeBufferSize  = 32 * 1024 // 32KB large buffer
+)
