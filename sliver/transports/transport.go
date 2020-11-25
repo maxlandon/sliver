@@ -58,10 +58,10 @@ type Transport struct {
 	// This SSH conn would be this net.Conn, and therefore not being a physical connection.
 	conn net.Conn
 
-	// multiplexer - Able to derive stream from the physical conn above. This
+	// Multiplexer - Able to derive stream from the physical conn above. This
 	// transport being in the implant and the server being the one "ordering"
 	// to mux conns, we are in a server position here.
-	multiplexer *yamux.Session
+	Multiplexer *yamux.Session
 
 	// C2 - The logical stream used, by default, to speak RPC with the server.
 	// Either setup on top of physical conn, or of a muxed stream. This can
@@ -177,10 +177,10 @@ ConnLoop:
 		t.Inbound = make(chan net.Conn, 100)
 		t.Outbound = make(chan net.Conn, 100)
 
-		t.multiplexer, err = yamux.Server(t.conn, nil)
+		t.Multiplexer, err = yamux.Server(t.conn, nil)
 		if err != nil {
 			// {{if .Config.Debug}}
-			log.Printf("[mux] Error setting up multiplexer server: %s", err)
+			log.Printf("[mux] Error setting up Multiplexer server: %s", err)
 			// {{end}}
 			return t.phyConnFallBack()
 		}
@@ -225,17 +225,17 @@ func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 	t.Inbound = make(chan net.Conn, 100)
 	t.Outbound = make(chan net.Conn, 100)
 
-	t.multiplexer, err = yamux.Client(conn, nil)
+	t.Multiplexer, err = yamux.Client(conn, nil)
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Printf("[mux] Error setting up multiplexer client: %s", err)
+		log.Printf("[mux] Error setting up Multiplexer client: %s", err)
 		// {{end}}
 	}
 
 	// Initiate first stream, used by remote end as C2 RPC stream.
 	// Then add it to inbound streams, which will be routed. Exceptionally,
 	// the transport is a client, relatively to another implant.
-	stream, err := t.multiplexer.Open()
+	stream, err := t.Multiplexer.Open()
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("[mux] Error opening C2 stream: %s", err)
@@ -324,7 +324,7 @@ func (t *Transport) NewStreamC2() (c2 *Connection, err error) {
 func (t *Transport) Stop(force bool) (err error) {
 
 	if t.IsMux {
-		activeStreams := t.multiplexer.NumStreams()
+		activeStreams := t.Multiplexer.NumStreams()
 
 		// If there is an active C2, there is at least one open stream,
 		// that we do not count as "important" when stopping the Transport.
@@ -335,13 +335,13 @@ func (t *Transport) Stop(force bool) (err error) {
 		// {{if .Config.Debug}}
 		log.Printf("[mux] closing all muxed streams")
 		// {{end}}
-		err = t.multiplexer.GoAway()
+		err = t.Multiplexer.GoAway()
 		if err != nil {
 			// {{if .Config.Debug}}
 			log.Printf("[mux] Error sending GoAway: %s", err)
 			// {{end}}
 		}
-		err = t.multiplexer.Close()
+		err = t.Multiplexer.Close()
 		// {{if .Config.Debug}}
 		log.Printf("[mux] Error closing session: %s", err)
 		// {{end}}
@@ -379,7 +379,7 @@ func (t *Transport) handleInboundStreams() {
 	for {
 		select {
 		default:
-			stream, err := t.multiplexer.Accept()
+			stream, err := t.Multiplexer.Accept()
 			if err != nil {
 				// {{if .Config.Debug}}
 				log.Printf("[mux] Error accepting C2 stream: %s", err)
@@ -391,7 +391,7 @@ func (t *Transport) handleInboundStreams() {
 			// {{end}}
 			t.Inbound <- stream
 
-		case <-t.multiplexer.CloseChan():
+		case <-t.Multiplexer.CloseChan():
 			return
 		}
 	}
@@ -416,7 +416,7 @@ func (t *Transport) handleOutboundStreams() {
 	for {
 		select {
 		case src := <-t.Outbound:
-			dst, err := t.multiplexer.Open()
+			dst, err := t.Multiplexer.Open()
 			if err != nil {
 				// {{if .Config.Debug}}
 				log.Printf("[mux] Error opening C2 stream: %s", err)
@@ -430,7 +430,7 @@ func (t *Transport) handleOutboundStreams() {
 			log.Printf("[mux] Outbound stream: muxing conn and piping")
 			// {{end}}
 
-		case <-t.multiplexer.CloseChan():
+		case <-t.Multiplexer.CloseChan():
 			return
 		}
 	}
@@ -454,7 +454,7 @@ func (t *Transport) phyConnFallBack() (err error) {
 func (t *Transport) IsRouting() bool {
 
 	if t.IsMux {
-		activeStreams := t.multiplexer.NumStreams()
+		activeStreams := t.Multiplexer.NumStreams()
 		// If there is an active C2, there is at least one open stream,
 		// that we do not count as "important" when stopping the Transport.
 		if (t.C2 != nil && activeStreams > 1) || (t.C2 == nil && activeStreams > 0) {

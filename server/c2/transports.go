@@ -1,11 +1,5 @@
 package c2
 
-import (
-	"crypto/rand"
-	"encoding/binary"
-	"sync"
-)
-
 /*
 	Sliver Implant Framework
 	Copyright (C) 2019  Bishop Fox
@@ -23,6 +17,12 @@ import (
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
+import (
+	"crypto/rand"
+	"encoding/binary"
+	"sync"
+)
 
 var (
 	// Transports - All active transports on the server.

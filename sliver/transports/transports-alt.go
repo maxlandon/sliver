@@ -33,6 +33,11 @@ var (
 		Active: map[uint64]*Transport{},
 		mutex:  &sync.Mutex{},
 	}
+
+	// ServerComms - Only one transport is tied either to the C2 server
+	// or to a pivot implant. This is a reference used for things like
+	// the routing system.
+	ServerComms *Transport
 )
 
 // transports - Holds all active transports for this implant.

