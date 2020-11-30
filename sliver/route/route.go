@@ -23,10 +23,9 @@ import (
 	"net"
 	"sync"
 
-	"github.com/ilgooz/bon"
-
 	"github.com/bishopfox/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/sliver/3rdparty/hashicorp/yamux"
+	"github.com/bishopfox/sliver/sliver/3rdparty/ilgooz/bon"
 )
 
 // The route package is used to route all traffic going either:

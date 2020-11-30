@@ -25,10 +25,10 @@ import (
 	"net"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/ilgooz/bon"
 
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/sliver/3rdparty/ilgooz/bon"
 	"github.com/bishopfox/sliver/sliver/route"
 	"github.com/bishopfox/sliver/sliver/transports"
 )

@@ -31,10 +31,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ilgooz/bon"
-
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/sliver/3rdparty/hashicorp/yamux"
+	"github.com/bishopfox/sliver/sliver/3rdparty/ilgooz/bon"
 )
 
 // Transport - A wrapper around a physical connection, embedding what is necessary to
@@ -426,6 +425,7 @@ func (t *Transport) phyConnFallBack() (err error) {
 	// {{end}}
 
 	// First make sure all mux code is cleanup correctly.
+	t.IsMux = false
 
 	// Wrap RPC layer around physical conn here.
 
