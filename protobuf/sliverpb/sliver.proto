@@ -543,3 +543,47 @@ message PivotData {
   uint32 PivotID = 12;
   bytes Data = 2;
 }
+
+// Network Routes
+message Route {
+        uint32 ID = 1;
+        string Subnet = 2;
+        string Netmask = 3;
+        repeated Node Nodes = 4;
+}
+
+message Node {
+        uint32 ID = 1;
+        string Name = 2;
+        string Addr = 3;
+        string Host = 4;
+}
+
+message  RoutesReq {
+  string Addr = 1;
+  commonpb.Request Request = 9;
+}
+
+message Routes {
+    repeated Route Active = 1;    
+}
+
+message AddRouteReq {
+  Route Route = 1;
+  commonpb.Request Request = 9;
+}
+
+message AddRoute {
+  bool Success = 1;
+  commonpb.Response Response = 9;
+}
+
+message RmRouteReq {
+  Route Route = 1; 
+  commonpb.Request Request = 9;
+}
+
+message RmRoute {
+  bool Success = 1;
+  commonpb.Response Response = 9;
+}

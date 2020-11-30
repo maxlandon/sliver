@@ -162,6 +162,7 @@ const (
 	MsgPivotClose
 	// MsgPivotData - Request that encapsulates and envelope form a sliver to the server though the pivot and viceversa
 	MsgPivotData
+
 	// MsgStartServiceReq - Request to start a service
 	MsgStartServiceReq
 	// MsgStartService - Response to start service request
@@ -170,14 +171,23 @@ const (
 	MsgStopServiceReq
 	// MsgRemoveServiceReq - Request to remove a remote service
 	MsgRemoveServiceReq
+
 	// MsgMakeTokenReq - Request for MakeToken
 	MsgMakeTokenReq
 	// MsgMakeToken - Response for MakeToken
 	MsgMakeToken
+
 	// MsgEnvReq - Request to get environment variables
 	MsgEnvReq
 	// MsgEnvInfo - Response to environment variable request
 	MsgEnvInfo
+
+	// MsgAddRouteReq - Add a network route.
+	MsgAddRouteReq
+	// MsgRoutesReq - Get all active network routes.
+	MsgRoutesReq
+	// MsgRmRouteReq - Remove an active network route.
+	MsgRmRouteReq
 )
 
 // MsgNumber - Get a message number of type
@@ -320,21 +330,31 @@ func MsgNumber(request proto.Message) uint32 {
 		return MsgPivotClose
 	case *PivotData:
 		return MsgPivotData
+
 	case *StartServiceReq:
 		return MsgStartServiceReq
 	case *StopServiceReq:
 		return MsgStopServiceReq
 	case *RemoveServiceReq:
 		return MsgRemoveServiceReq
+
 	case *MakeTokenReq:
 		return MsgMakeTokenReq
 	case *MakeToken:
 		return MsgMakeToken
+
 	case *EnvReq:
 		return MsgEnvReq
 	case *EnvInfo:
 		return MsgEnvInfo
 
+	case *Routes:
+		return MsgRoutesReq
+	case *AddRoute:
+		return MsgAddRouteReq
+	case *RemoveRoute:
+		return MsgRmRouteReq
 	}
+
 	return uint32(0)
 }
