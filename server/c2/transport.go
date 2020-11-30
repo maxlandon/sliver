@@ -126,6 +126,9 @@ func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 		return t.phyConnFallBack()
 	}
 
+	// Add to active transports
+	Transports.Add(t)
+
 	return
 }
 
@@ -180,6 +183,9 @@ func (t *Transport) Stop(force bool) (err error) {
 		tpLog.Infof("killing physical connection (%s  ->  %s", t.conn.LocalAddr(), t.conn.RemoteAddr())
 		return t.conn.Close()
 	}
+
+	// Remove from active transports
+	Transports.Remove(t.ID)
 
 	tpLog.Infof("Transport closed (%s)", t.conn.RemoteAddr())
 
