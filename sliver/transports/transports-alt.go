@@ -34,9 +34,8 @@ var (
 		mutex:  &sync.Mutex{},
 	}
 
-	// ServerComms - Only one transport is tied either to the C2 server
-	// or to a pivot implant. This is a reference used for things like
-	// the routing system.
+	// ServerComms - Only one transport is tied either to the C2 server or to a pivot implant.
+	// This is a reference used for things like the routing system.
 	ServerComms *Transport
 )
 
@@ -44,7 +43,7 @@ var (
 // This is consumed by some handlers & listeners, as well as the routing system.
 type transports struct {
 	Active map[uint64]*Transport // All transports with an active connection
-	mutext *sync.Mutex
+	mutex  *sync.Mutex
 }
 
 // Add - Add a new active transport to the implant' transport map.
