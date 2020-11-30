@@ -20,6 +20,7 @@ package route
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/core"
 )
 
@@ -84,17 +86,19 @@ func (r *routes) Add(new *sliverpb.Route) (route *sliverpb.Route, err error) {
 
 	// Add handle func to Router (technically the fist node in the chain)
 	var handle = func(conn net.Conn) {
-		// for _, t := range transports.Transports.Active {
-		//         next := addRouteReq.Route.Nodes[1]
-		//         if t.URL.String() == next.Addr {
-		//                 go t.HandleRouteStream(addRouteReq.Route.ID, conn)
-		//         }
-		// }
+		for _, t := range c2.Transports.Active {
+			next := route.Nodes[0]
+			if t.C2.ID == next.ID {
+				go t.HandleRouteStream(route.ID, conn)
+			}
+		}
 	}
 	// Add handle func to Router.
 	r.Server.Handle(bon.Route(route.ID), handle)
 
-	next := *new // A copy of the route that we use as cutoff
+	// A copy of the route that we cutoff at each successful node request.
+	// The final subnet we want to route traffic to is always preserved despite cutoffs
+	next := *new
 
 	// Send C2 request to each implant node in the chain.
 	for _, node := range next.Nodes {
@@ -132,11 +136,40 @@ func (r *routes) Add(new *sliverpb.Route) (route *sliverpb.Route, err error) {
 // Remove - We notify all implant nodes on the route to stop routing traffic, and deregister the route.
 func (r *routes) Remove(routeID uint32) (err error) {
 
-	// Send request to all implants
+	route, found := r.Active[routeID]
+	if !found {
+		return fmt.Errorf("provided route ID (%d) does not exist", routeID)
+	}
 
-	// Remove route from Active
+	// Send request to remove route to all implant nodes.
+	for _, node := range route.Nodes {
+
+		nodeSession := core.Sessions.Get(node.ID)
+
+		rmRouteReq := &sliverpb.RmRouteReq{}
+		data, _ := proto.Marshal(rmRouteReq)
+
+		resp, err := nodeSession.Request(sliverpb.MsgRmRouteReq, defaultNetTimeout, data)
+		if err != nil {
+			return err
+		}
+
+		rmRoute := &sliverpb.RmRoute{}
+		proto.Unmarshal(resp, rmRoute)
+
+		if rmRoute.Success == false {
+			return errors.New(rmRoute.Response.Err)
+		}
+
+	}
 
 	// Call off to Router
+	r.Server.Off(bon.Route(routeID))
+
+	// Remove route from Active
+	r.mutex.Lock()
+	delete(r.Active, route.ID)
+	r.mutex.Unlock()
 
 	return
 }

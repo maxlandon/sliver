@@ -21,23 +21,60 @@ package rpc
 import (
 	"context"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
+	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/route"
 )
 
 // Routes - Get active network routes
 func (rpc *Server) Routes(ctx context.Context, req *sliverpb.RoutesReq) (*sliverpb.Routes, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Routes not implemented")
+
+	resp := &sliverpb.Routes{}
+	for _, r := range route.Routes.Active {
+		resp.Active = append(resp.Active, r)
+	}
+
+	return resp, nil
 }
 
 // AddRoute - Add a nework route through
 func (rpc *Server) AddRoute(ctx context.Context, req *sliverpb.AddRouteReq) (*sliverpb.AddRoute, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddRoute not implemented")
+
+	resp := &sliverpb.AddRoute{Response: &commonpb.Response{}}
+
+	// Task server to setup route and request nodes to implement it
+	route, err := route.Routes.Add(req.Route)
+	if err != nil {
+		resp.Success = false
+		resp.Err = err.Error()
+		return resp, nil
+	}
+	if route == nil {
+		resp.Success = false
+		resp.Response.Err = "Route returned from route setup is nil: an unidentified error occured"
+		return resp, nil
+	}
+
+	// If we have a route and no errors, return success
+	resp.Success = true
+
+	return resp, nil
 }
 
 // RemoveRoute - Delete an active network route.
 func (rpc *Server) RemoveRoute(ctx context.Context, req *sliverpb.RmRouteReq) (*sliverpb.RmRoute, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RemoveRoute not implemented")
+
+	resp := &sliverpb.RmRoute{Response: &commonpb.Response{}}
+
+	err := route.Routes.Remove(req.Route.ID)
+	if err != nil {
+		resp.Success = false
+		resp.Response.Err = err.Error()
+		return resp, nil
+	}
+
+	// If we have a route and no errors, return success
+	resp.Success = true
+
+	return resp, nil
 }
