@@ -48,6 +48,7 @@ var (
 		"handlers/generic-rpc-handlers.go",
 		"handlers/generic-tun-handlers.go",
 		"handlers/generic-pivot-handlers.go",
+		"handlers/generic-route-handlers.go",
 		"handlers/special-handlers.go",
 		"handlers/handlers_darwin.go",
 		"handlers/handlers_linux.go",
@@ -132,7 +133,10 @@ var (
 		"transports/named-pipe.go",
 		"transports/tcp-pivot.go",
 		"transports/transports.go",
+		"transports/transport.go",
 		"transports/transports-alt.go",
+
+		"route/route.go",
 
 		"version/version.go",
 		"version/version_windows.go",
@@ -243,6 +247,10 @@ var (
 		"3rdparty/hashicorp/yamux/stream.go",
 		"3rdparty/hashicorp/yamux/util.go",
 		"3rdparty/hashicorp/yamux/util_test.go",
+
+		// Stream multiplex routing
+		"3rdparty/ilgooz/bon/bon.go",
+		"3rdparty/ilgooz/bon/bon_test.go",
 
 		// "go.mod",
 

@@ -348,11 +348,11 @@ func MsgNumber(request proto.Message) uint32 {
 	case *EnvInfo:
 		return MsgEnvInfo
 
-	case *Routes:
+	case *RoutesReq:
 		return MsgRoutesReq
-	case *AddRoute:
+	case *AddRouteReq:
 		return MsgAddRouteReq
-	case *RemoveRoute:
+	case *RmRouteReq:
 		return MsgRmRouteReq
 	}
 

@@ -46,7 +46,7 @@ func (rpc *Server) AddRoute(ctx context.Context, req *sliverpb.AddRouteReq) (*sl
 	route, err := route.Routes.Add(req.Route)
 	if err != nil {
 		resp.Success = false
-		resp.Err = err.Error()
+		resp.Response.Err = err.Error()
 		return resp, nil
 	}
 	if route == nil {
