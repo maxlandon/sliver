@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/yamux"
+	"github.com/ilgooz/bon"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
@@ -74,9 +75,11 @@ type Transport struct {
 	// having forwarded the conn. Therefore, all streams are "RPC handled" as such.
 	// Also, the conn at the transport layer has already been TLS-authenticated.
 	Inbound chan net.Conn
-	// Outbound - Streams directed at the Transport's other end. We usually
-	// fill this channel with conns handled by C2 server/console proxies.
-	Outbound chan net.Conn
+
+	// Router - For each connection that needs to be forwarded to the other end
+	// we use the Router to connect, specify the wished route of the connection, and pipe.
+	// Therefore, here the Router is in a client position most of the time.
+	Router *bon.Bon
 }
 
 // New - Instantiate a new transport and do basic setup
@@ -102,7 +105,6 @@ func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 
 	// Inbound/outbound streams are initialized
 	t.Inbound = make(chan net.Conn, 100)
-	t.Outbound = make(chan net.Conn, 100)
 
 	t.multiplexer, err = yamux.Client(conn, nil)
 	if err != nil {
@@ -111,7 +113,6 @@ func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 
 	// We start handling inbound/outbound streams in the background
 	go t.handleInboundStreams()
-	go t.handleOutboundStreams()
 
 	// Initiate first stream, used by remote end as C2 RPC stream.
 	// The remote is already listening for incoming mux requests.
@@ -220,35 +221,20 @@ func (t *Transport) handleInboundStreams() {
 	}
 }
 
-// handleOutboundStreams - The routing system populates the Outbound
-// stream channel with connections that we need to route to this
-// Transport's other end. We process/pipe these connections here.
-func (t *Transport) handleOutboundStreams() {
+// HandleRouteStream - The transport is asked to route a stream given a route ID.
+// This function is called by Bon' routing handlers, once they have the routeID and the conn.
+func (t *Transport) HandleRouteStream(routeID uint32, src net.Conn) (err error) {
 
-	defer func() {
-		close(t.Outbound)
-		tpLog.Infof("[mux] Stopped processing outbound streams: ")
-	}()
+	tpLog.Infof("[route] routing connection (ID: %d, Dest: %s)", routeID, src.RemoteAddr())
 
-	tpLog.Printf("[mux] Starting outbound stream handling in background...")
+	var route bon.Route = bon.Route(routeID)
+	dst, err := t.Router.Connect(route)
 
-	for {
-		select {
-		case src := <-t.Outbound:
-			dst, err := t.multiplexer.Open()
-			if err != nil {
-				tpLog.Errorf("[mux] Error opening C2 stream: %s", err)
-				return
-			}
-			// We pipe the output in the background, and go on with the next stream.
-			go transport(src, dst)
+	tpLog.Infof("[mux] Outbound stream: muxing conn and piping")
 
-			tpLog.Errorf("[mux] Outbound stream: muxing conn and piping")
-
-		case <-t.multiplexer.CloseChan():
-			return
-		}
-	}
+	transport(src, dst)
+	// go transport(src, dst)
+	return
 }
 
 // In case we failed to use multiplexing infrastructure, we call here

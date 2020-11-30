@@ -19,54 +19,124 @@ package route
 */
 
 import (
+	"errors"
+	"net"
 	"sync"
+	"time"
 
 	"github.com/ilgooz/bon"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/core"
 )
-
-// The server-side route package works similarly to the implant's route package with respect to:
-//
-// 1) Proxies used by C2 users are defined and used in the client/ (so that it does not make any
-//    difference whether we are the admin -local- or a client -remote-).
-
-// It also works differntly, because the server holds all routes for all implants, while implants
-// only have a subset of each route (the next node).
 
 var (
 	// Routes - All active network routes.
 	Routes = &routes{
-		Active: []Chain{},
+		Active: map[uint32]*sliverpb.Route{},
 		mutex:  &sync.Mutex{},
 	}
+	routeID = uint32(0)
+
+	defaultNetTimeout = 10 * time.Second
 )
 
 // routes - Holds all available routes to the server and its implants.
 type routes struct {
-	Active []Chain
+	Active map[uint32]*sliverpb.Route
 	mutex  *sync.Mutex
-	Router *bon.Bon
+	// Router - There is only one router as entrypoint to all network routes,
+	// and all server internal 'requests' are sent through here, as well as
+	// proxied communications from all user consoles.
+	Server *bon.Bon
 }
 
 // Add - A user has requested to open a route. Send requests to all nodes in the route chain,
 // so they know how to handle traffic directed at a certain address, and register the route.
-// For each implant node, we cut the Chain it directly send it through its C2 RPC channel.
-func (r *routes) Add(new *Chain) (*Chain, error) {
+// For each implant node, we cut the sliverpb.Route it directly send it through its C2 RPC channel.
+func (r *routes) Add(new *sliverpb.Route) (route *sliverpb.Route, err error) {
 
-	// If no routes yet, we need to register the mux router
+	// Check address / netmask / etc provided in new. Process values if needed
+
+	var sess *core.Session // The session that will be the last node in the route.
+
+	// If an implant ID is given in the request, we directly check its interfaces.
+	// The new.ID is normally (and later) used for the route, but we use it as a filter for now.
+	if new.ID != 0 {
+		sess = core.Sessions.Get(new.ID)
+	}
+
+	// If no, get interfaces for all implants and verify no doublons.
+	if new.ID == 0 {
+
+	}
+
+	// If yes, get route to implant.
+	route, err = r.BuildRouteToSession(sess)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate a unique ID for this route. This ID will be used by
+	// all nodes for routing all traffic tagged with this route ID.
+	route.ID = NextRouteID()
+
+	// Add handle func to Router (technically the fist node in the chain)
+	var handle = func(conn net.Conn) {
+		// for _, t := range transports.Transports.Active {
+		//         next := addRouteReq.Route.Nodes[1]
+		//         if t.URL.String() == next.Addr {
+		//                 go t.HandleRouteStream(addRouteReq.Route.ID, conn)
+		//         }
+		// }
+	}
+	// Add handle func to Router.
+	r.Server.Handle(bon.Route(route.ID), handle)
+
+	next := *new // A copy of the route that we use as cutoff
+
+	// Send C2 request to each implant node in the chain.
+	for _, node := range next.Nodes {
+		nodeSession := core.Sessions.Get(node.ID)
+
+		addRouteReq := &sliverpb.AddRouteReq{
+			Route: &next,
+		}
+		data, _ := proto.Marshal(addRouteReq)
+
+		resp, err := nodeSession.Request(sliverpb.MsgAddRouteReq, defaultNetTimeout, data)
+		if err != nil {
+			return nil, err
+		}
+
+		addRoute := &sliverpb.AddRoute{}
+		proto.Unmarshal(resp, addRoute)
+
+		if addRoute.Success == false {
+			return nil, errors.New(addRoute.Response.Err)
+		}
+
+		// Cutoff the implant node and roll to next implant.
+		next.Nodes = next.Nodes[1:]
+	}
 
 	// Add chain split to Active
+	r.mutex.Lock()
+	r.Active[new.ID] = new
+	r.mutex.Unlock()
 
-	// Add handle func to Router.
-
-	return &Chain{}, nil
+	return
 }
 
 // Remove - We notify all implant nodes on the route to stop routing traffic, and deregister the route.
-func (r *routes) Remove(routeID uint64) (err error) {
+func (r *routes) Remove(routeID uint32) (err error) {
+
+	// Send request to all implants
 
 	// Remove route from Active
 
-	// Call off to Router.
+	// Call off to Router
 
 	return
 }
@@ -74,30 +144,55 @@ func (r *routes) Remove(routeID uint64) (err error) {
 // GetRouteFor - Given a network address/subnet, we find the correct chain of nodes to route traffic.
 // The addr should normally be part of the last node's subnets. If the chain is empty, we pass the
 // conn to be handled directory by net.DialTCP/ net.DialUDP / other.
-func (r *routes) GetRouteFor(addr string) (route *Chain) {
+func (r *routes) GetRouteFor(addr string) (route *sliverpb.Route) {
+
+	// Get net interfaces for all implants and verify no doublons.
+
+	// Once interface is found, get route to implant and return it.
+
 	return
 }
 
-// handleRouteConns - A goroutine used to process all streams/conns given by transports/clients/servers to the routing system.
-// Subroutines are started for each active transport on the server. This function should normally only handle traffic to be forwarded
-// to implants, not reverse connections.
+// BuildRouteToSession - Given a session, we build the full route (all nodes) to this session.
+// Each node will have the implan's active transport address and the Session ID.
+func (r *routes) BuildRouteToSession(sess *core.Session) (route *sliverpb.Route, err error) {
+
+	// Check the session remote address, and check active routes for the corresponding subnet.
+
+	// Add a node to this route, (with the session argument info)
+
+	// Return the new route.
+
+	return
+}
+
+// GetSessionRoute - Sometimes we need to have quick access to sessions, based on an address (not subnets).
+// This returns an implant session if the provided address corresponds to a route address, or nil if the address is
+// accessible from the C2 Server. Error is returned if provided address is invalid, if not technical errors.
+func (r *routes) GetSessionRoute(addr string) (sess *core.Session, err error) {
+
+	// Get net interfaces for all implants and verify no doublons.
+
+	// If no doublons, send back implant session
+
+	// If yes, returns the first one in list.
+
+	return
+}
+
+// handleRouteConns - A goroutine used to process all streams/conns given by
+// transports/clients/servers to the routing system. Subroutines are started
+// for each active transport on the server. This function should normally only
+// handle traffic to be forwarded to implants, not reverse connections.
 func (r *routes) handleRouteConns() {
 
 	// For each of the transports, watch their inbound channel.
 
 }
 
-// Chain - A chain holds all nodes of a proxy chain, and builds routes from it.
-type Chain struct {
-	ID      bon.Route // Used by bon stream router over yamux.
-	Retries int
-	route   []Node
-}
-
-// Node - A proxy node, mainly used to construct a proxy chain.
-// Each node in a chain is an implant process.
-type Node struct {
-	ID   int
-	Addr string
-	Host string
+// NextRouteID - Returns an incremental nonce as an id
+func NextRouteID() uint32 {
+	newID := routeID + 1
+	routeID++
+	return newID
 }

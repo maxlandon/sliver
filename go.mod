@@ -20,6 +20,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/hashicorp/yamux v0.0.0-20200609203250-aecfd211c9ce
+	github.com/ilgooz/bon v0.0.0-20180703073257-5ea3fbc42d90
 	github.com/mattn/go-sqlite3 v1.14.5
 	github.com/miekg/dns v1.1.35
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -33,6 +34,7 @@ require (
 	golang.org/x/sys v0.0.0-20201116194326-cc9327a14d48
 	golang.org/x/tools v0.0.0-20201116182000-1d699438d2cf
 	google.golang.org/grpc v1.33.2
+	google.golang.org/protobuf v1.25.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.8
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
 	gorm.io/driver/mysql v1.0.3
