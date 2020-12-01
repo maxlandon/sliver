@@ -68,6 +68,7 @@ func addRouteHandler(data []byte, resp RPCResponse) {
 	}
 
 	routes := route.Routes
+	newRoute := addRouteReq.Route
 
 	// If no routes yet, we need to register the mux router
 	// to the active transport's multiplexer session.
@@ -99,14 +100,14 @@ func addRouteHandler(data []byte, resp RPCResponse) {
 			// Use function passing the new.Addr as a dest to dial, etc.
 		}
 		// Add handle func to Router.
-		routes.Server.Handle(bon.Route(new.ID), handle)
+		routes.Server.Handle(bon.Route(newRoute.ID), handle)
 	}
 
 	// Add route to active routes.
 	routes.Add(addRouteReq.Route)
 
 	// {{if .Config.Debug}}
-	log.Printf("Added new route (ID: %d, Dest: %s)", new.ID, new.Nodes[len(new.Nodes)-1].Addr)
+	log.Printf("Added new route (ID: %d, Dest: %s)", newRoute.ID, newRoute.Nodes[len(newRoute.Nodes)-1].Addr)
 	// {{end}}
 }
 

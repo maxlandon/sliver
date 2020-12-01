@@ -23,7 +23,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/bishopfox/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/sliver/3rdparty/hashicorp/yamux"
 	"github.com/bishopfox/sliver/sliver/3rdparty/ilgooz/bon"
 )
@@ -48,14 +48,14 @@ import (
 var (
 	// Routes - All active network routes.
 	Routes = &routes{
-		Active: map[uint32]sliverpb.Route{},
+		Active: map[uint32]*sliverpb.Route{},
 		mutex:  &sync.Mutex{},
 	}
 )
 
 // routes - Holds all routes in which this implant is a node.
 type routes struct {
-	Active map[uint32]sliverpb.Route
+	Active map[uint32]*sliverpb.Route
 	mutex  *sync.Mutex
 	Server *bon.Bon
 }
@@ -64,7 +64,7 @@ type routes struct {
 // TODO: If we have only len(Chain.Nodes) == 1, this means the last node
 // is a subnet, not a further node in the chain. Therefore we register
 // the special handler for net.Dial.
-func (r *routes) Add(new sliverpb.Route) (sliverpb.Route, error) {
+func (r *routes) Add(new *sliverpb.Route) (*sliverpb.Route, error) {
 	r.mutex.Lock()
 	r.Active[new.ID] = new
 	r.mutex.Unlock()

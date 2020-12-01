@@ -25,9 +25,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/ilgooz/bon"
-	"google.golang.org/protobuf/proto"
 
+	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/core"
@@ -105,11 +106,12 @@ func (r *routes) Add(new *sliverpb.Route) (route *sliverpb.Route, err error) {
 		nodeSession := core.Sessions.Get(node.ID)
 
 		addRouteReq := &sliverpb.AddRouteReq{
-			Route: &next,
+			Request: &commonpb.Request{SessionID: nodeSession.ID},
+			Route:   &next,
 		}
 		data, _ := proto.Marshal(addRouteReq)
 
-		resp, err := nodeSession.Request(sliverpb.MsgAddRouteReq, defaultNetTimeout, data)
+		resp, err := nodeSession.Request(sliverpb.MsgNumber(addRouteReq), defaultNetTimeout, data)
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +151,7 @@ func (r *routes) Remove(routeID uint32) (err error) {
 		rmRouteReq := &sliverpb.RmRouteReq{}
 		data, _ := proto.Marshal(rmRouteReq)
 
-		resp, err := nodeSession.Request(sliverpb.MsgRmRouteReq, defaultNetTimeout, data)
+		resp, err := nodeSession.Request(sliverpb.MsgNumber(rmRouteReq), defaultNetTimeout, data)
 		if err != nil {
 			return err
 		}
@@ -160,7 +162,6 @@ func (r *routes) Remove(routeID uint32) (err error) {
 		if rmRoute.Success == false {
 			return errors.New(rmRoute.Response.Err)
 		}
-
 	}
 
 	// Call off to Router
