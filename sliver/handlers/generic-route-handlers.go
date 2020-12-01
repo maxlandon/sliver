@@ -73,6 +73,7 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 
 	routes := route.Routes
 	newRoute := addRouteReq.Route
+	var routeHandler func(conn net.Conn)
 
 	// If no routes yet, we need to register the mux router
 	// to the active transport's multiplexer session.
@@ -87,7 +88,7 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 
 		// Set up stream handle function: we find the transport connected
 		// to next node in chain, and give it the conn to be handled.
-		var handle = func(conn net.Conn) {
+		routeHandler = func(conn net.Conn) {
 			for _, t := range transports.Transports.Active {
 				next := addRouteReq.Route.Nodes[1]
 				if t.URL.String() == next.Addr {
@@ -95,17 +96,16 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 				}
 			}
 		}
-		// Add handle func to Router.
-		routes.Server.Handle(bon.Route(addRouteReq.Route.ID), handle)
 
 	} else {
 		// Else, use special handler for dialing the implant's subnet.
-		var handle = func(conn net.Conn) {
+		routeHandler = func(conn net.Conn) {
 			// Use function passing the new.Addr as a dest to dial, etc.
 		}
-		// Add handle func to Router.
-		routes.Server.Handle(bon.Route(newRoute.ID), handle)
 	}
+
+	// Add handle func to Router.
+	routes.Server.Handle(bon.Route(addRouteReq.Route.ID), routeHandler)
 
 	// Add route to active routes.
 	routes.Add(addRouteReq.Route)

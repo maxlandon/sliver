@@ -19,12 +19,9 @@ package transports
 */
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"sync"
-	"time"
-)
-
-var (
-	defaultNetTimeout = 10 * time.Second
 )
 
 var (
@@ -48,15 +45,28 @@ type transports struct {
 
 // Add - Add a new active transport to the implant' transport map.
 func (t *transports) Add(tp *Transport) (err error) {
+	t.mutex.Lock()
+	t.Active[tp.ID] = tp
+	t.mutex.Unlock()
 	return
 }
 
 // Remove - A transport has terminated its connection, and we remove it.
 func (t *transports) Remove(ID uint64) (err error) {
+	t.mutex.Lock()
+	delete(t.Active, ID)
+	t.mutex.Unlock()
 	return
 }
 
 // Get - Returns an active Transport given an ID.
 func (t *transports) Get(ID uint64) (tp *Transport) {
+	tp, _ = t.Active[ID]
 	return
+}
+
+func newID() uint64 {
+	randBuf := make([]byte, 8)
+	rand.Read(randBuf)
+	return binary.LittleEndian.Uint64(randBuf)
 }

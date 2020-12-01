@@ -28,23 +28,6 @@ import (
 	"github.com/bishopfox/sliver/sliver/3rdparty/ilgooz/bon"
 )
 
-// The route package is used to route all traffic going either:
-// - From the server to a pivoted implant (through this pivot)
-// - From a pivoted implant back to the server
-// - From the server to an endpoint that is not an implant.
-
-// In the case of implant-to-server communications, the
-// traffic should never leave the physical connections:
-// Server -> pivot      and     pivot -> pivoted implant.
-
-// In any case, this pivot should NEVER open any listener on the host.
-// The listener is always a multiplexer, which satisfies the net.Listener interface.
-
-// Also, as opposed to gost where it doesn't matter opening physical conns,
-// and therefore where it does not matter to share the route chain between all
-// proxy nodes, we need to divide the Route between all nodes, where each node
-// only knows about the next one, and is therefore able to use mux conns to route traffic.
-
 var (
 	// Routes - All active network routes.
 	Routes = &routes{
