@@ -33,23 +33,23 @@ import (
 	"github.com/bishopfox/sliver/sliver/transports"
 )
 
-var routeHandlers = map[uint32]RPCHandler{
+var routeHandlers = map[uint32]RouteHandler{
 	sliverpb.MsgAddRouteReq: addRouteHandler,
 	sliverpb.MsgRmRouteReq:  removeRouteHandler,
 }
 
 // GetSystemRouteHandlers - Returns a map of route handlers
-func GetSystemRouteHandlers() map[uint32]RPCHandler {
+func GetSystemRouteHandlers() map[uint32]RouteHandler {
 	return routeHandlers
 }
 
 // ---------------- Route Handlers ----------------
 
-func addRouteHandler(data []byte, resp RPCResponse) {
+func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
 
 	// Request / Response
 	addRouteReq := &sliverpb.AddRouteReq{}
-	err := proto.Unmarshal(data, addRouteReq)
+	err := proto.Unmarshal(envelope.Data, addRouteReq)
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("error decoding message: %v", err)
@@ -62,8 +62,12 @@ func addRouteHandler(data []byte, resp RPCResponse) {
 	if transports.ServerComms != nil && !transports.ServerComms.IsMux {
 		addRoute.Success = false
 		addRoute.Response.Err = "current active transport does not support connection multiplexing"
-		data, err = proto.Marshal(addRoute)
-		resp(data, err)
+
+		data, _ := proto.Marshal(addRoute)
+		connection.Send <- &sliverpb.Envelope{
+			ID:   envelope.GetID(),
+			Data: data,
+		}
 		return
 	}
 
@@ -109,13 +113,19 @@ func addRouteHandler(data []byte, resp RPCResponse) {
 	// {{if .Config.Debug}}
 	log.Printf("Added new route (ID: %d, Dest: %s)", newRoute.ID, newRoute.Nodes[len(newRoute.Nodes)-1].Addr)
 	// {{end}}
+
+	data, _ := proto.Marshal(addRoute)
+	connection.Send <- &sliverpb.Envelope{
+		ID:   envelope.GetID(),
+		Data: data,
+	}
 }
 
-func removeRouteHandler(data []byte, resp RPCResponse) {
+func removeRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
 
 	// Request / Response
 	rmRouteReq := &sliverpb.RmRouteReq{}
-	err := proto.Unmarshal(data, rmRouteReq)
+	err := proto.Unmarshal(envelope.Data, rmRouteReq)
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("error decoding message: %v", err)
@@ -131,6 +141,10 @@ func removeRouteHandler(data []byte, resp RPCResponse) {
 	// {{end}}
 
 	rmRoute.Success = true
-	data, err = proto.Marshal(rmRoute)
-	resp(data, err)
+
+	data, _ := proto.Marshal(rmRoute)
+	connection.Send <- &sliverpb.Envelope{
+		ID:   envelope.GetID(),
+		Data: data,
+	}
 }
