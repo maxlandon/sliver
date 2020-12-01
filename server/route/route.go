@@ -58,7 +58,7 @@ type routes struct {
 // Add - A user has requested to open a route. Send requests to all nodes in the route chain,
 // so they know how to handle traffic directed at a certain address, and register the route.
 // For each implant node, we cut the sliverpb.Route it directly send it through its C2 RPC channel.
-func (r *routes) Add(new *sliverpb.Route) (route *sliverpb.Route, err error) {
+func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error) {
 
 	// Check address / netmask / etc provided in new. Process values if needed
 
@@ -66,12 +66,12 @@ func (r *routes) Add(new *sliverpb.Route) (route *sliverpb.Route, err error) {
 
 	// If an implant ID is given in the request, we directly check its interfaces.
 	// The new.ID is normally (and later) used for the route, but we use it as a filter for now.
-	if new.ID != 0 {
-		sess = core.Sessions.Get(new.ID)
+	if newRoute.ID != 0 {
+		sess = core.Sessions.Get(newRoute.ID)
 	}
 
 	// If no, get interfaces for all implants and verify no doublons.
-	if new.ID == 0 {
+	if newRoute.ID == 0 {
 
 	}
 
@@ -86,6 +86,8 @@ func (r *routes) Add(new *sliverpb.Route) (route *sliverpb.Route, err error) {
 	route.ID = NextRouteID()
 
 	// Add handle func to Router (technically the fist node in the chain)
+	// This instructs the corresponding Transport to add a handler and
+	// start processing in the background.
 	var handle = func(conn net.Conn) {
 		for _, t := range c2.Transports.Active {
 			next := route.Nodes[0]
@@ -94,44 +96,59 @@ func (r *routes) Add(new *sliverpb.Route) (route *sliverpb.Route, err error) {
 			}
 		}
 	}
-	// Add handle func to Router.
+
+	// Add handle func to the server's Router (used by console proxies)
 	r.Server.Handle(bon.Route(route.ID), handle)
+
+	// Send C2 request to each implant node in the chain.
+	err = r.initRoute(route)
+	if err != nil {
+
+	}
+
+	// Add chain split to Active
+	r.mutex.Lock()
+	r.Active[route.ID] = route
+	r.mutex.Unlock()
+
+	return
+}
+
+// initRoute - This function sends to each implant node a request to open a route handler.
+// If any error arises with one of the nodes, we go back to beginning of the route and
+// ask each node again to delete the route, if any are already up.
+func (r *routes) initRoute(route *sliverpb.Route) (err error) {
 
 	// A copy of the route that we cutoff at each successful node request.
 	// The final subnet we want to route traffic to is always preserved despite cutoffs
-	next := *new
+	next := *route
 
-	// Send C2 request to each implant node in the chain.
 	for _, node := range next.Nodes {
 		nodeSession := core.Sessions.Get(node.ID)
 
+		// Send request to implant
 		addRouteReq := &sliverpb.AddRouteReq{
 			Request: &commonpb.Request{SessionID: nodeSession.ID},
 			Route:   &next,
 		}
 		data, _ := proto.Marshal(addRouteReq)
 
+		// Process response
+		addRoute := &sliverpb.AddRoute{}
 		resp, err := nodeSession.Request(sliverpb.MsgNumber(addRouteReq), defaultNetTimeout, data)
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		addRoute := &sliverpb.AddRoute{}
 		proto.Unmarshal(resp, addRoute)
 
+		// If there is an error with a node, send previous nodes order to delete route.
 		if addRoute.Success == false {
-			return nil, errors.New(addRoute.Response.Err)
+			return errors.New(addRoute.Response.Err)
 		}
 
 		// Cutoff the implant node and roll to next implant.
 		next.Nodes = next.Nodes[1:]
 	}
-
-	// Add chain split to Active
-	r.mutex.Lock()
-	r.Active[new.ID] = new
-	r.mutex.Unlock()
-
 	return
 }
 
@@ -159,12 +176,17 @@ func (r *routes) Remove(routeID uint32) (err error) {
 		rmRoute := &sliverpb.RmRoute{}
 		proto.Unmarshal(resp, rmRoute)
 
+		// TODO: If, for any reason, an error arises from one of the nodes
+		// we currently don't instruct previous ones to "reopen" the route.
+		// If should not mattter as far as route IDs are concerned, because
+		// they are determined by the server and identical across nodes.
+		// Still, we should find a way to deal with this.
 		if rmRoute.Success == false {
 			return errors.New(rmRoute.Response.Err)
 		}
 	}
 
-	// Call off to Router
+	// Call off to the server's Router
 	r.Server.Off(bon.Route(routeID))
 
 	// Remove route from Active

