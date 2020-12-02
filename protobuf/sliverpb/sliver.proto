@@ -544,6 +544,43 @@ message PivotData {
   bytes Data = 2;
 }
 
+// MTLS Pivots
+// Request/responses used by the last route node, which opens the listener.
+message MTLSPivotReq {
+  string Host = 1;
+  uint32 Port = 2;
+  bytes CACertPEM = 3;
+  bytes CertPEM = 4;
+  bytes KeyPEM = 5;
+  commonpb.Request Request = 9;
+}
+
+message MTLSPivot {
+  bool Success = 1;
+  commonpb.Response Response = 9;
+}
+
+// Request/responses used by pivot nodes to route the pivoted stream.
+message PivotReverseRouteOpenReq {
+  Route Route = 5; 
+  commonpb.Request Request = 9;
+}
+
+message PivotReverseRouteOpen {
+  bool Success = 1;
+  commonpb.Response Response = 9;
+}
+
+message PivotReverseRouteCloseReq {
+  Route Route = 5; 
+  commonpb.Request Request = 9;
+}
+
+message PivotReverseRouteClose {
+  bool Success = 1;
+  commonpb.Response Response = 9;
+}
+
 // Network Routes
 message Route {
         uint32 ID = 1;
