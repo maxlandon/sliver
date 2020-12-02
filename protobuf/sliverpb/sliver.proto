@@ -552,6 +552,7 @@ message MTLSPivotReq {
   bytes CACertPEM = 3;
   bytes CertPEM = 4;
   bytes KeyPEM = 5;
+  uint32 RouteID = 6;
   commonpb.Request Request = 9;
 }
 

