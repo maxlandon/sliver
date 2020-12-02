@@ -81,7 +81,9 @@ func SetupMuxRouter(mux *yamux.Session) (router *bon.Bon) {
 	r := newRouter(mux)
 	router = bon.New(r)
 
-	// Set default (non-matching) handlers.
+	// We don't set default (non-matching) handlers,
+	// because no connection should arrive to the router
+	// without a defined route ID.
 
 	return
 }
