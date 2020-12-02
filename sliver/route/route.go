@@ -19,7 +19,9 @@ package route
 */
 
 import (
+	// {{if .Config.Debug}}
 	"log"
+	// {{end}}
 	"net"
 	"sync"
 

@@ -82,7 +82,7 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 	}
 
 	// Forge and register the appropriate route handlers for this route.
-	// The handler is always redirected to the active server connection.
+	// The handler is always tied to the active server connection.
 	// The latter will determine by itself what to do with the conn, based
 	// on the route information provided with it.
 	routes.Server.Handle(bon.Route(newRoute.ID), func(conn net.Conn) {
@@ -96,6 +96,7 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 	log.Printf("Added new route (ID: %d, Dest: %s)", newRoute.ID, newRoute.Nodes[len(newRoute.Nodes)-1].Addr)
 	// {{end}}
 
+	addRoute.Success = true
 	data, _ := proto.Marshal(addRoute)
 	connection.Send <- &sliverpb.Envelope{
 		ID:   envelope.GetID(),
