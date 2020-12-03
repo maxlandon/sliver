@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -98,6 +99,9 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 	// For each implant, check network interfaces. Stop at the first one valid.
 	if newRoute.ID == 0 {
 		lastNodeSession, err = checkAllNetIfaces(subnet)
+		if err != nil {
+			return nil, fmt.Errorf("Error adding route: %s", err.Error())
+		}
 	}
 
 	// We should not have an empty last node session.
@@ -106,7 +110,7 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 	}
 
 	// We build the full route to this last node session.
-	route, err = r.BuildRouteToSession(lastNodeSession)
+	route, err = r.buildRouteToSession(lastNodeSession)
 	if err != nil {
 		return nil, err
 	}
@@ -114,9 +118,9 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 		return nil, errors.New("Route is empty after building it")
 	}
 
-	// Generate a unique ID for this route. This ID will be used by
-	// all nodes for routing all traffic tagged with this route ID.
-	route.ID = NextRouteID()
+	// Populate remaining fields for this route.
+	route.Subnet = subnet.String()
+	route.Netmask = subnet.Mask.String()
 
 	// Add handle func to the server's Router (technically the fist node in the chain).
 	// This handler redirects any conn to the first node's Transport.
@@ -173,24 +177,75 @@ func (r *routes) Remove(routeID uint32) (err error) {
 // GetRouteFor - Given a network address/subnet, we find the correct chain of nodes to route traffic.
 // The addr should normally be part of the last node's subnets. If the chain is empty, we pass the
 // conn to be handled directory by net.DialTCP/ net.DialUDP / other.
-func (r *routes) GetRouteFor(addr string) (route *sliverpb.Route) {
+func (r *routes) GetRouteFor(addr string) (route *sliverpb.Route, err error) {
 
-	// Get net interfaces for all implants and verify no doublons.
+	// Check address / netmask / etc provided in new. Process values if needed
+	_, subnet, err := net.ParseCIDR(addr)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing route subnet: %s", err)
+	}
+
+	// Last node in the route we will build, if we find a corresponding network on host.
+	var session *core.Session
+
+	// First check in active routes if we have one that matches our address:
+	// It will save us from sending requests to all implants.
+	for _, rt := range r.Active {
+		if rt.Subnet == subnet.String() && rt.Netmask == subnet.Mask.String() {
+			session = core.Sessions.Get(rt.Nodes[len(rt.Nodes)-1].ID)
+			if session == nil {
+				return nil, fmt.Errorf("Error getting session for active route %s (ID:%d)",
+					rt.Subnet, rt.ID)
+			}
+		}
+	}
+
+	// If we did not find an active route, get net interfaces for all implants and verify no doublons.
+	if session == nil {
+		session, err = checkAllNetIfaces(subnet)
+		if err != nil {
+			return nil, fmt.Errorf("Error getting route: %s", err.Error())
+		}
+	}
 
 	// Once interface is found, get route to implant and return it.
+	route, err = r.buildRouteToSession(session)
+
+	// Populate remaining fields for the new route.
+	route.Subnet = subnet.String()
+	route.Netmask = subnet.Mask.String()
 
 	return
 }
 
-// BuildRouteToSession - Given a session, we build the full route (all nodes) to this session.
+// buildRouteToSession - Given a session, we build the full route (all nodes) to this session.
 // Each node will have the implan's active transport address and the Session ID.
-func (r *routes) BuildRouteToSession(sess *core.Session) (route *sliverpb.Route, err error) {
+func (r *routes) buildRouteToSession(sess *core.Session) (route *sliverpb.Route, err error) {
+
+	route = &sliverpb.Route{
+		ID: NextRouteID(),
+	}
 
 	// Check the session remote address, and check active routes for the corresponding subnet.
+	addr := strings.Split(sess.RemoteAddress, ":")[0]
+	ip := net.ParseIP(addr) // This IP is the address of the last node of a route.
+
+	// Check all active routes, if any.
+	for _, rt := range r.Active {
+		_, subnet, _ := net.ParseCIDR(rt.Subnet)
+		if subnet.Contains(ip) {
+			route.Nodes = rt.Nodes
+		}
+	}
 
 	// Add a node to this route, (with the session argument info)
-
-	// Return the new route.
+	node := &sliverpb.Node{
+		ID:   sess.ID,
+		Name: sess.Name,
+		Host: sess.Hostname,
+		Addr: ip.String(),
+	}
+	route.Nodes = append(route.Nodes, node)
 
 	return
 }
@@ -198,13 +253,19 @@ func (r *routes) BuildRouteToSession(sess *core.Session) (route *sliverpb.Route,
 // GetSessionRoute - Sometimes we need to have quick access to sessions, based on an address (not subnets).
 // This returns an implant session if the provided address corresponds to a route address, or nil if the address is
 // accessible from the C2 Server. Error is returned if provided address is invalid, if not technical errors.
-func (r *routes) GetSessionRoute(addr string) (sess *core.Session, err error) {
+func (r *routes) GetSessionRoute(addr string) (session *core.Session, err error) {
+
+	// Check address / netmask / etc provided in new. Process values if needed
+	_, subnet, err := net.ParseCIDR(addr)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing route subnet: %s", err)
+	}
 
 	// Get net interfaces for all implants and verify no doublons.
-
-	// If no doublons, send back implant session
-
-	// If yes, returns the first one in list.
+	session, err = checkAllNetIfaces(subnet)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting route: %s", err.Error())
+	}
 
 	return
 }
@@ -336,7 +397,7 @@ func checkAllNetIfaces(subnet *net.IPNet) (sess *core.Session, err error) {
 		if found && !doublon {
 			sess = s
 		} else if doublon {
-			err = fmt.Errorf("Error adding route: Sessions %s and %s have colliding interfaces for subnet %s",
+			err = fmt.Errorf("Sessions %s and %s have colliding interfaces for subnet %s",
 				sessions[0], sessions[1], subnet.Network())
 			return nil, err
 		}
