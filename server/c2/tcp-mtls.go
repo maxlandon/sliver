@@ -81,13 +81,12 @@ func acceptSliverConnections(ln net.Listener) {
 			continue
 		}
 		url := &url.URL{Host: conn.RemoteAddr().String()}
-		transport := New(url)
-		err = transport.StartFromConn(conn)
+
+		transport := NewTransport(url)
+		err = transport.Start(conn)
 		if err != nil {
 			mtlsLog.Errorf("Error setting up mTLS transport & session: %s", err)
 		}
-
-		// go handleSliverConnection(conn)
 	}
 }
 

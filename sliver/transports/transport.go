@@ -271,6 +271,7 @@ func (t *Transport) handleReverseC2(routeID uint32) (err error) {
 
 // setupMuxC2 - The transport waits for the server to mux the first stream and handles any error.
 func (t *Transport) setupMuxC2() (err error) {
+
 	// We wait for the first stream being instantiated over the connection
 	// and add the RPC layer to it. If an error arises or if we timeout, we
 	// fall back to wrapping the RPC around the transport's physical conn.
@@ -297,6 +298,7 @@ func (t *Transport) setupMuxC2() (err error) {
 			// {{if .Config.Debug}}
 			log.Printf("Error: setting RPC C2: %s", err)
 			err = t.phyConnFallBack()
+			// {{end}}
 		}
 	case <-time.After(defaultNetTimeout):
 		close(timedOut)

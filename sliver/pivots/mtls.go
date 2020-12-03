@@ -47,7 +47,6 @@ func StartMutualTLSListener(tlsConfig *tls.Config, bindIface string, port uint16
 	}
 
 	go acceptSliverConnections(ln, routeID)
-
 	return
 }
 
