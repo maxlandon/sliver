@@ -37,7 +37,7 @@ func (rpc *Server) Routes(ctx context.Context, req *sliverpb.RoutesReq) (*sliver
 	return resp, nil
 }
 
-// AddRoute - Add a nework route through
+// AddRoute - Add a network route.
 func (rpc *Server) AddRoute(ctx context.Context, req *sliverpb.AddRouteReq) (*sliverpb.AddRoute, error) {
 
 	resp := &sliverpb.AddRoute{Response: &commonpb.Response{}}

@@ -45,7 +45,7 @@ var (
 	defaultNetTimeout = 10 * time.Second
 )
 
-// routes - Holds all available routes to the server and its implants.
+// routes - Holds and manages all available routes to the server and its implants.
 type routes struct {
 	Active map[uint32]*sliverpb.Route
 	mutex  *sync.Mutex
@@ -61,33 +61,65 @@ type routes struct {
 func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error) {
 
 	// Check address / netmask / etc provided in new. Process values if needed
+	_, subnet, err := net.ParseCIDR(newRoute.Subnet)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing route subnet: %s", err)
+	}
 
-	var sess *core.Session // The session that will be the last node in the route.
+	// This session is the last one of the route, which will dial endpoint on its host subnet.
+	var lastNodeSession *core.Session
 
 	// If an implant ID is given in the request, we directly check its interfaces.
 	// The new.ID is normally (and later) used for the route, but we use it as a filter for now.
 	if newRoute.ID != 0 {
-		sess = core.Sessions.Get(newRoute.ID)
+		lastNodeSession = core.Sessions.Get(newRoute.ID)
+
+		ifaces, err := getNetIfaces(lastNodeSession)
+		if err != nil {
+			return nil, err
+		}
+
+		// For all net interfaces, check there is one that the new route subnet contains.
+		var found = false
+		for _, iface := range ifaces {
+			ip := net.ParseIP(iface.IPAddresses[0]) // First should be IPv4
+			if subnet.Contains(ip) {
+				found = true
+			}
+		}
+		// If yes, we can go on, else we return.
+		if !found {
+			return nil, fmt.Errorf("Error adding route: implant host has no subnet corresponsing to %s",
+				subnet.Network())
+		}
 	}
 
 	// If no, get interfaces for all implants and verify no doublons.
+	// For each implant, check network interfaces. Stop at the first one valid.
 	if newRoute.ID == 0 {
-
+		lastNodeSession, err = checkAllNetIfaces(subnet)
 	}
 
-	// If yes, get route to implant.
-	route, err = r.BuildRouteToSession(sess)
+	// We should not have an empty last node session.
+	if lastNodeSession == nil {
+		return nil, errors.New("Error adding route: last node' session is nil, after checking all interfaces")
+	}
+
+	// We build the full route to this last node session.
+	route, err = r.BuildRouteToSession(lastNodeSession)
 	if err != nil {
 		return nil, err
+	}
+	if route == nil {
+		return nil, errors.New("Route is empty after building it")
 	}
 
 	// Generate a unique ID for this route. This ID will be used by
 	// all nodes for routing all traffic tagged with this route ID.
 	route.ID = NextRouteID()
 
-	// Add handle func to Router (technically the fist node in the chain)
-	// This instructs the corresponding Transport to add a handler and
-	// start processing in the background.
+	// Add handle func to the server's Router (technically the fist node in the chain).
+	// This handler redirects any conn to the first node's Transport.
 	var handle = func(conn net.Conn) {
 		for _, t := range c2.Transports.Active {
 			next := route.Nodes[0]
@@ -96,14 +128,13 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 			}
 		}
 	}
-
-	// Add handle func to the server's Router (used by console proxies)
 	r.Server.Handle(bon.Route(route.ID), handle)
 
-	// Send C2 request to each implant node in the chain.
+	// Send C2 request to each implant node in the chain. If any error arises
+	// from this function, we ask back all concerned nodes to delete this route.
 	err = r.initRoute(route)
 	if err != nil {
-
+		// HERE TODO: ADD SPECIAL ROUTE CUTOFF AND PASS IT TO removeRoute() !!!!!
 	}
 
 	// Add chain split to Active
@@ -111,44 +142,6 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 	r.Active[route.ID] = route
 	r.mutex.Unlock()
 
-	return
-}
-
-// initRoute - This function sends to each implant node a request to open a route handler.
-// If any error arises with one of the nodes, we go back to beginning of the route and
-// ask each node again to delete the route, if any are already up.
-func (r *routes) initRoute(route *sliverpb.Route) (err error) {
-
-	// A copy of the route that we cutoff at each successful node request.
-	// The final subnet we want to route traffic to is always preserved despite cutoffs
-	next := *route
-
-	for _, node := range next.Nodes {
-		nodeSession := core.Sessions.Get(node.ID)
-
-		// Send request to implant
-		addRouteReq := &sliverpb.AddRouteReq{
-			Request: &commonpb.Request{SessionID: nodeSession.ID},
-			Route:   &next,
-		}
-		data, _ := proto.Marshal(addRouteReq)
-
-		// Process response
-		addRoute := &sliverpb.AddRoute{}
-		resp, err := nodeSession.Request(sliverpb.MsgNumber(addRouteReq), defaultNetTimeout, data)
-		if err != nil {
-			return err
-		}
-		proto.Unmarshal(resp, addRoute)
-
-		// If there is an error with a node, send previous nodes order to delete route.
-		if addRoute.Success == false {
-			return errors.New(addRoute.Response.Err)
-		}
-
-		// Cutoff the implant node and roll to next implant.
-		next.Nodes = next.Nodes[1:]
-	}
 	return
 }
 
@@ -161,29 +154,9 @@ func (r *routes) Remove(routeID uint32) (err error) {
 	}
 
 	// Send request to remove route to all implant nodes.
-	for _, node := range route.Nodes {
-
-		nodeSession := core.Sessions.Get(node.ID)
-
-		rmRouteReq := &sliverpb.RmRouteReq{}
-		data, _ := proto.Marshal(rmRouteReq)
-
-		resp, err := nodeSession.Request(sliverpb.MsgNumber(rmRouteReq), defaultNetTimeout, data)
-		if err != nil {
-			return err
-		}
-
-		rmRoute := &sliverpb.RmRoute{}
-		proto.Unmarshal(resp, rmRoute)
-
-		// TODO: If, for any reason, an error arises from one of the nodes
-		// we currently don't instruct previous ones to "reopen" the route.
-		// If should not mattter as far as route IDs are concerned, because
-		// they are determined by the server and identical across nodes.
-		// Still, we should find a way to deal with this.
-		if rmRoute.Success == false {
-			return errors.New(rmRoute.Response.Err)
-		}
+	err = r.removeRoute(route)
+	if err != nil {
+		return fmt.Errorf("Error removing route: %s", err.Error())
 	}
 
 	// Call off to the server's Router
@@ -236,6 +209,78 @@ func (r *routes) GetSessionRoute(addr string) (sess *core.Session, err error) {
 	return
 }
 
+// initRoute - This function sends to each implant node a request to open a route handler.
+// If any error arises with one of the nodes, we go back to beginning of the route and
+// ask each node again to delete the route, if any are already up.
+func (r *routes) initRoute(route *sliverpb.Route) (err error) {
+
+	// A copy of the route that we cutoff at each successful node request.
+	// The final subnet we want to route traffic to is always preserved despite cutoffs
+	next := *route
+
+	for _, node := range next.Nodes {
+		nodeSession := core.Sessions.Get(node.ID)
+
+		// Send request to implant
+		addRouteReq := &sliverpb.AddRouteReq{
+			Request: &commonpb.Request{SessionID: nodeSession.ID},
+			Route:   &next,
+		}
+		data, _ := proto.Marshal(addRouteReq)
+
+		// Process response
+		addRoute := &sliverpb.AddRoute{}
+		resp, err := nodeSession.Request(sliverpb.MsgNumber(addRouteReq), defaultNetTimeout, data)
+		if err != nil {
+			return err
+		}
+		proto.Unmarshal(resp, addRoute)
+
+		// If there is an error with a node, we return it and the caller will be in
+		// charge of asking previously ordered nodes to delete this orphaned route.
+		if addRoute.Success == false {
+			return errors.New(addRoute.Response.Err)
+		}
+
+		// Cutoff the implant node and roll to next implant.
+		next.Nodes = next.Nodes[1:]
+	}
+	return
+}
+
+// removeRoute - This function is the equivalent of initRoute(): it sends a request
+// to all implant nodes to delete a given route.
+func (r *routes) removeRoute(route *sliverpb.Route) (err error) {
+
+	for _, node := range route.Nodes {
+
+		nodeSession := core.Sessions.Get(node.ID)
+		rmRouteReq := &sliverpb.RmRouteReq{
+			Request: &commonpb.Request{SessionID: nodeSession.ID},
+		}
+		data, _ := proto.Marshal(rmRouteReq)
+
+		resp, err := nodeSession.Request(sliverpb.MsgNumber(rmRouteReq), defaultNetTimeout, data)
+		if err != nil {
+			return err
+		}
+
+		rmRoute := &sliverpb.RmRoute{}
+		proto.Unmarshal(resp, rmRoute)
+
+		// TODO: If, for any reason, an error arises from one of the nodes
+		// we currently don't instruct previous ones to "reopen" the route.
+		// If should not mattter as far as route IDs are concerned, because
+		// they are determined by the server and identical across nodes.
+		// Still, we should find a way to deal with this.
+		if rmRoute.Success == false {
+			return errors.New(rmRoute.Response.Err)
+		}
+	}
+
+	return
+}
+
 // handleRouteConns - A goroutine used to process all streams/conns given by
 // transports/clients/servers to the routing system. Subroutines are started
 // for each active transport on the server. This function should normally only
@@ -244,6 +289,63 @@ func (r *routes) handleRouteConns() {
 
 	// For each of the transports, watch their inbound channel.
 
+}
+
+func getNetIfaces(sess *core.Session) ([]*sliverpb.NetInterface, error) {
+
+	ifacesReq := &sliverpb.IfconfigReq{
+		Request: &commonpb.Request{SessionID: sess.ID},
+	}
+	data, _ := proto.Marshal(ifacesReq)
+
+	resp, err := sess.Request(sliverpb.MsgNumber(ifacesReq), defaultNetTimeout, data)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting session interfaces: %s", err.Error())
+	}
+	ifaces := &sliverpb.Ifconfig{}
+	proto.Unmarshal(resp, ifaces)
+
+	return ifaces.NetInterfaces, nil
+}
+
+func checkAllNetIfaces(subnet *net.IPNet) (sess *core.Session, err error) {
+
+	var found, doublon = false, false
+	var sessions []string
+
+	for _, s := range core.Sessions.All() {
+
+		ifaces, err := getNetIfaces(s)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, iface := range ifaces {
+			ip := net.ParseIP(iface.IPAddresses[0])
+			if subnet.Contains(ip) {
+				if found {
+					doublon = true
+				} else {
+					found = true
+				}
+				sessions = append(sessions, fmt.Sprintf("%s (ID:%d)", s.Name, s.ID))
+			}
+		}
+
+		// If we found one, we have the last node's session.
+		if found && !doublon {
+			sess = s
+		} else if doublon {
+			err = fmt.Errorf("Error adding route: Sessions %s and %s have colliding interfaces for subnet %s",
+				sessions[0], sessions[1], subnet.Network())
+			return nil, err
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("Error adding route: no implant hosts have access to subnet %s", subnet.Network())
+	}
+	return
 }
 
 // NextRouteID - Returns an incremental nonce as an id
