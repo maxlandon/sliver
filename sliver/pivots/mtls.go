@@ -67,10 +67,7 @@ func acceptSliverConnections(ln net.Listener, routeID uint32) {
 		// Instantiate new transport, and handle multiplexing, and route back
 		// the first muxed stream (used by pivoted implant to speak RPC with server)
 		transport, _ := transports.NewTransport(pivotURL)
-		transport.StartMuxPivot(conn)
-
-		// The first stream is the pivoted implant registering and speaking RPC.
-		go transport.HandleReverseC2(routeID)
+		transport.StartMuxPivot(conn, routeID)
 
 		// Add transport to Transports map.
 		transports.Transports.Add(transport)

