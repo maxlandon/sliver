@@ -19,23 +19,22 @@ package c2
 */
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"sync"
 )
 
 var (
 	// Transports - All active transports on the server.
 	Transports = &transports{
-		Active: map[uint64]*Transport{},
+		Active: map[uint32]*Transport{},
 		mutex:  &sync.Mutex{},
 	}
+	transportID = uint32(0)
 )
 
 // transports - Holds all active transports for the server.
 // This is consumed by some handlers & listeners, as well as the routing system.
 type transports struct {
-	Active map[uint64]*Transport // All transports with an active connection
+	Active map[uint32]*Transport // All transports with an active Session connection
 	mutex  *sync.Mutex
 }
 
@@ -48,7 +47,7 @@ func (t *transports) Add(tp *Transport) (err error) {
 }
 
 // Remove - A transport has terminated its connection, and we remove it.
-func (t *transports) Remove(ID uint64) (err error) {
+func (t *transports) Remove(ID uint32) (err error) {
 	t.mutex.Lock()
 	delete(t.Active, ID)
 	t.mutex.Unlock()
@@ -56,13 +55,14 @@ func (t *transports) Remove(ID uint64) (err error) {
 }
 
 // Get - Returns an active Transport given an ID.
-func (t *transports) Get(ID uint64) (tp *Transport) {
+func (t *transports) Get(ID uint32) (tp *Transport) {
 	tp, _ = t.Active[ID]
 	return
 }
 
-func newID() uint64 {
-	randBuf := make([]byte, 8)
-	rand.Read(randBuf)
-	return binary.LittleEndian.Uint64(randBuf)
+// nextTransportID - Returns an incremental nonce as an id
+func nextTransportID() uint32 {
+	newID := transportID + 1
+	transportID++
+	return newID
 }

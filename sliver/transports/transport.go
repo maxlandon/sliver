@@ -70,7 +70,7 @@ type Transport struct {
 
 	// Router - For each connection that needs to be forwarded to the Transport's other end,
 	// we use the Router to connect, specify the wished route of the connection, and pipe.
-	// Therefore, here the Router is in a client position most of the time.
+	// Automatically handles reverse connections when it has route IDs and handlers for doing so.
 	Router *bon.Bon
 }
 
