@@ -23,11 +23,16 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/golang/protobuf/proto"
+
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/c2"
+	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/configs"
 	"github.com/bishopfox/sliver/server/core"
+	"github.com/bishopfox/sliver/server/route"
 )
 
 const (
@@ -90,21 +95,94 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 		listenPort = uint16(req.Port)
 	}
 
-	job, err := c2.StartMTLSListenerJob(req.Host, listenPort)
+	// Get session for host
+	session, err := route.Routes.GetSessionRoute(req.Host)
 	if err != nil {
 		return nil, err
 	}
 
-	if req.Persistent {
-		cfg := &configs.MTLSJobConfig{
-			Host: req.Host,
-			Port: listenPort,
+	// If session is nil, start listener on server.
+	if session == nil {
+		job, err := c2.StartMTLSListenerJob(req.Host, listenPort)
+		if err != nil {
+			return nil, err
 		}
-		configs.GetServerConfig().AddMTLSJob(cfg)
-		job.PersistentID = cfg.JobID
+
+		if req.Persistent {
+			cfg := &configs.MTLSJobConfig{
+				Host: req.Host,
+				Port: listenPort,
+			}
+			configs.GetServerConfig().AddMTLSJob(cfg)
+			job.PersistentID = cfg.JobID
+		}
+
+		return &clientpb.MTLSListener{JobID: uint32(job.ID)}, nil
 	}
 
-	return &clientpb.MTLSListener{JobID: uint32(job.ID)}, nil
+	// Else, send requests to session and all nodes on route with appropriate function
+	lnRoute, err := route.Routes.BuildRouteToSession(session)
+	if err != nil {
+		return nil, err
+	}
+
+	// Forge listener request for session, with certificate information.
+	caCertPEM, certPEM, keyPEM, err := getMTLSCertificates(req.Host)
+	mtlsPivotReq := &sliverpb.MTLSPivotReq{
+		Host:      req.Host,
+		Port:      req.Port,
+		CACertPEM: caCertPEM,
+		CertPEM:   certPEM,
+		KeyPEM:    keyPEM,
+		RouteID:   lnRoute.ID,
+		Request:   &commonpb.Request{SessionID: session.ID},
+	}
+	data, _ := proto.Marshal(mtlsPivotReq)
+
+	// If there are more than 1 node in the route, send pivot reverse mux handler requests.
+	if len(lnRoute.Nodes) > 1 {
+		// Forge listener request for implant nodes
+
+		// Request.
+	}
+
+	// Send listener request to the last node in chain anyway.
+	mtlsPivot := &sliverpb.MTLSPivot{}
+	resp, err := session.Request(sliverpb.MsgNumber(mtlsPivotReq), defaultTimeout, data)
+	proto.Unmarshal(resp, mtlsPivot)
+
+	if !mtlsPivot.Success {
+		return nil, fmt.Errorf("Error starting remote listener (%s): %s", session.Name, mtlsPivot.Response.Err)
+	}
+
+	// If all clear, setup job and cleanup functions (requests)
+
+	return nil, nil
+	// return &clientpb.MTLSListener{JobID: uint32(job.ID)}, nil
+}
+
+// When we want to start a listener on an implant, we forge new certificates for this host.
+func getMTLSCertificates(host string) (caCert, certPEM, keyPEM []byte, err error) {
+
+	// Create certificates if they don't exist.
+	_, _, err = certs.GetCertificate(certs.C2ServerCA, certs.ECCKey, host)
+	if err != nil {
+		certs.C2ServerGenerateECCCertificate(host)
+	}
+
+	// Get CA Certificate
+	caCert, _, err = certs.GetCertificateAuthorityPEM(certs.ImplantCA)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Query certificates again
+	certPEM, keyPEM, err = certs.GetCertificate(certs.C2ServerCA, certs.ECCKey, host)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return
 }
 
 // StartDNSListener - Start a DNS listener TODO: respect request's Host specification

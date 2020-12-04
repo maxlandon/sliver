@@ -110,7 +110,7 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 	}
 
 	// We build the full route to this last node session.
-	route, err = r.buildRouteToSession(lastNodeSession)
+	route, err = r.BuildRouteToSession(lastNodeSession)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 	var handle = func(conn net.Conn) {
 		for _, t := range c2.Transports.Active {
 			next := route.Nodes[0]
-			if t.C2.ID == next.ID {
+			if t.Session.ID == next.ID {
 				go t.HandleRouteStream(route.ID, conn)
 			}
 		}
@@ -206,10 +206,15 @@ func (r *routes) GetRouteFor(addr string) (route *sliverpb.Route, err error) {
 		if err != nil {
 			return nil, fmt.Errorf("Error getting route: %s", err.Error())
 		}
+
+		// We return a nil session, indicating we contact the server's subnet hosts
+		if session == nil {
+			return nil, nil
+		}
 	}
 
 	// Once interface is found, get route to implant and return it.
-	route, err = r.buildRouteToSession(session)
+	route, err = r.BuildRouteToSession(session)
 
 	// Populate remaining fields for the new route.
 	route.Subnet = subnet.String()
@@ -218,9 +223,9 @@ func (r *routes) GetRouteFor(addr string) (route *sliverpb.Route, err error) {
 	return
 }
 
-// buildRouteToSession - Given a session, we build the full route (all nodes) to this session.
+// BuildRouteToSession - Given a session, we build the full route (all nodes) to this session.
 // Each node will have the implan's active transport address and the Session ID.
-func (r *routes) buildRouteToSession(sess *core.Session) (route *sliverpb.Route, err error) {
+func (r *routes) BuildRouteToSession(sess *core.Session) (route *sliverpb.Route, err error) {
 
 	route = &sliverpb.Route{
 		ID: NextRouteID(),
@@ -261,7 +266,13 @@ func (r *routes) GetSessionRoute(addr string) (session *core.Session, err error)
 		return nil, fmt.Errorf("Error parsing route subnet: %s", err)
 	}
 
+	// If we don't have route, the caller will know its the server.
+	if len(r.Active) == 0 {
+		return nil, nil
+	}
+
 	// Get net interfaces for all implants and verify no doublons.
+	// TODO: Change this so that session can be nil after call.
 	session, err = checkAllNetIfaces(subnet)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting route: %s", err.Error())
