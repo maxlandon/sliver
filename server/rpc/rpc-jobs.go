@@ -32,6 +32,7 @@ import (
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/configs"
 	"github.com/bishopfox/sliver/server/core"
+	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/server/route"
 )
 
@@ -45,6 +46,10 @@ const (
 var (
 	// ErrInvalidPort - Invalid TCP port number
 	ErrInvalidPort = errors.New("Invalid listener port")
+)
+
+var (
+	jobLog = log.NamedLogger("c2", "jobs")
 )
 
 // GetJobs - List jobs
@@ -141,9 +146,10 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 
 	// If there are more than 1 node in the route, send pivot reverse mux handler requests.
 	if len(lnRoute.Nodes) > 1 {
-		// Forge listener request for implant nodes
-
-		// Request.
+		err = initRouteReverseHandlers(lnRoute)
+		if err != nil {
+			return nil, fmt.Errorf("Error sending reverse handler requests: %s", err)
+		}
 	}
 
 	// Send listener request to the last node in chain anyway.
@@ -155,10 +161,51 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 		return nil, fmt.Errorf("Error starting remote listener (%s): %s", session.Name, mtlsPivot.Response.Err)
 	}
 
-	// If all clear, setup job and cleanup functions (requests)
+	// If all clear, setup job
+	bind := fmt.Sprintf("%s:%d", req.Host, listenPort)
+	job := &core.Job{
+		ID:          core.NextJobID(),
+		Name:        "mtls",
+		Description: fmt.Sprintf("mutual TLS listener %s (Session: %s, ID: %d)", bind, session.Name, session.ID),
+		Protocol:    "tcp",
+		Port:        listenPort,
+		JobCtrl:     make(chan bool),
+	}
 
-	return nil, nil
-	// return &clientpb.MTLSListener{JobID: uint32(job.ID)}, nil
+	// Setup cleanup functions (make request to all necessary implants)
+	go func() {
+		<-job.JobCtrl
+		jobLog.Infof("Stopping mTLS listener (%d) (Session: %s, ID: %d) on %s ...", job.ID, session.Name, session.ID, bind)
+
+		// Send request to session
+		mtlsCloseReq := &sliverpb.MTLSPivotCloseReq{
+			Host:    mtlsPivotReq.Host,
+			Port:    mtlsPivotReq.Port,
+			RouteID: mtlsPivotReq.RouteID,
+		}
+		data, _ := proto.Marshal(mtlsCloseReq)
+
+		mtlsClose := &sliverpb.MTLSPivotClose{}
+		resp, err := session.Request(sliverpb.MsgNumber(mtlsCloseReq), defaultTimeout, data)
+		proto.Unmarshal(resp, mtlsClose)
+
+		if !mtlsPivot.Success {
+			jobLog.Errorf("Error removing remote listener (%s): %s", session.Name, mtlsClose.Response.Err)
+		}
+
+		// Send request to intermediate nodes
+		if len(lnRoute.Nodes) > 1 {
+			err = removeRouteReverseHandlers(lnRoute)
+			if err != nil {
+				jobLog.Errorf("Error removing reverse mux handlers on route: %s", err)
+			}
+		}
+
+		core.Jobs.Remove(job)
+	}()
+	core.Jobs.Add(job)
+
+	return &clientpb.MTLSListener{JobID: uint32(job.ID)}, nil
 }
 
 // When we want to start a listener on an implant, we forge new certificates for this host.
@@ -182,6 +229,73 @@ func getMTLSCertificates(host string) (caCert, certPEM, keyPEM []byte, err error
 		return nil, nil, nil, err
 	}
 
+	return
+}
+
+// For each intermediate node in a route, we add a handler to handle reverse listener connections.
+func initRouteReverseHandlers(route *sliverpb.Route) (err error) {
+
+	// Cutoff the chain at each node
+	next := *route
+
+	// We never count the last node, as it will receive a special request with certificate information.
+	for _, node := range next.Nodes[:(len(next.Nodes) - 1)] {
+
+		reverseOpenReq := &sliverpb.PivotReverseRouteOpenReq{
+			Request: &commonpb.Request{SessionID: node.ID},
+			Route:   &next,
+		}
+		data, _ := proto.Marshal(reverseOpenReq)
+
+		session := core.Sessions.Get(node.ID)
+
+		reverseOpen := &sliverpb.PivotReverseRouteOpen{}
+		resp, err := session.Request(sliverpb.MsgNumber(reverseOpenReq), defaultTimeout, data)
+		if err != nil {
+			return err
+		}
+		proto.Unmarshal(resp, reverseOpen)
+
+		if reverseOpen.Success == false {
+			return errors.New(reverseOpen.Response.Err)
+		}
+
+		next.Nodes = next.Nodes[1:]
+	}
+
+	return
+}
+
+// Same as initRouteReverseHandlers, but for removing the reverse handlers.
+func removeRouteReverseHandlers(route *sliverpb.Route) (err error) {
+
+	// Cutoff the chain at each node
+	next := *route
+
+	// We never count the last node, as it will receive a special request with certificate information.
+	for _, node := range next.Nodes[:(len(next.Nodes) - 1)] {
+
+		reverseCloseReq := &sliverpb.PivotReverseRouteCloseReq{
+			Request: &commonpb.Request{SessionID: node.ID},
+			Route:   &next,
+		}
+		data, _ := proto.Marshal(reverseCloseReq)
+
+		session := core.Sessions.Get(node.ID)
+
+		reverseClose := &sliverpb.PivotReverseRouteClose{}
+		resp, err := session.Request(sliverpb.MsgNumber(reverseCloseReq), defaultTimeout, data)
+		if err != nil {
+			return err
+		}
+		proto.Unmarshal(resp, reverseClose)
+
+		if reverseClose.Success == false {
+			return errors.New(reverseClose.Response.Err)
+		}
+
+		next.Nodes = next.Nodes[1:]
+	}
 	return
 }
 

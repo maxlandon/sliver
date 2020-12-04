@@ -561,6 +561,17 @@ message MTLSPivot {
   commonpb.Response Response = 9;
 }
 
+message MTLSPivotCloseReq {
+  string Host = 1;
+  uint32 Port = 2;
+  uint32 RouteID = 6;
+}
+
+message MTLSPivotClose {
+  bool Success = 1;
+  commonpb.Response Response = 9;
+}
+
 // Request/responses used by pivot nodes to route the pivoted stream.
 message PivotReverseRouteOpenReq {
   Route Route = 5; 
@@ -584,17 +595,17 @@ message PivotReverseRouteClose {
 
 // Network Routes
 message Route {
-        uint32 ID = 1;
-        string Subnet = 2;
-        string Netmask = 3;
-        repeated Node Nodes = 4;
+  uint32 ID = 1;
+  string Subnet = 2;
+  string Netmask = 3;
+  repeated Node Nodes = 4;
 }
 
 message Node {
-        uint32 ID = 1;
-        string Name = 2;
-        string Addr = 3;
-        string Host = 4;
+  uint32 ID = 1;
+  string Name = 2;
+  string Addr = 3;
+  string Host = 4;
 }
 
 message  RoutesReq {
@@ -603,7 +614,7 @@ message  RoutesReq {
 }
 
 message Routes {
-    repeated Route Active = 1;    
+  repeated Route Active = 1;    
 }
 
 message AddRouteReq {

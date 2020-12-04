@@ -163,10 +163,15 @@ const (
 	// MsgPivotData - Request that encapsulates and envelope form a sliver to the server though the pivot and viceversa
 	MsgPivotData
 
-	// MsgMTLSPivotOpen - Request to start an mTLS pivot listener on the implant, or to add a handler for route nodes.
+	// MsgMTLSPivotOpenReq - Request to start an mTLS pivot listener on the implant, or to add a handler for route nodes.
 	MsgMTLSPivotOpenReq
 	// MsgMTLSPivotOpen - Response
 	MsgMTLSPivotOpen
+	// MsgMTLSPivotCloseReq  - Request to stop an mTLS pivot listener on the implant
+	MsgMTLSPivotCloseReq
+	// MsgMTLSPivotClose - Response
+	MsgMTLSPivotClose
+
 	// MsgPivotReverseRouteOpenReq - Register a handler used to route a reverse (pivoted) stream.
 	MsgPivotReverseRouteOpenReq
 	// MsgPivotReverseRouteOpen - Response
@@ -348,6 +353,11 @@ func MsgNumber(request proto.Message) uint32 {
 		return MsgMTLSPivotOpenReq
 	case *MTLSPivot:
 		return MsgMTLSPivotOpen
+	case *MTLSPivotCloseReq:
+		return MsgMTLSPivotCloseReq
+	case *MTLSPivotClose:
+		return MsgMTLSPivotClose
+
 	case *PivotReverseRouteOpenReq:
 		return MsgPivotReverseRouteOpenReq
 	case *PivotReverseRouteOpen:
