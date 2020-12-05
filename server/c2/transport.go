@@ -100,10 +100,14 @@ func (t *Transport) Start(conn net.Conn) (err error) {
 		}
 		t.IsMux = true
 
-		err = t.setupMuxC2()
+		// Register and handle the Session stream per-se.
+		err = t.handleTransportSession()
 		if err != nil {
-			t.phyConnFallBack()
+			t.phyConnFallBack() // Disables mux and use the underlying connection.
 		}
+
+		// Setup and start the transport's router
+		t.Router = StartMuxRouter(t.multiplexer)
 	}
 
 	// Add to active transports
@@ -113,7 +117,63 @@ func (t *Transport) Start(conn net.Conn) (err error) {
 	return
 }
 
-func (t *Transport) setupMuxC2() (err error) {
+// HandleSession - The transport may be given reverse connections that are matching
+// routed listeners, and it is invoked each time the transport's Router has to handle them.
+func (t *Transport) HandleSession(conn net.Conn) {
+
+	tpLog.Infof("Handled pivoted implant RPC C2 stream.")
+
+	session := &core.Session{
+		Transport:     conn.LocalAddr().Network(),
+		RemoteAddress: conn.RemoteAddr().String(),
+		Send:          make(chan *sliverpb.Envelope),
+		RespMutex:     &sync.RWMutex{},
+		Resp:          map[uint64]chan *sliverpb.Envelope{},
+	}
+	session.UpdateCheckin()
+
+	go t.setupSessionRPC(session, conn)
+}
+
+// Stop - Gracefully shutdowns all components of this transport.
+// The force parameter is used in case we have a mux transport, and
+// that we want to kill it even if there are pending streams in it.
+func (t *Transport) Stop(force bool) (err error) {
+
+	if t.IsMux {
+		activeStreams := t.multiplexer.NumStreams()
+
+		// If there is an active Session, there is at least one open stream,
+		// that we do not count as "important" when stopping the Transport.
+		if (t.Session != nil && activeStreams > 1) || (t.Session == nil && activeStreams > 0) && !force {
+			return fmt.Errorf("Cannot stop transport: %d streams still opened", activeStreams)
+		}
+
+		tpLog.Infof("[mux] closing all muxed streams")
+		err = t.multiplexer.GoAway()
+		if err != nil {
+			tpLog.Errorf("[mux] Error sending GoAway: %s", err)
+		}
+		err = t.multiplexer.Close()
+		tpLog.Errorf("[mux] Error closing session: %s", err)
+	}
+
+	// Just check the physical connection is not nil and kill it if necessary.
+	if t.conn != nil {
+		tpLog.Infof("killing physical connection (%s  ->  %s", t.conn.LocalAddr(), t.conn.RemoteAddr())
+		return t.conn.Close()
+	}
+
+	// Remove from active transports
+	Transports.Remove(t.ID)
+
+	tpLog.Infof("Transport closed (%s)", t.conn.RemoteAddr())
+
+	return
+}
+
+// handleTransportSession - This transport has just been instantiated, and it registers its own session.
+func (t *Transport) handleTransportSession() (err error) {
 
 	// Initiate first stream, used by remote end as C2 RPC stream.
 	// The remote is already listening for incoming mux requests.
@@ -133,36 +193,13 @@ func (t *Transport) setupMuxC2() (err error) {
 	}
 	t.Session.UpdateCheckin()
 
-	// Setup the transport's router
-	t.Router = SetupMuxRouter(t.multiplexer)
-
-	go t.handleSessionRPC(t.Session, stream)
-
-	tpLog.Infof("Done creating RPC C2 stream.")
+	go t.setupSessionRPC(t.Session, stream)
 	return
-}
-
-func (t *Transport) HandlePivotSessionRPC(conn net.Conn) {
-
-	tpLog.Infof("Handled pivoted implant RPC C2 stream.")
-
-	session := &core.Session{
-		Transport:     conn.LocalAddr().Network(),
-		RemoteAddress: conn.RemoteAddr().String(),
-		Send:          make(chan *sliverpb.Envelope),
-		RespMutex:     &sync.RWMutex{},
-		Resp:          map[uint64]chan *sliverpb.Envelope{},
-	}
-	session.UpdateCheckin()
-
-	go t.handleSessionRPC(session, conn)
-
-	tpLog.Infof("Done creating RPC C2 stream.")
 }
 
 // handleSessionRPC - Small refactor used by new Transport model. There is a session parameter
 // because the Transport must be able to handle pivoted sessions registrations as well.
-func (t *Transport) handleSessionRPC(session *core.Session, conn net.Conn) {
+func (t *Transport) setupSessionRPC(session *core.Session, conn net.Conn) {
 
 	// We will automatically cleanup the session once this function exits.
 	defer func() {
@@ -213,83 +250,9 @@ Loop:
 	mtlsLog.Infof("Closing connection to session %s", session.Name)
 }
 
-// In case we failed to use multiplexing, we downgrade to RPC over the transport's physical connection.
-func (t *Transport) phyConnFallBack() (err error) {
-
-	tpLog.Infof("falling back on RPC around physical conn")
-
-	// First make sure all mux code is cleanup correctly.
-	tpLog.Infof("[mux] Cleaning multiplexing code")
-	if t.multiplexer != nil {
-		err = t.multiplexer.GoAway()
-		if err != nil {
-			tpLog.Errorf("[mux] Error sending GoAway: %s", err)
-		}
-
-		err = t.multiplexer.Close()
-		tpLog.Errorf("[mux] Error closing session: %s", err)
-
-		t.IsMux = false
-	}
-
-	// Create and register session
-	t.Session = core.Sessions.Add(&core.Session{
-		Transport:     "mtls",
-		RemoteAddress: fmt.Sprintf("%s", t.conn.RemoteAddr()),
-		Send:          make(chan *sliverpb.Envelope),
-		RespMutex:     &sync.RWMutex{},
-		Resp:          map[uint64]chan *sliverpb.Envelope{},
-	})
-	t.Session.UpdateCheckin()
-
-	// Concurrently start RPC request/response handling.
-	go t.handleSessionRPC(t.Session, t.conn)
-
-	tpLog.Infof("Done downgrading RPC C2 over physical conn.")
-
-	return
-}
-
-// Stop - Gracefully shutdowns all components of this transport.
-// The force parameter is used in case we have a mux transport, and
-// that we want to kill it even if there are pending streams in it.
-func (t *Transport) Stop(force bool) (err error) {
-
-	if t.IsMux {
-		activeStreams := t.multiplexer.NumStreams()
-
-		// If there is an active Session, there is at least one open stream,
-		// that we do not count as "important" when stopping the Transport.
-		if (t.Session != nil && activeStreams > 1) || (t.Session == nil && activeStreams > 0) && !force {
-			return fmt.Errorf("Cannot stop transport: %d streams still opened", activeStreams)
-		}
-
-		tpLog.Infof("[mux] closing all muxed streams")
-		err = t.multiplexer.GoAway()
-		if err != nil {
-			tpLog.Errorf("[mux] Error sending GoAway: %s", err)
-		}
-		err = t.multiplexer.Close()
-		tpLog.Errorf("[mux] Error closing session: %s", err)
-	}
-
-	// Just check the physical connection is not nil and kill it if necessary.
-	if t.conn != nil {
-		tpLog.Infof("killing physical connection (%s  ->  %s", t.conn.LocalAddr(), t.conn.RemoteAddr())
-		return t.conn.Close()
-	}
-
-	// Remove from active transports
-	Transports.Remove(t.ID)
-
-	tpLog.Infof("Transport closed (%s)", t.conn.RemoteAddr())
-
-	return
-}
-
-// HandleRouteStream - The transport is asked to route a stream given a route ID.
+// HandleRouteConn - The transport is asked to route a stream given a route ID.
 // This function is called by Bon' routing handlers, once they have the routeID and the conn.
-func (t *Transport) HandleRouteStream(routeID uint32, src net.Conn) (err error) {
+func (t *Transport) HandleRouteConn(routeID uint32, src net.Conn) (err error) {
 
 	tpLog.Infof("[route] routing connection (ID: %d, Dest: %s)", routeID, src.RemoteAddr())
 
@@ -319,10 +282,47 @@ func (t *Transport) IsRouting() bool {
 	return false
 }
 
-// SetupMuxRouter - When the first route is registered, we register a mux router.
+// In case we failed to use multiplexing, we downgrade to RPC over the transport's physical connection.
+func (t *Transport) phyConnFallBack() (err error) {
+
+	tpLog.Infof("falling back on RPC around physical conn")
+
+	// First make sure all mux code is cleanup correctly.
+	tpLog.Infof("[mux] Cleaning multiplexing code")
+	if t.multiplexer != nil {
+		err = t.multiplexer.GoAway()
+		if err != nil {
+			tpLog.Errorf("[mux] Error sending GoAway: %s", err)
+		}
+
+		err = t.multiplexer.Close()
+		tpLog.Errorf("[mux] Error closing session: %s", err)
+
+		t.IsMux = false
+	}
+
+	// Create and register session
+	t.Session = &core.Session{
+		Transport:     "mtls",
+		RemoteAddress: fmt.Sprintf("%s", t.conn.RemoteAddr()),
+		Send:          make(chan *sliverpb.Envelope),
+		RespMutex:     &sync.RWMutex{},
+		Resp:          map[uint64]chan *sliverpb.Envelope{},
+	}
+	t.Session.UpdateCheckin()
+
+	// Concurrently start RPC request/response handling.
+	go t.setupSessionRPC(t.Session, t.conn)
+
+	tpLog.Infof("Done downgrading RPC C2 over physical conn.")
+
+	return
+}
+
+// StartMuxRouter - When the first route is registered, we register a mux router.
 // After this call, the implant is able to route traffic that is being forwarded
 // by the previous node in the chain (server -> pivot -> this implant).
-func SetupMuxRouter(mux *yamux.Session) (router *bon.Bon) {
+func StartMuxRouter(mux *yamux.Session) (router *bon.Bon) {
 	tpLog.Infof("Starting mux stream router")
 
 	r := newRouter(mux)
@@ -331,7 +331,10 @@ func SetupMuxRouter(mux *yamux.Session) (router *bon.Bon) {
 	// We don't set default (non-matching) handlers,
 	// because no connection should arrive to the router
 	// without a defined route ID.
+	// Or we can do nasty things here, like redirection to wonderlands ...
 
+	// We start the router by default
+	go router.Run()
 	return
 }
 
@@ -349,7 +352,6 @@ func newRouter(mux *yamux.Session) *router {
 // Accept - The router is able to accept a new muxed stream.
 func (s *router) Accept() (net.Conn, error) {
 	tpLog.Infof("[route] accepting new stream")
-	// {{end}}
 	return s.session.Accept()
 }
 

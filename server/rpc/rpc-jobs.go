@@ -102,13 +102,13 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 	}
 
 	// Get session for host
-	session, err := route.Routes.GetSessionRoute(req.Host)
+	session, err := route.Routes.GetSession(req.Host)
 	if err != nil {
 		return nil, err
 	}
 
-	// If session is nil, start listener on server.
-	if session == nil {
+	// If session is nil, start listener on server, or that we have no active routes.
+	if session == nil || len(route.Routes.Active) == 1 {
 		job, err := c2.StartMTLSListenerJob(req.Host, listenPort)
 		if err != nil {
 			return nil, err
@@ -127,20 +127,10 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 	}
 
 	// Else, send requests to session and all nodes on route with appropriate function
-	lnRoute, err := route.Routes.BuildRouteToSession(session)
+	lnRoute, err := route.BuildRouteToSession(session)
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(lnRoute.ID)
-
-	// Add handler to the first node Transport's, for automatic registration of session.
-	serverTransport := c2.Transports.GetBySession(lnRoute.Nodes[0].ID)
-	if serverTransport == nil {
-		return nil, fmt.Errorf("Error adding route: could not find transport for session %s (ID: %d)", session.Name, session.ID)
-	}
-	serverTransport.Router.Handle(bon.Route(lnRoute.ID), serverTransport.HandlePivotSessionRPC)
-	go serverTransport.Router.Run()
 
 	// Forge listener request for session, with certificate information.
 	caCertPEM, certPEM, keyPEM, err := getMTLSCertificates(req.Host)
@@ -246,6 +236,10 @@ func getMTLSCertificates(host string) (caCert, certPEM, keyPEM []byte, err error
 // For each intermediate node in a route, we add a handler to handle reverse listener connections.
 func initRouteReverseHandlers(route *sliverpb.Route) (err error) {
 
+	// Add handler to the first node Transport's, for automatic registration of session.
+	servNode := c2.Transports.GetBySession(route.Nodes[0].ID)
+	servNode.Router.Handle(bon.Route(route.ID), servNode.HandleSession)
+
 	// Cutoff the chain at each node
 	next := *route
 
@@ -278,10 +272,10 @@ func initRouteReverseHandlers(route *sliverpb.Route) (err error) {
 }
 
 // Same as initRouteReverseHandlers, but for removing the reverse handlers.
-func removeRouteReverseHandlers(route *sliverpb.Route) (err error) {
+func removeRouteReverseHandlers(r *sliverpb.Route) (err error) {
 
 	// Cutoff the chain at each node
-	next := *route
+	next := *r
 
 	// We never count the last node, as it will receive a special request with certificate information.
 	for _, node := range next.Nodes[:(len(next.Nodes) - 1)] {

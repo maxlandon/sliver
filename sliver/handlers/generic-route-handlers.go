@@ -59,7 +59,7 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 	addRoute := &sliverpb.AddRoute{Response: &commonpb.Response{}}
 
 	// If transport is not muxable, we can't route anything
-	if transports.ServerComms != nil && !transports.ServerComms.IsMux {
+	if !transports.ServerComms.IsMux {
 		addRoute.Success = false
 		addRoute.Response.Err = "current active transport does not support connection multiplexing"
 
@@ -77,13 +77,13 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 	// If no routes yet, we need to register the mux router
 	// to the active transport's multiplexer session.
 	if len(routes.Active) == 0 {
-		routes.Server = transports.SetupMuxRouter(transports.ServerComms.Multiplexer)
+		routes.Server = transports.StartMuxRouter(transports.ServerComms.Multiplexer)
 	}
 
 	// Forge and register the appropriate route handlers for this route.
 	// The handler is always tied to the active server connection.
-	// The latter will determine by itself what to do with the conn, based
-	// on the route information provided with it.
+	// The latter will determine by itself what to do with
+	// the conn, based on the route information provided with it.
 	routes.Server.Handle(bon.Route(newRoute.ID), func(conn net.Conn) {
 		go transports.ServerComms.HandleRouteConn(newRoute, conn)
 	})

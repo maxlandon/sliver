@@ -49,34 +49,8 @@ var (
 // routes - Holds and manages all available routes to the server and its implants.
 type routes struct {
 	Active map[uint32]*sliverpb.Route
+	Server *bon.Bon // Default server used when no personal proxies or other scheme.
 	mutex  *sync.Mutex
-	// Router - There is only one router as entrypoint to all network routes,
-	// and all server internal 'requests' are sent through here, as well as
-	// proxied communications from all user consoles.
-	Server *bon.Bon
-}
-
-func (r *routes) AddRouteForwardHandler(route *sliverpb.Route) (err error) {
-
-	// If the routes server is nil, we need to activate it with all client proxies
-	// available
-	if r.Server == nil {
-
-	}
-
-	// The server automatically determines the next node and finds the
-	// transport tied to it, and give it the conn and a route ID to handle it.
-	var handle = func(conn net.Conn) {
-		for _, t := range c2.Transports.Active {
-			next := route.Nodes[0]
-			if t.Session.ID == next.ID {
-				go t.HandleRouteStream(route.ID, conn)
-			}
-		}
-	}
-	r.Server.Handle(bon.Route(route.ID), handle)
-
-	return
 }
 
 // Add - A user has requested to open a route. Send requests to all nodes in the route chain,
@@ -95,6 +69,8 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 			return nil, fmt.Errorf("Error parsing route subnet: %s", err)
 		}
 	}
+	m := subnet.Mask
+	mask := fmt.Sprintf("%d.%d.%d.%d", m[0], m[1], m[2], m[3])
 
 	// If an implant ID is given in the request, we directly check its interfaces.
 	// The new.ID is normally (and later) used for the route, but we use it as a filter for now.
@@ -120,8 +96,16 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 		return nil, errors.New("Error adding route: last node' session is nil, after checking all interfaces")
 	}
 
+	// Check existing routes: for each of them, make sure the ip is not contained in the destination subnet.
+	for _, rt := range r.Active {
+		_, rtNet, _ := net.ParseCIDR(rt.Subnet)
+		if rtNet.Contains(ip) && rtNet.Mask.String() == subnet.Mask.String() {
+			return nil, fmt.Errorf("Active route %s (Mask: %s, ID:%d)", rt.Subnet, mask, rt.ID)
+		}
+	}
+
 	// We build the full route to this last node session.
-	route, err = r.BuildRouteToSession(lastNodeSession)
+	route, err = BuildRouteToSession(lastNodeSession)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +115,7 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 
 	// Populate remaining fields for this route.
 	route.Subnet = subnet.String()
-	route.Netmask = subnet.Mask.String()
+	route.Netmask = mask
 
 	// Send C2 request to each implant node in the chain. If any error arises
 	// from this function, we ask back all concerned nodes to delete this route.
@@ -173,73 +157,46 @@ func (r *routes) Remove(routeID uint32) (err error) {
 	return
 }
 
-// GetRouteFor - Given a network address/subnet, we find the correct chain of nodes to route traffic.
-// The addr should normally be part of the last node's subnets. If the chain is empty, we pass the
-// conn to be handled directory by net.DialTCP/ net.DialUDP / other.
-func (r *routes) GetRouteFor(addr string) (route *sliverpb.Route, err error) {
+func (r *routes) AddRouteForwardHandler(route *sliverpb.Route) (err error) {
 
-	// Check address / netmask / etc provided in new. Process values if needed
-	_, subnet, err := net.ParseCIDR(addr)
-	if err != nil {
-		return nil, fmt.Errorf("Error parsing route subnet: %s", err)
+	// If the routes server is nil, activate it with all client proxies
+	// available, or setup a default one.
+	if r.Server == nil {
+
 	}
 
-	// Last node in the route we will build, if we find a corresponding network on host.
-	var session *core.Session
-
-	// First check in active routes if we have one that matches our address:
-	// It will save us from sending requests to all implants.
-	for _, rt := range r.Active {
-		if rt.Subnet == subnet.String() && rt.Netmask == subnet.Mask.String() {
-			session = core.Sessions.Get(rt.Nodes[len(rt.Nodes)-1].ID)
-			if session == nil {
-				return nil, fmt.Errorf("Error getting session for active route %s (ID:%d)",
-					rt.Subnet, rt.ID)
+	// We always have the implant IDs for each node, and we match it with a transport.
+	var handle = func(conn net.Conn) {
+		for _, t := range c2.Transports.Active {
+			next := route.Nodes[0]
+			if t.Session.ID == next.ID {
+				go t.HandleRouteConn(route.ID, conn)
 			}
 		}
 	}
-
-	// If we did not find an active route, get net interfaces for all implants and verify no doublons.
-	if session == nil {
-		session, err = checkAllNetIfaces(subnet)
-		if err != nil {
-			return nil, fmt.Errorf("Error getting route: %s", err.Error())
-		}
-
-		// We return a nil session, indicating we contact the server's subnet hosts
-		if session == nil {
-			return nil, nil
-		}
-	}
-
-	// Once interface is found, get route to implant and return it.
-	route, err = r.BuildRouteToSession(session)
-
-	// Populate remaining fields for the new route.
-	route.Subnet = subnet.String()
-	route.Netmask = subnet.Mask.String()
+	r.Server.Handle(bon.Route(route.ID), handle) // Add add this default server.
 
 	return
 }
 
 // BuildRouteToSession - Given a session, we build the full route (all nodes) to this session.
 // Each node will have the implan's active transport address and the Session ID.
-func (r *routes) BuildRouteToSession(sess *core.Session) (route *sliverpb.Route, err error) {
+func BuildRouteToSession(sess *core.Session) (route *sliverpb.Route, err error) {
 
 	route = &sliverpb.Route{
-		ID: NextRouteID(),
+		ID: NextRouteID(), // A unique ID for this route, wether used or not.
 	}
 
-	// Check the session remote address, and check active routes for the corresponding subnet.
+	// The session remote address belongs to one of the routes' IP destinations.
 	addr := strings.Split(sess.RemoteAddress, ":")[0]
-	ip := net.ParseIP(addr) // This IP is the address of the last node of a route.
+	ip := net.ParseIP(addr)
 
-	// Check all active routes, if any.
-	for _, rt := range r.Active {
+	// Check all active routes: if any of them has a final destination network
+	// that encompasses the address of the Session, we return this route.
+	for _, rt := range Routes.Active {
 		_, subnet, _ := net.ParseCIDR(rt.Subnet)
-		if subnet.Contains(ip) {
+		if subnet.Contains(ip) && rt.Nodes[len(rt.Nodes)-1].ID == sess.ID {
 			route.Nodes = rt.Nodes
-			return
 		}
 	}
 
@@ -255,10 +212,10 @@ func (r *routes) BuildRouteToSession(sess *core.Session) (route *sliverpb.Route,
 	return
 }
 
-// GetSessionRoute - Sometimes we need to have quick access to sessions, based on an address (not subnets).
+// GetSession - Sometimes we need to have quick access to sessions, based on an address (not subnets).
 // This returns an implant session if the provided address corresponds to a route address, or nil if the address is
 // accessible from the C2 Server. Error is returned if provided address is invalid, if not technical errors.
-func (r *routes) GetSessionRoute(addr string) (session *core.Session, err error) {
+func (r *routes) GetSession(addr string) (session *core.Session, err error) {
 
 	// Check address / netmask / etc provided in new. Process values if needed
 	ip, subnet, err := net.ParseCIDR(addr)
@@ -357,16 +314,6 @@ func (r *routes) removeRoute(route *sliverpb.Route) (err error) {
 	return
 }
 
-// handleRouteConns - A goroutine used to process all streams/conns given by
-// transports/clients/servers to the routing system. Subroutines are started
-// for each active transport on the server. This function should normally only
-// handle traffic to be forwarded to implants, not reverse connections.
-func (r *routes) handleRouteConns() {
-
-	// For each of the transports, watch their inbound channel.
-
-}
-
 func checkSessionNetIfaces(ip net.IP, sess *core.Session) (err error) {
 
 	ifacesReq := &sliverpb.IfconfigReq{
@@ -393,6 +340,7 @@ func checkSessionNetIfaces(ip net.IP, sess *core.Session) (err error) {
 		if err != nil {
 			ip = net.ParseIP(iface.IPAddresses[0])
 		}
+		// Loopback are not allowed when routing, only with port forward.
 		if ipAddr.IsLoopback() {
 			continue
 		}
@@ -451,3 +399,48 @@ func NextRouteID() uint32 {
 	routeID++
 	return newID
 }
+
+// GetRouteFor - Given a network address/subnet, we find the correct chain of nodes to route traffic.
+// The addr should normally be part of the last node's subnets. If the chain is empty, we pass the
+// conn to be handled directory by net.DialTCP/ net.DialUDP / other.
+// func (r *routes) GetRouteFor(addr string) (route *sliverpb.Route, err error) {
+//
+//         // Check address / netmask / etc provided in new. Process values if needed
+//         ip, subnet, err := net.ParseCIDR(addr)
+//         if err != nil {
+//                 ip = net.ParseIP(addr)
+//                 if ip == nil {
+//                         return nil, fmt.Errorf("Error parsing route subnet: %s", err)
+//                 }
+//         }
+//
+//         // Last node in the route we will build, if we find a corresponding network on host.
+//         var session *core.Session
+//
+//         // Active routes and their associated sessions have priority: a route is directly
+//         // returned, as it does not need any additional node or processing.
+//         for _, rt := range r.Active {
+//                 if rt.Subnet == ip.String() && rt.Netmask == subnet.Mask.String() {
+//                         return rt, nil
+//                 }
+//         }
+//
+//         // If we did not find an active route, get net interfaces for all implants and verify no doublons.
+//         if session == nil {
+//                 session, err = checkAllNetIfaces(subnet)
+//                 if err != nil {
+//                         return nil, fmt.Errorf("Error getting route: %s", err.Error())
+//                 }
+//         }
+//
+//         // If session is still nil, it means we contact the server.
+//         if session == nil {
+//                 return nil, nil
+//         }
+//
+//         // TODO:
+//         // The session found might be in the same network as the host,
+//         // in which case we use the server and return nil (check transport connections)
+//
+//         return
+// }

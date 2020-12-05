@@ -48,16 +48,6 @@ var (
 	mtlsLog = log.NamedLogger("c2", "mtls")
 )
 
-// RouteStartMutualTLSListenerJob - A function that automatically determines wether the listener
-// needs to be started on the server or on an implant, sends according requests and processes
-// responses, and finally setup all job details with remote requests if the listener is pivot.
-func RouteStartMutualTLSListenerJob(bindIface string, port uint16) (*core.Job, error) {
-
-	// get session for the address.
-
-	return nil, nil
-}
-
 // StartMutualTLSListener - Start a mutual TLS listener
 func StartMutualTLSListener(bindIface string, port uint16) (net.Listener, error) {
 	StartPivotListener()
