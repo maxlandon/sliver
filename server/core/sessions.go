@@ -57,8 +57,9 @@ type Session struct {
 	Os                string
 	Version           string
 	Arch              string
-	Transport         string
+	Network           string // Go std lib Network field is "tcp", "udp", "ip", etc.
 	RemoteAddress     string
+	Transport         string // Full string used to show (routed) Transport endpoints.
 	PID               int32
 	Filename          string
 	LastCheckin       *time.Time
@@ -101,7 +102,7 @@ func (s *Session) ToProtobuf() *clientpb.Session {
 		OS:                s.Os,
 		Version:           s.Version,
 		Arch:              s.Arch,
-		Transport:         s.Transport,
+		Network:           s.Network,
 		RemoteAddress:     s.RemoteAddress,
 		PID:               int32(s.PID),
 		Filename:          s.Filename,
@@ -109,6 +110,7 @@ func (s *Session) ToProtobuf() *clientpb.Session {
 		ActiveC2:          s.ActiveC2,
 		IsDead:            isDead,
 		ReconnectInterval: s.ReconnectInterval,
+		Transport:         s.Transport,
 	}
 }
 

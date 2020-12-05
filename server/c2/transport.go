@@ -23,6 +23,7 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/yamux"
@@ -119,20 +120,35 @@ func (t *Transport) Start(conn net.Conn) (err error) {
 
 // HandleSession - The transport may be given reverse connections that are matching
 // routed listeners, and it is invoked each time the transport's Router has to handle them.
-func (t *Transport) HandleSession(conn net.Conn) {
+// We pass the route so that we can correctly register the implant's transport addresses.
+func (t *Transport) HandleSession(route *sliverpb.Route) {
 
-	tpLog.Infof("Handled pivoted implant RPC C2 stream.")
+	// We pass everything to a handler that is returned for usage by the Transport's router.
+	t.Router.Handle(bon.Route(route.ID), func(conn net.Conn) {
 
-	session := &core.Session{
-		Transport:     conn.LocalAddr().Network(),
-		RemoteAddress: conn.RemoteAddr().String(),
-		Send:          make(chan *sliverpb.Envelope),
-		RespMutex:     &sync.RWMutex{},
-		Resp:          map[uint64]chan *sliverpb.Envelope{},
-	}
-	session.UpdateCheckin()
+		tpLog.Infof("Handled pivoted implant RPC C2 stream.")
 
-	go t.setupSessionRPC(session, conn)
+		session := &core.Session{
+			Send:      make(chan *sliverpb.Envelope),
+			RespMutex: &sync.RWMutex{},
+			Resp:      map[uint64]chan *sliverpb.Envelope{},
+		}
+		session.UpdateCheckin()
+
+		// The transport has been registered through a route, and we add
+		// indication of it in the transport's pretty print string.
+		// We handle cases where we could not parse a CIDR.
+		host := route.Nodes[len(route.Nodes)-1].Addr
+		_, subnet, err := net.ParseCIDR(route.Subnet)
+		if err != nil {
+			session.Transport = fmt.Sprintf("[%s =>] ", host)
+		} else {
+			cidr := strings.Split(subnet.String(), "/")[1]
+			session.Transport = fmt.Sprintf("[%s/%s =>] ", host, cidr)
+		}
+
+		go t.setupSessionRPC(session, conn)
+	})
 }
 
 // Stop - Gracefully shutdowns all components of this transport.
@@ -185,11 +201,9 @@ func (t *Transport) handleTransportSession() (err error) {
 
 	// Create and register session
 	t.Session = &core.Session{
-		Transport:     "mtls",
-		RemoteAddress: fmt.Sprintf("%s", t.multiplexer.Addr()),
-		Send:          make(chan *sliverpb.Envelope),
-		RespMutex:     &sync.RWMutex{},
-		Resp:          map[uint64]chan *sliverpb.Envelope{},
+		Send:      make(chan *sliverpb.Envelope),
+		RespMutex: &sync.RWMutex{},
+		Resp:      map[uint64]chan *sliverpb.Envelope{},
 	}
 	t.Session.UpdateCheckin()
 

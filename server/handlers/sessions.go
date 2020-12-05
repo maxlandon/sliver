@@ -23,6 +23,9 @@ package handlers
 */
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/log"
@@ -80,6 +83,13 @@ func registerSessionHandler(session *core.Session, data []byte) {
 	session.ActiveC2 = register.ActiveC2
 	session.Version = register.Version
 	session.ReconnectInterval = register.ReconnectInterval
+	session.Network = register.Network
+	session.RemoteAddress = register.RemoteAddress
+
+	// Add strict transport's ends to Transport string (pretty print).
+	// The route part, if any, has already been added by the route's transport.
+	session.Transport += fmt.Sprintf("%s <-- %s", strings.Split(register.ActiveC2, "://")[1], register.RemoteAddress)
+
 	core.Sessions.Add(session)
 }
 

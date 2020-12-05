@@ -24,7 +24,6 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/ilgooz/bon"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -236,7 +235,7 @@ func initRouteReverseHandlers(route *sliverpb.Route) (err error) {
 
 	// Add handler to the first node Transport's, for automatic registration of session.
 	servNode := c2.Transports.GetBySession(route.Nodes[0].ID)
-	servNode.Router.Handle(bon.Route(route.ID), servNode.HandleSession)
+	go servNode.HandleSession(route)
 
 	// Cutoff the chain at each node
 	next := *route

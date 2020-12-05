@@ -29,7 +29,7 @@ message Session {
   string GID = 6;
   string OS = 7;
   string Arch = 8;
-  string Transport = 9;
+  string Network = 9;
   string RemoteAddress = 10;
   int32 PID = 11;
   string Filename = 12; // Argv[0]
@@ -39,6 +39,7 @@ message Session {
   bool Evasion = 16;
   bool IsDead = 17;
   uint32 ReconnectInterval = 18;
+  string Transport = 19; // Complete (routed) Transport string.
 }
 
 message ImplantC2 {

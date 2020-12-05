@@ -99,8 +99,10 @@ func (r *routes) Add(newRoute *sliverpb.Route) (route *sliverpb.Route, err error
 	// Check existing routes: for each of them, make sure the ip is not contained in the destination subnet.
 	for _, rt := range r.Active {
 		_, rtNet, _ := net.ParseCIDR(rt.Subnet)
+		nodeSess := rt.Nodes[len(rt.Nodes)-1]
 		if rtNet.Contains(ip) && rtNet.Mask.String() == subnet.Mask.String() {
-			return nil, fmt.Errorf("Active route %s (Mask: %s, ID:%d)", rt.Subnet, mask, rt.ID)
+			return nil, fmt.Errorf("Active route %s (Mask: %s, ID:%d) via (%s(%d) at %s) is colliding",
+				rt.Subnet, mask, rt.ID, nodeSess.Name, nodeSess.ID, nodeSess.Addr)
 		}
 	}
 
@@ -180,7 +182,8 @@ func (r *routes) AddRouteForwardHandler(route *sliverpb.Route) (err error) {
 }
 
 // BuildRouteToSession - Given a session, we build the full route (all nodes) to this session.
-// Each node will have the implan's active transport address and the Session ID.
+// Each node will have the corresponding implant's active transport address and the Session ID. By default,
+// The route's destination subnet and netmask is the active route's leading to the the node we are about to add.
 func BuildRouteToSession(sess *core.Session) (route *sliverpb.Route, err error) {
 
 	route = &sliverpb.Route{
@@ -191,16 +194,27 @@ func BuildRouteToSession(sess *core.Session) (route *sliverpb.Route, err error) 
 	addr := strings.Split(sess.RemoteAddress, ":")[0]
 	ip := net.ParseIP(addr)
 
-	// Check all active routes: if any of them has a final destination network
-	// that encompasses the address of the Session, we return this route.
+	// Find a potential active route that might be leading to session, or closest to it.
 	for _, rt := range Routes.Active {
 		_, subnet, _ := net.ParseCIDR(rt.Subnet)
-		if subnet.Contains(ip) && rt.Nodes[len(rt.Nodes)-1].ID == sess.ID {
+
+		// - A node with same SessionID, copy route properties and return it with a new ID.
+		if rt.Nodes[len(rt.Nodes)-1].ID == sess.ID {
+			route.Subnet = rt.Subnet
+			route.Netmask = rt.Netmask
+			route.Nodes = rt.Nodes
+			return
+		}
+
+		// - If route's subnet encompasses the session's IP, this route is the closest to our session.
+		if subnet.Contains(ip) {
+			route.Subnet = rt.Subnet
+			route.Netmask = rt.Netmask
 			route.Nodes = rt.Nodes
 		}
 	}
 
-	// Add a node to this route, (with the session argument info)
+	// If we came here, we need to add a node to this route, (with the session argument info)
 	node := &sliverpb.Node{
 		ID:   sess.ID,
 		Name: sess.Name,
