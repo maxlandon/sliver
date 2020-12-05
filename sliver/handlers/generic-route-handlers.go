@@ -76,7 +76,7 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 
 	// Forge and register the appropriate route handlers for this route.
 	// The handler is always tied to the active server connection.
-	routes.Server.Handle(bon.Route(newRoute.ID), func(conn net.Conn) {
+	transports.ServerComms.Router.Handle(bon.Route(newRoute.ID), func(conn net.Conn) {
 		go transports.ServerComms.HandleRouteConn(newRoute, conn)
 	})
 
@@ -84,7 +84,8 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 	routes.Add(addRouteReq.Route)
 
 	// {{if .Config.Debug}}
-	log.Printf("Added new route (ID: %d, Dest: %s)", newRoute.ID, newRoute.Nodes[len(newRoute.Nodes)-1].Addr)
+	log.Printf("Added new route to %s (ID: %d, Next node: %s)",
+		newRoute.Subnet, newRoute.ID, newRoute.Nodes[len(newRoute.Nodes)-1].Addr)
 	// {{end}}
 
 	addRoute.Success = true

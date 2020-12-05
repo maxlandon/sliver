@@ -108,7 +108,7 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 	}
 
 	// If session is nil, start listener on server, or that we have no active routes.
-	if session == nil || len(route.Routes.Active) == 1 {
+	if session == nil || len(route.Routes.Active) == 0 {
 		job, err := c2.StartMTLSListenerJob(req.Host, listenPort)
 		if err != nil {
 			return nil, err
@@ -145,12 +145,10 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 	}
 	data, _ := proto.Marshal(mtlsPivotReq)
 
-	// If there are more than 1 node in the route, send pivot reverse mux handler requests.
-	if len(lnRoute.Nodes) > 1 {
-		err = initRouteReverseHandlers(lnRoute)
-		if err != nil {
-			return nil, fmt.Errorf("Error sending reverse handler requests: %s", err)
-		}
+	// Send pivot reverse mux handler requests to all nodes, including the first node server's transport
+	err = initRouteReverseHandlers(lnRoute)
+	if err != nil {
+		return nil, fmt.Errorf("Error sending reverse handler requests: %s", err)
 	}
 
 	// Send listener request to the last node in chain anyway.
@@ -243,29 +241,31 @@ func initRouteReverseHandlers(route *sliverpb.Route) (err error) {
 	// Cutoff the chain at each node
 	next := *route
 
-	// We never count the last node, as it will receive a special request with certificate information.
-	for _, node := range next.Nodes[:(len(next.Nodes) - 1)] {
+	if len(next.Nodes) > 1 {
+		// We never count the last node, as it will receive a special request with certificate information.
+		for _, node := range next.Nodes[:(len(next.Nodes) - 1)] {
 
-		reverseOpenReq := &sliverpb.PivotReverseRouteOpenReq{
-			Request: &commonpb.Request{SessionID: node.ID},
-			Route:   &next,
+			reverseOpenReq := &sliverpb.PivotReverseRouteOpenReq{
+				Request: &commonpb.Request{SessionID: node.ID},
+				Route:   &next,
+			}
+			data, _ := proto.Marshal(reverseOpenReq)
+
+			session := core.Sessions.Get(node.ID)
+
+			reverseOpen := &sliverpb.PivotReverseRouteOpen{}
+			resp, err := session.Request(sliverpb.MsgNumber(reverseOpenReq), defaultTimeout, data)
+			if err != nil {
+				return err
+			}
+			proto.Unmarshal(resp, reverseOpen)
+
+			if reverseOpen.Success == false {
+				return errors.New(reverseOpen.Response.Err)
+			}
+
+			next.Nodes = next.Nodes[1:]
 		}
-		data, _ := proto.Marshal(reverseOpenReq)
-
-		session := core.Sessions.Get(node.ID)
-
-		reverseOpen := &sliverpb.PivotReverseRouteOpen{}
-		resp, err := session.Request(sliverpb.MsgNumber(reverseOpenReq), defaultTimeout, data)
-		if err != nil {
-			return err
-		}
-		proto.Unmarshal(resp, reverseOpen)
-
-		if reverseOpen.Success == false {
-			return errors.New(reverseOpen.Response.Err)
-		}
-
-		next.Nodes = next.Nodes[1:]
 	}
 
 	return
