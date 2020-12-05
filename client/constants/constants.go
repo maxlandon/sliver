@@ -132,6 +132,10 @@ const (
 	BackdoorStr   = "backdoor"
 	MakeTokenStr  = "make-token"
 	GetEnvStr     = "getenv"
+
+	RoutesStr       = "route"
+	RoutesAddStr    = "add"
+	RoutesRemoveStr = "remove"
 )
 
 // Groups

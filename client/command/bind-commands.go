@@ -1283,4 +1283,36 @@ func BindCommands(app *grumble.App, rpc rpcpb.SliverRPCClient) {
 		},
 		HelpGroup: consts.GenericHelpGroup,
 	})
+
+	routeCmd := &grumble.Command{
+		Name:      consts.RoutesStr,
+		Help:      "Manage network routes",
+		LongHelp:  help.GetHelpFor(consts.RoutesStr),
+		AllowArgs: false,
+		Run: func(ctx *grumble.Context) error {
+			fmt.Println()
+			fmt.Println(Warn + "Please use one of the route subcommands")
+			fmt.Println()
+			return nil
+		},
+		HelpGroup: consts.GenericHelpGroup,
+	}
+
+	routeCmd.AddCommand(&grumble.Command{
+		Name:      consts.RoutesAddStr,
+		Help:      "Add a new network route",
+		LongHelp:  help.GetHelpFor(consts.RoutesAddStr),
+		AllowArgs: false,
+		Flags: func(f *grumble.Flags) {
+			f.String("s", "subnet", "", "Target subnet for new route")
+		},
+		Run: func(ctx *grumble.Context) error {
+			fmt.Println()
+			addRoute(ctx, rpc)
+			fmt.Println()
+			return nil
+		},
+		HelpGroup: consts.GenericHelpGroup,
+	})
+	app.AddCommand(routeCmd)
 }

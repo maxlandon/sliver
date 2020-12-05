@@ -21,9 +21,8 @@ package handlers
 import (
 	// {{if .Config.Debug}}
 	"log"
-	"net"
-
 	// {{end}}
+	"net"
 
 	"github.com/golang/protobuf/proto"
 
@@ -78,7 +77,7 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 	// If no routes yet, we need to register the mux router
 	// to the active transport's multiplexer session.
 	if len(routes.Active) == 0 {
-		routes.Server = route.SetupMuxRouter(transports.ServerComms.Multiplexer)
+		routes.Server = transports.SetupMuxRouter(transports.ServerComms.Multiplexer)
 	}
 
 	// Forge and register the appropriate route handlers for this route.

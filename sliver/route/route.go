@@ -19,14 +19,9 @@ package route
 */
 
 import (
-	// {{if .Config.Debug}}
-	"log"
-	// {{end}}
-	"net"
 	"sync"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/bishopfox/sliver/sliver/3rdparty/hashicorp/yamux"
 	"github.com/bishopfox/sliver/sliver/3rdparty/ilgooz/bon"
 )
 
@@ -63,55 +58,4 @@ func (r *routes) Remove(routeID uint32) (err error) {
 	delete(r.Active, routeID)
 	r.mutex.Unlock()
 	return
-}
-
-// router - Responsible for routing all streams muxed out of of a physical connection.
-// This router is being passed various objects drawned from transports, etc.
-// This object also wraps the multiplexer so as to be compatible with the Bon router object.
-type router struct {
-	session *yamux.Session
-}
-
-// SetupMuxRouter - When the first route is registered, we register a mux router.
-// After this call, the implant is able to route traffic that is being forwarded
-// by the previous node in the chain (server -> pivot -> this implant).
-func SetupMuxRouter(mux *yamux.Session) (router *bon.Bon) {
-	// {{if .Config.Debug}}
-	log.Printf("Starting mux stream router")
-	// {{end}}
-
-	r := newRouter(mux)
-	router = bon.New(r)
-
-	// We don't set default (non-matching) handlers,
-	// because no connection should arrive to the router
-	// without a defined route ID.
-
-	return
-}
-
-func newRouter(mux *yamux.Session) *router {
-	return &router{session: mux}
-}
-
-// Accept - The router is able to accept a new muxed stream.
-func (s *router) Accept() (net.Conn, error) {
-	// {{if .Config.Debug}}
-	log.Printf("[route] accepting new stream")
-	// {{end}}
-	return s.session.Accept()
-}
-
-// Open - The router is able to open a new stream so as to
-// forward the connection that we want to route, with a Route r.
-func (s *router) Open(r bon.Route) (net.Conn, error) {
-	// {{if .Config.Debug}}
-	log.Printf("[route] routing newly accepted stream")
-	// {{end}}
-	return s.session.Open()
-}
-
-// Close - The router can close the multiplexer session.
-func (s *router) Close() error {
-	return s.session.Close()
 }
