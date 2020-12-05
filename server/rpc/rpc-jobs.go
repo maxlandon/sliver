@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/ilgooz/bon"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -130,6 +131,16 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println(lnRoute.ID)
+
+	// Add handler to the first node Transport's, for automatic registration of session.
+	serverTransport := c2.Transports.GetBySession(lnRoute.Nodes[0].ID)
+	if serverTransport == nil {
+		return nil, fmt.Errorf("Error adding route: could not find transport for session %s (ID: %d)", session.Name, session.ID)
+	}
+	serverTransport.Router.Handle(bon.Route(lnRoute.ID), serverTransport.HandlePivotSessionRPC)
+	go serverTransport.Router.Run()
 
 	// Forge listener request for session, with certificate information.
 	caCertPEM, certPEM, keyPEM, err := getMTLSCertificates(req.Host)

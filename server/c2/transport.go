@@ -90,6 +90,7 @@ func NewTransport(url *url.URL) (t *Transport) {
 func (t *Transport) Start(conn net.Conn) (err error) {
 
 	if conn != nil {
+		t.conn = conn
 
 		// Assuming the conn has not been drawned from a multiplexer !!
 		t.multiplexer, err = yamux.Client(conn, nil)
@@ -121,23 +122,46 @@ func (t *Transport) setupMuxC2() (err error) {
 		tpLog.Printf("[mux] Error opening C2 stream: %s", err)
 		return
 	}
-	go t.handleSessionRPC(t.Session, stream)
 
 	// Create and register session
-	t.Session = core.Sessions.Add(&core.Session{
+	t.Session = &core.Session{
 		Transport:     "mtls",
 		RemoteAddress: fmt.Sprintf("%s", t.multiplexer.Addr()),
 		Send:          make(chan *sliverpb.Envelope),
 		RespMutex:     &sync.RWMutex{},
 		Resp:          map[uint64]chan *sliverpb.Envelope{},
-	})
+	}
 	t.Session.UpdateCheckin()
+
+	// Setup the transport's router
+	t.Router = SetupMuxRouter(t.multiplexer)
+
+	go t.handleSessionRPC(t.Session, stream)
 
 	tpLog.Infof("Done creating RPC C2 stream.")
 	return
 }
 
-// handleSessionRPC - Small refactor used by new Transport model.
+func (t *Transport) HandlePivotSessionRPC(conn net.Conn) {
+
+	tpLog.Infof("Handled pivoted implant RPC C2 stream.")
+
+	session := &core.Session{
+		Transport:     conn.LocalAddr().Network(),
+		RemoteAddress: conn.RemoteAddr().String(),
+		Send:          make(chan *sliverpb.Envelope),
+		RespMutex:     &sync.RWMutex{},
+		Resp:          map[uint64]chan *sliverpb.Envelope{},
+	}
+	session.UpdateCheckin()
+
+	go t.handleSessionRPC(session, conn)
+
+	tpLog.Infof("Done creating RPC C2 stream.")
+}
+
+// handleSessionRPC - Small refactor used by new Transport model. There is a session parameter
+// because the Transport must be able to handle pivoted sessions registrations as well.
 func (t *Transport) handleSessionRPC(session *core.Session, conn net.Conn) {
 
 	// We will automatically cleanup the session once this function exits.
@@ -293,6 +317,52 @@ func (t *Transport) IsRouting() bool {
 	}
 	// If no mux, no routing.
 	return false
+}
+
+// SetupMuxRouter - When the first route is registered, we register a mux router.
+// After this call, the implant is able to route traffic that is being forwarded
+// by the previous node in the chain (server -> pivot -> this implant).
+func SetupMuxRouter(mux *yamux.Session) (router *bon.Bon) {
+	tpLog.Infof("Starting mux stream router")
+
+	r := newRouter(mux)
+	router = bon.New(r)
+
+	// We don't set default (non-matching) handlers,
+	// because no connection should arrive to the router
+	// without a defined route ID.
+
+	return
+}
+
+// router - Responsible for routing all streams muxed out of of a physical connection.
+// This router is being passed various objects drawned from transports, etc.
+// This object also wraps the multiplexer so as to be compatible with the Bon router object.
+type router struct {
+	session *yamux.Session
+}
+
+func newRouter(mux *yamux.Session) *router {
+	return &router{session: mux}
+}
+
+// Accept - The router is able to accept a new muxed stream.
+func (s *router) Accept() (net.Conn, error) {
+	tpLog.Infof("[route] accepting new stream")
+	// {{end}}
+	return s.session.Accept()
+}
+
+// Open - The router is able to open a new stream so as to
+// forward the connection that we want to route, with a Route r.
+func (s *router) Open(r bon.Route) (net.Conn, error) {
+	tpLog.Infof("[route] routing newly accepted stream")
+	return s.session.Open()
+}
+
+// Close - The router can close the multiplexer session.
+func (s *router) Close() error {
+	return s.session.Close()
 }
 
 func transport(rw1, rw2 io.ReadWriter) error {

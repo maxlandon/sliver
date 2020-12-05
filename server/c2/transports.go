@@ -60,6 +60,17 @@ func (t *transports) Get(ID uint32) (tp *Transport) {
 	return
 }
 
+// GetBySession - Used when we have the ID of the implant that is at the other end
+// of one of our server's transports. Useful to add entry route handlers.
+func (t *transports) GetBySession(ID uint32) *Transport {
+	for _, tp := range t.Active {
+		if tp.Session.ID == ID {
+			return tp
+		}
+	}
+	return nil
+}
+
 // nextTransportID - Returns an incremental nonce as an id
 func nextTransportID() uint32 {
 	newID := transportID + 1
