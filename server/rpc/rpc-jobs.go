@@ -92,6 +92,7 @@ func (rpc *Server) KillJob(ctx context.Context, kill *clientpb.KillJobReq) (*cli
 // StartMTLSListener - Start an MTLS listener
 func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSListenerReq) (*clientpb.MTLSListener, error) {
 
+	// The tls.Listener requires the uint16 type.
 	if 65535 <= req.Port {
 		return nil, ErrInvalidPort
 	}
@@ -100,66 +101,39 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 		listenPort = uint16(req.Port)
 	}
 
-	// Get session for host
+	// Get session for host address. The session found is not necessarily
+	// already accessible via a route, but we build it below, if needed.
 	session, err := route.Routes.GetSession(req.Host)
 	if err != nil {
 		return nil, err
 	}
 
-	// If session is nil, start listener on server, or that we have no active routes.
+	// If session is nil or if we have no active routes, start listener on server.
 	if session == nil || len(route.Routes.Active) == 0 {
-		job, err := c2.StartMTLSListenerJob(req.Host, listenPort)
-		if err != nil {
-			return nil, err
-		}
-
-		if req.Persistent {
-			cfg := &configs.MTLSJobConfig{
-				Host: req.Host,
-				Port: listenPort,
-			}
-			configs.GetServerConfig().AddMTLSJob(cfg)
-			job.PersistentID = cfg.JobID
-		}
-
-		return &clientpb.MTLSListener{JobID: uint32(job.ID)}, nil
+		return serverStartMTLSListener(req, listenPort)
 	}
 
-	// Else, send requests to session and all nodes on route with appropriate function
+	// Build the route toward that session. This will either return an existing route
+	// chain with a new ID, or it will build the route (add last node to closest route).
 	lnRoute, err := route.BuildRouteToSession(session)
 	if err != nil {
 		return nil, err
 	}
 
-	// Forge listener request for session, with certificate information.
-	caCertPEM, certPEM, keyPEM, err := getMTLSCertificates(req.Host)
-	mtlsPivotReq := &sliverpb.MTLSPivotReq{
-		Host:      req.Host,
-		Port:      req.Port,
-		CACertPEM: caCertPEM,
-		CertPEM:   certPEM,
-		KeyPEM:    keyPEM,
-		RouteID:   lnRoute.ID,
-		Request:   &commonpb.Request{SessionID: session.ID},
+	// Forge listener request for session (last node in route), with certificate information.
+	err = sendSessionMTLSListenerRequest(session, lnRoute, req.Host, req.Port)
+	if err != nil {
+		return nil, err
 	}
-	data, _ := proto.Marshal(mtlsPivotReq)
 
-	// Send pivot reverse mux handler requests to all nodes, including the first node server's transport
-	err = initRouteReverseHandlers(lnRoute)
+	// Send pivot reverse mux handler requests to all nodes except
+	// the last one, but including the first node server's transport.
+	err = route.InitRouteReverseHandlers(lnRoute)
 	if err != nil {
 		return nil, fmt.Errorf("Error sending reverse handler requests: %s", err)
 	}
 
-	// Send listener request to the last node in chain anyway.
-	mtlsPivot := &sliverpb.MTLSPivot{}
-	resp, err := session.Request(sliverpb.MsgNumber(mtlsPivotReq), defaultTimeout, data)
-	proto.Unmarshal(resp, mtlsPivot)
-
-	if !mtlsPivot.Success {
-		return nil, fmt.Errorf("Error starting remote listener (%s): %s", session.Name, mtlsPivot.Response.Err)
-	}
-
-	// If all clear, setup job
+	// If all clear, setup job for remote listener.
 	bind := fmt.Sprintf("%s:%d", req.Host, listenPort)
 	job := &core.Job{
 		ID:          core.NextJobID(),
@@ -170,40 +144,106 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 		JobCtrl:     make(chan bool),
 	}
 
+	// Setup and register cleanup functions (make request to all necessary implants), and add job.
+	go handleRemoteListenerCleanup(job, lnRoute, session, req.Host, listenPort)
+	core.Jobs.Add(job)
+
+	return &clientpb.MTLSListener{JobID: uint32(job.ID)}, nil
+}
+
+// serverStartMTLSListener - The listener needs to be start on the server. Handle start and job management.
+func serverStartMTLSListener(req *clientpb.MTLSListenerReq, listenPort uint16) (*clientpb.MTLSListener, error) {
+	job, err := c2.StartMTLSListenerJob(req.Host, listenPort)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Persistent {
+		cfg := &configs.MTLSJobConfig{
+			Host: req.Host,
+			Port: listenPort,
+		}
+		configs.GetServerConfig().AddMTLSJob(cfg)
+		job.PersistentID = cfg.JobID
+	}
+
 	// Setup cleanup functions (make request to all necessary implants)
 	go func() {
 		<-job.JobCtrl
-		jobLog.Infof("Stopping mTLS listener (%d) (Session: %s, ID: %d) on %s ...", job.ID, session.Name, session.ID, bind)
 
-		// Send request to session
-		mtlsCloseReq := &sliverpb.MTLSPivotCloseReq{
-			Host:    mtlsPivotReq.Host,
-			Port:    mtlsPivotReq.Port,
-			RouteID: mtlsPivotReq.RouteID,
-		}
-		data, _ := proto.Marshal(mtlsCloseReq)
-
-		mtlsClose := &sliverpb.MTLSPivotClose{}
-		resp, err := session.Request(sliverpb.MsgNumber(mtlsCloseReq), defaultTimeout, data)
-		proto.Unmarshal(resp, mtlsClose)
-
-		if !mtlsPivot.Success {
-			jobLog.Errorf("Error removing remote listener (%s): %s", session.Name, mtlsClose.Response.Err)
-		}
-
-		// Send request to intermediate nodes
-		if len(lnRoute.Nodes) > 1 {
-			err = removeRouteReverseHandlers(lnRoute)
-			if err != nil {
-				jobLog.Errorf("Error removing reverse mux handlers on route: %s", err)
-			}
-		}
+		bind := fmt.Sprintf("%s:%d", req.Host, listenPort)
+		jobLog.Infof("Stopping mTLS listener (%d) on %s ...", job.ID, bind)
 
 		core.Jobs.Remove(job)
 	}()
 	core.Jobs.Add(job)
-
 	return &clientpb.MTLSListener{JobID: uint32(job.ID)}, nil
+}
+
+// sendSessionMTLSListenerRequest - Forge listener request with custom certificate information, and send it to session.
+func sendSessionMTLSListenerRequest(session *core.Session, route *sliverpb.Route, host string, port uint32) error {
+
+	// First, we likely need to forge new certificates for this listener on the implan's host.
+	caCertPEM, certPEM, keyPEM, err := getMTLSCertificates(host)
+	mtlsPivotReq := &sliverpb.MTLSPivotReq{
+		Host:      host,
+		Port:      port,
+		CACertPEM: caCertPEM,
+		CertPEM:   certPEM,
+		KeyPEM:    keyPEM,
+		RouteID:   route.ID,
+		Request:   &commonpb.Request{SessionID: session.ID},
+	}
+	data, _ := proto.Marshal(mtlsPivotReq)
+
+	// Send listener request to the session, which is the last node in the route.
+	mtlsPivot := &sliverpb.MTLSPivot{}
+	resp, err := session.Request(sliverpb.MsgNumber(mtlsPivotReq), defaultTimeout, data)
+	if err != nil {
+		return fmt.Errorf("Error starting remote listener (%s): %s", session.Name, err.Error())
+	}
+	proto.Unmarshal(resp, mtlsPivot)
+
+	if !mtlsPivot.Success {
+		return fmt.Errorf("Error starting remote listener (%s): %s", session.Name, mtlsPivot.Response.Err)
+	}
+	return nil
+}
+
+// handleRemoteListenerCleanup - When the corresponsing job is killed on the server, send request to all implant nodes to
+// deregister reverse route handlers for the listener, and the listener itself on the last node.
+func handleRemoteListenerCleanup(job *core.Job, lnRoute *sliverpb.Route, session *core.Session, host string, port uint16) {
+
+	<-job.JobCtrl // Wait for job kill signal.
+
+	bind := fmt.Sprintf("%s:%d", host, port)
+	jobLog.Infof("Stopping mTLS listener (%d) (Session: %s, ID: %d) on %s ...", job.ID, session.Name, session.ID, bind)
+
+	// Send request to session last node.
+	mtlsCloseReq := &sliverpb.MTLSPivotCloseReq{
+		Host:    host,
+		Port:    uint32(port),
+		RouteID: lnRoute.ID,
+	}
+	data, _ := proto.Marshal(mtlsCloseReq)
+
+	mtlsClose := &sliverpb.MTLSPivotClose{}
+	resp, err := session.Request(sliverpb.MsgNumber(mtlsCloseReq), defaultTimeout, data)
+	proto.Unmarshal(resp, mtlsClose)
+
+	if !mtlsClose.Success {
+		jobLog.Errorf("Error removing remote listener (%s): %s", session.Name, mtlsClose.Response.Err)
+	}
+
+	// Send request to intermediate nodes
+	if len(lnRoute.Nodes) > 1 {
+		err = route.RemoveRouteReverseHandlers(lnRoute)
+		if err != nil {
+			jobLog.Errorf("Error removing reverse mux handlers on route: %s", err)
+		}
+	}
+
+	core.Jobs.Remove(job)
 }
 
 // When we want to start a listener on an implant, we forge new certificates for this host.
@@ -227,79 +267,6 @@ func getMTLSCertificates(host string) (caCert, certPEM, keyPEM []byte, err error
 		return nil, nil, nil, err
 	}
 
-	return
-}
-
-// For each intermediate node in a route, we add a handler to handle reverse listener connections.
-func initRouteReverseHandlers(route *sliverpb.Route) (err error) {
-
-	// Add handler to the first node Transport's, for automatic registration of session.
-	servNode := c2.Transports.GetBySession(route.Nodes[0].ID)
-	go servNode.HandleSession(route)
-
-	// Cutoff the chain at each node
-	next := *route
-
-	if len(next.Nodes) > 1 {
-		// We never count the last node, as it will receive a special request with certificate information.
-		for _, node := range next.Nodes[:(len(next.Nodes) - 1)] {
-
-			reverseOpenReq := &sliverpb.PivotReverseRouteOpenReq{
-				Request: &commonpb.Request{SessionID: node.ID},
-				Route:   &next,
-			}
-			data, _ := proto.Marshal(reverseOpenReq)
-
-			session := core.Sessions.Get(node.ID)
-
-			reverseOpen := &sliverpb.PivotReverseRouteOpen{}
-			resp, err := session.Request(sliverpb.MsgNumber(reverseOpenReq), defaultTimeout, data)
-			if err != nil {
-				return err
-			}
-			proto.Unmarshal(resp, reverseOpen)
-
-			if reverseOpen.Success == false {
-				return errors.New(reverseOpen.Response.Err)
-			}
-
-			next.Nodes = next.Nodes[1:]
-		}
-	}
-
-	return
-}
-
-// Same as initRouteReverseHandlers, but for removing the reverse handlers.
-func removeRouteReverseHandlers(r *sliverpb.Route) (err error) {
-
-	// Cutoff the chain at each node
-	next := *r
-
-	// We never count the last node, as it will receive a special request with certificate information.
-	for _, node := range next.Nodes[:(len(next.Nodes) - 1)] {
-
-		reverseCloseReq := &sliverpb.PivotReverseRouteCloseReq{
-			Request: &commonpb.Request{SessionID: node.ID},
-			Route:   &next,
-		}
-		data, _ := proto.Marshal(reverseCloseReq)
-
-		session := core.Sessions.Get(node.ID)
-
-		reverseClose := &sliverpb.PivotReverseRouteClose{}
-		resp, err := session.Request(sliverpb.MsgNumber(reverseCloseReq), defaultTimeout, data)
-		if err != nil {
-			return err
-		}
-		proto.Unmarshal(resp, reverseClose)
-
-		if reverseClose.Success == false {
-			return errors.New(reverseClose.Response.Err)
-		}
-
-		next.Nodes = next.Nodes[1:]
-	}
 	return
 }
 

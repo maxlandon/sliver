@@ -84,8 +84,14 @@ func addRouteHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 	routes.Add(addRouteReq.Route)
 
 	// {{if .Config.Debug}}
+	var next string
+	if len(newRoute.Nodes) > 1 {
+		next = newRoute.Nodes[1].Addr
+	} else {
+		next = newRoute.Subnet
+	}
 	log.Printf("Added new route to %s (ID: %d, Next node: %s)",
-		newRoute.Subnet, newRoute.ID, newRoute.Nodes[len(newRoute.Nodes)-1].Addr)
+		newRoute.Subnet, newRoute.ID, next)
 	// {{end}}
 
 	addRoute.Success = true

@@ -53,6 +53,13 @@ type routes struct {
 	mutex  *sync.Mutex
 }
 
+// NextRouteID - Returns an incremental nonce as an id
+func NextRouteID() uint32 {
+	newID := routeID + 1
+	routeID++
+	return newID
+}
+
 // Add - A user has requested to open a route. Send requests to all nodes in the route chain,
 // so they know how to handle traffic directed at a certain address, and register the route.
 // For each implant node, we cut the sliverpb.Route it directly send it through its C2 RPC channel.
@@ -407,11 +414,77 @@ func checkAllNetIfaces(subnet *net.IPNet) (session *core.Session, err error) {
 	return
 }
 
-// NextRouteID - Returns an incremental nonce as an id
-func NextRouteID() uint32 {
-	newID := routeID + 1
-	routeID++
-	return newID
+// InitRouteReverseHandlers - For each intermediate node in a route, we add a handler to handle reverse listener connections.
+func InitRouteReverseHandlers(route *sliverpb.Route) (err error) {
+
+	// Add handler to the first node Transport's, for automatic registration of session.
+	servNode := c2.Transports.GetBySession(route.Nodes[0].ID)
+	go servNode.HandleSession(route)
+
+	// Cutoff the chain at each node
+	next := *route
+
+	if len(next.Nodes) > 1 {
+		// We never count the last node, as it will receive a special request with certificate information.
+		for _, node := range next.Nodes[:(len(next.Nodes) - 1)] {
+
+			reverseOpenReq := &sliverpb.PivotReverseRouteOpenReq{
+				Request: &commonpb.Request{SessionID: node.ID},
+				Route:   &next,
+			}
+			data, _ := proto.Marshal(reverseOpenReq)
+
+			session := core.Sessions.Get(node.ID)
+
+			reverseOpen := &sliverpb.PivotReverseRouteOpen{}
+			resp, err := session.Request(sliverpb.MsgNumber(reverseOpenReq), defaultNetTimeout, data)
+			if err != nil {
+				return err
+			}
+			proto.Unmarshal(resp, reverseOpen)
+
+			if reverseOpen.Success == false {
+				return errors.New(reverseOpen.Response.Err)
+			}
+
+			next.Nodes = next.Nodes[1:]
+		}
+	}
+
+	return
+}
+
+// RemoveRouteReverseHandlers - Same as InitRouteReverseHandlers, but for removing the reverse handlers.
+func RemoveRouteReverseHandlers(r *sliverpb.Route) (err error) {
+
+	// Cutoff the chain at each node
+	next := *r
+
+	// We never count the last node, as it will receive a special request with certificate information.
+	for _, node := range next.Nodes[:(len(next.Nodes) - 1)] {
+
+		reverseCloseReq := &sliverpb.PivotReverseRouteCloseReq{
+			Request: &commonpb.Request{SessionID: node.ID},
+			Route:   &next,
+		}
+		data, _ := proto.Marshal(reverseCloseReq)
+
+		session := core.Sessions.Get(node.ID)
+
+		reverseClose := &sliverpb.PivotReverseRouteClose{}
+		resp, err := session.Request(sliverpb.MsgNumber(reverseCloseReq), defaultNetTimeout, data)
+		if err != nil {
+			return err
+		}
+		proto.Unmarshal(resp, reverseClose)
+
+		if reverseClose.Success == false {
+			return errors.New(reverseClose.Response.Err)
+		}
+
+		next.Nodes = next.Nodes[1:]
+	}
+	return
 }
 
 // GetRouteFor - Given a network address/subnet, we find the correct chain of nodes to route traffic.
