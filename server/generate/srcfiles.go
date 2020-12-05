@@ -115,6 +115,7 @@ var (
 		"pivots/named-pipe_windows.go",
 		"pivots/tcp.go",
 		"pivots/pivots.go",
+		"pivots/mtls.go",
 
 		"sc/screenshot_darwin.go",
 		"sc/screenshot_linux.go",
