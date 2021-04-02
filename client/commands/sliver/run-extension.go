@@ -169,6 +169,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 			Data:        binData,
 			ProcessName: processName,
 			EntryPoint:  ext.sub.Entrypoint,
+			Kill:        true,
 			Request:     cctx.Request(session),
 		})
 		ctrl <- true
@@ -196,6 +197,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 		Data:        binData,
 		EntryPoint:  entryPoint,
 		ProcessName: processName,
+		Kill:        true,
 		Request:     cctx.Request(session),
 	})
 	ctrl <- true
