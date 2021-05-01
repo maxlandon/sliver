@@ -41,6 +41,10 @@ var (
 		"evasion/evasion_linux.go",
 		"evasion/evasion_windows.go",
 
+		"forwarder/forwarder.go",
+		"forwarder/socks.go",
+		"forwarder/portforward.go",
+
 		// C files for DLL
 		"sliver.h",
 		"sliver.c",
@@ -136,6 +140,14 @@ var (
 
 		"transports/connection.go",
 		"transports/crypto.go",
+<<<<<<< HEAD
+=======
+		"transports/tcp-mtls.go",
+		"netstack/tun.go",
+		"transports/tcp-wg.go",
+		"transports/tcp-http.go",
+		"transports/udp-dns.go",
+>>>>>>> BishopFox/master
 		"transports/named-pipe.go",
 		"transports/named-pipe_windows.go",
 		"transports/rpc.go",
@@ -199,6 +211,14 @@ var (
 
 		"transports/connection.go",
 		"transports/crypto.go",
+<<<<<<< HEAD
+=======
+		"transports/tcp-mtls.go",
+		"netstack/tun.go",
+		"transports/tcp-wg.go",
+		"transports/tcp-http.go",
+		"transports/udp-dns.go",
+>>>>>>> BishopFox/master
 		"transports/named-pipe.go",
 		"transports/rpc.go",
 		"transports/tcp-http.go",

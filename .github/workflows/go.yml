@@ -25,6 +25,7 @@ jobs:
         git build-essential zlib1g zlib1g-dev wget zip unzip \
         mingw-w64 binutils-mingw-w64 g++-mingw-w64 gcc-multilib
 
+<<<<<<< HEAD
     - name: Protoc
       env:
         PROTOC_VER: 3.11.4
@@ -45,6 +46,8 @@ jobs:
     - name: Packr
       run: go get -u github.com/gobuffalo/packr/packr
 
+=======
+>>>>>>> BishopFox/master
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
@@ -53,9 +56,6 @@ jobs:
 
     - name: Go Assets
       run: ./go-assets.sh
-
-    - name: Remove Vendor
-      run: rm -rf ./vendor/
 
     - name: Make
       run: make linux
@@ -80,6 +80,7 @@ jobs:
     - name: Mingw
       run: brew install mingw-w64
 
+<<<<<<< HEAD
     - name: Protoc
       env:
         PROTOC_VER: 3.11.4
@@ -100,6 +101,8 @@ jobs:
     - name: Packr
       run: go get -u github.com/gobuffalo/packr/packr
 
+=======
+>>>>>>> BishopFox/master
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
@@ -108,9 +111,6 @@ jobs:
 
     - name: Go Assets
       run: ./go-assets.sh
-
-    - name: Remove Vendor
-      run: rm -rf ./vendor/
 
     - name: Make
       run: make macos

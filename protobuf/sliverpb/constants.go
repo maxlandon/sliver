@@ -157,6 +157,8 @@ const (
 	MsgTCPPivotReq
 	// MsgTCPPivot - Response with the result
 	MsgTCPPivot
+	// MsgPivotListReq
+	MsgPivotListReq
 
 	// MsgPivotOpen - Request to create a new pivot tunnel
 	MsgPivotOpen
@@ -193,6 +195,7 @@ const (
 	// MsgRegistryCreateKeyReq
 	MsgRegistryCreateKeyReq
 
+<<<<<<< HEAD
 	// MsgHandlerStartReq - Request to start a handler on an implant.
 	MsgHandlerStartReq
 	// MsgHandlerStart - Response
@@ -245,6 +248,35 @@ const (
 	MsgSwitchTransportReq
 	// MsgSwitchTransport - Response
 	MsgSwitchTransport
+=======
+	// MsgWGStartPortFwdReq - Request to start a port forwarding in a WG transport
+	MsgWGStartPortFwdReq
+	// MsgWGStopPortFwdReq - Request to stop a port forwarding in a WG transport
+	MsgWGStopPortFwdReq
+	// MsgWGStartSocks - Request to start a socks server in a WG transport
+	MsgWGStartSocksReq
+	// MsgWGStopSocks - Request to stop a socks server in a WG transport
+	MsgWGStopSocksReq
+	// MsgWGListForwarders
+	MsgWGListForwardersReq
+	// MsgWGListSocks
+	MsgWGListSocksReq
+
+	// MsgPortfwdReq - Establish a port forward
+	MsgPortfwdReq
+	// MsgPortfwd - Response of port forward
+	MsgPortfwd
+
+	// MsgReconnectIntervalReq
+	MsgReconnectIntervalReq
+
+	MsgReconnectInterval
+
+	// MsgPollIntervalReq
+	MsgPollIntervalReq
+
+	MsgPollInterval
+>>>>>>> BishopFox/master
 )
 
 // MsgNumber - Get a message number of type
@@ -417,6 +449,40 @@ func MsgNumber(request proto.Message) uint32 {
 		return MsgRegistryWriteReq
 	case *RegistryCreateKeyReq:
 		return MsgRegistryCreateKeyReq
+
+	case *PivotListReq:
+		return MsgPivotListReq
+
+	case *WGPortForwardStartReq:
+		return MsgWGStartPortFwdReq
+	case *WGPortForwardStopReq:
+		return MsgWGStopPortFwdReq
+	case *WGSocksStartReq:
+		return MsgWGStartSocksReq
+	case *WGSocksStopReq:
+		return MsgWGStopSocksReq
+	case *WGTCPForwardersReq:
+		return MsgWGListForwardersReq
+	case *WGSocksServersReq:
+		return MsgWGListSocksReq
+
+	case *PortfwdReq:
+		return MsgPortfwdReq
+	case *Portfwd:
+		return MsgPortfwd
+
+	case *ReconnectIntervalReq:
+		return MsgReconnectIntervalReq
+
+	case *ReconnectInterval:
+		return MsgReconnectInterval
+
+	case *PollIntervalReq:
+		return MsgPollIntervalReq
+
+	case *PollInterval:
+		return MsgPollInterval
+
 	}
 	return uint32(0)
 }

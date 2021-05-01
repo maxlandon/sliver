@@ -72,13 +72,29 @@ type ImplantConfig struct {
 	Evasion             bool
 	ObfuscateSymbols    bool
 	ReconnectInterval   uint32
+	PollInterval        uint32
 	MaxConnectionErrors uint32
+
+	WGImplantPrivKey  string
+	WGServerPubKey    string
+	WGPeerTunIP       string
+	WGKeyExchangePort uint32
+	WGTcpCommsPort    uint32
 
 	C2 []ImplantC2
 
+<<<<<<< HEAD
 	MTLSc2Enabled     bool
 	HTTPc2Enabled     bool
 	DNSc2Enabled      bool
+=======
+	MTLSc2Enabled bool
+	WGc2Enabled   bool
+	HTTPc2Enabled bool
+	DNSc2Enabled  bool
+
+	CanaryDomains     []CanaryDomain
+>>>>>>> BishopFox/master
 	NamePipec2Enabled bool
 	TCPPivotc2Enabled bool
 
@@ -126,6 +142,7 @@ func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 		ObfuscateSymbols: ic.ObfuscateSymbols,
 
 		ReconnectInterval:   ic.ReconnectInterval,
+		PollInterval:        ic.PollInterval,
 		MaxConnectionErrors: ic.MaxConnectionErrors,
 
 		LimitDatetime:     ic.LimitDatetime,
@@ -134,10 +151,15 @@ func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 		LimitUsername:     ic.LimitUsername,
 		LimitFileExists:   ic.LimitFileExists,
 
-		IsSharedLib: ic.IsSharedLib,
-		IsService:   ic.IsService,
-		IsShellcode: ic.IsShellcode,
-		Format:      ic.Format,
+		IsSharedLib:       ic.IsSharedLib,
+		IsService:         ic.IsService,
+		IsShellcode:       ic.IsShellcode,
+		Format:            ic.Format,
+		WGImplantPrivKey:  ic.WGImplantPrivKey,
+		WGServerPubKey:    ic.WGServerPubKey,
+		WGPeerTunIP:       ic.WGPeerTunIP,
+		WGKeyExchangePort: ic.WGKeyExchangePort,
+		WGTcpCommsPort:    ic.WGTcpCommsPort,
 
 		FileName: ic.FileName,
 	}

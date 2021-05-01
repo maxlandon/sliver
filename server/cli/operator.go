@@ -39,7 +39,7 @@ var (
 	namePattern = regexp.MustCompile("^[a-zA-Z0-9_]*$") // Only allow alphanumeric chars
 )
 
-var cmdOperator = &cobra.Command{
+var operatorCmd = &cobra.Command{
 	Use:   "operator",
 	Short: "Generate operator configuration files",
 	Long:  ``,

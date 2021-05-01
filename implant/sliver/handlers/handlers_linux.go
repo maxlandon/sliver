@@ -44,6 +44,19 @@ var (
 
 		sliverpb.MsgNetstatReq:  netstatHandler,
 		sliverpb.MsgSideloadReq: sideloadHandler,
+
+		sliverpb.MsgReconnectIntervalReq: reconnectIntervalHandler,
+		sliverpb.MsgPollIntervalReq:      pollIntervalHandler,
+
+		// {{if .Config.WGc2Enabled}}
+		// Wireguard specific
+		sliverpb.MsgWGStartPortFwdReq:   wgStartPortfwdHandler,
+		sliverpb.MsgWGStopPortFwdReq:    wgStopPortfwdHandler,
+		sliverpb.MsgWGListForwardersReq: wgListTCPForwardersHandler,
+		sliverpb.MsgWGStartSocksReq:     wgStartSocksHandler,
+		sliverpb.MsgWGStopSocksReq:      wgStopSocksHandler,
+		sliverpb.MsgWGListSocksReq:      wgListSocksServersHandler,
+		// {{end}}
 	}
 
 	linuxPivotHandlers = map[uint32]PivotHandler{}

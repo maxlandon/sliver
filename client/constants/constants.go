@@ -97,6 +97,7 @@ const (
 	JobsKillStr    = "kill"
 	JobsKillAllStr = "kill-all"
 	MtlsStr        = "mtls"
+	WGStr          = "wg"
 	DnsStr         = "dns"
 	HttpStr        = "http"
 	HttpsStr       = "https"
@@ -173,6 +174,12 @@ const (
 	RegistryListSubStr    = "list-subkeys"
 	RegistryListValuesStr = "list-values"
 	RegistryCreateKeyStr  = "create"
+	PivotsListStr         = "pivots-list"
+	WgConfigStr           = "wg-config"
+	WgSocksStr            = "wg-socks"
+	WgPortFwdStr          = "wg-portfwd"
+
+	PortfwdStr = "portfwd"
 
 	RouteStr       = "route"
 	RoutePrintStr  = "print"

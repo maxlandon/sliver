@@ -251,12 +251,24 @@ func (c *Client) ResetShell() {
 	} else {
 		c.Shell.InputMode = readline.Vim
 	}
+<<<<<<< HEAD
 
 	// Hints are configurable and can deactivated
 	if !cctx.Config.Hints {
 		c.Shell.HintText = nil
 	} else {
 		c.Shell.HintText = completers.HintCompleter
+=======
+	serverSemVer := fmt.Sprintf("%d.%d.%d", serverVer.Major, serverVer.Minor, serverVer.Patch)
+
+	insecureRand.Seed(time.Now().Unix())
+	logo := asciiLogos[insecureRand.Intn(len(asciiLogos))]
+	fmt.Println(logo)
+	fmt.Println("All hackers gain " + abilities[insecureRand.Intn(len(abilities))])
+	fmt.Printf(Info+"Server v%s - %s%s\n", serverSemVer, serverVer.Commit, dirty)
+	if version.GitCommit != serverVer.Commit {
+		fmt.Printf(Info+"Client %s\n", version.FullVersion())
+>>>>>>> BishopFox/master
 	}
 }
 
@@ -323,6 +335,7 @@ func (c *Client) ParseTokens(sanitized []string) (parsed []string) {
 	return
 }
 
+<<<<<<< HEAD
 // Initialize logging
 func initLogging() {
 	appDir := assets.GetRootAppDir()
@@ -334,4 +347,36 @@ func initLogging() {
 	defer logFile.Close()
 	log.SetOutput(logFile)
 	return
+=======
+var asciiLogos = []string{
+	red + `
+ 	  ██████  ██▓     ██▓ ██▒   █▓▓█████  ██▀███
+	▒██    ▒ ▓██▒    ▓██▒▓██░   █▒▓█   ▀ ▓██ ▒ ██▒
+	░ ▓██▄   ▒██░    ▒██▒ ▓██  █▒░▒███   ▓██ ░▄█ ▒
+	  ▒   ██▒▒██░    ░██░  ▒██ █░░▒▓█  ▄ ▒██▀▀█▄
+	▒██████▒▒░██████▒░██░   ▒▀█░  ░▒████▒░██▓ ▒██▒
+	▒ ▒▓▒ ▒ ░░ ▒░▓  ░░▓     ░ ▐░  ░░ ▒░ ░░ ▒▓ ░▒▓░
+	░ ░▒  ░ ░░ ░ ▒  ░ ▒ ░   ░ ░░   ░ ░  ░  ░▒ ░ ▒░
+	░  ░  ░    ░ ░    ▒ ░     ░░     ░     ░░   ░
+		  ░      ░  ░ ░        ░     ░  ░   ░
+` + normal,
+
+	green + `
+    ███████╗██╗     ██╗██╗   ██╗███████╗██████╗
+    ██╔════╝██║     ██║██║   ██║██╔════╝██╔══██╗
+    ███████╗██║     ██║██║   ██║█████╗  ██████╔╝
+    ╚════██║██║     ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗
+    ███████║███████╗██║ ╚████╔╝ ███████╗██║  ██║
+    ╚══════╝╚══════╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
+` + normal,
+
+	bold + gray + `
+.------..------..------..------..------..------.
+|S.--. ||L.--. ||I.--. ||V.--. ||E.--. ||R.--. |
+| :/\: || :/\: || (\/) || :(): || (\/) || :(): |
+| :\/: || (__) || :\/: || ()() || :\/: || ()() |
+| '--'S|| '--'L|| '--'I|| '--'V|| '--'E|| '--'R|
+` + "`------'`------'`------'`------'`------'`------'" + `
+` + normal,
+>>>>>>> BishopFox/master
 }

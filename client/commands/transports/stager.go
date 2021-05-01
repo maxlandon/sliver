@@ -26,7 +26,6 @@ import (
 	"strconv"
 	"strings"
 
-	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/spin"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
@@ -35,6 +34,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 )
 
+<<<<<<< HEAD:client/commands/transports/stager.go
 // StageListener - Start a staging listener.
 type StageListener struct {
 	Options struct {
@@ -55,6 +55,12 @@ func (s *StageListener) Execute(args []string) (err error) {
 	var implantProfile *clientpb.ImplantProfile
 	profileName := s.Options.Profile
 	listenerURL := s.Options.URL
+=======
+// stage-listener --url [tcp://ip:port | http://ip:port ] --profile name
+func stageListener(ctx *grumble.Context, rpc rpcpb.SliverRPCClient) {
+	profileName := ctx.Flags.String("profile")
+	listenerURL := ctx.Flags.String("url")
+>>>>>>> BishopFox/master:client/command/stager.go
 
 	if profileName == "" || listenerURL == "" {
 		fmt.Println(util.Error + "missing required flags, see `help stage-listener` for more info")
@@ -73,6 +79,7 @@ func (s *StageListener) Execute(args []string) (err error) {
 		return
 	}
 
+<<<<<<< HEAD:client/commands/transports/stager.go
 	// get profile
 	profiles := getSliverProfiles()
 	if profiles == nil {
@@ -96,6 +103,13 @@ func (s *StageListener) Execute(args []string) (err error) {
 	}
 
 	stage2, err := GetSliverBinary(*implantProfile, rpc)
+=======
+	profile := getImplantProfileByName(rpc, profileName)
+	if profile != nil {
+
+	}
+	stage2, err := getSliverBinary(profile, rpc)
+>>>>>>> BishopFox/master:client/command/stager.go
 	if err != nil {
 		fmt.Printf(util.Error+"Error: %v\n", err)
 		return
@@ -171,8 +185,12 @@ func (s *StageListener) Execute(args []string) (err error) {
 	return
 }
 
+<<<<<<< HEAD:client/commands/transports/stager.go
 // GetSliverBinary - Get the bytes of an implant binary.
 func GetSliverBinary(profile clientpb.ImplantProfile, rpc rpcpb.SliverRPCClient) ([]byte, error) {
+=======
+func getSliverBinary(profile *clientpb.ImplantProfile, rpc rpcpb.SliverRPCClient) ([]byte, error) {
+>>>>>>> BishopFox/master:client/command/stager.go
 	var data []byte
 	// get implant builds
 	builds, err := rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
@@ -187,8 +205,9 @@ func GetSliverBinary(profile clientpb.ImplantProfile, rpc rpcpb.SliverRPCClient)
 		fmt.Printf(util.Info+"No builds found for profile %s, generating a new one\n", profile.GetName())
 		ctrl := make(chan bool)
 		go spin.Until("Compiling, please wait ...", ctrl)
+
 		generated, err := rpc.Generate(context.Background(), &clientpb.GenerateReq{
-			Config: profile.GetConfig(),
+			Config: profile.Config,
 		})
 		ctrl <- true
 		<-ctrl
@@ -198,7 +217,7 @@ func GetSliverBinary(profile clientpb.ImplantProfile, rpc rpcpb.SliverRPCClient)
 		}
 		data = generated.GetFile().GetData()
 		profile.Config.Name = buildImplantName(generated.GetFile().GetName())
-		_, err = rpc.SaveImplantProfile(context.Background(), &profile)
+		_, err = rpc.SaveImplantProfile(context.Background(), profile)
 		if err != nil {
 			fmt.Println("Error updating implant profile")
 			return data, err

@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+<<<<<<< HEAD
 // +build !appengine
+=======
+//go:build !purego
+// +build !purego
+>>>>>>> BishopFox/master
 
 // Package subtle implements functions that are often useful in cryptographic
 // code but require careful thought to use correctly.
