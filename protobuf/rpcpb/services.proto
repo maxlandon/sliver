@@ -27,6 +27,16 @@ service SliverRPC {
     rpc GetSessions(commonpb.Empty) returns (clientpb.Sessions);
     rpc KillSession(sliverpb.KillSessionReq) returns (commonpb.Empty);
     rpc UpdateSession(clientpb.UpdateSession) returns (clientpb.Session);
+
+    // *** Beacons ***
+    rpc GetBeacons(commonpb.Empty) returns (clientpb.Beacons);
+    rpc RmBeacon(clientpb.Beacon) returns (commonpb.Empty);
+    rpc GetBeaconTasks(clientpb.Beacon) returns (clientpb.BeaconTasks);
+    rpc GetBeaconTaskContent(clientpb.BeaconTask) returns (clientpb.BeaconTask);
+
+    // ***Threat monitoring ***
+    rpc MonitorStart(commonpb.Empty) returns (commonpb.Response);
+    rpc MonitorStop(commonpb.Empty) returns (commonpb.Empty);
     
     // *** Jobs ***
     rpc GetJobs(commonpb.Empty) returns (clientpb.Jobs);
@@ -39,13 +49,27 @@ service SliverRPC {
     rpc StartHTTPSListener(clientpb.HTTPListenerReq) returns (clientpb.HTTPListener);
     rpc StartHTTPListener(clientpb.HTTPListenerReq) returns (clientpb.HTTPListener);
     
-    // *** Server Adresses ***
-    rpc GetServerInterfaces(sliverpb.IfconfigReq) returns (sliverpb.Ifconfig);
-
     // *** Stager Listener ***
     rpc StartTCPStagerListener(clientpb.StagerListenerReq) returns(clientpb.StagerListener);
     rpc StartHTTPStagerListener(clientpb.StagerListenerReq) returns(clientpb.StagerListener);
     
+    // *** Server Adresses ***
+    rpc GetServerInterfaces(sliverpb.IfconfigReq) returns (sliverpb.Ifconfig);
+
+    // *** Loot ***
+    rpc LootAdd(clientpb.Loot) returns(clientpb.Loot);
+    rpc LootRm(clientpb.Loot) returns(commonpb.Empty);
+    rpc LootUpdate(clientpb.Loot) returns(clientpb.Loot);
+    rpc LootContent(clientpb.Loot) returns(clientpb.Loot);
+    rpc LootAll(commonpb.Empty) returns(clientpb.AllLoot);
+    rpc LootAllOf(clientpb.Loot) returns(clientpb.AllLoot);
+
+    // *** Hosts ***
+    rpc Hosts(commonpb.Empty) returns(clientpb.AllHosts);
+    rpc Host(clientpb.Host) returns(clientpb.Host);
+    rpc HostRm(clientpb.Host) returns(commonpb.Empty);
+    rpc HostIOCRm(clientpb.IOC) returns(commonpb.Empty);
+
     // *** Implants ***
     rpc Generate(clientpb.GenerateReq) returns (clientpb.Generate);
     rpc Regenerate(clientpb.RegenerateReq) returns (clientpb.Generate);
@@ -59,6 +83,7 @@ service SliverRPC {
     rpc SaveImplantProfile(clientpb.ImplantProfile) returns (clientpb.ImplantProfile);
     rpc MsfStage(clientpb.MsfStagerReq) returns (clientpb.MsfStager);
     rpc ShellcodeRDI(clientpb.ShellcodeRDIReq) returns (clientpb.ShellcodeRDI);
+    rpc GetCompiler(commonpb.Empty) returns (clientpb.Compiler);
 
     // *** Websites ***
     rpc Websites(commonpb.Empty) returns (clientpb.Websites);
@@ -105,10 +130,22 @@ service SliverRPC {
     rpc MakeToken(sliverpb.MakeTokenReq) returns (sliverpb.MakeToken);
     rpc GetEnv(sliverpb.EnvReq) returns (sliverpb.EnvInfo);
     rpc SetEnv(sliverpb.SetEnvReq) returns (sliverpb.SetEnv);
+    rpc UnsetEnv(sliverpb.UnsetEnvReq) returns (sliverpb.UnsetEnv);
     rpc Backdoor(sliverpb.BackdoorReq) returns (sliverpb.Backdoor);
     rpc RegistryRead(sliverpb.RegistryReadReq) returns (sliverpb.RegistryRead);
     rpc RegistryWrite(sliverpb.RegistryWriteReq) returns (sliverpb.RegistryWrite);
     rpc RegistryCreateKey(sliverpb.RegistryCreateKeyReq) returns (sliverpb.RegistryCreateKey);
+    rpc RegistryListSubKeys(sliverpb.RegistrySubKeyListReq) returns (sliverpb.RegistrySubKeyList);
+    rpc RegistryListValues(sliverpb.RegistryListValuesReq) returns (sliverpb.RegistryValuesList);
+    rpc RunSSHCommand(sliverpb.SSHCommandReq) returns (sliverpb.SSHCommand);
+    rpc HijackDLL(clientpb.DllHijackReq) returns (clientpb.DllHijack);
+    rpc GetPrivs(sliverpb.GetPrivsReq) returns  (sliverpb.GetPrivs);
+    
+    // Extensions
+    rpc RegisterExtension(sliverpb.RegisterExtensionReq) returns (sliverpb.RegisterExtension);
+    rpc CallExtension(sliverpb.CallExtensionReq) returns (sliverpb.CallExtension);
+    rpc ListExtensions(sliverpb.ListExtensionsReq) returns (sliverpb.ListExtensions);
+    
     // *** Wireguard Specific ***
     rpc WGStartPortForward(sliverpb.WGPortForwardStartReq) returns (sliverpb.WGPortForward);
     rpc WGStopPortForward(sliverpb.WGPortForwardStopReq) returns (sliverpb.WGPortForward);

@@ -14,6 +14,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // SliverRPCClient is the client API for SliverRPC service.
@@ -34,6 +35,14 @@ type SliverRPCClient interface {
 	GetSessions(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Sessions, error)
 	KillSession(ctx context.Context, in *sliverpb.KillSessionReq, opts ...grpc.CallOption) (*commonpb.Empty, error)
 	UpdateSession(ctx context.Context, in *clientpb.UpdateSession, opts ...grpc.CallOption) (*clientpb.Session, error)
+	// *** Beacons ***
+	GetBeacons(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Beacons, error)
+	RmBeacon(ctx context.Context, in *clientpb.Beacon, opts ...grpc.CallOption) (*commonpb.Empty, error)
+	GetBeaconTasks(ctx context.Context, in *clientpb.Beacon, opts ...grpc.CallOption) (*clientpb.BeaconTasks, error)
+	GetBeaconTaskContent(ctx context.Context, in *clientpb.BeaconTask, opts ...grpc.CallOption) (*clientpb.BeaconTask, error)
+	// ***Threat monitoring ***
+	MonitorStart(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*commonpb.Response, error)
+	MonitorStop(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*commonpb.Empty, error)
 	// *** Jobs ***
 	GetJobs(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Jobs, error)
 	KillJob(ctx context.Context, in *clientpb.KillJobReq, opts ...grpc.CallOption) (*clientpb.KillJob, error)
@@ -43,11 +52,23 @@ type SliverRPCClient interface {
 	StartDNSListener(ctx context.Context, in *clientpb.DNSListenerReq, opts ...grpc.CallOption) (*clientpb.DNSListener, error)
 	StartHTTPSListener(ctx context.Context, in *clientpb.HTTPListenerReq, opts ...grpc.CallOption) (*clientpb.HTTPListener, error)
 	StartHTTPListener(ctx context.Context, in *clientpb.HTTPListenerReq, opts ...grpc.CallOption) (*clientpb.HTTPListener, error)
-	// *** Server Adresses ***
-	GetServerInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error)
 	// *** Stager Listener ***
 	StartTCPStagerListener(ctx context.Context, in *clientpb.StagerListenerReq, opts ...grpc.CallOption) (*clientpb.StagerListener, error)
 	StartHTTPStagerListener(ctx context.Context, in *clientpb.StagerListenerReq, opts ...grpc.CallOption) (*clientpb.StagerListener, error)
+	// *** Server Adresses ***
+	GetServerInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error)
+	// *** Loot ***
+	LootAdd(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*clientpb.Loot, error)
+	LootRm(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*commonpb.Empty, error)
+	LootUpdate(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*clientpb.Loot, error)
+	LootContent(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*clientpb.Loot, error)
+	LootAll(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.AllLoot, error)
+	LootAllOf(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*clientpb.AllLoot, error)
+	// *** Hosts ***
+	Hosts(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.AllHosts, error)
+	Host(ctx context.Context, in *clientpb.Host, opts ...grpc.CallOption) (*clientpb.Host, error)
+	HostRm(ctx context.Context, in *clientpb.Host, opts ...grpc.CallOption) (*commonpb.Empty, error)
+	HostIOCRm(ctx context.Context, in *clientpb.IOC, opts ...grpc.CallOption) (*commonpb.Empty, error)
 	// *** Implants ***
 	Generate(ctx context.Context, in *clientpb.GenerateReq, opts ...grpc.CallOption) (*clientpb.Generate, error)
 	Regenerate(ctx context.Context, in *clientpb.RegenerateReq, opts ...grpc.CallOption) (*clientpb.Generate, error)
@@ -61,6 +82,7 @@ type SliverRPCClient interface {
 	SaveImplantProfile(ctx context.Context, in *clientpb.ImplantProfile, opts ...grpc.CallOption) (*clientpb.ImplantProfile, error)
 	MsfStage(ctx context.Context, in *clientpb.MsfStagerReq, opts ...grpc.CallOption) (*clientpb.MsfStager, error)
 	ShellcodeRDI(ctx context.Context, in *clientpb.ShellcodeRDIReq, opts ...grpc.CallOption) (*clientpb.ShellcodeRDI, error)
+	GetCompiler(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Compiler, error)
 	// *** Websites ***
 	Websites(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Websites, error)
 	Website(ctx context.Context, in *clientpb.Website, opts ...grpc.CallOption) (*clientpb.Website, error)
@@ -105,10 +127,20 @@ type SliverRPCClient interface {
 	MakeToken(ctx context.Context, in *sliverpb.MakeTokenReq, opts ...grpc.CallOption) (*sliverpb.MakeToken, error)
 	GetEnv(ctx context.Context, in *sliverpb.EnvReq, opts ...grpc.CallOption) (*sliverpb.EnvInfo, error)
 	SetEnv(ctx context.Context, in *sliverpb.SetEnvReq, opts ...grpc.CallOption) (*sliverpb.SetEnv, error)
+	UnsetEnv(ctx context.Context, in *sliverpb.UnsetEnvReq, opts ...grpc.CallOption) (*sliverpb.UnsetEnv, error)
 	Backdoor(ctx context.Context, in *sliverpb.BackdoorReq, opts ...grpc.CallOption) (*sliverpb.Backdoor, error)
 	RegistryRead(ctx context.Context, in *sliverpb.RegistryReadReq, opts ...grpc.CallOption) (*sliverpb.RegistryRead, error)
 	RegistryWrite(ctx context.Context, in *sliverpb.RegistryWriteReq, opts ...grpc.CallOption) (*sliverpb.RegistryWrite, error)
 	RegistryCreateKey(ctx context.Context, in *sliverpb.RegistryCreateKeyReq, opts ...grpc.CallOption) (*sliverpb.RegistryCreateKey, error)
+	RegistryListSubKeys(ctx context.Context, in *sliverpb.RegistrySubKeyListReq, opts ...grpc.CallOption) (*sliverpb.RegistrySubKeyList, error)
+	RegistryListValues(ctx context.Context, in *sliverpb.RegistryListValuesReq, opts ...grpc.CallOption) (*sliverpb.RegistryValuesList, error)
+	RunSSHCommand(ctx context.Context, in *sliverpb.SSHCommandReq, opts ...grpc.CallOption) (*sliverpb.SSHCommand, error)
+	HijackDLL(ctx context.Context, in *clientpb.DllHijackReq, opts ...grpc.CallOption) (*clientpb.DllHijack, error)
+	GetPrivs(ctx context.Context, in *sliverpb.GetPrivsReq, opts ...grpc.CallOption) (*sliverpb.GetPrivs, error)
+	// Extensions
+	RegisterExtension(ctx context.Context, in *sliverpb.RegisterExtensionReq, opts ...grpc.CallOption) (*sliverpb.RegisterExtension, error)
+	CallExtension(ctx context.Context, in *sliverpb.CallExtensionReq, opts ...grpc.CallOption) (*sliverpb.CallExtension, error)
+	ListExtensions(ctx context.Context, in *sliverpb.ListExtensionsReq, opts ...grpc.CallOption) (*sliverpb.ListExtensions, error)
 	// *** Wireguard Specific ***
 	WGStartPortForward(ctx context.Context, in *sliverpb.WGPortForwardStartReq, opts ...grpc.CallOption) (*sliverpb.WGPortForward, error)
 	WGStopPortForward(ctx context.Context, in *sliverpb.WGPortForwardStopReq, opts ...grpc.CallOption) (*sliverpb.WGPortForward, error)
@@ -216,6 +248,60 @@ func (c *sliverRPCClient) UpdateSession(ctx context.Context, in *clientpb.Update
 	return out, nil
 }
 
+func (c *sliverRPCClient) GetBeacons(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Beacons, error) {
+	out := new(clientpb.Beacons)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetBeacons", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) RmBeacon(ctx context.Context, in *clientpb.Beacon, opts ...grpc.CallOption) (*commonpb.Empty, error) {
+	out := new(commonpb.Empty)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/RmBeacon", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) GetBeaconTasks(ctx context.Context, in *clientpb.Beacon, opts ...grpc.CallOption) (*clientpb.BeaconTasks, error) {
+	out := new(clientpb.BeaconTasks)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetBeaconTasks", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) GetBeaconTaskContent(ctx context.Context, in *clientpb.BeaconTask, opts ...grpc.CallOption) (*clientpb.BeaconTask, error) {
+	out := new(clientpb.BeaconTask)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetBeaconTaskContent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) MonitorStart(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*commonpb.Response, error) {
+	out := new(commonpb.Response)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/MonitorStart", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) MonitorStop(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*commonpb.Empty, error) {
+	out := new(commonpb.Empty)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/MonitorStop", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sliverRPCClient) GetJobs(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Jobs, error) {
 	out := new(clientpb.Jobs)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetJobs", in, out, opts...)
@@ -279,15 +365,6 @@ func (c *sliverRPCClient) StartHTTPListener(ctx context.Context, in *clientpb.HT
 	return out, nil
 }
 
-func (c *sliverRPCClient) GetServerInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error) {
-	out := new(sliverpb.Ifconfig)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetServerInterfaces", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *sliverRPCClient) StartTCPStagerListener(ctx context.Context, in *clientpb.StagerListenerReq, opts ...grpc.CallOption) (*clientpb.StagerListener, error) {
 	out := new(clientpb.StagerListener)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartTCPStagerListener", in, out, opts...)
@@ -300,6 +377,105 @@ func (c *sliverRPCClient) StartTCPStagerListener(ctx context.Context, in *client
 func (c *sliverRPCClient) StartHTTPStagerListener(ctx context.Context, in *clientpb.StagerListenerReq, opts ...grpc.CallOption) (*clientpb.StagerListener, error) {
 	out := new(clientpb.StagerListener)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartHTTPStagerListener", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) GetServerInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error) {
+	out := new(sliverpb.Ifconfig)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetServerInterfaces", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) LootAdd(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*clientpb.Loot, error) {
+	out := new(clientpb.Loot)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/LootAdd", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) LootRm(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*commonpb.Empty, error) {
+	out := new(commonpb.Empty)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/LootRm", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) LootUpdate(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*clientpb.Loot, error) {
+	out := new(clientpb.Loot)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/LootUpdate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) LootContent(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*clientpb.Loot, error) {
+	out := new(clientpb.Loot)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/LootContent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) LootAll(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.AllLoot, error) {
+	out := new(clientpb.AllLoot)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/LootAll", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) LootAllOf(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*clientpb.AllLoot, error) {
+	out := new(clientpb.AllLoot)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/LootAllOf", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) Hosts(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.AllHosts, error) {
+	out := new(clientpb.AllHosts)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/Hosts", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) Host(ctx context.Context, in *clientpb.Host, opts ...grpc.CallOption) (*clientpb.Host, error) {
+	out := new(clientpb.Host)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/Host", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) HostRm(ctx context.Context, in *clientpb.Host, opts ...grpc.CallOption) (*commonpb.Empty, error) {
+	out := new(commonpb.Empty)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/HostRm", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) HostIOCRm(ctx context.Context, in *clientpb.IOC, opts ...grpc.CallOption) (*commonpb.Empty, error) {
+	out := new(commonpb.Empty)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/HostIOCRm", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -408,6 +584,15 @@ func (c *sliverRPCClient) MsfStage(ctx context.Context, in *clientpb.MsfStagerRe
 func (c *sliverRPCClient) ShellcodeRDI(ctx context.Context, in *clientpb.ShellcodeRDIReq, opts ...grpc.CallOption) (*clientpb.ShellcodeRDI, error) {
 	out := new(clientpb.ShellcodeRDI)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/ShellcodeRDI", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) GetCompiler(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Compiler, error) {
+	out := new(clientpb.Compiler)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetCompiler", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -792,6 +977,15 @@ func (c *sliverRPCClient) SetEnv(ctx context.Context, in *sliverpb.SetEnvReq, op
 	return out, nil
 }
 
+func (c *sliverRPCClient) UnsetEnv(ctx context.Context, in *sliverpb.UnsetEnvReq, opts ...grpc.CallOption) (*sliverpb.UnsetEnv, error) {
+	out := new(sliverpb.UnsetEnv)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/UnsetEnv", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sliverRPCClient) Backdoor(ctx context.Context, in *sliverpb.BackdoorReq, opts ...grpc.CallOption) (*sliverpb.Backdoor, error) {
 	out := new(sliverpb.Backdoor)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/Backdoor", in, out, opts...)
@@ -822,6 +1016,78 @@ func (c *sliverRPCClient) RegistryWrite(ctx context.Context, in *sliverpb.Regist
 func (c *sliverRPCClient) RegistryCreateKey(ctx context.Context, in *sliverpb.RegistryCreateKeyReq, opts ...grpc.CallOption) (*sliverpb.RegistryCreateKey, error) {
 	out := new(sliverpb.RegistryCreateKey)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/RegistryCreateKey", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) RegistryListSubKeys(ctx context.Context, in *sliverpb.RegistrySubKeyListReq, opts ...grpc.CallOption) (*sliverpb.RegistrySubKeyList, error) {
+	out := new(sliverpb.RegistrySubKeyList)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/RegistryListSubKeys", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) RegistryListValues(ctx context.Context, in *sliverpb.RegistryListValuesReq, opts ...grpc.CallOption) (*sliverpb.RegistryValuesList, error) {
+	out := new(sliverpb.RegistryValuesList)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/RegistryListValues", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) RunSSHCommand(ctx context.Context, in *sliverpb.SSHCommandReq, opts ...grpc.CallOption) (*sliverpb.SSHCommand, error) {
+	out := new(sliverpb.SSHCommand)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/RunSSHCommand", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) HijackDLL(ctx context.Context, in *clientpb.DllHijackReq, opts ...grpc.CallOption) (*clientpb.DllHijack, error) {
+	out := new(clientpb.DllHijack)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/HijackDLL", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) GetPrivs(ctx context.Context, in *sliverpb.GetPrivsReq, opts ...grpc.CallOption) (*sliverpb.GetPrivs, error) {
+	out := new(sliverpb.GetPrivs)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetPrivs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) RegisterExtension(ctx context.Context, in *sliverpb.RegisterExtensionReq, opts ...grpc.CallOption) (*sliverpb.RegisterExtension, error) {
+	out := new(sliverpb.RegisterExtension)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/RegisterExtension", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) CallExtension(ctx context.Context, in *sliverpb.CallExtensionReq, opts ...grpc.CallOption) (*sliverpb.CallExtension, error) {
+	out := new(sliverpb.CallExtension)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/CallExtension", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) ListExtensions(ctx context.Context, in *sliverpb.ListExtensionsReq, opts ...grpc.CallOption) (*sliverpb.ListExtensions, error) {
+	out := new(sliverpb.ListExtensions)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/ListExtensions", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -919,7 +1185,7 @@ func (c *sliverRPCClient) CloseTunnel(ctx context.Context, in *sliverpb.Tunnel, 
 }
 
 func (c *sliverRPCClient) TunnelData(ctx context.Context, opts ...grpc.CallOption) (SliverRPC_TunnelDataClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_SliverRPC_serviceDesc.Streams[0], "/rpcpb.SliverRPC/TunnelData", opts...)
+	stream, err := c.cc.NewStream(ctx, &SliverRPC_ServiceDesc.Streams[0], "/rpcpb.SliverRPC/TunnelData", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -950,7 +1216,7 @@ func (x *sliverRPCTunnelDataClient) Recv() (*sliverpb.TunnelData, error) {
 }
 
 func (c *sliverRPCClient) Events(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (SliverRPC_EventsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_SliverRPC_serviceDesc.Streams[1], "/rpcpb.SliverRPC/Events", opts...)
+	stream, err := c.cc.NewStream(ctx, &SliverRPC_ServiceDesc.Streams[1], "/rpcpb.SliverRPC/Events", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -999,6 +1265,14 @@ type SliverRPCServer interface {
 	GetSessions(context.Context, *commonpb.Empty) (*clientpb.Sessions, error)
 	KillSession(context.Context, *sliverpb.KillSessionReq) (*commonpb.Empty, error)
 	UpdateSession(context.Context, *clientpb.UpdateSession) (*clientpb.Session, error)
+	// *** Beacons ***
+	GetBeacons(context.Context, *commonpb.Empty) (*clientpb.Beacons, error)
+	RmBeacon(context.Context, *clientpb.Beacon) (*commonpb.Empty, error)
+	GetBeaconTasks(context.Context, *clientpb.Beacon) (*clientpb.BeaconTasks, error)
+	GetBeaconTaskContent(context.Context, *clientpb.BeaconTask) (*clientpb.BeaconTask, error)
+	// ***Threat monitoring ***
+	MonitorStart(context.Context, *commonpb.Empty) (*commonpb.Response, error)
+	MonitorStop(context.Context, *commonpb.Empty) (*commonpb.Empty, error)
 	// *** Jobs ***
 	GetJobs(context.Context, *commonpb.Empty) (*clientpb.Jobs, error)
 	KillJob(context.Context, *clientpb.KillJobReq) (*clientpb.KillJob, error)
@@ -1008,11 +1282,23 @@ type SliverRPCServer interface {
 	StartDNSListener(context.Context, *clientpb.DNSListenerReq) (*clientpb.DNSListener, error)
 	StartHTTPSListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error)
 	StartHTTPListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error)
-	// *** Server Adresses ***
-	GetServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error)
 	// *** Stager Listener ***
 	StartTCPStagerListener(context.Context, *clientpb.StagerListenerReq) (*clientpb.StagerListener, error)
 	StartHTTPStagerListener(context.Context, *clientpb.StagerListenerReq) (*clientpb.StagerListener, error)
+	// *** Server Adresses ***
+	GetServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error)
+	// *** Loot ***
+	LootAdd(context.Context, *clientpb.Loot) (*clientpb.Loot, error)
+	LootRm(context.Context, *clientpb.Loot) (*commonpb.Empty, error)
+	LootUpdate(context.Context, *clientpb.Loot) (*clientpb.Loot, error)
+	LootContent(context.Context, *clientpb.Loot) (*clientpb.Loot, error)
+	LootAll(context.Context, *commonpb.Empty) (*clientpb.AllLoot, error)
+	LootAllOf(context.Context, *clientpb.Loot) (*clientpb.AllLoot, error)
+	// *** Hosts ***
+	Hosts(context.Context, *commonpb.Empty) (*clientpb.AllHosts, error)
+	Host(context.Context, *clientpb.Host) (*clientpb.Host, error)
+	HostRm(context.Context, *clientpb.Host) (*commonpb.Empty, error)
+	HostIOCRm(context.Context, *clientpb.IOC) (*commonpb.Empty, error)
 	// *** Implants ***
 	Generate(context.Context, *clientpb.GenerateReq) (*clientpb.Generate, error)
 	Regenerate(context.Context, *clientpb.RegenerateReq) (*clientpb.Generate, error)
@@ -1026,6 +1312,7 @@ type SliverRPCServer interface {
 	SaveImplantProfile(context.Context, *clientpb.ImplantProfile) (*clientpb.ImplantProfile, error)
 	MsfStage(context.Context, *clientpb.MsfStagerReq) (*clientpb.MsfStager, error)
 	ShellcodeRDI(context.Context, *clientpb.ShellcodeRDIReq) (*clientpb.ShellcodeRDI, error)
+	GetCompiler(context.Context, *commonpb.Empty) (*clientpb.Compiler, error)
 	// *** Websites ***
 	Websites(context.Context, *commonpb.Empty) (*clientpb.Websites, error)
 	Website(context.Context, *clientpb.Website) (*clientpb.Website, error)
@@ -1070,10 +1357,20 @@ type SliverRPCServer interface {
 	MakeToken(context.Context, *sliverpb.MakeTokenReq) (*sliverpb.MakeToken, error)
 	GetEnv(context.Context, *sliverpb.EnvReq) (*sliverpb.EnvInfo, error)
 	SetEnv(context.Context, *sliverpb.SetEnvReq) (*sliverpb.SetEnv, error)
+	UnsetEnv(context.Context, *sliverpb.UnsetEnvReq) (*sliverpb.UnsetEnv, error)
 	Backdoor(context.Context, *sliverpb.BackdoorReq) (*sliverpb.Backdoor, error)
 	RegistryRead(context.Context, *sliverpb.RegistryReadReq) (*sliverpb.RegistryRead, error)
 	RegistryWrite(context.Context, *sliverpb.RegistryWriteReq) (*sliverpb.RegistryWrite, error)
 	RegistryCreateKey(context.Context, *sliverpb.RegistryCreateKeyReq) (*sliverpb.RegistryCreateKey, error)
+	RegistryListSubKeys(context.Context, *sliverpb.RegistrySubKeyListReq) (*sliverpb.RegistrySubKeyList, error)
+	RegistryListValues(context.Context, *sliverpb.RegistryListValuesReq) (*sliverpb.RegistryValuesList, error)
+	RunSSHCommand(context.Context, *sliverpb.SSHCommandReq) (*sliverpb.SSHCommand, error)
+	HijackDLL(context.Context, *clientpb.DllHijackReq) (*clientpb.DllHijack, error)
+	GetPrivs(context.Context, *sliverpb.GetPrivsReq) (*sliverpb.GetPrivs, error)
+	// Extensions
+	RegisterExtension(context.Context, *sliverpb.RegisterExtensionReq) (*sliverpb.RegisterExtension, error)
+	CallExtension(context.Context, *sliverpb.CallExtensionReq) (*sliverpb.CallExtension, error)
+	ListExtensions(context.Context, *sliverpb.ListExtensionsReq) (*sliverpb.ListExtensions, error)
 	// *** Wireguard Specific ***
 	WGStartPortForward(context.Context, *sliverpb.WGPortForwardStartReq) (*sliverpb.WGPortForward, error)
 	WGStopPortForward(context.Context, *sliverpb.WGPortForwardStopReq) (*sliverpb.WGPortForward, error)
@@ -1124,6 +1421,24 @@ func (UnimplementedSliverRPCServer) KillSession(context.Context, *sliverpb.KillS
 func (UnimplementedSliverRPCServer) UpdateSession(context.Context, *clientpb.UpdateSession) (*clientpb.Session, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateSession not implemented")
 }
+func (UnimplementedSliverRPCServer) GetBeacons(context.Context, *commonpb.Empty) (*clientpb.Beacons, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBeacons not implemented")
+}
+func (UnimplementedSliverRPCServer) RmBeacon(context.Context, *clientpb.Beacon) (*commonpb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RmBeacon not implemented")
+}
+func (UnimplementedSliverRPCServer) GetBeaconTasks(context.Context, *clientpb.Beacon) (*clientpb.BeaconTasks, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconTasks not implemented")
+}
+func (UnimplementedSliverRPCServer) GetBeaconTaskContent(context.Context, *clientpb.BeaconTask) (*clientpb.BeaconTask, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconTaskContent not implemented")
+}
+func (UnimplementedSliverRPCServer) MonitorStart(context.Context, *commonpb.Empty) (*commonpb.Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MonitorStart not implemented")
+}
+func (UnimplementedSliverRPCServer) MonitorStop(context.Context, *commonpb.Empty) (*commonpb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MonitorStop not implemented")
+}
 func (UnimplementedSliverRPCServer) GetJobs(context.Context, *commonpb.Empty) (*clientpb.Jobs, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetJobs not implemented")
 }
@@ -1145,14 +1460,44 @@ func (UnimplementedSliverRPCServer) StartHTTPSListener(context.Context, *clientp
 func (UnimplementedSliverRPCServer) StartHTTPListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartHTTPListener not implemented")
 }
-func (UnimplementedSliverRPCServer) GetServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetServerInterfaces not implemented")
-}
 func (UnimplementedSliverRPCServer) StartTCPStagerListener(context.Context, *clientpb.StagerListenerReq) (*clientpb.StagerListener, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartTCPStagerListener not implemented")
 }
 func (UnimplementedSliverRPCServer) StartHTTPStagerListener(context.Context, *clientpb.StagerListenerReq) (*clientpb.StagerListener, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartHTTPStagerListener not implemented")
+}
+func (UnimplementedSliverRPCServer) GetServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetServerInterfaces not implemented")
+}
+func (UnimplementedSliverRPCServer) LootAdd(context.Context, *clientpb.Loot) (*clientpb.Loot, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LootAdd not implemented")
+}
+func (UnimplementedSliverRPCServer) LootRm(context.Context, *clientpb.Loot) (*commonpb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LootRm not implemented")
+}
+func (UnimplementedSliverRPCServer) LootUpdate(context.Context, *clientpb.Loot) (*clientpb.Loot, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LootUpdate not implemented")
+}
+func (UnimplementedSliverRPCServer) LootContent(context.Context, *clientpb.Loot) (*clientpb.Loot, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LootContent not implemented")
+}
+func (UnimplementedSliverRPCServer) LootAll(context.Context, *commonpb.Empty) (*clientpb.AllLoot, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LootAll not implemented")
+}
+func (UnimplementedSliverRPCServer) LootAllOf(context.Context, *clientpb.Loot) (*clientpb.AllLoot, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LootAllOf not implemented")
+}
+func (UnimplementedSliverRPCServer) Hosts(context.Context, *commonpb.Empty) (*clientpb.AllHosts, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Hosts not implemented")
+}
+func (UnimplementedSliverRPCServer) Host(context.Context, *clientpb.Host) (*clientpb.Host, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Host not implemented")
+}
+func (UnimplementedSliverRPCServer) HostRm(context.Context, *clientpb.Host) (*commonpb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HostRm not implemented")
+}
+func (UnimplementedSliverRPCServer) HostIOCRm(context.Context, *clientpb.IOC) (*commonpb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HostIOCRm not implemented")
 }
 func (UnimplementedSliverRPCServer) Generate(context.Context, *clientpb.GenerateReq) (*clientpb.Generate, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Generate not implemented")
@@ -1189,6 +1534,9 @@ func (UnimplementedSliverRPCServer) MsfStage(context.Context, *clientpb.MsfStage
 }
 func (UnimplementedSliverRPCServer) ShellcodeRDI(context.Context, *clientpb.ShellcodeRDIReq) (*clientpb.ShellcodeRDI, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ShellcodeRDI not implemented")
+}
+func (UnimplementedSliverRPCServer) GetCompiler(context.Context, *commonpb.Empty) (*clientpb.Compiler, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCompiler not implemented")
 }
 func (UnimplementedSliverRPCServer) Websites(context.Context, *commonpb.Empty) (*clientpb.Websites, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Websites not implemented")
@@ -1316,6 +1664,9 @@ func (UnimplementedSliverRPCServer) GetEnv(context.Context, *sliverpb.EnvReq) (*
 func (UnimplementedSliverRPCServer) SetEnv(context.Context, *sliverpb.SetEnvReq) (*sliverpb.SetEnv, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetEnv not implemented")
 }
+func (UnimplementedSliverRPCServer) UnsetEnv(context.Context, *sliverpb.UnsetEnvReq) (*sliverpb.UnsetEnv, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnsetEnv not implemented")
+}
 func (UnimplementedSliverRPCServer) Backdoor(context.Context, *sliverpb.BackdoorReq) (*sliverpb.Backdoor, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Backdoor not implemented")
 }
@@ -1327,6 +1678,30 @@ func (UnimplementedSliverRPCServer) RegistryWrite(context.Context, *sliverpb.Reg
 }
 func (UnimplementedSliverRPCServer) RegistryCreateKey(context.Context, *sliverpb.RegistryCreateKeyReq) (*sliverpb.RegistryCreateKey, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegistryCreateKey not implemented")
+}
+func (UnimplementedSliverRPCServer) RegistryListSubKeys(context.Context, *sliverpb.RegistrySubKeyListReq) (*sliverpb.RegistrySubKeyList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegistryListSubKeys not implemented")
+}
+func (UnimplementedSliverRPCServer) RegistryListValues(context.Context, *sliverpb.RegistryListValuesReq) (*sliverpb.RegistryValuesList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegistryListValues not implemented")
+}
+func (UnimplementedSliverRPCServer) RunSSHCommand(context.Context, *sliverpb.SSHCommandReq) (*sliverpb.SSHCommand, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunSSHCommand not implemented")
+}
+func (UnimplementedSliverRPCServer) HijackDLL(context.Context, *clientpb.DllHijackReq) (*clientpb.DllHijack, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HijackDLL not implemented")
+}
+func (UnimplementedSliverRPCServer) GetPrivs(context.Context, *sliverpb.GetPrivsReq) (*sliverpb.GetPrivs, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPrivs not implemented")
+}
+func (UnimplementedSliverRPCServer) RegisterExtension(context.Context, *sliverpb.RegisterExtensionReq) (*sliverpb.RegisterExtension, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterExtension not implemented")
+}
+func (UnimplementedSliverRPCServer) CallExtension(context.Context, *sliverpb.CallExtensionReq) (*sliverpb.CallExtension, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CallExtension not implemented")
+}
+func (UnimplementedSliverRPCServer) ListExtensions(context.Context, *sliverpb.ListExtensionsReq) (*sliverpb.ListExtensions, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListExtensions not implemented")
 }
 func (UnimplementedSliverRPCServer) WGStartPortForward(context.Context, *sliverpb.WGPortForwardStartReq) (*sliverpb.WGPortForward, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WGStartPortForward not implemented")
@@ -1373,8 +1748,8 @@ type UnsafeSliverRPCServer interface {
 	mustEmbedUnimplementedSliverRPCServer()
 }
 
-func RegisterSliverRPCServer(s *grpc.Server, srv SliverRPCServer) {
-	s.RegisterService(&_SliverRPC_serviceDesc, srv)
+func RegisterSliverRPCServer(s grpc.ServiceRegistrar, srv SliverRPCServer) {
+	s.RegisterService(&SliverRPC_ServiceDesc, srv)
 }
 
 func _SliverRPC_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1539,6 +1914,114 @@ func _SliverRPC_UpdateSession_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SliverRPC_GetBeacons_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(commonpb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).GetBeacons(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/GetBeacons",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).GetBeacons(ctx, req.(*commonpb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_RmBeacon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.Beacon)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).RmBeacon(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/RmBeacon",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).RmBeacon(ctx, req.(*clientpb.Beacon))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_GetBeaconTasks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.Beacon)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).GetBeaconTasks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/GetBeaconTasks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).GetBeaconTasks(ctx, req.(*clientpb.Beacon))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_GetBeaconTaskContent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.BeaconTask)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).GetBeaconTaskContent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/GetBeaconTaskContent",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).GetBeaconTaskContent(ctx, req.(*clientpb.BeaconTask))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_MonitorStart_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(commonpb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).MonitorStart(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/MonitorStart",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).MonitorStart(ctx, req.(*commonpb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_MonitorStop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(commonpb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).MonitorStop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/MonitorStop",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).MonitorStop(ctx, req.(*commonpb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SliverRPC_GetJobs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(commonpb.Empty)
 	if err := dec(in); err != nil {
@@ -1665,24 +2148,6 @@ func _SliverRPC_StartHTTPListener_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SliverRPC_GetServerInterfaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(sliverpb.IfconfigReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SliverRPCServer).GetServerInterfaces(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/GetServerInterfaces",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).GetServerInterfaces(ctx, req.(*sliverpb.IfconfigReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _SliverRPC_StartTCPStagerListener_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(clientpb.StagerListenerReq)
 	if err := dec(in); err != nil {
@@ -1715,6 +2180,204 @@ func _SliverRPC_StartHTTPStagerListener_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).StartHTTPStagerListener(ctx, req.(*clientpb.StagerListenerReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_GetServerInterfaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.IfconfigReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).GetServerInterfaces(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/GetServerInterfaces",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).GetServerInterfaces(ctx, req.(*sliverpb.IfconfigReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_LootAdd_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.Loot)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).LootAdd(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/LootAdd",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).LootAdd(ctx, req.(*clientpb.Loot))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_LootRm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.Loot)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).LootRm(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/LootRm",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).LootRm(ctx, req.(*clientpb.Loot))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_LootUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.Loot)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).LootUpdate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/LootUpdate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).LootUpdate(ctx, req.(*clientpb.Loot))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_LootContent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.Loot)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).LootContent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/LootContent",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).LootContent(ctx, req.(*clientpb.Loot))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_LootAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(commonpb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).LootAll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/LootAll",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).LootAll(ctx, req.(*commonpb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_LootAllOf_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.Loot)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).LootAllOf(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/LootAllOf",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).LootAllOf(ctx, req.(*clientpb.Loot))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_Hosts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(commonpb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).Hosts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/Hosts",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).Hosts(ctx, req.(*commonpb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_Host_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.Host)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).Host(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/Host",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).Host(ctx, req.(*clientpb.Host))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_HostRm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.Host)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).HostRm(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/HostRm",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).HostRm(ctx, req.(*clientpb.Host))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_HostIOCRm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.IOC)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).HostIOCRm(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/HostIOCRm",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).HostIOCRm(ctx, req.(*clientpb.IOC))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1931,6 +2594,24 @@ func _SliverRPC_ShellcodeRDI_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).ShellcodeRDI(ctx, req.(*clientpb.ShellcodeRDIReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_GetCompiler_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(commonpb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).GetCompiler(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/GetCompiler",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).GetCompiler(ctx, req.(*commonpb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2691,6 +3372,24 @@ func _SliverRPC_SetEnv_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SliverRPC_UnsetEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.UnsetEnvReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).UnsetEnv(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/UnsetEnv",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).UnsetEnv(ctx, req.(*sliverpb.UnsetEnvReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SliverRPC_Backdoor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(sliverpb.BackdoorReq)
 	if err := dec(in); err != nil {
@@ -2759,6 +3458,150 @@ func _SliverRPC_RegistryCreateKey_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).RegistryCreateKey(ctx, req.(*sliverpb.RegistryCreateKeyReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_RegistryListSubKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.RegistrySubKeyListReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).RegistryListSubKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/RegistryListSubKeys",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).RegistryListSubKeys(ctx, req.(*sliverpb.RegistrySubKeyListReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_RegistryListValues_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.RegistryListValuesReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).RegistryListValues(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/RegistryListValues",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).RegistryListValues(ctx, req.(*sliverpb.RegistryListValuesReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_RunSSHCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.SSHCommandReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).RunSSHCommand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/RunSSHCommand",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).RunSSHCommand(ctx, req.(*sliverpb.SSHCommandReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_HijackDLL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.DllHijackReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).HijackDLL(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/HijackDLL",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).HijackDLL(ctx, req.(*clientpb.DllHijackReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_GetPrivs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.GetPrivsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).GetPrivs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/GetPrivs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).GetPrivs(ctx, req.(*sliverpb.GetPrivsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_RegisterExtension_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.RegisterExtensionReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).RegisterExtension(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/RegisterExtension",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).RegisterExtension(ctx, req.(*sliverpb.RegisterExtensionReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_CallExtension_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.CallExtensionReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).CallExtension(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/CallExtension",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).CallExtension(ctx, req.(*sliverpb.CallExtensionReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_ListExtensions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.ListExtensionsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).ListExtensions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/ListExtensions",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).ListExtensions(ctx, req.(*sliverpb.ListExtensionsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2990,7 +3833,10 @@ func (x *sliverRPCEventsServer) Send(m *clientpb.Event) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-var _SliverRPC_serviceDesc = grpc.ServiceDesc{
+// SliverRPC_ServiceDesc is the grpc.ServiceDesc for SliverRPC service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "rpcpb.SliverRPC",
 	HandlerType: (*SliverRPCServer)(nil),
 	Methods: []grpc.MethodDesc{
@@ -3031,6 +3877,30 @@ var _SliverRPC_serviceDesc = grpc.ServiceDesc{
 			Handler:    _SliverRPC_UpdateSession_Handler,
 		},
 		{
+			MethodName: "GetBeacons",
+			Handler:    _SliverRPC_GetBeacons_Handler,
+		},
+		{
+			MethodName: "RmBeacon",
+			Handler:    _SliverRPC_RmBeacon_Handler,
+		},
+		{
+			MethodName: "GetBeaconTasks",
+			Handler:    _SliverRPC_GetBeaconTasks_Handler,
+		},
+		{
+			MethodName: "GetBeaconTaskContent",
+			Handler:    _SliverRPC_GetBeaconTaskContent_Handler,
+		},
+		{
+			MethodName: "MonitorStart",
+			Handler:    _SliverRPC_MonitorStart_Handler,
+		},
+		{
+			MethodName: "MonitorStop",
+			Handler:    _SliverRPC_MonitorStop_Handler,
+		},
+		{
 			MethodName: "GetJobs",
 			Handler:    _SliverRPC_GetJobs_Handler,
 		},
@@ -3059,16 +3929,56 @@ var _SliverRPC_serviceDesc = grpc.ServiceDesc{
 			Handler:    _SliverRPC_StartHTTPListener_Handler,
 		},
 		{
-			MethodName: "GetServerInterfaces",
-			Handler:    _SliverRPC_GetServerInterfaces_Handler,
-		},
-		{
 			MethodName: "StartTCPStagerListener",
 			Handler:    _SliverRPC_StartTCPStagerListener_Handler,
 		},
 		{
 			MethodName: "StartHTTPStagerListener",
 			Handler:    _SliverRPC_StartHTTPStagerListener_Handler,
+		},
+		{
+			MethodName: "GetServerInterfaces",
+			Handler:    _SliverRPC_GetServerInterfaces_Handler,
+		},
+		{
+			MethodName: "LootAdd",
+			Handler:    _SliverRPC_LootAdd_Handler,
+		},
+		{
+			MethodName: "LootRm",
+			Handler:    _SliverRPC_LootRm_Handler,
+		},
+		{
+			MethodName: "LootUpdate",
+			Handler:    _SliverRPC_LootUpdate_Handler,
+		},
+		{
+			MethodName: "LootContent",
+			Handler:    _SliverRPC_LootContent_Handler,
+		},
+		{
+			MethodName: "LootAll",
+			Handler:    _SliverRPC_LootAll_Handler,
+		},
+		{
+			MethodName: "LootAllOf",
+			Handler:    _SliverRPC_LootAllOf_Handler,
+		},
+		{
+			MethodName: "Hosts",
+			Handler:    _SliverRPC_Hosts_Handler,
+		},
+		{
+			MethodName: "Host",
+			Handler:    _SliverRPC_Host_Handler,
+		},
+		{
+			MethodName: "HostRm",
+			Handler:    _SliverRPC_HostRm_Handler,
+		},
+		{
+			MethodName: "HostIOCRm",
+			Handler:    _SliverRPC_HostIOCRm_Handler,
 		},
 		{
 			MethodName: "Generate",
@@ -3117,6 +4027,10 @@ var _SliverRPC_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ShellcodeRDI",
 			Handler:    _SliverRPC_ShellcodeRDI_Handler,
+		},
+		{
+			MethodName: "GetCompiler",
+			Handler:    _SliverRPC_GetCompiler_Handler,
 		},
 		{
 			MethodName: "Websites",
@@ -3287,6 +4201,10 @@ var _SliverRPC_serviceDesc = grpc.ServiceDesc{
 			Handler:    _SliverRPC_SetEnv_Handler,
 		},
 		{
+			MethodName: "UnsetEnv",
+			Handler:    _SliverRPC_UnsetEnv_Handler,
+		},
+		{
 			MethodName: "Backdoor",
 			Handler:    _SliverRPC_Backdoor_Handler,
 		},
@@ -3301,6 +4219,38 @@ var _SliverRPC_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegistryCreateKey",
 			Handler:    _SliverRPC_RegistryCreateKey_Handler,
+		},
+		{
+			MethodName: "RegistryListSubKeys",
+			Handler:    _SliverRPC_RegistryListSubKeys_Handler,
+		},
+		{
+			MethodName: "RegistryListValues",
+			Handler:    _SliverRPC_RegistryListValues_Handler,
+		},
+		{
+			MethodName: "RunSSHCommand",
+			Handler:    _SliverRPC_RunSSHCommand_Handler,
+		},
+		{
+			MethodName: "HijackDLL",
+			Handler:    _SliverRPC_HijackDLL_Handler,
+		},
+		{
+			MethodName: "GetPrivs",
+			Handler:    _SliverRPC_GetPrivs_Handler,
+		},
+		{
+			MethodName: "RegisterExtension",
+			Handler:    _SliverRPC_RegisterExtension_Handler,
+		},
+		{
+			MethodName: "CallExtension",
+			Handler:    _SliverRPC_CallExtension_Handler,
+		},
+		{
+			MethodName: "ListExtensions",
+			Handler:    _SliverRPC_ListExtensions_Handler,
 		},
 		{
 			MethodName: "WGStartPortForward",
