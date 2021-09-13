@@ -28,12 +28,19 @@ import (
 
 // ImplantBuild - Represents an implant
 type ImplantBuild struct {
-	// gorm.Model
-
 	ID        uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	CreatedAt time.Time `gorm:"->;<-:create;"`
 
 	Name string `gorm:"unique;"`
+
+	// Checksums stores of the implant binary
+	MD5    string
+	SHA1   string
+	SHA256 string
+
+	// Burned indicates whether the implant
+	// has been seen on threat intel platforms
+	Burned bool
 
 	ImplantConfig ImplantConfig
 }
@@ -62,17 +69,21 @@ type ImplantConfig struct {
 	GOOS   string
 	GOARCH string
 
+	IsBeacon       bool
+	BeaconInterval int64
+	BeaconJitter   int64
+
 	// Standard
-	// Name                string
 	CACert              string
 	Cert                string
 	Key                 string
 	Debug               bool
 	Evasion             bool
 	ObfuscateSymbols    bool
-	ReconnectInterval   uint32
-	PollInterval        uint32
+	ReconnectInterval   int64
+	PollTimeout         int64
 	MaxConnectionErrors uint32
+	ConnectionStrategy  string
 
 	WGImplantPrivKey  string
 	WGServerPubKey    string
@@ -99,7 +110,7 @@ type ImplantConfig struct {
 	LimitFileExists   string
 
 	// Output Format
-	Format clientpb.ImplantConfig_OutputFormat
+	Format clientpb.OutputFormat
 
 	// For 	IsSharedLib bool
 	IsSharedLib bool
@@ -122,6 +133,12 @@ func (ic *ImplantConfig) BeforeCreate(tx *gorm.DB) (err error) {
 // ToProtobuf - Convert ImplantConfig to protobuf equiv
 func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 	config := &clientpb.ImplantConfig{
+		ID: ic.ID.String(),
+
+		IsBeacon:       ic.IsBeacon,
+		BeaconInterval: ic.BeaconInterval,
+		BeaconJitter:   ic.BeaconJitter,
+
 		GOOS:   ic.GOOS,
 		GOARCH: ic.GOARCH,
 
@@ -133,8 +150,9 @@ func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 		ObfuscateSymbols: ic.ObfuscateSymbols,
 
 		ReconnectInterval:   ic.ReconnectInterval,
-		PollInterval:        ic.PollInterval,
+		PollTimeout:         ic.PollTimeout,
 		MaxConnectionErrors: ic.MaxConnectionErrors,
+		ConnectionStrategy:  ic.ConnectionStrategy,
 
 		LimitDatetime:     ic.LimitDatetime,
 		LimitDomainJoined: ic.LimitDomainJoined,

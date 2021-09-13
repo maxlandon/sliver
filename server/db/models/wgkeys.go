@@ -9,7 +9,6 @@ import (
 
 // WGKeys - WGKeys database model
 type WGKeys struct {
-	// gorm.Model
 	ID        uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	CreatedAt time.Time `gorm:"->;<-:create;"`
 	PrivKey   string
@@ -26,6 +25,7 @@ func (c *WGKeys) BeforeCreate(tx *gorm.DB) (err error) {
 	return nil
 }
 
+// WGPeer- WGPeer database model
 type WGPeer struct {
 	// gorm.Model
 	ID        uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`

@@ -2,7 +2,7 @@ package models
 
 /*
 	Sliver Implant Framework
-	Copyright (C) 2020  Bishop Fox
+	Copyright (C) 2021  Bishop Fox
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -19,44 +19,38 @@ package models
 */
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"time"
 
-	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/gofrs/uuid"
 	"gorm.io/gorm"
 )
 
-// DNSCanary - Colletions of content to serve from HTTP(S)
-type DNSCanary struct {
+// Operator - Colletions of content to serve from HTTP(S)
+type Operator struct {
 	ID        uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	CreatedAt time.Time `gorm:"->;<-:create;"`
-
-	ImplantName   string
-	Domain        string
-	Triggered     bool
-	FirstTrigger  time.Time
-	LatestTrigger time.Time
-	Count         uint32
+	Name      string
+	Token     string `gorm:"uniqueIndex"`
 }
 
 // BeforeCreate - GORM hook
-func (c *DNSCanary) BeforeCreate(tx *gorm.DB) (err error) {
-	c.ID, err = uuid.NewV4()
+func (o *Operator) BeforeCreate(tx *gorm.DB) (err error) {
+	o.ID, err = uuid.NewV4()
 	if err != nil {
 		return err
 	}
-	c.CreatedAt = time.Now()
+	o.CreatedAt = time.Now()
 	return nil
 }
 
-// ToProtobuf - Converts to protobuf object
-func (c *DNSCanary) ToProtobuf() *clientpb.DNSCanary {
-	return &clientpb.DNSCanary{
-		ImplantName:    c.ImplantName,
-		Domain:         c.Domain,
-		Triggered:      c.Triggered,
-		FirstTriggered: c.FirstTrigger.Format(time.RFC1123),
-		LatestTrigger:  c.LatestTrigger.Format(time.RFC1123),
-		Count:          c.Count,
+// GenerateOperatorToken - Generate a new operator auth token
+func GenerateOperatorToken() string {
+	buf := make([]byte, 32)
+	_, err := rand.Read(buf)
+	if err != nil {
+		panic(err)
 	}
+	return hex.EncodeToString(buf)
 }

@@ -52,13 +52,20 @@ func newDBClient() *gorm.DB {
 	}
 
 	err := dbClient.AutoMigrate(
+		&models.Beacon{},
+		&models.BeaconTask{},
 		&models.DNSCanary{},
 		&models.Certificate{},
+		&models.Host{},
+		&models.IOC{},
+		&models.ExtensionData{},
 		&models.ImplantC2{},
 		&models.ImplantConfig{},
 		&models.ImplantBuild{},
 		&models.CanaryDomain{},
 		&models.ImplantProfile{},
+		&models.Loot{},
+		&models.Operator{},
 		&models.WebContent{},
 		&models.Website{},
 		&models.WGKeys{},
