@@ -22,10 +22,7 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/maxlandon/gonsole"
 	"google.golang.org/grpc"
 
@@ -35,7 +32,6 @@ import (
 	"github.com/bishopfox/sliver/client/help"
 	clienttransport "github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
-	"github.com/bishopfox/sliver/server/assets"
 	"github.com/bishopfox/sliver/server/transport"
 )
 
@@ -87,27 +83,7 @@ func Start() {
 	}
 	defer conn.Close()
 	localRPC := rpcpb.NewSliverRPCClient(conn)
-	checkForLegacyDB()
 	clientconsole.Start(localRPC, serverOnlyCmds, &clientAssets.ClientConfig{})
-}
-
-func checkForLegacyDB() {
-	legacyDBPath := filepath.Join(assets.GetRootAppDir(), "db")
-	if _, err := os.Stat(legacyDBPath); !os.IsNotExist(err) {
-		fmt.Println("\n" + Warning + bold + "Compatability Warning: " + normal)
-		fmt.Println(Warning + "It looks like this server was upgraded from an older version of Sliver.")
-		fmt.Println(Warning + "We have switched to using SQL for internal data (before we used BadgerDB)")
-		fmt.Printf(Warning+"Regrettably this means there's %sno backwards compatibility%s for implants, etc.\n", bold, normal)
-		fmt.Println(Warning + "If you need to use existing implants, stick with any version up to 1.0.9")
-		fmt.Println()
-		confirm := false
-		survey.AskOne(&survey.Confirm{
-			Message: "Delete old database (CANNOT BE UNDONE)",
-		}, &confirm)
-		if confirm {
-			os.RemoveAll(legacyDBPath)
-		}
-	}
 }
 
 // serverOnlyCmds - We bind commands only available to the server admin to the console command parser.

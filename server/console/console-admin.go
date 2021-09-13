@@ -19,6 +19,8 @@ package console
 */
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +34,8 @@ import (
 	clientLog "github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/core"
+	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/server/transport"
 )
@@ -115,6 +119,19 @@ func (k *KickOperator) Execute(args []string) (err error) {
 		return
 	}
 
+	// Remove operator auth token
+	fmt.Printf(Info+"Removing auth token(s) for %s, please wait ... \n", operator)
+	err := db.Session().Where(&models.Operator{
+		Name: operator,
+	}).Delete(&models.Operator{}).Error
+	if err != nil {
+		return
+	}
+
+	// Refresh the transport package so that no further connections are allowed
+	transport.ClearTokenCache()
+
+	// And remove operator console certificates
 	adminLog.Infof("Removing client certificate for operator %s, please wait ... \n", operator)
 	err = certs.OperatorClientRemoveCertificate(operator)
 	if err != nil {
@@ -170,6 +187,17 @@ func NewPlayerConfig(operatorName, lhost string, lport uint16) ([]byte, error) {
 		return nil, errors.New("Invalid lhost")
 	}
 
+	rawToken := models.GenerateOperatorToken()
+	digest := sha256.Sum256([]byte(rawToken))
+	dbOperator := &models.Operator{
+		Name:  operatorName,
+		Token: hex.EncodeToString(digest[:]),
+	}
+	err := db.Session().Save(dbOperator).Error
+	if err != nil {
+		return nil, err
+	}
+
 	publicKey, privateKey, err := certs.OperatorClientGenerateCertificate(operatorName)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to generate certificate %s", err)
@@ -185,6 +213,7 @@ func NewPlayerConfig(operatorName, lhost string, lport uint16) ([]byte, error) {
 
 	config := assets.ClientConfig{
 		Operator:      operatorName,
+		Token:         rawToken,
 		LHost:         lhost,
 		LPort:         int(lport),
 		CACertificate: string(caCertPEM),
