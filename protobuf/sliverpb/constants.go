@@ -1,7 +1,7 @@
 package sliverpb
 
 import (
-	proto "github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 /*
@@ -20,9 +20,23 @@ import (
 
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
 
-// Message Name Constants
+------------------------------------------------------------------------------------
+
+
+    ██     ██  █████  ██████  ███    ██ ██ ███    ██  ██████
+    ██     ██ ██   ██ ██   ██ ████   ██ ██ ████   ██ ██
+    ██  █  ██ ███████ ██████  ██ ██  ██ ██ ██ ██  ██ ██   ███
+    ██ ███ ██ ██   ██ ██   ██ ██  ██ ██ ██ ██  ██ ██ ██    ██
+     ███ ███  ██   ██ ██   ██ ██   ████ ██ ██   ████  ██████
+
+	!!! The order of constants is APPEND ONLY !!!
+
+	If you insert values into this file it is very important that you only append the
+	order of the constants. If you do not you will break backwards compatibility with
+	implants.
+
+*/
 
 const (
 
@@ -222,6 +236,48 @@ const (
 	MsgPollIntervalReq
 
 	MsgPollInterval
+
+	// MsgUnsetEnvReq
+	MsgUnsetEnvReq
+
+	// MsgSSHCommandReq - Run a SSH command
+	MsgSSHCommandReq
+
+	// MsgGetPrivsReq - Get privileges (Windows)
+	MsgGetPrivsReq
+
+	// MsgRegistryListReq - List registry sub keys
+	MsgRegistrySubKeysListReq
+
+	// MsgRegistryListValuesReq - List registry values
+	MsgRegistryListValuesReq
+	// MsgRegisterExtensionReq - Register a new extension
+	MsgRegisterExtensionReq
+
+	// MsgCallExtensionReq - Run an extension command
+	MsgCallExtensionReq
+
+	// MsgListExtensionsReq - List loaded extensions
+	MsgListExtensionsReq
+
+	// MsgBeaconRegister - Register a new beacon
+	MsgBeaconRegister
+
+	// MsgBeaconTasks - Send/recv batches of beacon tasks
+	MsgBeaconTasks
+)
+
+// Constants to replace enums
+const (
+	// Port forward protocols
+	PortFwdProtoTCP = 1
+	PortFwdProtoUDP = 2
+
+	// Registry types
+	RegistryTypeBinary = 1
+	RegistryTypeString = 2
+	RegistryTypeDWORD  = 3
+	RegistryTypeQWORD  = 4
 )
 
 // MsgNumber - Get a message number of type
@@ -388,6 +444,8 @@ func MsgNumber(request proto.Message) uint32 {
 		return MsgSetEnvReq
 	case *SetEnv:
 		return MsgSetEnv
+	case *UnsetEnvReq:
+		return MsgUnsetEnvReq
 	case *RegistryReadReq:
 		return MsgRegistryReadReq
 	case *RegistryWriteReq:
@@ -427,7 +485,28 @@ func MsgNumber(request proto.Message) uint32 {
 
 	case *PollInterval:
 		return MsgPollInterval
+	case *SSHCommandReq:
+		return MsgSSHCommandReq
 
+	case *GetPrivsReq:
+		return MsgGetPrivsReq
+	case *RegistrySubKeyListReq:
+		return MsgRegistrySubKeysListReq
+	case *RegistryListValuesReq:
+		return MsgRegistryListValuesReq
+
+	case *RegisterExtensionReq:
+		return MsgRegisterExtensionReq
+
+	case *CallExtensionReq:
+		return MsgCallExtensionReq
+
+	case *ListExtensionsReq:
+		return MsgListExtensionsReq
+
+	case *BeaconTasks:
+		return MsgBeaconTasks
 	}
+
 	return uint32(0)
 }
