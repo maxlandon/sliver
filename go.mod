@@ -8,12 +8,14 @@ replace golang.zx2c4.com/wireguard => golang.zx2c4.com/wireguard v0.0.0-20210311
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.2
 	github.com/Binject/binjection v0.0.0-20200705191933-da1a50d7013d
-	github.com/Binject/debug v0.0.0-20210225042342-c9b8b45728d2
+	github.com/Binject/debug v0.0.0-20210312092933-6277045c2fdf
+	github.com/Binject/go-donut v0.0.0-20210701074227-67a31e2d883e
+	github.com/Binject/universal v0.0.0-20210304094126-daefaa886313
 	github.com/BurntSushi/xgb v0.0.0-20201008132610-5f9e7b3c49cd // indirect
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
 	github.com/alecthomas/chroma v0.8.1
-	github.com/binject/go-donut v0.0.0-20201215224200-d947cf4d090d
+	github.com/binject/go-donut v0.0.0-20201215224200-d947cf4d090d // indirect
 	github.com/cheggaaa/pb/v3 v3.0.5
 	github.com/evilsocket/islazy v1.10.6
 	github.com/fatih/color v1.10.0 // indirect
@@ -29,6 +31,7 @@ require (
 	github.com/kbinani/screenshot v0.0.0-20191211154542-3a185f1ce18f
 	github.com/lesnuages/go-socks5 v0.0.0-20210409090601-adbe23bd0194
 	github.com/lesnuages/go-winio v0.4.19
+	github.com/lesnuages/snitch v0.6.0
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/mattn/go-sqlite3 v1.14.5
 	github.com/maxlandon/gonsole v0.0.0-20210502160124-377d77a27617
@@ -37,10 +40,11 @@ require (
 	github.com/miekg/dns v1.1.35
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/pquerna/otp v1.3.0
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210317152858-513c2a44f670
 	golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
@@ -48,6 +52,7 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200609130330-bd2cb7843e1b
 	google.golang.org/genproto v0.0.0-20210406143921-e86de6bf7a46 // indirect
 	google.golang.org/grpc v1.37.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.8
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
 	gorm.io/driver/mysql v1.0.3

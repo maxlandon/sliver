@@ -6,14 +6,20 @@ github.com/AlecAivazis/survey/v2/terminal
 # github.com/Binject/binjection v0.0.0-20200705191933-da1a50d7013d
 ## explicit
 github.com/Binject/binjection/bj
-# github.com/Binject/debug v0.0.0-20210225042342-c9b8b45728d2
+# github.com/Binject/debug v0.0.0-20210312092933-6277045c2fdf
 ## explicit
 github.com/Binject/debug/elf
 github.com/Binject/debug/macho
 github.com/Binject/debug/pe
+# github.com/Binject/go-donut v0.0.0-20210701074227-67a31e2d883e
+## explicit
+github.com/Binject/go-donut/donut
 # github.com/Binject/shellcode v0.0.0-20191101084904-a8a90e7d4563
 github.com/Binject/shellcode
 github.com/Binject/shellcode/api
+# github.com/Binject/universal v0.0.0-20210304094126-daefaa886313
+## explicit
+github.com/Binject/universal
 # github.com/BurntSushi/xgb v0.0.0-20201008132610-5f9e7b3c49cd
 ## explicit
 github.com/BurntSushi/xgb
@@ -25,6 +31,8 @@ github.com/BurntSushi/xgb/xproto
 github.com/Microsoft/go-winio/pkg/guid
 # github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667
 ## explicit
+# github.com/VirusTotal/vt-go v0.0.0-20210528074736-45bbe34cc8ab
+github.com/VirusTotal/vt-go
 # github.com/VividCortex/ewma v1.1.1
 github.com/VividCortex/ewma
 # github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
@@ -64,9 +72,16 @@ github.com/alecthomas/chroma/lexers/x
 github.com/alecthomas/chroma/lexers/y
 github.com/alecthomas/chroma/lexers/z
 github.com/alecthomas/chroma/styles
+# github.com/awgh/cppgo v0.0.0-20210224085512-3d24bca8edc0
+github.com/awgh/cppgo/asmcall/cdecl
+# github.com/awgh/rawreader v0.0.0-20200626064944-56820a9c6da4
+github.com/awgh/rawreader
 # github.com/binject/go-donut v0.0.0-20201215224200-d947cf4d090d
 ## explicit
-github.com/binject/go-donut/donut
+# github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc
+github.com/boombuler/barcode
+github.com/boombuler/barcode/qr
+github.com/boombuler/barcode/utils
 # github.com/cheggaaa/pb/v3 v3.0.5
 ## explicit
 github.com/cheggaaa/pb/v3
@@ -75,6 +90,8 @@ github.com/cheggaaa/pb/v3/termutil
 github.com/danwakefield/fnmatch
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
+# github.com/demisto/goxforce v0.0.0-20160322194047-db8357535b1d
+github.com/demisto/goxforce
 # github.com/dlclark/regexp2 v1.2.0
 github.com/dlclark/regexp2
 github.com/dlclark/regexp2/syntax
@@ -115,10 +132,12 @@ github.com/gorilla/mux
 # github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 ## explicit
 github.com/grpc-ecosystem/go-grpc-middleware
+github.com/grpc-ecosystem/go-grpc-middleware/auth
 github.com/grpc-ecosystem/go-grpc-middleware/logging
 github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus
 github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus
 github.com/grpc-ecosystem/go-grpc-middleware/tags
+github.com/grpc-ecosystem/go-grpc-middleware/util/metautils
 # github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c
 ## explicit
 # github.com/inconshreveable/mousetrap v1.0.0
@@ -163,6 +182,9 @@ github.com/lesnuages/go-socks5
 # github.com/lesnuages/go-winio v0.4.19
 ## explicit
 github.com/lesnuages/go-winio
+# github.com/lesnuages/snitch v0.6.0
+## explicit
+github.com/lesnuages/snitch/pkg/snitch
 # github.com/lxn/win v0.0.0-20210218163916-a377121e959e
 ## explicit
 github.com/lxn/win
@@ -196,6 +218,11 @@ github.com/olekukonko/tablewriter
 github.com/olekukonko/ts
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
+# github.com/pquerna/otp v1.3.0
+## explicit
+github.com/pquerna/otp
+github.com/pquerna/otp/hotp
+github.com/pquerna/otp/totp
 # github.com/sergi/go-diff v1.1.0
 ## explicit
 # github.com/sirupsen/logrus v1.7.0
@@ -206,14 +233,17 @@ github.com/sirupsen/logrus
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/stretchr/testify v1.6.1
+# github.com/stretchr/testify v1.7.0
 ## explicit
 github.com/stretchr/testify/assert
+# github.com/thedevsaddam/gojsonq/v2 v2.5.2
+github.com/thedevsaddam/gojsonq/v2
 # golang.org/x/crypto v0.0.0-20210317152858-513c2a44f670
 ## explicit
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/blake2s
+golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/chacha20poly1305
@@ -228,6 +258,9 @@ golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/poly1305
+golang.org/x/crypto/ssh
+golang.org/x/crypto/ssh/agent
+golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1
 ## explicit
@@ -343,6 +376,7 @@ google.golang.org/grpc/status
 google.golang.org/grpc/tap
 google.golang.org/grpc/test/bufconn
 # google.golang.org/protobuf v1.26.0
+## explicit
 google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
