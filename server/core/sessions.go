@@ -20,23 +20,26 @@ package core
 
 import (
 	"errors"
-	"math"
 	"sync"
 	"time"
 
+	"github.com/bishopfox/sliver/implant/sliver/transports/mtls"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/log"
 
 	consts "github.com/bishopfox/sliver/client/constants"
 )
 
 var (
+	sessionsLog = log.NamedLogger("core", "sessions")
+
 	// Sessions - Manages implant connections
 	Sessions = &sessions{
 		sessions: map[uint32]*Session{},
 		mutex:    &sync.RWMutex{},
 	}
-	hiveID = uint32(0)
+	rollingSessionID = uint32(0)
 
 	// ErrUnknownMessageType - Returned if the implant did not understand the message for
 	//                         example when the command is not supported on the platform
@@ -58,43 +61,44 @@ type Session struct {
 	Os                string
 	Version           string
 	Arch              string
-	Transport         string
-	RemoteAddress     string
 	PID               int32
 	Filename          string
-	LastCheckin       *time.Time
-	Send              chan *sliverpb.Envelope
-	Resp              map[uint64]chan *sliverpb.Envelope
-	RespMutex         *sync.RWMutex
+	Connection        *ImplantConnection
 	ActiveC2          string
-	IsDead            bool
-	ReconnectInterval uint32
+	ReconnectInterval int64
 	ProxyURL          string
-	PollInterval      uint32
+	PollTimeout       int64
+	Burned            bool
+	Extensions        []string
+	ConfigID          string
 	WorkingDirectory  string
+}
+
+func (s *Session) LastCheckin() time.Time {
+	return s.Connection.LastMessage
+}
+
+func (s *Session) IsDead() bool {
+	sessionsLog.Debugf("Last checkin was %v", s.Connection.LastMessage)
+	padding := time.Duration(10 * time.Second) // Arbitrary margin of error
+	timePassed := time.Now().Sub(s.LastCheckin())
+	reconnect := time.Duration(s.ReconnectInterval)
+	pollTimeout := time.Duration(s.PollTimeout)
+	if timePassed < reconnect+padding && timePassed < pollTimeout+padding {
+		sessionsLog.Debugf("Last message within reconnect interval / poll timeout with padding")
+		return false
+	}
+	if s.Connection.Transport == consts.MtlsStr {
+		if time.Now().Sub(s.Connection.LastMessage) < mtls.PingInterval+padding {
+			sessionsLog.Debugf("Last message within ping interval with padding")
+			return false
+		}
+	}
+	return true
 }
 
 // ToProtobuf - Get the protobuf version of the object
 func (s *Session) ToProtobuf() *clientpb.Session {
-	var (
-		lastCheckin string
-		isDead      bool
-	)
-	if s.LastCheckin != nil {
-		lastCheckin = s.LastCheckin.Format(time.RFC1123)
-
-		// Calculates how much time has passed in seconds and compares that to the ReconnectInterval+10 of the Implant.
-		// (ReconnectInterval+10 seconds is just arbitrary padding to account for potential delays)
-		// If it hasn't checked in, flag it as DEAD.
-		var timePassed = uint32(math.Abs(s.LastCheckin.Sub(time.Now()).Seconds()))
-
-		if timePassed > (s.ReconnectInterval + 10) {
-			isDead = true
-		} else {
-			isDead = false
-		}
-	}
-
 	return &clientpb.Session{
 		ID:                uint32(s.ID),
 		Name:              s.Name,
@@ -106,35 +110,35 @@ func (s *Session) ToProtobuf() *clientpb.Session {
 		OS:                s.Os,
 		Version:           s.Version,
 		Arch:              s.Arch,
-		Transport:         s.Transport,
-		RemoteAddress:     s.RemoteAddress,
+		Transport:         s.Connection.Transport,
+		RemoteAddress:     s.Connection.RemoteAddress,
 		PID:               int32(s.PID),
 		Filename:          s.Filename,
-		LastCheckin:       lastCheckin,
+		LastCheckin:       s.LastCheckin().Unix(),
 		ActiveC2:          s.ActiveC2,
-		IsDead:            isDead,
+		IsDead:            s.IsDead(),
 		ReconnectInterval: s.ReconnectInterval,
 		ProxyURL:          s.ProxyURL,
-		PollInterval:      s.PollInterval,
-		WorkingDirectory:  s.WorkingDirectory,
+		PollTimeout:       s.PollTimeout,
+		Burned:            s.Burned,
+		// ConfigID:          s.ConfigID,
 	}
 }
 
 // Request - Sends a protobuf request to the active sliver and returns the response
 func (s *Session) Request(msgType uint32, timeout time.Duration, data []byte) ([]byte, error) {
-
 	resp := make(chan *sliverpb.Envelope)
 	reqID := EnvelopeID()
-	s.RespMutex.Lock()
-	s.Resp[reqID] = resp
-	s.RespMutex.Unlock()
+	s.Connection.RespMutex.Lock()
+	s.Connection.Resp[reqID] = resp
+	s.Connection.RespMutex.Unlock()
 	defer func() {
-		s.RespMutex.Lock()
-		defer s.RespMutex.Unlock()
+		s.Connection.RespMutex.Lock()
+		defer s.Connection.RespMutex.Unlock()
 		// close(resp)
-		delete(s.Resp, reqID)
+		delete(s.Connection.Resp, reqID)
 	}()
-	s.Send <- &sliverpb.Envelope{
+	s.Connection.Send <- &sliverpb.Envelope{
 		ID:   reqID,
 		Type: msgType,
 		Data: data,
@@ -149,14 +153,7 @@ func (s *Session) Request(msgType uint32, timeout time.Duration, data []byte) ([
 	if respEnvelope.UnknownMessageType {
 		return nil, ErrUnknownMessageType
 	}
-	s.UpdateCheckin()
 	return respEnvelope.Data, nil
-}
-
-// UpdateCheckin - Update a session's checkin time
-func (s *Session) UpdateCheckin() {
-	now := time.Now()
-	s.LastCheckin = &now
 }
 
 // UpdateWorkingDirectory - Updated when either cd is invoked successfully,
@@ -215,10 +212,29 @@ func (s *sessions) Remove(sessionID uint32) {
 	}
 }
 
-// NextSessionID - Returns an incremental nonce as an id
-func NextSessionID() uint32 {
-	newID := hiveID + 1
-	hiveID++
+func NewSession(implantConn *ImplantConnection) *Session {
+	implantConn.UpdateLastMessage()
+	return &Session{
+		ID:         nextSessionID(),
+		Connection: implantConn,
+	}
+}
+
+func SessionFromImplantConnection(conn *ImplantConnection) *Session {
+	Sessions.mutex.RLock()
+	defer Sessions.mutex.RUnlock()
+	for _, session := range Sessions.sessions {
+		if session.Connection.ID == conn.ID {
+			return session
+		}
+	}
+	return nil
+}
+
+// nextSessionID - Returns an incremental nonce as an id
+func nextSessionID() uint32 {
+	newID := rollingSessionID + 1
+	rollingSessionID++
 	return newID
 }
 
