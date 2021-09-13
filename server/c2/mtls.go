@@ -25,15 +25,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"sync"
 
+	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/core"
 	serverHandlers "github.com/bishopfox/sliver/server/handlers"
 	"github.com/bishopfox/sliver/server/log"
-
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -44,7 +43,7 @@ const (
 )
 
 var (
-	mtlsLog = log.NamedLogger("c2", "mtls")
+	mtlsLog = log.NamedLogger("c2", consts.MtlsStr)
 )
 
 // StartMutualTLSListener - Start a mutual TLS listener
@@ -85,44 +84,35 @@ func acceptSliverConnections(ln net.Listener) {
 
 func handleSliverConnection(conn net.Conn) {
 	mtlsLog.Infof("Accepted incoming connection: %s", conn.RemoteAddr())
-
-	session := &core.Session{
-		Transport:     "mtls",
-		RemoteAddress: fmt.Sprintf("%s", conn.RemoteAddr()),
-		Send:          make(chan *sliverpb.Envelope),
-		RespMutex:     &sync.RWMutex{},
-		Resp:          map[uint64]chan *sliverpb.Envelope{},
-	}
-	session.UpdateCheckin()
+	implantConn := core.NewImplantConnection(consts.MtlsStr, conn.RemoteAddr().String())
 
 	defer func() {
-		mtlsLog.Debugf("Cleaning up for %s", session.Name)
-		core.Sessions.Remove(session.ID)
+		mtlsLog.Debugf("mtls connection closing")
 		conn.Close()
+		implantConn.Cleanup()
 	}()
 
 	done := make(chan bool)
-
 	go func() {
 		defer func() {
 			done <- true
 		}()
-		handlers := serverHandlers.GetSessionHandlers()
+		handlers := serverHandlers.GetHandlers()
 		for {
 			envelope, err := socketReadEnvelope(conn)
 			if err != nil {
 				mtlsLog.Errorf("Socket read error %v", err)
 				return
 			}
-			session.UpdateCheckin()
+			implantConn.UpdateLastMessage()
 			if envelope.ID != 0 {
-				session.RespMutex.RLock()
-				if resp, ok := session.Resp[envelope.ID]; ok {
+				implantConn.RespMutex.RLock()
+				if resp, ok := implantConn.Resp[envelope.ID]; ok {
 					resp <- envelope // Could deadlock, maybe want to investigate better solutions
 				}
-				session.RespMutex.RUnlock()
+				implantConn.RespMutex.RUnlock()
 			} else if handler, ok := handlers[envelope.Type]; ok {
-				go handler.(func(*core.Session, []byte))(session, envelope.Data)
+				go handler(implantConn, envelope.Data)
 			}
 		}
 	}()
@@ -130,7 +120,7 @@ func handleSliverConnection(conn net.Conn) {
 Loop:
 	for {
 		select {
-		case envelope := <-session.Send:
+		case envelope := <-implantConn.Send:
 			err := socketWriteEnvelope(conn, envelope)
 			if err != nil {
 				mtlsLog.Errorf("Socket write failed %v", err)
@@ -140,7 +130,7 @@ Loop:
 			break Loop
 		}
 	}
-	mtlsLog.Infof("Closing connection to session %s", session.Name)
+	mtlsLog.Debugf("Closing implant connection %s", implantConn.ID)
 }
 
 // socketWriteEnvelope - Writes a message to the TLS socket using length prefix framing
@@ -231,13 +221,11 @@ func getServerTLSConfig(host string) *tls.Config {
 	}
 
 	tlsConfig := &tls.Config{
-		RootCAs:                  sliverCACertPool,
-		ClientAuth:               tls.RequireAndVerifyClientCert,
-		ClientCAs:                sliverCACertPool,
-		Certificates:             []tls.Certificate{cert},
-		CipherSuites:             []uint16{tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384},
-		PreferServerCipherSuites: true,
-		MinVersion:               tls.VersionTLS12,
+		RootCAs:      sliverCACertPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    sliverCACertPool,
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS13, // Force TLS v1.3
 	}
 	tlsConfig.BuildNameToCertificate()
 	return tlsConfig

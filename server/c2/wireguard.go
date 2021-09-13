@@ -1,12 +1,29 @@
 package c2
 
+/*
+	Sliver Implant Framework
+	Copyright (C) 2021  Bishop Fox
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
 	"net"
-	"sync"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/certs"
@@ -15,9 +32,9 @@ import (
 	serverHandlers "github.com/bishopfox/sliver/server/handlers"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/server/netstack"
-	"github.com/golang/protobuf/proto"
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -25,7 +42,7 @@ var (
 	tunIP = "100.64.0.1" // Don't let user configure this for now
 )
 
-// StartWGListener - First ceates an inet.af network stack.
+// StartWGListener - First creates an inet.af network stack.
 // then creates a Wireguard device/interface and applies configuration.
 // Go routines are spun up to handle key exchange connections, as well
 // as c2 comms connections.
@@ -33,7 +50,7 @@ func StartWGListener(port uint16, netstackPort uint16, keyExchangeListenPort uin
 	StartPivotListener()
 	wgLog.Infof("Starting Wireguard listener on port: %d", port)
 
-	tun, tnet, err := netstack.CreateNetTUN(
+	tun, tNet, err := netstack.CreateNetTUN(
 		[]net.IP{net.ParseIP(tunIP)},
 		[]net.IP{net.ParseIP("127.0.0.1")}, // We don't use DNS in the WG listener. Yet.
 		1420,
@@ -86,7 +103,7 @@ func StartWGListener(port uint16, netstackPort uint16, keyExchangeListenPort uin
 	}
 
 	// Open up key exchange TCP socket
-	keyExchangeListener, err := tnet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(keyExchangeListenPort)})
+	keyExchangeListener, err := tNet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(keyExchangeListenPort)})
 	if err != nil {
 		wgLog.Errorf("Failed to setup up wg key exchange listener: %v", err)
 		return nil, nil, nil, err
@@ -95,7 +112,7 @@ func StartWGListener(port uint16, netstackPort uint16, keyExchangeListenPort uin
 	go acceptKeyExchangeConnection(keyExchangeListener)
 
 	// Open up c2 comms listener TCP socket
-	listener, err := tnet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(netstackPort)})
+	listener, err := tNet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(netstackPort)})
 	if err != nil {
 		wgLog.Errorf("Failed to setup up wg sliver listener: %v", err)
 		return nil, nil, nil, err
@@ -146,8 +163,7 @@ func handleKeyExchangeConnection(conn net.Conn) {
 	} else {
 		wgLog.Infof("Successfully generated new wg keys")
 		message := implantPrivKey + "|" + serverPubKey + "|" + string(ip)
-
-		wgLog.Infof("Sending new wg keys and IP: %s", message)
+		wgLog.Debugf("Sending new wg keys and IP: %s", message)
 		conn.Write([]byte(message))
 	}
 }
@@ -169,43 +185,34 @@ func acceptWGSliverConnections(ln net.Listener) {
 func handleWGSliverConnection(conn net.Conn) {
 	wgLog.Infof("Accepted incoming connection: %s", conn.RemoteAddr())
 
-	session := &core.Session{
-		Transport:     "wg",
-		RemoteAddress: fmt.Sprintf("%s", conn.RemoteAddr()),
-		Send:          make(chan *sliverpb.Envelope),
-		RespMutex:     &sync.RWMutex{},
-		Resp:          map[uint64]chan *sliverpb.Envelope{},
-	}
-	session.UpdateCheckin()
-
+	implantConn := core.NewImplantConnection("wg", fmt.Sprintf("%s", conn.RemoteAddr()))
+	implantConn.UpdateLastMessage()
 	defer func() {
-		wgLog.Debugf("Cleaning up for %s", session.Name)
-		core.Sessions.Remove(session.ID)
+		implantConn.Cleanup()
 		conn.Close()
 	}()
 
 	done := make(chan bool)
-
 	go func() {
 		defer func() {
 			done <- true
 		}()
-		handlers := serverHandlers.GetSessionHandlers()
+		handlers := serverHandlers.GetHandlers()
 		for {
 			envelope, err := socketWGReadEnvelope(conn)
 			if err != nil {
-				wgLog.Errorf("Socket read error %v", err)
+				wgLog.Errorf("Socket read error %s", err)
 				return
 			}
-			session.UpdateCheckin()
+			implantConn.UpdateLastMessage()
 			if envelope.ID != 0 {
-				session.RespMutex.RLock()
-				if resp, ok := session.Resp[envelope.ID]; ok {
+				implantConn.RespMutex.RLock()
+				if resp, ok := implantConn.Resp[envelope.ID]; ok {
 					resp <- envelope // Could deadlock, maybe want to investigate better solutions
 				}
-				session.RespMutex.RUnlock()
+				implantConn.RespMutex.RUnlock()
 			} else if handler, ok := handlers[envelope.Type]; ok {
-				go handler.(func(*core.Session, []byte))(session, envelope.Data)
+				go handler(implantConn, envelope.Data)
 			}
 		}
 	}()
@@ -213,17 +220,17 @@ func handleWGSliverConnection(conn net.Conn) {
 Loop:
 	for {
 		select {
-		case envelope := <-session.Send:
+		case envelope := <-implantConn.Send:
 			err := socketWGWriteEnvelope(conn, envelope)
 			if err != nil {
-				wgLog.Errorf("Socket write failed %v", err)
+				wgLog.Errorf("Socket write failed %s", err)
 				break Loop
 			}
 		case <-done:
 			break Loop
 		}
 	}
-	wgLog.Infof("Closing connection to session %s", session.Name)
+	wgLog.Debugf("Closing connection to implant %s", implantConn.ID)
 }
 
 // socketWGWriteEnvelope - Writes a message to the wireguard socket using length prefix framing

@@ -53,8 +53,8 @@ import (
 	serverHandlers "github.com/bishopfox/sliver/server/handlers"
 	"github.com/bishopfox/sliver/server/log"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/miekg/dns"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -76,7 +76,7 @@ const (
 var (
 	dnsLog = log.NamedLogger("c2", "dns")
 
-	dnsCharSet = []rune("abcdefghijklmnopqrstuvwxyz0123456789-_")
+	dnsCharSet = []rune("abcdefghijklmnopqrstuvwxyz0123456789_")
 
 	sendBlocksMutex = &sync.RWMutex{}
 	sendBlocks      = &map[string]*SendBlock{}
@@ -99,10 +99,10 @@ type SendBlock struct {
 
 // DNSSession - Holds DNS session information
 type DNSSession struct {
-	ID      string
-	Session *core.Session
-	Key     cryptography.AESKey
-	replay  map[string]bool // Sessions are mutex 'd
+	ID                string
+	ImplantConnection *core.ImplantConnection
+	Key               cryptography.AESKey
+	replay            sync.Map // Sessions are mutex 'd
 }
 
 func (s *DNSSession) isReplayAttack(ciphertext []byte) bool {
@@ -112,17 +112,17 @@ func (s *DNSSession) isReplayAttack(ciphertext []byte) bool {
 	sha := sha256.New()
 	sha.Write(ciphertext)
 	digest := base64.RawStdEncoding.EncodeToString(sha.Sum(nil))
-	if _, ok := s.replay[digest]; ok {
+	if _, ok := s.replay.Load(digest); ok {
 		return true
 	}
-	s.replay[digest] = true
+	s.replay.Store(digest, true)
 	return false
 }
 
 // --------------------------- DNS SERVER ---------------------------
 
 // StartDNSListener - Start a DNS listener
-func StartDNSListener(domains []string, canaries bool) *dns.Server {
+func StartDNSListener(bindIface string, lport uint16, domains []string, canaries bool) *dns.Server {
 	StartPivotListener()
 	dnsLog.Infof("Starting DNS listener for %v (canaries: %v) ...", domains, canaries)
 
@@ -131,7 +131,7 @@ func StartDNSListener(domains []string, canaries bool) *dns.Server {
 		handleDNSRequest(domains, canaries, writer, req)
 	})
 
-	server := &dns.Server{Addr: ":53", Net: "udp"}
+	server := &dns.Server{Addr: fmt.Sprintf("%s:%d", bindIface, lport), Net: "udp"}
 	return server
 }
 
@@ -438,25 +438,18 @@ func startDNSSession(domain string, fields []string) ([]string, error) {
 
 	dnsLog.Infof("Received new session in request")
 
-	session := &core.Session{
-		ID:            core.NextSessionID(),
-		Transport:     "dns",
-		RemoteAddress: "n/a",
-		Send:          make(chan *sliverpb.Envelope, 16),
-		RespMutex:     &sync.RWMutex{},
-		Resp:          map[uint64]chan *sliverpb.Envelope{},
-	}
-	session.UpdateCheckin()
+	implantConn := core.NewImplantConnection("dns", "n/a")
+	implantConn.UpdateLastMessage()
 
 	aesKey, _ := cryptography.AESKeyFromBytes(sessionInit.Key)
 	sessionID := dnsSessionID()
 	dnsLog.Infof("Starting new DNS session with id = %s", sessionID)
 	dnsSessionsMutex.Lock()
 	(*dnsSessions)[sessionID] = &DNSSession{
-		ID:      sessionID,
-		Session: session,
-		Key:     aesKey,
-		replay:  map[string]bool{},
+		ID:                sessionID,
+		ImplantConnection: implantConn,
+		Key:               aesKey,
+		replay:            sync.Map{},
 	}
 	dnsSessionsMutex.Unlock()
 
@@ -516,18 +509,18 @@ func dnsSessionEnvelope(domain string, fields []string) ([]string, error) {
 
 		dnsLog.Infof("Envelope Type = %#v RespID = %#v", envelope.Type, envelope.ID)
 
-		dnsSession.Session.UpdateCheckin()
+		dnsSession.ImplantConnection.UpdateLastMessage()
 
 		// Response Envelope or Handler
-		handlers := serverHandlers.GetSessionHandlers()
+		handlers := serverHandlers.GetHandlers()
 		if envelope.ID != 0 {
-			dnsSession.Session.RespMutex.Lock()
-			defer dnsSession.Session.RespMutex.Unlock()
-			if resp, ok := dnsSession.Session.Resp[envelope.ID]; ok {
+			dnsSession.ImplantConnection.RespMutex.Lock()
+			defer dnsSession.ImplantConnection.RespMutex.Unlock()
+			if resp, ok := dnsSession.ImplantConnection.Resp[envelope.ID]; ok {
 				resp <- envelope
 			}
 		} else if handler, ok := handlers[envelope.Type]; ok {
-			handler.(func(*core.Session, []byte))(dnsSession.Session, envelope.Data)
+			handler(dnsSession.ImplantConnection, envelope.Data)
 		}
 		return []string{"0"}, nil
 	}
@@ -554,7 +547,12 @@ func dnsSegmentReassemble(nonce string) ([]byte, error) {
 			dnsLog.Infof("Failed to decode session init: %v", err)
 			return nil, err
 		}
-		delete((*dnsSegmentReassembler), nonce)
+		//BUG - in the event that the session init msg does not make it to the client, this will fail. This has been
+		//observed consistently (Namely due to the race condition bug that is also being fixed in dnsSessionPoll).
+		//Currently a memory leak. Consider tracking moving the cleanup code to after polling has
+		//begun to ensure the initial handshake was successful.
+		//
+		//delete((*dnsSegmentReassembler), nonce)
 		return data, nil
 	}
 	return nil, fmt.Errorf("Invalid nonce '%#v' (session init reassembler)", nonce)
@@ -629,7 +627,9 @@ func dnsSessionPoll(domain string, fields []string) ([]string, error) {
 	dnsSessionsMutex.Lock()
 	dnsSession, found := (*dnsSessions)[sessionID]
 	if !found {
-		return []string{"1"}, errors.New("invalid session (nil pointer")
+		dnsSessionsMutex.Unlock()
+		b64SessionId := base64.RawStdEncoding.EncodeToString([]byte(sessionID))
+		return []string{b64SessionId}, errors.New("invalid session (nil pointer)")
 	}
 	dnsSessionsMutex.Unlock()
 
@@ -637,13 +637,15 @@ func dnsSessionPoll(domain string, fields []string) ([]string, error) {
 	envelopes := []*sliverpb.Envelope{}
 	for !isDrained {
 		select {
-		case envelope := <-dnsSession.Session.Send:
+		case envelope := <-dnsSession.ImplantConnection.Send:
 			dnsLog.Infof("New message from send channel ...")
 			envelopes = append(envelopes, envelope)
 		default:
 			isDrained = true
 		}
 	}
+
+	dnsSession.ImplantConnection.UpdateLastMessage()
 
 	if 0 < len(envelopes) {
 		dnsLog.Infof("%d new message(s) for session id %#v", len(envelopes), sessionID)
