@@ -27,7 +27,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/log"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -150,7 +150,7 @@ func (s *Server) TunnelData(stream rpcpb.SliverRPC_TunnelDataServer) error {
 								tunnelLog.Debugf("[shell] Failed to marshal protobuf %s", err)
 								// {{end}}
 							}
-							session.Send <- &sliverpb.Envelope{
+							session.Connection.Send <- &sliverpb.Envelope{
 								Type: sliverpb.MsgTunnelData,
 								Data: data,
 							}
@@ -170,7 +170,7 @@ func (s *Server) TunnelData(stream rpcpb.SliverRPC_TunnelDataServer) error {
 
 			go func() {
 				session := core.Sessions.Get(tunnel.SessionID)
-				send_cache, _ := toImplantCache[tunnel.ID]
+				sendCache, _ := toImplantCache[tunnel.ID]
 				for data := range tunnel.ToImplant {
 					tunnelLog.Debugf("Tunnel %d: To implant %d byte(s), seq: %d", tunnel.ID, len(data), tunnel.ToImplantSequence)
 					tunnelData := sliverpb.TunnelData{
@@ -181,11 +181,11 @@ func (s *Server) TunnelData(stream rpcpb.SliverRPC_TunnelDataServer) error {
 						Closed:    false,
 					}
 					// Add tunnel data to cache
-					send_cache[tunnelData.Sequence] = &tunnelData
+					sendCache[tunnelData.Sequence] = &tunnelData
 
 					data, _ := proto.Marshal(&tunnelData)
 					tunnel.ToImplantSequence++
-					session.Send <- &sliverpb.Envelope{
+					session.Connection.Send <- &sliverpb.Envelope{
 						Type: sliverpb.MsgTunnelData,
 						Data: data,
 					}
@@ -199,7 +199,7 @@ func (s *Server) TunnelData(stream rpcpb.SliverRPC_TunnelDataServer) error {
 					Data:      make([]byte, 0),
 					Closed:    true,
 				})
-				session.Send <- &sliverpb.Envelope{
+				session.Connection.Send <- &sliverpb.Envelope{
 					Type: sliverpb.MsgTunnelData,
 					Data: data,
 				}
