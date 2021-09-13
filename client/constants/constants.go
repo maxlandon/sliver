@@ -20,17 +20,26 @@ package constants
 
 // Meta
 const (
+	// KeepAliveStr - Keep alive constant
 	KeepAliveStr = "keepalive"
+)
+
+const (
+	// LastUpdateCheckFileName - Last update check file name
+	LastUpdateCheckFileName = "last_update_check"
 )
 
 // Events
 const (
-	UpdateStr  = "update"
+	// UpdateStr - "update"
+	UpdateStr = "update"
+	// VersionStr - "version"
 	VersionStr = "version"
-	ExitStr    = "exit"
 
+	// EventStr - "event"
 	EventStr = "event"
 
+	// ServersStr - "server-error"
 	ServerErrorStr = "server-error"
 
 	// ConnectedEvent - Sliver Connected
@@ -48,6 +57,9 @@ const (
 	// CanaryEvent - A DNS canary was triggered
 	CanaryEvent = "canary"
 
+	// WatchtowerEvent - An implant hash has been identified on a threat intel platform
+	WatchtowerEvent = "watchtower"
+
 	// StartedEvent - Job was started
 	JobStartedEvent = "job-started"
 	// StoppedEvent - Job was stopped
@@ -64,38 +76,75 @@ const (
 
 	// WebsiteEvent - Fires whenever there's a change to websites
 	WebsiteEvent = "website"
+
+	// LootAdded
+	LootAddedEvent = "loot-added"
+
+	// LootRemoved
+	LootRemovedEvent = "loot-removed"
+
+	// BeaconRegisteredEvent - First connection from a new beacon
+	BeaconRegisteredEvent = "beacon-registered"
+
+	// BeaconTaskResult - Beacon task completed with a result
+	BeaconTaskResultEvent = "beacon-taskresult"
 )
 
-// Menu contexts
+// Menus
 const (
+	// ServerMenu - Not interacting with a session
 	ServerMenu = "server"
+	// SliverMenu - Interacting with a session
 	SliverMenu = "sliver"
 )
 
 // Commands
 const (
-	NewPlayerStr       = "new-player"
-	PlayersStr         = "players"
-	KickPlayerStr      = "kick-player"
+	OperatorsStr       = "operators"
+	NewOperatorStr     = "new-operator"
+	KickOperatorStr    = "kick-operator"
 	MultiplayerModeStr = "multiplayer"
 
 	SessionsStr   = "sessions"
 	BackgroundStr = "background"
 	InfoStr       = "info"
 	UseStr        = "use"
-	SetStr        = "set"
-	InteractStr   = "interact"
+	ReconfigStr   = "reconfig"
+	PruneStr      = "prune"
+	TasksStr      = "tasks"
+	GenerateStr   = "generate"
+	RegenerateStr = "regenerate"
+	CompilerStr   = "info"
+	StagerStr     = "stager"
+	ProfilesStr   = "profiles"
+	BeaconStr     = "beacon"
+	BeaconsStr    = "beacons"
+	SettingsStr   = "settings"
 
-	GenerateStr        = "generate"
-	StageStr           = "stage"
-	StagerStr          = "stager"
-	RegenerateStr      = "regenerate"
-	ProfileGenerateStr = "generate-profile"
-	ProfilesStr        = "profiles"
-	NewProfileStr      = "new-profile"
+	// Generic
+
+	// NewStr - "new"
+	NewStr    = "new"
+	AddStr    = "add"
+	StartStr  = "start"
+	StopStr   = "stop"
+	SetStr    = "set"
+	UnsetStr  = "unset"
+	SaveStr   = "save"
+	ReloadStr = "reload"
+	LoadStr   = "load"
+	TablesStr = "tables"
+
+	LootStr       = "loot"
+	LootLocalStr  = "local"
+	LootRemoteStr = "remote"
+	LootFetchStr  = "fetch"
+	LootCredsStr  = "creds"
+
+	RenameStr = "rename"
 
 	ImplantBuildsStr = "implants"
-	ListCanariesStr  = "canaries"
+	CanariesStr      = "canaries"
 
 	JobsStr        = "jobs"
 	JobsKillStr    = "kill"
@@ -111,9 +160,8 @@ const (
 	LogStr        = "log"
 	ConfigStr     = "config"
 	ConfigSaveStr = "save"
-
-	MsfStr       = "msf"
-	MsfInjectStr = "msf-inject"
+	MsfStr        = "msf"
+	MsfInjectStr  = "msf-inject"
 
 	PsStr        = "ps"
 	PingStr      = "ping"
@@ -151,7 +199,8 @@ const (
 	MigrateStr          = "migrate"
 	SideloadStr         = "sideload"
 	SpawnDllStr         = "spawndll"
-	LoadExtensionStr    = "load-extension"
+	ExtensionStr        = "extension"
+	LoadMacroStr        = "load-macro"
 	StageListenerStr    = "stage-listener"
 
 	WebsitesStr       = "websites"
@@ -165,8 +214,7 @@ const (
 	PsExecStr             = "psexec"
 	BackdoorStr           = "backdoor"
 	MakeTokenStr          = "make-token"
-	GetEnvStr             = "getenv"
-	SetEnvStr             = "setenv"
+	EnvStr                = "env"
 	RegistryStr           = "registry"
 	RegistryReadStr       = "read"
 	RegistryWriteStr      = "write"
@@ -177,10 +225,22 @@ const (
 	WgConfigStr           = "wg-config"
 	WgSocksStr            = "wg-socks"
 	WgPortFwdStr          = "wg-portfwd"
+	MonitorStr            = "monitor"
+	SSHStr                = "ssh"
+	DLLHijackStr          = "dllhijack"
 
 	PortfwdStr = "portfwd"
 
+	ReactionStr = "reaction"
+
+	HostsStr = "hosts"
+	IOCStr   = "ioc"
+
 	LicensesStr = "licenses"
+
+	GetPrivsStr        = "getprivs"
+	PreludeOperatorStr = "prelude-operator"
+	ConnectStr         = "connect"
 )
 
 // Groups

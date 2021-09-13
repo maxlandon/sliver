@@ -37,7 +37,7 @@ var (
 	// ActiveSession - The Sliver session we are currently interacting with.
 	ActiveSession *clientpb.Session
 
-	// Console At startup the console has passed itself to this package, so that
+	// Console - At startup the console has passed itself to this package, so that
 	// we can question the application parser for timeout/request options.
 	Console *gonsole.Console
 
