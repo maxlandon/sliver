@@ -70,7 +70,7 @@ func (n NewOperator) Execute(args []string) (err error) {
 
 	cliLog.Debugf("Generating new client certificate for user %s (server at %s:%d)",
 		n.Options.Operator, n.Options.LHost, n.Options.LPort)
-	configJSON, err := NewPlayerConfig(n.Options.Operator, n.Options.LHost, n.Options.LPort)
+	configJSON, err := NewOperatorConfig(n.Options.Operator, n.Options.LHost, n.Options.LPort)
 	if err != nil {
 		fmt.Printf(Error+"Failed to generate user config: %v \n", err)
 		return
@@ -172,8 +172,8 @@ func (m *MultiplayerMode) Execute(args []string) (err error) {
 	return
 }
 
-// NewPlayerConfig - Generate a new player/client/operator configuration
-func NewPlayerConfig(operatorName, lhost string, lport uint16) ([]byte, error) {
+// NewOperatorConfig - Generate a new player/client/operator configuration
+func NewOperatorConfig(operatorName, lhost string, lport uint16) ([]byte, error) {
 
 	if !namePattern.MatchString(operatorName) {
 		return nil, errors.New("Invalid operator name (alphanumerics only)")
