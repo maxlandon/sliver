@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+	osLog "log"
 	"os"
 	"os/user"
 	"path"
@@ -33,19 +33,19 @@ import (
 	"runtime"
 	"strings"
 
-	ver "github.com/bishopfox/sliver/client/version"
-	protobufs "github.com/bishopfox/sliver/protobuf"
-	"github.com/bishopfox/sliver/protobuf/clientpb"
-	sliverLog "github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/util"
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
+
+	ver "github.com/bishopfox/sliver/client/version"
+	protobufs "github.com/bishopfox/sliver/protobuf"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/server/log"
 )
 
 const (
 	// GoDirName - The directory to store the go compiler/toolchain files in
-	GoDirName  = "go"
-	dllDirName = "dll"
+	GoDirName = "go"
 
 	goPathDirName   = "gopath"
 	versionFileName = "version"
@@ -56,7 +56,7 @@ const (
 )
 
 var (
-	setupLog = sliverLog.NamedLogger("assets", "setup")
+	setupLog = log.NamedLogger("assets", "setup")
 )
 
 // GetRootAppDir - Get the Sliver app dir, default is: ~/.sliver/
@@ -89,7 +89,7 @@ func GetUserDirectory(name string) (dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			log.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
+			osLog.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
 		}
 	}
 	return
@@ -104,7 +104,7 @@ func GetSliverDirectory(sess *clientpb.Session) (dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			log.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
+			osLog.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
 		}
 	}
 	return
@@ -118,18 +118,11 @@ func GetUserHistoryDir(name string) (dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			log.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
+			osLog.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
 		}
 	}
 	return
 }
-
-// GetDllDir - Returns the full path to the data directory
-func GetDllDir() string {
-	dir := path.Join(GetRootAppDir(), dllDirName)
-	return dir
-}
-
 func assetVersion() string {
 	appDir := GetRootAppDir()
 	data, err := ioutil.ReadFile(path.Join(appDir, versionFileName))
@@ -158,7 +151,6 @@ func Setup(force bool, echo bool) {
 		}
 		setupGo(appDir)
 		setupCodenames(appDir)
-		setupDllPath(appDir)
 		saveAssetVersion(appDir)
 	}
 }
@@ -309,22 +301,6 @@ func SetupGoPath(goPathSrc string) error {
 	ioutil.WriteFile(path.Join(commonpbDir, "common.pb.go"), commonpbSrc, 0600)
 
 	return nil
-}
-
-// setupDllPath - Sets the data directory up
-func setupDllPath(appDir string) error {
-	dataDir := GetDllDir()
-	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
-		setupLog.Infof("Creating data directory: %s", dataDir)
-		os.MkdirAll(dataDir, 0700)
-	}
-	hostingDll, err := assetsFs.ReadFile(path.Join("fs", "dll", "HostingCLRx64.dll"))
-	if err != nil {
-		setupLog.Info("failed to find the dll")
-		return err
-	}
-	err = ioutil.WriteFile(path.Join(dataDir, "HostingCLRx64.dll"), hostingDll, 0600)
-	return err
 }
 
 func unzipGoDependency(fsPath string, targetPath string) error {
