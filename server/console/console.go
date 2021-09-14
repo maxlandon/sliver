@@ -91,26 +91,26 @@ func Start() {
 // There is a namespace field, however it messes up with the option printing/detection/parsing.
 func serverOnlyCmds(cc *gonsole.Menu) {
 
-	cc.AddCommand(constants.NewPlayerStr,
+	cc.AddCommand(constants.NewOperatorStr,
 		"Create a new player config file",
-		help.GetHelpFor(constants.NewPlayerStr),
+		help.GetHelpFor(constants.NewOperatorStr),
 		constants.AdminGroup,
 		[]string{""},
-		func() interface{} { return &NewOperator{} })
+		func() gonsole.Commander { return &NewOperator{} })
 
-	cc.AddCommand(constants.KickPlayerStr,
+	cc.AddCommand(constants.KickOperatorStr,
 		"Kick a player from the server",
-		help.GetHelpFor(constants.KickPlayerStr),
+		help.GetHelpFor(constants.KickOperatorStr),
 		constants.AdminGroup,
 		[]string{""},
-		func() interface{} { return &KickOperator{} })
+		func() gonsole.Commander { return &KickOperator{} })
 
 	cc.AddCommand(constants.MultiplayerModeStr,
 		"Enable multiplayer mode on this server",
 		help.GetHelpFor(constants.MultiplayerModeStr),
 		constants.AdminGroup,
 		[]string{""},
-		func() interface{} { return &MultiplayerMode{} })
+		func() gonsole.Commander { return &MultiplayerMode{} })
 
 	return
 }

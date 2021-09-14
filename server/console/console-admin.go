@@ -121,7 +121,7 @@ func (k *KickOperator) Execute(args []string) (err error) {
 
 	// Remove operator auth token
 	fmt.Printf(Info+"Removing auth token(s) for %s, please wait ... \n", operator)
-	err := db.Session().Where(&models.Operator{
+	err = db.Session().Where(&models.Operator{
 		Name: operator,
 	}).Delete(&models.Operator{}).Error
 	if err != nil {
