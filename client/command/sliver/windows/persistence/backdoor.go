@@ -1,4 +1,4 @@
-package windows
+package persistence
 
 /*
 	Sliver Implant Framework
@@ -23,7 +23,7 @@ import (
 	"fmt"
 
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/spin"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
@@ -47,24 +47,24 @@ func (b *Backdoor) Execute(args []string) (err error) {
 
 	ctrl := make(chan bool)
 	msg := fmt.Sprintf("Backdooring %s ...", remoteFilePath)
-	go spin.Until(msg, ctrl)
+	go log.SpinUntil(msg, ctrl)
 	backdoor, err := transport.RPC.Backdoor(context.Background(), &sliverpb.BackdoorReq{
 		FilePath:    remoteFilePath,
 		ProfileName: profileName,
-		Request:     core.ActiveSessionRequest(),
+		Request:     core.ActiveTarget.Request(),
 	})
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		fmt.Printf(Error+"Error: %v\n", err)
+		log.Errorf("Error: %v\n", err)
 		return
 	}
 
 	if backdoor.Response != nil && backdoor.Response.Err != "" {
-		fmt.Printf(Error+"Error: %s\n", backdoor.Response.Err)
+		log.Errorf("Error: %s\n", backdoor.Response.Err)
 		return
 	}
 
-	fmt.Printf(Info+"Uploaded backdoored binary to %s\n", remoteFilePath)
+	log.Infof("Uploaded backdoored binary to %s\n", remoteFilePath)
 	return
 }

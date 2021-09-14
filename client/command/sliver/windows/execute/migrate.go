@@ -1,4 +1,4 @@
-package windows
+package execute
 
 /*
 	Sliver Implant Framework
@@ -23,7 +23,7 @@ import (
 	"fmt"
 
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/spin"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
@@ -39,55 +39,28 @@ type Migrate struct {
 func (m *Migrate) Execute(args []string) (err error) {
 	pid := m.Positional.PID
 	if err != nil {
-		fmt.Printf(Error+"Error: %v", err)
+		log.Errorf("Error: %v", err)
 	}
-	config := getActiveSliverConfig()
+	config := core.GetActiveSessionConfig()
 	ctrl := make(chan bool)
 	msg := fmt.Sprintf("Migrating into %d ...", pid)
-	go spin.Until(msg, ctrl)
+	go log.SpinUntil(msg, ctrl)
 	migrate, err := transport.RPC.Migrate(context.Background(), &clientpb.MigrateReq{
 		Pid:     pid,
 		Config:  config,
-		Request: core.ActiveSessionRequest(),
+		Request: core.ActiveTarget.Request(),
 	})
 
 	if err != nil {
-		fmt.Printf(Error+"Error: %v", err)
+		log.Errorf("Error: %v", err)
 		return
 	}
 	ctrl <- true
 	<-ctrl
 	if !migrate.Success {
-		fmt.Printf(Error+"%s\n", migrate.GetResponse().GetErr())
+		log.Errorf("%s\n", migrate.GetResponse().GetErr())
 		return
 	}
-	fmt.Printf("\n"+Info+"Successfully migrated to %d\n", pid)
+	log.Infof("Successfully migrated to %d\n", pid)
 	return
-}
-
-func getActiveSliverConfig() *clientpb.ImplantConfig {
-	session := core.ActiveSession
-	if session == nil {
-		return nil
-	}
-	c2s := []*clientpb.ImplantC2{}
-	c2s = append(c2s, &clientpb.ImplantC2{
-		URL:      session.GetActiveC2(),
-		Priority: uint32(0),
-	})
-	config := &clientpb.ImplantConfig{
-		Name:    session.GetName(),
-		GOOS:    session.GetOS(),
-		GOARCH:  session.GetArch(),
-		Debug:   true,
-		Evasion: session.GetEvasion(),
-
-		MaxConnectionErrors: uint32(1000),
-		ReconnectInterval:   uint32(60),
-
-		Format:      clientpb.ImplantConfig_SHELLCODE,
-		IsSharedLib: true,
-		C2:          c2s,
-	}
-	return config
 }

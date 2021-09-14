@@ -5,7 +5,14 @@ import (
 
 	"github.com/bishopfox/sliver/client/completion"
 	"github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/help"
+
+	// Command implementations
+	"github.com/bishopfox/sliver/client/command/sliver/windows/execute"
+	"github.com/bishopfox/sliver/client/command/sliver/windows/persistence"
+	"github.com/bishopfox/sliver/client/command/sliver/windows/priv"
+	"github.com/bishopfox/sliver/client/command/sliver/windows/registry"
 )
 
 const (
@@ -37,117 +44,105 @@ const (
 	Woot = bold + green + "[$] " + normal
 )
 
-var (
-	// Console Some commands might need to access the current context
-	// in the course of the application execution.
-	Console *gonsole.Console
-
-	// Most commands just need access to a precise context.
-	sliverMenu *gonsole.Menu
-)
-
 // BindCommands - Binds Windows-specific commands for Windows-based Sliver session.
 func BindCommands(cc *gonsole.Menu) {
-
-	// Keep a reference to this context, command implementations might want to use it.
-	sliverMenu = cc
-
-	// Proc -------------------------------------------------------------------------------
-	migrate := cc.AddCommand(constants.MigrateStr,
-		"Migrate into a remote host process", "",
-		constants.ProcGroup,
-		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &Migrate{} })
-	migrate.AddArgumentCompletion("PID", completion.SessionProcesses)
 
 	// Priv -------------------------------------------------------------------------------
 	cc.AddCommand(constants.ImpersonateStr,
 		"Impersonate a logged in user", "",
 		constants.PrivGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &Impersonate{} })
+		func() interface{} { return &priv.Impersonate{} })
 
 	cc.AddCommand(constants.RevToSelfStr,
 		"Revert to self: lose stolen Windows token", "",
 		constants.PrivGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &Rev2Self{} })
+		func() interface{} { return &priv.Rev2Self{} })
 
 	cc.AddCommand(constants.GetSystemStr,
 		"Spawns a new sliver session as the NT AUTHORITY\\SYSTEM user ", "",
 		constants.PrivGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &GetSystem{} })
+		func() interface{} { return &priv.GetSystem{} })
 
 	cc.AddCommand(constants.MakeTokenStr,
 		"Create a new Logon Session with the specified credentials", "",
 		constants.PrivGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &MakeToken{} })
+		func() interface{} { return &priv.MakeToken{} })
+
+	cc.AddCommand(constants.RunAsStr,
+		"Run a new process in the context of the designated user", "",
+		constants.ExecuteGroup,
+		[]string{constants.SliverWinHelpGroup},
+		func() interface{} { return &priv.RunAs{} })
 
 	// Execution --------------------------------------------------------------------------
+	migrate := cc.AddCommand(constants.MigrateStr,
+		"Migrate into a remote host process", "",
+		constants.ProcGroup,
+		[]string{constants.SliverWinHelpGroup},
+		func() interface{} { return &execute.Migrate{} })
+	migrate.AddArgumentCompletion("PID", completion.SessionProcesses)
+
 	execAssembly := cc.AddCommand(constants.ExecuteAssemblyStr,
 		"Loads and executes a .NET assembly in a child process", "",
 		constants.ExecuteGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &ExecuteAssembly{} })
-	execAssembly.AddArgumentCompletionDynamic("LocalPath", Console.Completer.LocalPathAndFiles)
+		func() interface{} { return &execute.ExecuteAssembly{} })
+	execAssembly.AddArgumentCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 	execAssembly.AddArgumentCompletionDynamic("Args", completion.CompleteRemotePathAndFiles)
 	execAssembly.AddOptionCompletionDynamic("Path", completion.CompleteRemotePathAndFiles)
-	execAssembly.AddOptionCompletionDynamic("Save", Console.Completer.LocalPath)
+	execAssembly.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
 	execAssembly.AddOptionCompletion("Arch", completion.CompleteAssemblyArchs)
 
 	spawnDll := cc.AddCommand(constants.SpawnDllStr,
 		"Load and execute a Reflective DLL in a remote process", "",
 		constants.ExecuteGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &SpawnDLL{} })
-	spawnDll.AddArgumentCompletionDynamic("LocalPath", Console.Completer.LocalPathAndFiles)
+		func() interface{} { return &execute.SpawnDLL{} })
+	spawnDll.AddArgumentCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 	spawnDll.AddArgumentCompletionDynamic("Args", completion.CompleteRemotePathAndFiles)
-	spawnDll.AddOptionCompletionDynamic("Save", Console.Completer.LocalPath)
-
-	cc.AddCommand(constants.RunAsStr,
-		"Run a new process in the context of the designated user", "",
-		constants.ExecuteGroup,
-		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &RunAs{} })
+	spawnDll.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
 
 	// Persistence ------------------------------------------------------------------------
 	cc.AddCommand(constants.PsExecStr,
 		"Start a sliver service on the session target", "",
 		constants.PersistenceGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &Service{} })
+		func() interface{} { return &persistence.Service{} })
 
 	backdoor := cc.AddCommand(constants.BackdoorStr,
 		"Infect a remote file with a sliver shellcode", "",
 		constants.PersistenceGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &Backdoor{} })
+		func() interface{} { return &persistence.Backdoor{} })
 	backdoor.AddArgumentCompletionDynamic("RemotePath", completion.CompleteRemotePathAndFiles)
 
+	// Registry ---------------------------------------------------------------------------
 	reg := cc.AddCommand(constants.RegistryStr,
 		"Windows Registry management commands",
 		help.GetHelpFor(constants.RegistryStr),
 		constants.PersistenceGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &Registry{} })
+		func() interface{} { return &registry.Registry{} })
 
 	reg.AddCommand(constants.RegistryReadStr,
 		"Read values from the Windows Registry",
 		help.GetHelpFor(constants.RegistryReadStr),
 		"", []string{constants.SliverWinHelpGroup},
-		func() interface{} { return &RegistryRead{} })
+		func() interface{} { return &registry.RegistryRead{} })
 
 	reg.AddCommand(constants.RegistryWriteStr,
 		"Write values to the Windows Registry",
 		help.GetHelpFor(constants.RegistryWriteStr),
 		"", []string{constants.SliverWinHelpGroup},
-		func() interface{} { return &RegistryWrite{} })
+		func() interface{} { return &registry.RegistryWrite{} })
 
 	reg.AddCommand(constants.RegistryCreateKeyStr,
 		"Create a Registry key",
 		help.GetHelpFor(constants.RegistryCreateKeyStr),
 		"", []string{constants.SliverWinHelpGroup},
-		func() interface{} { return &RegistryCreateKey{} })
+		func() interface{} { return &registry.RegistryCreateKey{} })
 }
