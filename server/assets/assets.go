@@ -95,11 +95,26 @@ func GetUserDirectory(name string) (dir string) {
 	return
 }
 
-// Given a session, find the appropriate directory for it.
+// GetSliverDirectory - Given a session, find the appropriate directory for it.
 func GetSliverDirectory(sess *clientpb.Session) (dir string) {
 
 	dir = path.Join(GetRootAppDir(), "slivers", sess.OS,
 		sess.Arch, sess.Name)
+
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			osLog.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
+		}
+	}
+	return
+}
+
+// GetBeaconDirectory - Given a beacon, find the appropriate directory for it.
+func GetBeaconDirectory(beacon *clientpb.Beacon) (dir string) {
+
+	dir = path.Join(GetRootAppDir(), "slivers", beacon.OS,
+		beacon.Arch, beacon.Name)
 
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)

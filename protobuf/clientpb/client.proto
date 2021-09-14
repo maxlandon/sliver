@@ -29,6 +29,7 @@ message Version {
 message AddCmdHistoryRequest {
   string Line = 1;
   Session Session = 2;      
+  Beacon Beacon = 3;
 
   commonpb.Request Request = 9;
 }
@@ -47,6 +48,7 @@ message HistoryRequest {
   bool AllConsoles = 1;     
   int32 Index = 2;         
   Session Session = 3;      
+  Beacon Beacon = 4;
         
   commonpb.Request Request = 9;
 }
@@ -112,6 +114,7 @@ message Session {
   bool Burned = 22;
   repeated string Extensions = 23;
   // string ConfigID = 24;
+  string WorkingDirectory = 25;
 }
 
 message Beacon {
@@ -133,6 +136,7 @@ message Beacon {
   string Version = 16;
   bool Evasion = 17;
   bool IsDead = 18;
+  string WorkingDirectory = 19;
 
   string ProxyURL = 20;
   int64 Interval = 21;

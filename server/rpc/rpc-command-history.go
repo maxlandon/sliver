@@ -54,6 +54,13 @@ func (c *Server) GetHistory(in context.Context, req *pb.HistoryRequest) (res *pb
 		}
 	}
 
+	if req.Beacon != nil {
+		hist.Sliver, hist.SliverHistLength, err = getBeaconHistory(req.Beacon)
+		if err != nil {
+			hist.Response.Err = err.Error()
+		}
+	}
+
 	return hist, nil
 }
 
@@ -95,6 +102,26 @@ func getSessionHistory(sess *pb.Session) (lines []string, length int32, err erro
 	return
 }
 
+func getBeaconHistory(beacon *pb.Beacon) (lines []string, length int32, err error) {
+	sliverPath := assets.GetBeaconDirectory(beacon)
+
+	// The same history is shared by all sessions who have the same target user,
+	// and the same UUID. (mostly machine identifiers, except for Windows where there's more)
+	histFile := fmt.Sprintf("%s_%s.history", beacon.Username, beacon.UUID)
+
+	// Make the whole
+	filename := filepath.Join(sliverPath, histFile)
+
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return
+	}
+	lines = strings.Split(string(data), "\n")
+	length = int32(len(lines))
+
+	return
+}
+
 // AddToHistory - A client has sent a new command input line to be saved.
 func (c *Server) AddToHistory(in context.Context, req *pb.AddCmdHistoryRequest) (res *pb.AddCmdHistory, err error) {
 
@@ -115,12 +142,27 @@ func (c *Server) AddToHistory(in context.Context, req *pb.AddCmdHistoryRequest) 
 		res.Doublon = true
 	}
 
+	// Do the same for beacon if it's one
+	if req.Beacon != nil && commandBanned(strings.TrimSpace(req.Line), uselessCmdsSession) {
+		res.Doublon = true
+	} else if commandBanned(strings.TrimSpace(req.Line), uselessCmdsServer) {
+		res.Doublon = true
+	}
+	if strings.TrimSpace(req.Line) == "" {
+		res.Doublon = true
+	}
+
 	// If there are no doublons, we check to which history file we need to save.
 	if !res.Doublon {
 		if req.Session != nil {
 			err = writeSessionHistory(req.Session, req.Line)
 			if err != nil {
 				res.Response.Err = err.Error()
+			} else if req.Beacon != nil {
+				err = writeBeaconHistory(req.Beacon, req.Line)
+				if err != nil {
+					res.Response.Err = err.Error()
+				}
 			}
 		} else {
 			err = writeUserHistory(name, req.Line)
@@ -171,6 +213,29 @@ func writeSessionHistory(sess *pb.Session, line string) (err error) {
 	// The same history is shared by all sessions who have the same target user,
 	// and the same UUID. (mostly machine identifiers, except for Windows where there's more)
 	histFile := fmt.Sprintf("%s_%s.history", sess.Username, sess.UUID)
+
+	// Make the whole
+	filename := filepath.Join(sliverPath, histFile)
+
+	// Write to session history file
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		return errors.New("server could not find your client when requesting history: " + err.Error())
+	}
+	if _, err = f.WriteString(line + "\n"); err != nil {
+		return errors.New("server could not find your client when requesting history: " + err.Error())
+	}
+	f.Close()
+
+	return
+}
+
+func writeBeaconHistory(beacon *pb.Beacon, line string) (err error) {
+	sliverPath := assets.GetBeaconDirectory(beacon)
+
+	// The same history is shared by all sessions who have the same target user,
+	// and the same UUID. (mostly machine identifiers, except for Windows where there's more)
+	histFile := fmt.Sprintf("%s_%s.history", beacon.Username, beacon.UUID)
 
 	// Make the whole
 	filename := filepath.Join(sliverPath, histFile)
