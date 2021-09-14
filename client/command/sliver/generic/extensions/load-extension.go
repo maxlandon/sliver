@@ -1,4 +1,4 @@
-package sliver
+package extensions
 
 /*
 	Sliver Implant Framework
@@ -30,6 +30,7 @@ import (
 	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/help"
+	"github.com/bishopfox/sliver/client/log"
 )
 
 var (
@@ -53,22 +54,22 @@ func (l *LoadExtension) Execute(args []string) (err error) {
 	manifestPath := fmt.Sprintf("%s/%s", l.Positional.Path, "manifest.json")
 	jsonBytes, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
-		fmt.Printf(Error+"%v", err)
+		log.Errorf("%v", err)
 	}
 	// parse it
 	ext := &extension{}
 	err = json.Unmarshal(jsonBytes, ext)
 	if err != nil {
-		fmt.Printf(Error+"error loading extension: %v\n", err)
+		log.Errorf("error loading extension: %v\n", err)
 		return
 	}
 	ext.Path = l.Positional.Path
 
 	// If the root extension name is already taken
 	// by another command, return and notify
-	for _, c := range sliverMenu.Commands() {
+	for _, c := range core.Console.GetMenu(constants.SliverMenu).Commands() {
 		if ext.Name == c.Name {
-			fmt.Printf(Error+"Error loading extension: another command has name %s\n",
+			log.Errorf("Error loading extension: another command has name %s\n",
 				readline.Yellow(ext.Name))
 			return nil
 		}
@@ -79,7 +80,7 @@ func (l *LoadExtension) Execute(args []string) (err error) {
 	var bindExtensionCommands = func() {
 
 		// There is always at least one root command
-		root := sliverMenu.AddCommand(ext.Name,
+		root := core.Console.GetMenu(constants.SliverMenu).AddCommand(ext.Name,
 			fmt.Sprintf("%s extension commands", ext.Name), "",
 			constants.ExtensionsGroup,
 			[]string{""},
@@ -115,18 +116,18 @@ func (l *LoadExtension) Execute(args []string) (err error) {
 
 			// Add completions to some options
 			sub.AddOptionCompletionDynamic("Path", completion.CompleteRemotePathAndFiles)
-			sub.AddOptionCompletionDynamic("Save", Console.Completer.LocalPath)
+			sub.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
 			sub.AddOptionCompletion("Arch", completion.CompleteAssemblyArchs)
 		}
 	}
 
 	// Bind the extension to a given session. Create the extensions map if needed.
-	sessionExtensions, found := LoadedExtensions[core.ActiveSession.ID]
+	sessionExtensions, found := LoadedExtensions[core.ActiveTarget.Session.ID]
 	if found {
 		sessionExtensions[ext.Path] = bindExtensionCommands
 	} else {
-		LoadedExtensions[core.ActiveSession.ID] = map[string]func(){}
-		LoadedExtensions[core.ActiveSession.ID][ext.Path] = bindExtensionCommands
+		LoadedExtensions[core.ActiveTarget.Session.ID] = map[string]func(){}
+		LoadedExtensions[core.ActiveTarget.Session.ID][ext.Path] = bindExtensionCommands
 	}
 
 	return

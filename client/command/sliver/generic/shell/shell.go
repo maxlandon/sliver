@@ -1,4 +1,4 @@
-package sliver
+package shell
 
 /*
 	Sliver Implant Framework
@@ -55,7 +55,7 @@ func (sh *Shell) Execute(args []string) (err error) {
 
 	shellPath := sh.Options.Path
 	noPty := sh.Options.NoPty
-	if core.ActiveSession.OS == windows {
+	if core.ActiveTarget.Session.OS == windows {
 		noPty = true // Windows of course doesn't have PTYs
 	}
 	runInteractive(shellPath, noPty, transport.RPC)
@@ -65,8 +65,8 @@ func (sh *Shell) Execute(args []string) (err error) {
 }
 
 func runInteractive(shellPath string, noPty bool, rpc rpcpb.SliverRPCClient) {
-	fmt.Printf(Info + "Opening shell tunnel (EOF to exit) ...\n\n")
-	session := core.ActiveSession
+	log.Infof("Opening shell tunnel (EOF to exit) ...\n\n")
+	session := core.ActiveTarget.Session
 	if session == nil {
 		return
 	}
@@ -76,7 +76,7 @@ func runInteractive(shellPath string, noPty bool, rpc rpcpb.SliverRPCClient) {
 		SessionID: session.ID,
 	})
 	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	log.ClientLogger.Debugf("Created new tunnel with id: %d, binding to shell ...", rpcTunnel.TunnelID)
@@ -88,14 +88,14 @@ func runInteractive(shellPath string, noPty bool, rpc rpcpb.SliverRPCClient) {
 		Path:      shellPath,
 		EnablePTY: !noPty,
 		TunnelID:  tunnel.ID,
-		Request:   core.ActiveSessionRequest(),
+		Request:   core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	log.ClientLogger.Debugf("Bound remote shell pid %d to tunnel %d", shell.Pid, shell.TunnelID)
-	fmt.Printf(Info+"Started remote shell with pid %d\n\n", shell.Pid)
+	log.Infof("Started remote shell with pid %d\n\n", shell.Pid)
 
 	var oldState *terminal.State
 	if !noPty {
@@ -112,7 +112,7 @@ func runInteractive(shellPath string, noPty bool, rpc rpcpb.SliverRPCClient) {
 		n, err := io.Copy(os.Stdout, tunnel)
 		log.ClientLogger.Tracef("Wrote %d bytes to stdout", n)
 		if err != nil {
-			fmt.Printf(Error+"Error writing to stdout: %v", err)
+			log.Errorf("Error writing to stdout: %v", err)
 			return
 		}
 	}()
@@ -121,7 +121,7 @@ func runInteractive(shellPath string, noPty bool, rpc rpcpb.SliverRPCClient) {
 	n, err := io.Copy(tunnel, os.Stdin)
 	log.ClientLogger.Tracef("Read %d bytes from stdin", n)
 	if err != nil && err != io.EOF {
-		fmt.Printf(Error+"Error reading from stdin: %v", err)
+		log.Errorf("Error reading from stdin: %v", err)
 	}
 
 	if !noPty {

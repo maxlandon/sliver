@@ -1,4 +1,4 @@
-package sliver
+package extensions
 
 /*
 	Sliver Implant Framework
@@ -28,7 +28,7 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/spin"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
@@ -70,11 +70,11 @@ type ExtensionLibraryOptions struct {
 
 // Execute - The extension command works like a normal command.
 func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
-	session := core.ActiveSession
+	session := core.ActiveTarget.Session
 
 	binPath, err := ext.root.getFileForTarget(ext.sub.Name, session.GetOS(), session.GetArch())
 	if err != nil {
-		fmt.Printf(Error+"Error: %v\n", err)
+		log.Errorf("Error: %v\n", err)
 		return
 	}
 
@@ -90,7 +90,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 
 	// Find command and subcommand for extension
 	// (we cannot be in a root command Execute() when being an extension)
-	parser := Console.CommandParser()
+	parser := core.Console.CommandParser()
 	root := parser.Find(ext.root.Name)
 	sub := root.Find(ext.sub.Name)
 
@@ -101,7 +101,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 	if proc == nil {
 		processName, err = ext.sub.getDefaultProcess(session.GetOS())
 		if err != nil {
-			fmt.Printf(Error+"Error: %v\n", err)
+			log.Errorf("Error: %v\n", err)
 			return
 		}
 	}
@@ -112,7 +112,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 	}
 	binData, err := ioutil.ReadFile(binPath)
 	if err != nil {
-		fmt.Printf(Error+"%s", err.Error())
+		log.Errorf("%s", err.Error())
 		return
 	}
 
@@ -128,7 +128,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 	if ext.sub.IsAssembly {
 		ctrl := make(chan bool)
 		msg := fmt.Sprintf("Executing %s %s ...", ext.sub.Name, args)
-		go spin.Until(msg, ctrl)
+		go log.SpinUntil(msg, ctrl)
 		executeAssemblyResp, err := transport.RPC.ExecuteAssembly(context.Background(), &sliverpb.ExecuteAssemblyReq{
 			IsDLL: isDLL,
 
@@ -139,18 +139,18 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 			Method:    sub.FindOptionByLongName("method").Value().(string),
 			ClassName: sub.FindOptionByLongName("class").Value().(string),
 			AppDomain: sub.FindOptionByLongName("app-domain").Value().(string),
-			Request:   core.ActiveSessionRequest(),
+			Request:   core.ActiveTarget.Request(),
 		})
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			fmt.Printf(Error+"Error: %v", err)
+			log.Errorf("Error: %v", err)
 			return nil
 		}
-		fmt.Printf(Info+"Output:\n%s", string(executeAssemblyResp.GetOutput()))
+		log.Infof("Output:\n%s", string(executeAssemblyResp.GetOutput()))
 		if outFilePath != nil {
 			outFilePath.Write(executeAssemblyResp.GetOutput())
-			fmt.Printf(Info+"Output saved to %s\n", outFilePath.Name())
+			log.Infof("Output saved to %s\n", outFilePath.Name())
 		}
 		return nil
 	}
@@ -159,27 +159,27 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 	if ext.sub.IsReflective {
 		ctrl := make(chan bool)
 		msg := fmt.Sprintf("Executing %s %s ...", ext.sub.Name, args)
-		go spin.Until(msg, ctrl)
+		go log.SpinUntil(msg, ctrl)
 		spawnDllResp, err := transport.RPC.SpawnDll(context.Background(), &sliverpb.InvokeSpawnDllReq{
 			Args:        strings.Trim(args, " "),
 			Data:        binData,
 			ProcessName: processName,
 			EntryPoint:  ext.sub.Entrypoint,
 			Kill:        true,
-			Request:     core.ActiveSessionRequest(),
+			Request:     core.ActiveTarget.Request(),
 		})
 		ctrl <- true
 		<-ctrl
 
 		if err != nil {
-			fmt.Printf(Error+"Error: %v", err)
+			log.Errorf("Error: %v", err)
 			return nil
 		}
 
-		fmt.Printf(Info+"Output:\n%s", spawnDllResp.GetResult())
+		log.Infof("Output:\n%s", spawnDllResp.GetResult())
 		if outFilePath != nil {
 			outFilePath.Write([]byte(spawnDllResp.GetResult()))
-			fmt.Printf(Info+"Output saved to %s\n", outFilePath.Name())
+			log.Infof("Output saved to %s\n", outFilePath.Name())
 		}
 		return nil
 	}
@@ -187,27 +187,27 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 	// By default, the extension sideloads the library
 	ctrl := make(chan bool)
 	msg := fmt.Sprintf("Executing %s %s ...", ext.sub.Name, args)
-	go spin.Until(msg, ctrl)
+	go log.SpinUntil(msg, ctrl)
 	sideloadResp, err := transport.RPC.Sideload(context.Background(), &sliverpb.SideloadReq{
 		Args:        args,
 		Data:        binData,
 		EntryPoint:  entryPoint,
 		ProcessName: processName,
 		Kill:        true,
-		Request:     core.ActiveSessionRequest(),
+		Request:     core.ActiveTarget.Request(),
 	})
 	ctrl <- true
 	<-ctrl
 
 	if err != nil {
-		fmt.Printf(Error+"Error: %v", err)
+		log.Errorf("Error: %v", err)
 		return nil
 	}
 
-	fmt.Printf(Info+"Output:\n%s", sideloadResp.GetResult())
+	log.Infof("Output:\n%s", sideloadResp.GetResult())
 	if outFilePath != nil {
 		outFilePath.Write([]byte(sideloadResp.GetResult()))
-		fmt.Printf(Info+"Output saved to %s\n", outFilePath.Name())
+		log.Infof("Output saved to %s\n", outFilePath.Name())
 	}
 
 	return

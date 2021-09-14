@@ -50,7 +50,7 @@ func (tp *TCPPivot) Execute(args []string) (err error) {
 
 	_, err = transport.RPC.TCPListener(context.Background(), &sliverpb.TCPPivotReq{
 		Address: address,
-		Request: core.ActiveSessionRequest(),
+		Request: core.ActiveTarget.Request(),
 	})
 
 	if err != nil {
@@ -75,7 +75,7 @@ func (tp *NamedPipePivot) Execute(args []string) (err error) {
 	pipeName := tp.Options.Name
 	_, err = transport.RPC.NamedPipes(context.Background(), &sliverpb.NamedPipesReq{
 		PipeName: pipeName,
-		Request:  core.ActiveSessionRequest(),
+		Request:  core.ActiveTarget.Request(),
 	})
 
 	if err != nil {
@@ -106,7 +106,7 @@ func (p *Pivots) Execute(args []string) (err error) {
 		}
 		printPivots(session, int64(timeout), rpc)
 	} else {
-		session := core.ActiveSession
+		session := core.ActiveTarget.Session
 		if session != nil {
 			printPivots(session, int64(timeout), rpc)
 		} else {

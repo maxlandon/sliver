@@ -1,4 +1,4 @@
-package sliver
+package info
 
 /*
 	Sliver Implant Framework
@@ -19,17 +19,19 @@ package sliver
 */
 
 import (
-	"context"
 	"fmt"
-	insecureRand "math/rand"
 
 	"github.com/maxlandon/readline"
 
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/transport"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
+)
+
+const (
+	normal = "\033[0m"
+	bold   = "\033[1m"
 )
 
 // SessionInfo - Show Session information
@@ -43,8 +45,8 @@ type SessionInfo struct {
 func (i *SessionInfo) Execute(args []string) (err error) {
 
 	var session *clientpb.Session
-	if core.ActiveSession != nil {
-		session = core.ActiveSession
+	if core.ActiveTarget.Session != nil {
+		session = core.ActiveTarget.Session
 	} else if i.Positional.SessionID != "" {
 		session = core.GetSession(i.Positional.SessionID)
 	}
@@ -64,29 +66,9 @@ func (i *SessionInfo) Execute(args []string) (err error) {
 		fmt.Printf(bold+"Remote Address: %s%s\n", normal, session.RemoteAddress)
 		fmt.Printf(bold+"     Proxy URL: %s%s\n", normal, session.ProxyURL)
 	} else {
-		fmt.Printf(Error+"No target session, see `help %s`\n", consts.InfoStr)
+		log.Errorf("No target session, see `help %s`\n", consts.InfoStr)
 	}
 	return
-}
-
-// Ping - Ping a session
-type Ping struct{}
-
-// Execute - Command
-func (p *Ping) Execute(args []string) (err error) {
-
-	nonce := insecureRand.Intn(999999)
-	fmt.Printf(Info+"Ping %d\n", nonce)
-	pong, err := transport.RPC.Ping(context.Background(), &sliverpb.Ping{
-		Nonce:   int32(nonce),
-		Request: core.ActiveSessionRequest(),
-	})
-	if err != nil {
-		fmt.Printf(Warning+"%s\n", err)
-	} else {
-		fmt.Printf(Info+"Pong %d\n", pong.Nonce)
-	}
-	return nil
 }
 
 // PID - Get session Process ID
@@ -94,7 +76,7 @@ type PID struct{}
 
 // Execute - Command
 func (p *PID) Execute(args []string) (err error) {
-	fmt.Printf(Info+"Process ID: %d\n", core.ActiveSession.PID)
+	log.Infof("Process ID: %d\n", core.ActiveTarget.Session.PID)
 	return
 }
 
@@ -103,7 +85,7 @@ type UID struct{}
 
 // Execute - Command
 func (u *UID) Execute(args []string) (err error) {
-	fmt.Printf(Info+"User ID: %s\n", readline.Bold(core.ActiveSession.UID))
+	log.Infof("User ID: %s\n", readline.Bold(core.ActiveTarget.Session.UID))
 	return
 }
 
@@ -112,7 +94,7 @@ type GID struct{}
 
 // Execute - Command
 func (p *GID) Execute(args []string) (err error) {
-	fmt.Printf(Info+"User group ID: %s\n", readline.Bold(core.ActiveSession.GID))
+	log.Infof("User group ID: %s\n", readline.Bold(core.ActiveTarget.Session.GID))
 	return
 }
 
@@ -121,6 +103,6 @@ type Whoami struct{}
 
 // Execute - Command
 func (w *Whoami) Execute(args []string) (err error) {
-	fmt.Printf(Info+"User: %s\n", readline.Bold(core.ActiveSession.Username))
+	log.Infof("User: %s\n", readline.Bold(core.ActiveTarget.Session.Username))
 	return
 }

@@ -1,4 +1,4 @@
-package sliver
+package env
 
 /*
 	Sliver Implant Framework
@@ -20,11 +20,10 @@ package sliver
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
-	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
@@ -46,48 +45,17 @@ func (e *GetEnv) Execute(args []string) (err error) {
 	for _, name := range e.Positional.Vars {
 		envInfo, err := transport.RPC.GetEnv(context.Background(), &sliverpb.EnvReq{
 			Name:    name,
-			Request: core.ActiveSessionRequest(),
+			Request: core.ActiveTarget.Request(),
 		})
 
 		if err != nil {
-			fmt.Printf(Error+"Error: %v", err)
+			log.Errorf("Error: %v", err)
 			continue
 		}
 
 		for _, envVar := range envInfo.Variables {
-			fmt.Printf(" %s=%s\n", envVar.Key, envVar.Value)
+			log.Infof(" %s=%s\n", envVar.Key, envVar.Value)
 		}
 	}
-	return
-}
-
-// SetEnv - Set an environment variable on the target host
-type SetEnv struct {
-	Positional struct {
-		Key   string `description:"environment variable name" required:"1"`
-		Value string `description:"environment variable value" required:"1"`
-	} `positional-args:"yes" required:"yes"`
-}
-
-// Execute - Set an environment variable on the target host
-func (e *SetEnv) Execute(args []string) (err error) {
-
-	envInfo, err := transport.RPC.SetEnv(context.Background(), &sliverpb.SetEnvReq{
-		Variable: &commonpb.EnvVar{
-			Key:   e.Positional.Key,
-			Value: e.Positional.Value,
-		},
-		Request: core.ActiveSessionRequest(),
-	})
-	if err != nil {
-		fmt.Printf(Warning+"Error: %v", err)
-		return
-	}
-	if envInfo.Response != nil && envInfo.Response.Err != "" {
-		fmt.Printf(Warning+"Error: %s", envInfo.Response.Err)
-		return
-	}
-	fmt.Printf(Info+"set %s to %s\n", e.Positional.Key, e.Positional.Value)
-
 	return
 }

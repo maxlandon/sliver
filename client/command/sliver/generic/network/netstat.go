@@ -1,4 +1,4 @@
-package sliver
+package network
 
 /*
 	Sliver Implant Framework
@@ -19,64 +19,13 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
-
-// Ifconfig - Show session network interfaces
-type Ifconfig struct{}
-
-// Execute - Show session network interfaces
-func (i *Ifconfig) Execute(args []string) (err error) {
-
-	ifconfig, err := transport.RPC.Ifconfig(context.Background(), &sliverpb.IfconfigReq{
-		Request: core.ActiveSessionRequest(),
-	})
-	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
-		return
-	}
-
-	for ifaceIndex, iface := range ifconfig.NetInterfaces {
-		fmt.Printf("%s%s%s (%d)\n", bold, iface.Name, normal, ifaceIndex)
-		if 0 < len(iface.MAC) {
-			fmt.Printf("   MAC Address: %s\n", iface.MAC)
-		}
-		for _, ip := range iface.IPAddresses {
-
-			// Try to find local IPs and colorize them
-			subnet := -1
-			if strings.Contains(ip, "/") {
-				parts := strings.Split(ip, "/")
-				subnetStr := parts[len(parts)-1]
-				subnet, err = strconv.Atoi(subnetStr)
-				if err != nil {
-					subnet = -1
-				}
-			}
-
-			if 0 < subnet && subnet <= 32 && !isLoopback(ip) {
-				fmt.Printf(bold+green+"    IP Address: %s%s\n", ip, normal)
-			} else if 32 < subnet && !isLoopback(ip) {
-				fmt.Printf(bold+cyan+"    IP Address: %s%s\n", ip, normal)
-			} else {
-				fmt.Printf("    IP Address: %s\n", ip)
-			}
-		}
-	}
-	return
-}
-
-func isLoopback(ip string) bool {
-	if strings.HasPrefix(ip, "127") || strings.HasPrefix(ip, "::1") {
-		return true
-	}
-	return false
-}
 
 // Netstat - Print session active sockets
 type Netstat struct {
@@ -104,10 +53,10 @@ func (n *Netstat) Execute(args []string) (err error) {
 		Listening: listening,
 		IP4:       ip4,
 		IP6:       ip6,
-		Request:   core.ActiveSessionRequest(),
+		Request:   core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	displayEntries(netstat.Entries)
@@ -137,7 +86,7 @@ func displayEntries(entries []*sliverpb.SockTabEntry) {
 		}
 		srcAddr := lookup(e.LocalAddr)
 		dstAddr := lookup(e.RemoteAddr)
-		if e.Process != nil && e.Process.Pid == core.ActiveSession.PID && isSliverAddr(dstAddr) {
+		if e.Process != nil && e.Process.Pid == core.ActiveTarget.Session.PID && isSliverAddr(dstAddr) {
 			fmt.Printf("%s%-5s %-23.23s %-23.23s %-12s %-16s%s\n",
 				green, e.Protocol, srcAddr, dstAddr, e.SkState, p, normal)
 		} else {
@@ -152,6 +101,6 @@ func isSliverAddr(dstAddr string) bool {
 	if len(parts) != 3 {
 		return false
 	}
-	c2Addr := strings.Split(core.ActiveSession.ActiveC2, "://")[1]
+	c2Addr := strings.Split(core.ActiveTarget.Session.ActiveC2, "://")[1]
 	return strings.Join(parts[:2], ":") == c2Addr
 }

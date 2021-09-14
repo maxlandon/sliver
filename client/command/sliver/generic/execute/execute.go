@@ -1,4 +1,4 @@
-package sliver
+package execute
 
 /*
 	Sliver Implant Framework
@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/spin"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
@@ -50,18 +50,18 @@ func (e *Execute) Execute(args []string) (err error) {
 	ctrl := make(chan bool)
 	var exec *sliverpb.Execute
 	msg := fmt.Sprintf("Executing %s %s...", cmdPath, strings.Join(cArgs, " "))
-	go spin.Until(msg, ctrl)
+	go log.SpinUntil(msg, ctrl)
 
 	if e.Options.Token {
 		exec, err = transport.RPC.ExecuteToken(context.Background(), &sliverpb.ExecuteTokenReq{
-			Request: core.ActiveSessionRequest(),
+			Request: core.ActiveTarget.Request(),
 			Path:    cmdPath,
 			Args:    args,
 			Output:  !output,
 		})
 	} else {
 		exec, err = transport.RPC.Execute(context.Background(), &sliverpb.ExecuteReq{
-			Request: core.ActiveSessionRequest(),
+			Request: core.ActiveTarget.Request(),
 			Path:    cmdPath,
 			Args:    args,
 			Output:  !output,
@@ -71,15 +71,15 @@ func (e *Execute) Execute(args []string) (err error) {
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		fmt.Printf(Error+"%s", err)
+		log.Errorf("%s", err)
 	} else if !output {
 		if exec.Status != 0 {
-			fmt.Printf(Error+"Exited with status %d!\n", exec.Status)
-			if exec.Result != "" {
-				fmt.Printf(Info+"Output:\n%s\n", exec.Result)
+			log.Errorf("Exited with status %d!\n", exec.Status)
+			if exec.Response != "" {
+				log.Infof("Output:\n%s\n", exec.Response)
 			}
 		} else {
-			fmt.Printf(Info+"Output:\n%s", exec.Result)
+			log.Infof("Output:\n%s", exec.Response)
 		}
 	}
 	return

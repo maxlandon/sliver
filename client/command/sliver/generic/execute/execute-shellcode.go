@@ -1,4 +1,4 @@
-package sliver
+package execute
 
 /*
 	Sliver Implant Framework
@@ -25,15 +25,11 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
-	"strings"
 
 	"golang.org/x/crypto/ssh/terminal"
 
-	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
-	"github.com/bishopfox/sliver/client/spin"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
@@ -54,18 +50,18 @@ type ExecuteShellcode struct {
 
 // Execute - Executes the given shellcode in the sliver process
 func (es *ExecuteShellcode) Execute(args []string) (err error) {
-	session := core.ActiveSession
+	session := core.ActiveTarget.Session
 
 	interactive := es.Options.Interactive
 	pid := es.Options.PID
 	shellcodePath := es.Positional.LocalPath
 	shellcodeBin, err := ioutil.ReadFile(shellcodePath)
 	if err != nil {
-		fmt.Printf(Error+"Error: %s\n", err.Error())
+		log.Errorf("Error: %s\n", err.Error())
 		return
 	}
 	if pid != 0 && interactive {
-		fmt.Printf(Error + "Cannot use both `--pid` and `--interactive`\n")
+		log.Errorf("Cannot use both `--pid` and `--interactive`\n")
 		return
 	}
 	if interactive {
@@ -74,30 +70,30 @@ func (es *ExecuteShellcode) Execute(args []string) (err error) {
 	}
 	ctrl := make(chan bool)
 	msg := fmt.Sprintf("Sending shellcode to %s ...", session.GetName())
-	go spin.Until(msg, ctrl)
+	go log.SpinUntil(msg, ctrl)
 	task, err := transport.RPC.Task(context.Background(), &sliverpb.TaskReq{
 		Data:     shellcodeBin,
 		RWXPages: es.Options.RWX,
-		Pid:      uint32(pid),
-		Request:  core.ActiveSessionRequest(),
+		Pid:      pid,
+		Request:  core.ActiveTarget.Request(),
 	})
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		fmt.Printf(Error+"Error: %v\n", err)
+		log.Errorf("Error: %v\n", err)
 		return
 	}
 	if task.Response.GetErr() != "" {
-		fmt.Printf(Error+"Error: %s\n", task.Response.GetErr())
+		log.Errorf("Error: %s\n", task.Response.GetErr())
 		return
 	}
-	fmt.Printf(Info + "Executed shellcode on target\n")
+	log.Infof("Executed shellcode on target\n")
 
 	return
 }
 
 func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte, rwxPages bool) {
-	session := core.ActiveSession
+	session := core.ActiveTarget.Session
 
 	// Use the client logger for controlling log output
 	clog := log.ClientLogger
@@ -113,7 +109,7 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 	})
 
 	if err != nil {
-		fmt.Printf(Error+"Error: %v\n", err)
+		log.Errorf("Error: %v\n", err)
 		return
 	}
 
@@ -123,11 +119,11 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 		Path:      hostProc,
 		EnablePTY: !noPty,
 		TunnelID:  tunnel.ID,
-		Request:   core.ActiveSessionRequest(),
+		Request:   core.ActiveTarget.Request(),
 	})
 
 	if err != nil {
-		fmt.Printf(Error+"Error: %v\n", err)
+		log.Errorf("Error: %v\n", err)
 		return
 	}
 	// Retrieve PID and start remote task
@@ -135,30 +131,30 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 
 	ctrl := make(chan bool)
 	msg := fmt.Sprintf("Sending shellcode to %s ...", session.GetName())
-	go spin.Until(msg, ctrl)
+	go log.SpinUntil(msg, ctrl)
 	_, err = transport.RPC.Task(context.Background(), &sliverpb.TaskReq{
 		Pid:      pid,
 		Data:     shellcode,
 		RWXPages: rwxPages,
-		Request:  core.ActiveSessionRequest(),
+		Request:  core.ActiveTarget.Request(),
 	})
 	ctrl <- true
 	<-ctrl
 
 	if err != nil {
-		fmt.Printf(Error+"Error: %v", err)
+		log.Errorf("Error: %v", err)
 		return
 	}
 
 	clog.Debugf("Bound remote program pid %d to tunnel %d", shell.Pid, shell.TunnelID)
-	fmt.Printf(Info+"Started remote shell with pid %d\n\n", shell.Pid)
+	log.Infof("Started remote shell with pid %d\n\n", shell.Pid)
 
 	var oldState *terminal.State
 	if !noPty {
 		oldState, err = terminal.MakeRaw(0)
 		clog.Tracef("Saving terminal state: %v", oldState)
 		if err != nil {
-			fmt.Printf(Error + "Failed to save terminal state")
+			log.Errorf("Failed to save terminal state")
 			return
 		}
 	}
@@ -168,7 +164,7 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 		n, err := io.Copy(os.Stdout, tunnel)
 		clog.Tracef("Wrote %d bytes to stdout", n)
 		if err != nil {
-			fmt.Printf(Error+"Error writing to stdout: %v", err)
+			log.Errorf("Error writing to stdout: %v", err)
 			return
 		}
 	}()
@@ -180,7 +176,7 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 			break
 		}
 		if err != nil {
-			fmt.Printf(Error+"Error reading from stdin: %v", err)
+			log.Errorf("Error reading from stdin: %v", err)
 			break
 		}
 	}
@@ -193,69 +189,4 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 	clog.Debugf("Exit interactive")
 	bufio.NewWriter(os.Stdout).Flush()
 
-}
-
-// Sideload - Load and execute a shared object (shared library/DLL) in a remote process
-type Sideload struct {
-	Positional struct {
-		LocalPath string   `description:"path to shared object" required:"1-1"`
-		Args      []string `description:"(optional) arguments for the shared library function"`
-	} `positional-args:"yes" required:"yes"`
-
-	Options struct {
-		Entrypoint string `long:"entry-point" short:"e" description:"entrypoint for the DLL (Windows only)"`
-		RemotePath string `long:"process" short:"p" description:"path to process to host the shellcode"`
-		Save       bool   `long:"save" short:"s" description:"save output to file"`
-		KeepAlive  bool   `long:"keep-alive" short:"k" description:"don't terminate host process once the execution completes"`
-	} `group:"sideload options"`
-}
-
-// Execute - Load and execute a shared object (shared library/DLL) in a remote process
-func (s *Sideload) Execute(args []string) (err error) {
-	session := core.ActiveSession
-
-	binPath := s.Positional.LocalPath
-
-	entryPoint := s.Options.Entrypoint
-	processName := s.Options.RemotePath
-	cargs := strings.Join(s.Positional.Args, " ")
-
-	binData, err := ioutil.ReadFile(binPath)
-	if err != nil {
-		fmt.Printf(Error+"%s", err.Error())
-		return
-	}
-	ctrl := make(chan bool)
-	go spin.Until(fmt.Sprintf("Sideloading %s ...", binPath), ctrl)
-	sideload, err := transport.RPC.Sideload(context.Background(), &sliverpb.SideloadReq{
-		Args:        cargs,
-		Data:        binData,
-		EntryPoint:  entryPoint,
-		ProcessName: processName,
-		Kill:        !s.Options.KeepAlive,
-		Request:     core.ActiveSessionRequest(),
-	})
-	ctrl <- true
-	<-ctrl
-	if err != nil {
-		fmt.Printf(Error+"Error: %v", err)
-		return
-	}
-
-	if sideload.GetResponse().GetErr() != "" {
-		fmt.Printf(Error+"Error: %s\n", sideload.GetResponse().GetErr())
-		return
-	}
-	var outFilePath *os.File
-	if s.Options.Save {
-		outFile := path.Base(fmt.Sprintf("%s_%s*.log", constants.SideloadStr, session.GetHostname()))
-		outFilePath, err = ioutil.TempFile("", outFile)
-	}
-	fmt.Printf(Info+"Output:\n%s", sideload.GetResult())
-	if outFilePath != nil {
-		outFilePath.Write([]byte(sideload.GetResult()))
-		fmt.Printf(Info+"Output saved to %s\n", outFilePath.Name())
-	}
-
-	return
 }

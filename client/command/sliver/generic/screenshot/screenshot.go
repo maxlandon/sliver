@@ -1,4 +1,4 @@
-package sliver
+package screenshot
 
 /*
 	Sliver Implant Framework
@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
@@ -35,18 +36,18 @@ type Screenshot struct{}
 
 // Execute - Take a screenshot
 func (s *Screenshot) Execute(args []string) (err error) {
-	session := core.ActiveSession
+	session := core.ActiveTarget.Session
 
 	if session.OS != "windows" && session.OS != "linux" {
-		fmt.Printf(Error+"Not implemented for %s\n", session.OS)
+		log.Errorf("Not implemented for %s\n", session.OS)
 		return
 	}
 
 	screenshot, err := transport.RPC.Screenshot(context.Background(), &sliverpb.ScreenshotReq{
-		Request: core.ActiveSessionRequest(),
+		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 
@@ -54,14 +55,14 @@ func (s *Screenshot) Execute(args []string) (err error) {
 	tmpFileName := path.Base(fmt.Sprintf("screenshot_%s_%d_%s_*.png", session.Name, session.ID, timestamp))
 	tmpFile, err := ioutil.TempFile("", tmpFileName)
 	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	err = ioutil.WriteFile(tmpFile.Name(), screenshot.Data, 0600)
 	if err != nil {
-		fmt.Printf(Error+"Error writting file: %s\n", err)
+		log.Errorf("Error writting file: %s\n", err)
 		return
 	}
-	fmt.Printf(bold+"Screenshot written to %s\n", tmpFile.Name())
+	log.Infof("Screenshot written to %s\n", tmpFile.Name())
 	return
 }
