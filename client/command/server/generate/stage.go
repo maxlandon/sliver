@@ -1,4 +1,4 @@
-package server
+package generate
 
 /*
 	Sliver Implant Framework
@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/url"
 	"os"
@@ -36,9 +35,8 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 
 	"github.com/bishopfox/sliver/client/constants"
-	"github.com/bishopfox/sliver/client/spin"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
-	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
@@ -140,7 +138,7 @@ type Regenerate struct {
 // Execute - Recompile an implant with a given profile
 func (r *Regenerate) Execute(args []string) (err error) {
 	if r.Positional.ImplantName == "" {
-		fmt.Printf(Error+"Invalid implant name, see `help %s`\n", constants.RegenerateStr)
+		log.Errorf("Invalid implant name, see `help %s`\n", constants.RegenerateStr)
 		return
 	}
 	save := r.Options.Save
@@ -152,24 +150,24 @@ func (r *Regenerate) Execute(args []string) (err error) {
 		ImplantName: r.Positional.ImplantName,
 	})
 	if err != nil {
-		fmt.Printf(util.RPCError+"Failed to regenerate implant %s\n", err)
+		log.RPCErrorf("Failed to regenerate implant %s\n", err)
 		return
 	}
 	if regenerate.File == nil {
-		fmt.Printf(Error + "Failed to regenerate implant (no data)\n")
+		log.Errorf("Failed to regenerate implant (no data)\n")
 		return
 	}
 	saveTo, err := saveLocation(save, regenerate.File.Name)
 	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	err = ioutil.WriteFile(saveTo, regenerate.File.Data, 0500)
 	if err != nil {
-		fmt.Printf(Error+"Failed to write to %s\n", err)
+		log.Errorf("Failed to write to %s\n", err)
 		return
 	}
-	fmt.Printf(Error+"Implant binary saved to: %s\n", saveTo)
+	log.Infof("Implant binary saved to: %s\n", saveTo)
 
 	return
 }
@@ -179,7 +177,7 @@ func parseCompileFlags(g StageOptions) (*clientpb.ImplantConfig, error) {
 	platform := strings.ToLower(g.CoreOptions.Platform)
 
 	if len(strings.Split(platform, "/")) != 2 {
-		return nil, fmt.Errorf(Error + "--platform value must be os/arch value")
+		return nil, fmt.Errorf("--platform value must be os/arch value")
 	}
 	targetOS := strings.Split(platform, "/")[0]
 	arch := strings.Split(platform, "/")[1]
@@ -191,7 +189,7 @@ func parseCompileFlags(g StageOptions) (*clientpb.ImplantConfig, error) {
 		if name != "" {
 			isAlphanumeric := regexp.MustCompile(`^[[:alnum:]]+$`).MatchString
 			if !isAlphanumeric(name) {
-				return nil, fmt.Errorf(Error + "Agent's name must be in alphanumeric only")
+				return nil, fmt.Errorf("Agent's name must be in alphanumeric only")
 			}
 		}
 	}
@@ -221,7 +219,7 @@ func parseCompileFlags(g StageOptions) (*clientpb.ImplantConfig, error) {
 	}
 
 	if len(mtlsC2) == 0 && len(httpC2) == 0 && len(dnsC2) == 0 && len(namedPipeC2) == 0 && len(tcpPivotC2) == 0 {
-		return nil, fmt.Errorf(Error + "Must specify at least one of --mtls, --http, --dns, --named-pipe, or --tcp-pivot")
+		return nil, fmt.Errorf("Must specify at least one of --mtls, --http, --dns, --named-pipe, or --tcp-pivot")
 	}
 
 	var canaryDomains []string
@@ -248,22 +246,22 @@ func parseCompileFlags(g StageOptions) (*clientpb.ImplantConfig, error) {
 	isShellcode := false
 
 	format := g.CoreOptions.Format
-	var configFormat clientpb.ImplantConfig_OutputFormat
+	var configFormat clientpb.OutputFormat
 	switch format {
 	case "exe":
-		configFormat = clientpb.ImplantConfig_EXECUTABLE
+		configFormat = clientpb.OutputFormat_EXECUTABLE
 	case "shared":
-		configFormat = clientpb.ImplantConfig_SHARED_LIB
+		configFormat = clientpb.OutputFormat_SHARED_LIB
 		isSharedLib = true
 	case "shellcode":
-		configFormat = clientpb.ImplantConfig_SHELLCODE
+		configFormat = clientpb.OutputFormat_SHELLCODE
 		isShellcode = true
 	case "service":
-		configFormat = clientpb.ImplantConfig_SERVICE
+		configFormat = clientpb.OutputFormat_SERVICE
 		isService = true
 	default:
 		// default to exe
-		configFormat = clientpb.ImplantConfig_EXECUTABLE
+		configFormat = clientpb.OutputFormat_EXECUTABLE
 	}
 
 	targetOS, arch = getTargets(targetOS, arch)
@@ -272,7 +270,7 @@ func parseCompileFlags(g StageOptions) (*clientpb.ImplantConfig, error) {
 	}
 
 	if len(namedPipeC2) > 0 && targetOS != "windows" {
-		return nil, fmt.Errorf(Error + "Named pipe pivoting can only be used in Windows.")
+		return nil, fmt.Errorf("Named pipe pivoting can only be used in Windows.")
 	}
 
 	var tunIP net.IP
@@ -280,9 +278,9 @@ func parseCompileFlags(g StageOptions) (*clientpb.ImplantConfig, error) {
 		uniqueWGIP, err := transport.RPC.GenerateUniqueIP(context.Background(), &commonpb.Empty{})
 		tunIP = net.ParseIP(uniqueWGIP.IP)
 		if err != nil {
-			return nil, fmt.Errorf(Error + "Failed to generate unique ip for wg peer tun interface")
+			return nil, fmt.Errorf("Failed to generate unique ip for wg peer tun interface")
 		}
-		fmt.Printf(Info+"Generated unique ip for wg peer tun interface: %s\n", tunIP.String())
+		log.Infof("Generated unique ip for wg peer tun interface: %s\n", tunIP.String())
 	}
 
 	config := &clientpb.ImplantConfig{
@@ -299,8 +297,8 @@ func parseCompileFlags(g StageOptions) (*clientpb.ImplantConfig, error) {
 		WGKeyExchangePort: uint32(g.TransportOptions.KeyExchange),
 		WGTcpCommsPort:    uint32(g.TransportOptions.TCPComms),
 
-		ReconnectInterval:   uint32(reconnectInterval),
-		PollInterval:        uint32(g.TransportOptions.PollInterval),
+		ReconnectInterval:   int64(reconnectInterval) * int64(time.Second),
+		PollTimeout:         int64(g.TransportOptions.PollInterval) * int64(time.Second),
 		MaxConnectionErrors: uint32(maxConnectionErrors),
 
 		LimitDomainJoined: limitDomainJoined,
@@ -491,18 +489,18 @@ func parseTCPPivotc2(args []string) []*clientpb.ImplantC2 {
 
 func compile(config *clientpb.ImplantConfig, save string) (*commonpb.File, error) {
 
-	fmt.Printf(Info+"Generating new %s/%s implant binary\n", config.GOOS, config.GOARCH)
+	log.Infof("Generating new %s/%s implant binary\n", config.GOOS, config.GOARCH)
 
 	if config.ObfuscateSymbols {
-		fmt.Printf(Info+"%sSymbol obfuscation is enabled.%s\n", bold, normal)
-		fmt.Printf(Info + "This process can take awhile, and consumes significant amounts of CPU/Memory\n")
+		log.Infof("Symbol obfuscation is enabled.\n")
+		log.Infof("This process can take awhile, and consumes significant amounts of CPU/Memory\n")
 	} else if !config.Debug {
-		fmt.Printf(Warning+"Symbol obfuscation is %sdisabled%s\n", bold, normal)
+		log.Warnf("Symbol obfuscation is disabled\n")
 	}
 
 	start := time.Now()
 	ctrl := make(chan bool)
-	go spin.Until("Compiling, please wait ...", ctrl)
+	go log.SpinUntil("Compiling, please wait ...", ctrl)
 
 	generated, err := transport.RPC.Generate(context.Background(), &clientpb.GenerateReq{
 		Config: config,
@@ -510,15 +508,15 @@ func compile(config *clientpb.ImplantConfig, save string) (*commonpb.File, error
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
+		log.Errorf("%s\n", err)
 		return nil, err
 	}
 
 	end := time.Now()
 	elapsed := time.Time{}.Add(end.Sub(start))
-	fmt.Printf(clearln+Info+"Build completed in %s\n", elapsed.Format("15:04:05"))
+	log.Infof("Build completed in %s\n", elapsed.Format("15:04:05"))
 	if len(generated.File.Data) == 0 {
-		fmt.Printf(Warning + "Build failed, no file data\n")
+		log.Errorf("Build failed, no file data\n")
 		return nil, errors.New("No file data")
 	}
 
@@ -529,10 +527,10 @@ func compile(config *clientpb.ImplantConfig, save string) (*commonpb.File, error
 
 	err = ioutil.WriteFile(saveTo, generated.File.Data, 0700)
 	if err != nil {
-		fmt.Printf(Warning+"Failed to write to: %s\n", saveTo)
+		log.Errorf("Failed to write to: %s\n", saveTo)
 		return nil, err
 	}
-	fmt.Printf(Info+"Implant saved to %s\n", saveTo)
+	log.Infof("Implant saved to %s\n", saveTo)
 	return generated.File, err
 }
 
@@ -545,7 +543,7 @@ func saveLocation(save, defaultName string) (string, error) {
 	if os.IsNotExist(err) {
 		log.Printf("%s does not exist\n", save)
 		if strings.HasSuffix(save, "/") {
-			log.Printf("%s is dir\n", save)
+			log.Infof("%s is dir\n", save)
 			os.MkdirAll(save, 0700)
 			saveTo, _ = filepath.Abs(path.Join(saveTo, defaultName))
 		} else {
@@ -560,7 +558,7 @@ func saveLocation(save, defaultName string) (string, error) {
 	} else {
 		log.Printf("%s does exist\n", save)
 		if fi.IsDir() {
-			log.Printf("%s is dir\n", save)
+			log.Infof("%s is dir\n", save)
 			saveTo, _ = filepath.Abs(path.Join(save, defaultName))
 		} else {
 			log.Printf("%s is not dir\n", save)

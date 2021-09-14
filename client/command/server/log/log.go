@@ -1,4 +1,4 @@
-package server
+package log
 
 /*
 	Sliver Implant Framework
@@ -16,8 +16,6 @@ package server
 */
 
 import (
-	"fmt"
-
 	"github.com/maxlandon/readline"
 	"github.com/sirupsen/logrus"
 
@@ -37,14 +35,14 @@ func (l *Log) Execute(args []string) (err error) {
 	// Check level
 	level, valid := logrusLevels[l.Positional.Level]
 	if !valid {
-		fmt.Printf(Error + "Invalid log level (trace, debug, info, warn, error)\n")
+		log.Errorf("Invalid log level (trace, debug, info, warn, error)\n")
 		return
 	}
 
 	for _, comp := range l.Positional.Components {
 		for name, logger := range log.Loggers {
 			if name == comp {
-				fmt.Printf(Info+"Log level (%s): %s\n", readline.Blue(name), readline.Yellow(level.String()))
+				log.Infof("Log level (%s): %s\n", readline.Blue(name), readline.Yellow(level.String()))
 				logger.SetLevel(level)
 			}
 		}

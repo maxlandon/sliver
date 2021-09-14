@@ -1,4 +1,4 @@
-package server
+package operators
 
 /*
 	Sliver Implant Framework
@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -40,7 +41,7 @@ func (o *Operators) Execute(args []string) (err error) {
 	} else if 0 < len(operators.Operators) {
 		displayOperators(operators.Operators)
 	} else {
-		fmt.Printf(Info + "No remote operators connected\n")
+		log.Infof("No remote operators connected\n")
 	}
 
 	return

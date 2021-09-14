@@ -1,4 +1,4 @@
-package server
+package canaries
 
 /*
 	Sliver Implant Framework
@@ -25,10 +25,17 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
-	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+)
+
+const (
+	// ANSI Colors
+	normal = "\033[0m"
+	red    = "\033[31m"
+	bold   = "\033[1m"
 )
 
 // Canaries - List previously generated canaries
@@ -41,13 +48,13 @@ func (c *Canaries) Execute(args []string) (err error) {
 
 	canaries, err := transport.RPC.Canaries(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		fmt.Printf(util.RPCError+"Failed to list canaries %s", err)
+		log.RPCErrorf("Failed to list canaries %s", err)
 		return
 	}
 	if 0 < len(canaries.Canaries) {
 		displayCanaries(canaries.Canaries, c.Burned)
 	} else {
-		fmt.Printf(util.Info + "No canaries in database\n")
+		log.Infof("No canaries in database\n")
 	}
 	return
 }

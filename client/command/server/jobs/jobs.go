@@ -1,4 +1,4 @@
-package server
+package jobs
 
 /*
 	Sliver Implant Framework
@@ -27,6 +27,7 @@ import (
 
 	"github.com/maxlandon/readline"
 
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -52,7 +53,7 @@ func (j *Jobs) Execute(args []string) (err error) {
 	if 0 < len(activeJobs) {
 		printJobs(activeJobs)
 	} else {
-		fmt.Printf(Info + "No active jobs\n")
+		log.Infof("No active jobs\n")
 	}
 	return
 }
@@ -67,12 +68,12 @@ type JobsKill struct {
 // Execute - Kill a job given an ID
 func (j *JobsKill) Execute(args []string) (err error) {
 	for _, jobID := range j.Positional.JobID {
-		fmt.Printf(Info+"Killing job #%d ... \n", jobID)
+		log.Infof("Killing job #%d ... \n", jobID)
 		_, err := transport.RPC.KillJob(context.Background(), &clientpb.KillJobReq{
 			ID: jobID,
 		})
 		if err != nil {
-			fmt.Printf(Error+"%s\n", err)
+			log.Errorf("%s\n", err)
 		}
 	}
 	return
@@ -96,14 +97,14 @@ func (j *JobsKillAll) Execute(args []string) (err error) {
 }
 
 func killJob(jobID uint32) {
-	fmt.Printf(Info+"Killing job #%d ...\n", jobID)
+	log.Infof("Killing job #%d ...\n", jobID)
 	jobKill, err := transport.RPC.KillJob(context.Background(), &clientpb.KillJobReq{
 		ID: jobID,
 	})
 	if err != nil {
 		fmt.Printf(util.RPCError+"%s\n", err)
 	} else {
-		fmt.Printf(Info+"Successfully killed job #%d\n", jobKill.ID)
+		log.Infof("Successfully killed job #%d\n", jobKill.ID)
 	}
 }
 

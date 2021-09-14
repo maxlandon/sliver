@@ -1,4 +1,4 @@
-package server
+package core
 
 /*
 	Sliver Implant Framework
@@ -26,6 +26,7 @@ import (
 
 	"github.com/evilsocket/islazy/fs"
 
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/util"
 )
 
@@ -63,9 +64,9 @@ func (cd *ChangeClientDirectory) Execute(args []string) (err error) {
 
 	err = os.Chdir(dir)
 	if err != nil {
-		fmt.Printf(util.CommandError+"%s \n", err)
+		log.Errorf(err.Error())
 	} else {
-		fmt.Printf(Info+"Changed directory to %s \n", dir)
+		log.Infof("Changed directory to %s \n", dir)
 	}
 
 	return
@@ -96,7 +97,7 @@ func (ls *ListClientDirectories) Execute(args []string) error {
 
 	err := util.Shell(base)
 	if err != nil {
-		fmt.Println(err)
+		log.CommandErrorf(err.Error())
 	}
 
 	return nil

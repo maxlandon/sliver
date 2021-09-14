@@ -1,4 +1,4 @@
-package server
+package generate
 
 /*
 	Sliver Implant Framework
@@ -26,6 +26,7 @@ import (
 
 	"github.com/maxlandon/readline"
 
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -47,7 +48,7 @@ func (b *Builds) Execute(args []string) (err error) {
 	if 0 < len(builds.Configs) {
 		printImplantBuilds(builds.Configs)
 	} else {
-		fmt.Printf(Info + "No implant builds\n")
+		log.Infof("No implant builds\n")
 	}
 
 	return
@@ -140,6 +141,7 @@ type RemoveBuild struct {
 	} `positional-args:"yes" required:"yes"`
 }
 
+// Execute - Remove one or more implant builds from the server database
 func (r *RemoveBuild) Execute(args []string) (err error) {
 
 	for _, name := range r.Args.Names {
@@ -147,10 +149,10 @@ func (r *RemoveBuild) Execute(args []string) (err error) {
 			Name: name,
 		})
 		if err != nil {
-			fmt.Printf(Error+"Failed to delete implant %s\n", err)
+			log.Errorf("Failed to delete implant %s\n", err)
 			continue
 		}
-		fmt.Printf(Info+"Deleted implant %s\n", name)
+		log.Infof("Deleted implant %s\n", name)
 
 	}
 	return

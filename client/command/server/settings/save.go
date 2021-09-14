@@ -1,4 +1,4 @@
-package server
+package settings
 
 /*
 	Sliver Implant Framework
@@ -21,12 +21,12 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"google.golang.org/grpc"
 
+	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
-	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
@@ -37,10 +37,10 @@ type SaveConfig struct{}
 // Execute - Save the current console configuration.
 func (c *SaveConfig) Execute(args []string) (err error) {
 
-	currentConf := Console.GetConfig()
+	currentConf := core.Console.GetConfig()
 	confBytes, err := json.Marshal(currentConf)
 	if err != nil {
-		fmt.Printf(Error+"Error marshaling config: %s\n", err.Error())
+		log.Errorf("Error marshaling config: %s\n", err.Error())
 	}
 
 	req := &clientpb.SaveConsoleConfigReq{
@@ -48,14 +48,14 @@ func (c *SaveConfig) Execute(args []string) (err error) {
 	}
 	res, err := transport.RPC.SaveUserConsoleConfig(context.Background(), req, grpc.EmptyCallOption{})
 	if err != nil {
-		fmt.Printf(util.RPCError+"%v\n", err)
+		log.RPCErrorf("%v\n", err)
 		return
 	}
 
 	if res.Response.Err != "" {
-		fmt.Printf(Error+"Error saving config: %s\n", res.Response.Err)
+		log.Errorf("Error saving config: %s\n", res.Response.Err)
 	} else {
-		fmt.Printf(Info + "Saved console config\n")
+		log.Infof("Saved console config\n")
 	}
 	return
 }

@@ -23,48 +23,26 @@ import (
 
 	"github.com/maxlandon/gonsole"
 
-	"github.com/bishopfox/sliver/client/command/c2"
-	"github.com/bishopfox/sliver/client/command/sliver"
 	"github.com/bishopfox/sliver/client/completion"
 	"github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/help"
 	"github.com/bishopfox/sliver/client/util"
-)
 
-const (
-	// ANSI Colors
-	normal    = "\033[0m"
-	black     = "\033[30m"
-	red       = "\033[31m"
-	green     = "\033[32m"
-	orange    = "\033[33m"
-	blue      = "\033[34m"
-	purple    = "\033[35m"
-	cyan      = "\033[36m"
-	gray      = "\033[37m"
-	bold      = "\033[1m"
-	clearln   = "\r\x1b[2K"
-	upN       = "\033[%dA"
-	downN     = "\033[%dB"
-	underline = "\033[4m"
-
-	// Info - Display colorful information
-	Info = bold + cyan + "[*] " + normal
-	// Debug - Display debug information
-	Debug = bold + purple + "[-] " + normal
-	// Error - Notify error to a user
-	Error = bold + red + "[!] " + normal
-	// Warning - Notify important information, not an error
-	Warning = bold + orange + "[!] " + normal
-	// Woot - Display success
-	Woot = bold + green + "[$] " + normal
+	// Commands implementations
+	"github.com/bishopfox/sliver/client/command/c2"
+	"github.com/bishopfox/sliver/client/command/server/canaries"
+	ccore "github.com/bishopfox/sliver/client/command/server/core"
+	"github.com/bishopfox/sliver/client/command/server/generate"
+	"github.com/bishopfox/sliver/client/command/server/jobs"
+	"github.com/bishopfox/sliver/client/command/server/log"
+	"github.com/bishopfox/sliver/client/command/server/operators"
+	"github.com/bishopfox/sliver/client/command/server/sessions"
+	"github.com/bishopfox/sliver/client/command/server/update"
+	"github.com/bishopfox/sliver/client/command/sliver"
 )
 
 var (
-	// Console Some commands might need to access the current context
-	// in the course of the application execution.
-	Console *gonsole.Console
-
 	// Most commands just need access to a precise context.
 	serverMenu *gonsole.Menu
 )
@@ -83,19 +61,19 @@ func BindCommands(cc *gonsole.Menu) {
 	serverMenu.UnknownCommandHandler = util.Shell
 
 	// Core Commands ----------------------------------------------------------------------------
-	cc.AddCommand(constants.ExitStr, // Command name
+	cc.AddCommand("exit", // Command name
 		"Exit from the client/server console", // Short description (completions & hints)
 		"",                                    // Long description
 		constants.CoreServerGroup,             // The group of the command (completions, menu structuring)
 		[]string{""},                          // A filter by which to hide/show the command.
-		func() interface{} { return &Exit{} }) // The command generator, yielding instances.
+		func() interface{} { return &ccore.Exit{} }) // The command generator, yielding instances.
 
 	cc.AddCommand(constants.VersionStr,
 		"Display version information",
 		help.GetHelpFor(constants.VersionStr),
 		constants.CoreServerGroup,
 		[]string{""},
-		func() interface{} { return &Version{} })
+		func() interface{} { return &update.Version{} })
 
 	// Cd has a context-sensitive name.
 	var cdCmdStr string
@@ -111,31 +89,31 @@ func BindCommands(cc *gonsole.Menu) {
 		"",
 		constants.CoreServerGroup,
 		[]string{""},
-		func() interface{} { return &ChangeClientDirectory{} })
-	cd.AddArgumentCompletionDynamic("Path", Console.Completer.LocalPath)
+		func() interface{} { return &ccore.ChangeClientDirectory{} })
+	cd.AddArgumentCompletionDynamic("Path", core.Console.Completer.LocalPath)
 
 	cc.AddCommand(constants.LicensesStr,
 		"Display project licenses (core & libraries)",
 		"",
 		constants.CoreServerGroup,
 		[]string{""},
-		func() interface{} { return &Licenses{} })
+		func() interface{} { return &update.Licenses{} })
 
 	updates := cc.AddCommand(constants.UpdateStr,
 		"Check for newer Sliver console/server releases",
 		help.GetHelpFor(constants.UpdateStr),
 		constants.CoreServerGroup,
 		[]string{""},
-		func() interface{} { return &Updates{} })
+		func() interface{} { return &update.Updates{} })
 	updates.AddOptionCompletionDynamic("Proxy", completion.NewURLCompleterProxyUpdate().CompleteURL) // Option completions
-	updates.AddOptionCompletionDynamic("Save", Console.Completer.LocalPath)
+	updates.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
 
-	cc.AddCommand(constants.PlayersStr,
+	cc.AddCommand(constants.OperatorsStr,
 		"List operators and their status",
-		help.GetHelpFor(constants.PlayersStr),
+		help.GetHelpFor(constants.OperatorsStr),
 		constants.CoreServerGroup,
 		[]string{""},
-		func() interface{} { return &Operators{} })
+		func() interface{} { return &operators.Operators{} })
 
 	// Log management ---------------------------------------------------------------------------
 	log := cc.AddCommand(constants.LogStr,
@@ -143,30 +121,30 @@ func BindCommands(cc *gonsole.Menu) {
 		"",
 		constants.CoreServerGroup,
 		[]string{""},
-		func() interface{} { return &Log{} })
+		func() interface{} { return &log.Log{} })
 	log.AddArgumentCompletion("Level", completion.LogLevels)
 	log.AddArgumentCompletion("Components", completion.Loggers)
 
 	// Jobs management --------------------------------------------------------------------------
-	jobs := cc.AddCommand(constants.JobsStr,
+	j := cc.AddCommand(constants.JobsStr,
 		"Job management commands",
 		help.GetHelpFor(constants.JobsStr),
 		constants.CoreServerGroup,
 		[]string{""},
-		func() interface{} { return &Jobs{} })
+		func() interface{} { return &jobs.Jobs{} })
 
-	jobs.SubcommandsOptional = true
+	j.SubcommandsOptional = true
 
-	kill := jobs.AddCommand(constants.JobsKillStr,
+	kill := j.AddCommand(constants.JobsKillStr,
 		"Kill one or more jobs given their ID",
 		"", "", []string{""},
-		func() interface{} { return &JobsKill{} })
+		func() interface{} { return &jobs.JobsKill{} })
 	kill.AddArgumentCompletion("JobID", completion.JobIDs)
 
-	jobs.AddCommand(constants.JobsKillAllStr,
+	j.AddCommand(constants.JobsKillAllStr,
 		"Kill all active jobs on server",
 		"", "", []string{""},
-		func() interface{} { return &JobsKillAll{} })
+		func() interface{} { return &jobs.JobsKillAll{} })
 
 	// Session Management ----------------------------------------------------------------------------
 	interact := cc.AddCommand(constants.UseStr,
@@ -174,41 +152,41 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.UseStr),
 		constants.SessionsGroup,
 		[]string{""},
-		func() interface{} { return &Interact{} })
+		func() interface{} { return &sessions.Interact{} })
 	interact.AddArgumentCompletion("SessionID", completion.SessionIDs)
 
-	sessions := cc.AddCommand(constants.SessionsStr,
+	s := cc.AddCommand(constants.SessionsStr,
 		"Session management (all contexts)",
 		help.GetHelpFor(constants.SessionsStr),
 		constants.SessionsGroup,
 		[]string{""},
-		func() interface{} { return &Sessions{} })
+		func() interface{} { return &sessions.Sessions{} })
 
-	sessions.SubcommandsOptional = true
+	s.SubcommandsOptional = true
 
-	sinteract := sessions.AddCommand(constants.InteractStr,
+	sinteract := s.AddCommand("interact",
 		"Interact with an implant",
 		help.GetHelpFor(constants.UseStr),
 		"",
 		[]string{""},
-		func() interface{} { return &Interact{} })
+		func() interface{} { return &sessions.Interact{} })
 	sinteract.AddArgumentCompletion("SessionID", completion.SessionIDs)
 
-	sessionKill := sessions.AddCommand(constants.KillStr,
+	sessionKill := s.AddCommand(constants.KillStr,
 		"Kill one or more implant sessions",
 		"", "", []string{""},
-		func() interface{} { return &SessionsKill{} })
+		func() interface{} { return &sessions.SessionsKill{} })
 	sessionKill.AddArgumentCompletion("SessionID", completion.SessionIDs)
 
-	sessions.AddCommand(constants.JobsKillAllStr,
+	s.AddCommand(constants.JobsKillAllStr,
 		"Kill all registered sessions",
 		"", "", []string{""},
-		func() interface{} { return &SessionsKillAll{} })
+		func() interface{} { return &sessions.SessionsKillAll{} })
 
-	sessions.AddCommand("clean",
+	s.AddCommand(constants.PruneStr,
 		"Clean sessions marked Dead",
 		"", "", []string{""},
-		func() interface{} { return &SessionsClean{} })
+		func() interface{} { return &sessions.SessionsClean{} })
 
 	pivots := cc.AddCommand(constants.PivotsListStr,
 		"Pivots management command, prints them by default",
@@ -224,76 +202,82 @@ func BindCommands(cc *gonsole.Menu) {
 		"",
 		constants.BuildsGroup,
 		[]string{""},
-		func() interface{} { return &Generate{} })
+		func() interface{} { return &generate.Generate{} })
 
-	s := g.AddCommand(constants.StageStr,
+	st := g.AddCommand("stage",
 		"Configure and compile a Sliver (stage) implant",
 		help.GetHelpFor(constants.GenerateStr),
 		"", []string{""},
-		func() interface{} { return &GenerateStage{} })
-	s.AddOptionCompletion("Platform", completion.CompleteStagePlatforms)
-	s.AddOptionCompletion("Format", completion.CompleteStageFormats)
-	s.AddOptionCompletionDynamic("Save", Console.Completer.LocalPath)
-	s.AddOptionCompletion("MTLS", completion.ServerInterfaceAddrs)
-	s.AddOptionCompletion("HTTP", completion.ServerInterfaceAddrs)
-	s.AddOptionCompletion("DNS", completion.ServerInterfaceAddrs)
-	s.AddOptionCompletion("TCPPivot", completion.ActiveSessionIfaceAddrs)
+		func() interface{} { return &generate.GenerateStage{} })
+	st.AddOptionCompletion("Platform", completion.CompleteStagePlatforms)
+	st.AddOptionCompletion("Format", completion.CompleteStageFormats)
+	st.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
+	st.AddOptionCompletion("MTLS", completion.ServerInterfaceAddrs)
+	st.AddOptionCompletion("HTTP", completion.ServerInterfaceAddrs)
+	st.AddOptionCompletion("DNS", completion.ServerInterfaceAddrs)
+	st.AddOptionCompletion("TCPPivot", completion.ActiveSessionIfaceAddrs)
 
 	sg := g.AddCommand(constants.StagerStr,
 		"Generate a stager shellcode payload using MSFVenom, (to file: --save, to stdout: --format",
 		help.GetHelpFor(constants.StagerStr),
 		"", []string{""},
-		func() interface{} { return &GenerateStager{} })
+		func() interface{} { return &generate.GenerateStager{} })
 	sg.AddOptionCompletion("Format", completion.CompleteMsfFormats)
 	sg.AddOptionCompletion("Protocol", completion.CompleteMsfProtocols)
-	sg.AddOptionCompletionDynamic("Save", Console.Completer.LocalPath)
+	sg.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
 
 	// Profiles Management / Generation ----------------------------------------------------------------
-	p := cc.AddCommand(constants.NewProfileStr,
+	p := cc.AddCommand(constants.ProfilesStr,
+		"Implant profiles management commands",
+		help.GetHelpFor(constants.ProfilesStr),
+		constants.BuildsGroup,
+		[]string{""},
+		func() interface{} { return &generate.ProfilesCmd{} })
+
+	pn := p.AddCommand(constants.NewStr,
 		"Configure and save a new (stage) implant profile",
-		help.GetHelpFor(constants.NewProfileStr),
+		help.GetHelpFor(constants.ProfilesStr),
 		constants.BuildsGroup,
 		[]string{""},
-		func() interface{} { return &NewProfile{} })
-	p.AddOptionCompletion("Platform", completion.CompleteStagePlatforms)
-	p.AddOptionCompletion("Format", completion.CompleteStageFormats)
+		func() interface{} { return &generate.NewProfile{} })
+	pn.AddOptionCompletion("Platform", completion.CompleteStagePlatforms)
+	pn.AddOptionCompletion("Format", completion.CompleteStageFormats)
 
-	regenerate := cc.AddCommand(constants.RegenerateStr,
-		"Recompile an implant by name, passed as argument (completed)",
-		help.GetHelpFor(constants.RegenerateStr),
-		constants.BuildsGroup,
-		[]string{""},
-		func() interface{} { return &Regenerate{} })
-	regenerate.AddArgumentCompletion("ImplantName", completion.ImplantNames)
-
-	pr := cc.AddCommand(constants.ProfilesStr,
+	pr := p.AddCommand("list",
 		"List existing implant profiles",
 		help.GetHelpFor(constants.ProfilesStr),
 		constants.BuildsGroup,
 		[]string{""},
-		func() interface{} { return &Profiles{} })
-
+		func() interface{} { return &generate.Profiles{} })
 	pr.SubcommandsOptional = true
 
-	profileDelete := pr.AddCommand(constants.RmStr,
+	profileDelete := p.AddCommand(constants.RmStr,
 		"Delete one or more existing implant profiles",
 		"", "", []string{""},
-		func() interface{} { return &ProfileDelete{} })
+		func() interface{} { return &generate.ProfileDelete{} })
 	profileDelete.AddArgumentCompletion("Profile", completion.ImplantProfiles)
 
-	cc.AddCommand(constants.ProfileGenerateStr,
+	p.AddCommand(constants.GenerateStr,
 		"Compile an implant based on a profile, passed as argument (completed)",
-		help.GetHelpFor(constants.ProfileGenerateStr),
+		help.GetHelpFor(constants.GenerateStr),
 		constants.BuildsGroup,
 		[]string{""},
-		func() interface{} { return &ProfileGenerate{} })
+		func() interface{} { return &generate.ProfileGenerate{} })
 
 	builds := cc.AddCommand(constants.ImplantBuildsStr,
 		"List old implant builds",
 		help.GetHelpFor(constants.ImplantBuildsStr),
 		constants.BuildsGroup,
 		[]string{""},
-		func() interface{} { return &Builds{} })
+		func() interface{} { return &generate.Builds{} })
+
+	regenerate := cc.AddCommand(constants.RegenerateStr,
+		"Recompile an implant by name, passed as argument (completed)",
+		help.GetHelpFor(constants.RegenerateStr),
+		constants.BuildsGroup,
+		[]string{""},
+		func() interface{} { return &generate.Regenerate{} })
+	regenerate.AddArgumentCompletion("ImplantName", completion.ImplantNames)
 
 	builds.SubcommandsOptional = true
 	buildsRm := builds.AddCommand(constants.RmStr,
@@ -301,15 +285,15 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(fmt.Sprintf("%s.%s", constants.ImplantBuildsStr, constants.RmStr)),
 		"",
 		[]string{""},
-		func() interface{} { return &RemoveBuild{} })
+		func() interface{} { return &generate.RemoveBuild{} })
 	buildsRm.AddArgumentCompletion("Names", completion.ImplantNames)
 
-	cc.AddCommand(constants.ListCanariesStr,
+	cc.AddCommand(constants.CanariesStr,
 		"List previously generated DNS canaries",
-		help.GetHelpFor(constants.ListCanariesStr),
+		help.GetHelpFor(constants.CanariesStr),
 		constants.BuildsGroup,
 		[]string{""},
-		func() interface{} { return &Canaries{} })
+		func() interface{} { return &canaries.Canaries{} })
 
 	// Context-sensitive commands / alias -----------------------------------------------------------
 	switch cc.Name {
