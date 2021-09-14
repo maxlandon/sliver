@@ -64,28 +64,23 @@ func (w *WireGuardConfig) Execute(args []string) (err error) {
 
 	wgConfig, err := transport.RPC.GenerateWGClientConfig(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
-		return
+		return log.Error(err)
 	}
 	clientPrivKeyBytes, err := hex.DecodeString(wgConfig.ClientPrivateKey)
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
-		return
+		return log.Error(err)
 	}
 	serverPubKeyBytes, err := hex.DecodeString(wgConfig.ServerPubKey)
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
-		return
+		return log.Error(err)
 	}
 	tmpl, err := template.New("wgQuick").Parse(wgQuickTemplate)
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
-		return
+		return log.Error(err)
 	}
 	clientIP, network, err := net.ParseCIDR(wgConfig.ClientIP + "/16")
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
-		return
+		return log.Error(err)
 	}
 	output := bytes.Buffer{}
 	tmpl.Execute(&output, wgQuickConfig{
@@ -105,8 +100,7 @@ func (w *WireGuardConfig) Execute(args []string) (err error) {
 		}
 		err = ioutil.WriteFile(save, []byte(output.String()), 0600)
 		if err != nil {
-			log.Errorf("Error: %s\n", err)
-			return
+			return log.Error(err)
 		}
 		log.Infof("Wrote conf: %s\n", save)
 	}

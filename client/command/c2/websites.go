@@ -69,8 +69,7 @@ func (w *Websites) Execute(args []string) (err error) {
 func listWebsites(w *Websites, rpc rpcpb.SliverRPCClient) {
 	websites, err := rpc.Websites(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("Failed to list websites %s\n", err)
-		return
+		return log.Errorf("Failed to list websites %s", err)
 	}
 	if len(websites.Websites) < 1 {
 		log.Infof("No websites\n")
@@ -104,8 +103,7 @@ func listWebsiteContent(w *WebsitesShow, rpc rpcpb.SliverRPCClient) {
 		Name: w.Args.Name,
 	})
 	if err != nil {
-		log.Errorf("Failed to list website content %s\n", err)
-		return
+		return log.Errorf("Failed to list website content %s", err)
 	}
 	if 0 < len(website.Contents) {
 		displayWebsite(website)
@@ -152,7 +150,8 @@ func (w *WebsitesDelete) Execute(args []string) (err error) {
 			Name: name,
 		})
 		if err != nil {
-			log.Errorf("Failed to remove website %s\n", err)
+			err := log.Errorf("Failed to remove website %s", err)
+			fmt.Printf(err.Error())
 		} else {
 			log.Infof("Removed website %s%s%s\n", readline.YELLOW, name, readline.RESET)
 		}
@@ -172,20 +171,17 @@ func (w *WebsitesDeleteContent) Execute(args []string) (err error) {
 	recursive := w.Recursive
 
 	if name == "" {
-		log.Errorf("Must specify a website name via --website, see --help\n")
-		return
+		return log.Errorf("Must specify a website name via --website, see --help")
 	}
 	if webPath == "" {
-		log.Errorf("Must specify a web path via --web-path, see --help\n")
-		return
+		return log.Errorf("Must specify a web path via --web-path, see --help")
 	}
 
 	website, err := transport.RPC.Website(context.Background(), &clientpb.Website{
 		Name: name,
 	})
 	if err != nil {
-		log.Errorf("%s", err)
-		return
+		return log.Error(err)
 	}
 
 	rmWebContent := &clientpb.WebsiteRemoveContent{
@@ -203,8 +199,7 @@ func (w *WebsitesDeleteContent) Execute(args []string) (err error) {
 	}
 	web, err := transport.RPC.WebsiteRemoveContent(context.Background(), rmWebContent)
 	if err != nil {
-		log.Errorf("Failed to remove content %s\n", err)
-		return
+		return log.Errorf("Failed to remove content %s", err)
 	}
 	displayWebsite(web)
 	return
@@ -219,18 +214,15 @@ type WebsitesAddContent struct {
 func (w *WebsitesAddContent) Execute(args []string) (err error) {
 	websiteName := w.Website
 	if websiteName == "" {
-		log.Errorf("Must specify a website name via --website, see --help\n")
-		return
+		return log.Errorf("Must specify a website name via --website, see --help")
 	}
 	webPath := w.WebPath
 	if webPath == "" {
-		log.Errorf("Must specify a web path via --web-path, see --help\n")
-		return
+		return log.Errorf("Must specify a web path via --web-path, see --help")
 	}
 	contentPath := w.Content
 	if contentPath == "" {
-		log.Errorf("Must specify some --content\n")
-		return
+		return log.Errorf("Must specify some --content")
 	}
 	contentPath, _ = filepath.Abs(contentPath)
 	contentType := w.ContentType
@@ -238,8 +230,7 @@ func (w *WebsitesAddContent) Execute(args []string) (err error) {
 
 	fileInfo, err := os.Stat(contentPath)
 	if err != nil {
-		log.Errorf("Error adding content %s\n", err)
-		return
+		return log.Errorf("Error adding content %s", err)
 	}
 
 	addWeb := &clientpb.WebsiteAddContent{
@@ -258,8 +249,7 @@ func (w *WebsitesAddContent) Execute(args []string) (err error) {
 
 	web, err := transport.RPC.WebsiteAddContent(context.Background(), addWeb)
 	if err != nil {
-		log.Errorf("%s", err)
-		return
+		return log.Error(err)
 	}
 	displayWebsite(web)
 	return
@@ -339,18 +329,15 @@ type WebsiteType struct {
 func (w *WebsiteType) Execute(args []string) (err error) {
 	websiteName := w.WebsiteOptions.Website
 	if websiteName == "" {
-		log.Errorf("Must specify a website name via --website, see --help\n")
-		return
+		return log.Errorf("Must specify a website name via --website, see --help")
 	}
 	webPath := w.WebsiteOptions.WebPath
 	if webPath == "" {
-		log.Errorf("Must specify a web path via --web-path, see --help\n")
-		return
+		return log.Errorf("Must specify a web path via --web-path, see --help")
 	}
 	contentType := w.WebsiteOptions.ContentType
 	if contentType == "" {
-		log.Errorf("Must specify a new --content-type, see --help\n")
-		return
+		return log.Errorf("Must specify a new --content-type, see --help")
 	}
 
 	updateWeb := &clientpb.WebsiteAddContent{
@@ -363,8 +350,7 @@ func (w *WebsiteType) Execute(args []string) (err error) {
 
 	web, err := transport.RPC.WebsiteUpdateContent(context.Background(), updateWeb)
 	if err != nil {
-		log.Errorf("%s", err)
-		return
+		return log.Error(err)
 	}
 	displayWebsite(web)
 	return

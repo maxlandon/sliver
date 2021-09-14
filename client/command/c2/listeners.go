@@ -65,11 +65,10 @@ func (m *MTLSListener) Execute(args []string) (err error) {
 		Persistent: m.Options.Persistent,
 	})
 	if err != nil {
-		fmt.Printf(util.RPCError+"%s\n", err)
-	} else {
-		log.Infof("Successfully started job #%d\n", mtls.JobID)
+		return log.Error(err)
 	}
 
+	log.Infof("Successfully started job #%d\n", mtls.JobID)
 	return
 }
 
@@ -99,11 +98,10 @@ func (w *WireGuardListener) Execute(args []string) (err error) {
 		Persistent: w.Options.Persistent,
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
-	} else {
-		log.Infof("Successfully started job #%d\n", wg.JobID)
+		return log.Error(err)
 	}
 
+	log.Infof("Successfully started job #%d\n", wg.JobID)
 	return
 }
 
@@ -173,8 +171,7 @@ func (m *HTTPSListener) Execute(args []string) (err error) {
 
 	cert, key, err := getLocalCertificatePair(m.Options.Certificate, m.Options.PrivateKey)
 	if err != nil {
-		log.Errorf("Failed to load local certificate %v", err)
-		return
+		return log.Errorf("Failed to load local certificate %v", err)
 	}
 
 	log.Infof("Starting HTTPS %s:%d listener ...\n", domain, lport)
@@ -189,11 +186,10 @@ func (m *HTTPSListener) Execute(args []string) (err error) {
 		Persistent: m.Options.Persistent,
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
-	} else {
-		log.Infof("Successfully started job #%d\n", https.JobID)
+		return log.Error(err)
 	}
 
+	log.Infof("Successfully started job #%d\n", https.JobID)
 	return
 }
 
@@ -240,10 +236,9 @@ func (m *HTTPListener) Execute(args []string) (err error) {
 		Persistent: m.Options.Persistent,
 	})
 	if err != nil {
-		log.RPCErrorf("%s\n", err)
-	} else {
-		log.Infof("Successfully started job #%d\n", http.JobID)
+		return log.Error(err)
 	}
 
+	log.Infof("Successfully started job #%d\n", http.JobID)
 	return
 }

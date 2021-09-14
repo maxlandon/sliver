@@ -20,6 +20,7 @@ package c2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/maxlandon/readline"
@@ -55,8 +56,7 @@ func (tp *TCPPivot) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return nil
+		return log.Error(err)
 	}
 
 	log.Infof("Listening on tcp://%s \n", address)
@@ -80,8 +80,7 @@ func (tp *NamedPipePivot) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return nil
+		return log.Error(err)
 	}
 
 	log.Infof("Listening on %s", "\\\\.\\pipe\\"+pipeName+" \n")
@@ -113,8 +112,7 @@ func (p *Pivots) Execute(args []string) (err error) {
 		} else {
 			sessions, err := rpc.GetSessions(context.Background(), &commonpb.Empty{})
 			if err != nil {
-				log.Errorf("Error: %v", err)
-				return nil
+				return log.Error(err)
 			}
 			if len(sessions.Sessions) == 0 {
 				log.Infof("No pivoted sessions \n")
@@ -128,7 +126,7 @@ func (p *Pivots) Execute(args []string) (err error) {
 	return
 }
 
-func printPivots(session *clientpb.Session, timeout int64, rpc rpcpb.SliverRPCClient) {
+func printPivots(session *clientpb.Session, timeout int64, rpc rpcpb.SliverRPCClient) (err error) {
 	pivotList, err := rpc.ListPivots(context.Background(), &sliverpb.PivotListReq{
 		Request: &commonpb.Request{
 			SessionID: session.ID,
@@ -138,18 +136,15 @@ func printPivots(session *clientpb.Session, timeout int64, rpc rpcpb.SliverRPCCl
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return err
 	}
 
 	if pivotList.Response != nil && pivotList.Response.Err != "" {
-		log.Errorf("Error: %s", pivotList.Response.Err)
-		return
+		return errors.New(pivotList.Response.Err)
 	}
 
 	if pivotList.Entries == nil || len(pivotList.Entries) == 0 {
-		log.Infof("No pivots found for session %d\n", session.ID)
-		return
+		return fmt.Errorf("No pivots found for session %d", session.ID)
 	}
 
 	table := util.NewTable(readline.Bold(readline.Blue(fmt.Sprintf("Session %d\n", session.ID))))
@@ -161,4 +156,6 @@ func printPivots(session *clientpb.Session, timeout int64, rpc rpcpb.SliverRPCCl
 		table.Append([]string{entry.Type, entry.Remote})
 	}
 	table.Output()
+
+	return nil
 }

@@ -55,31 +55,26 @@ func (s *StageListener) Execute(args []string) (err error) {
 	listenerURL := s.Options.URL
 
 	if profileName == "" || listenerURL == "" {
-		log.Errorf("missing required flags, see `help stage-listener` for more info")
-		return
+		return log.Errorf("missing required flags, see `help stage-listener` for more info")
 	}
 
 	// parse listener url
 	stagingURL, err := url.Parse(listenerURL)
 	if err != nil {
-		log.Errorf("listener-url format not supported")
-		return
+		return log.Errorf("listener-url format not supported")
 	}
 	stagingPort, err := strconv.ParseUint(stagingURL.Port(), 10, 32)
 	if err != nil {
-		log.Errorf("error parsing staging port: %v\n", err)
-		return
+		return log.Errorf("error parsing staging port: %v", err)
 	}
 
 	// get profile
-	profiles := getSliverProfiles()
-	if profiles == nil {
-		return
+	profiles, err := getSliverProfiles()
+	if err != nil {
+		return log.Error(err)
 	}
-
-	if len(*profiles) == 0 {
-		log.Errorf("No profiles, create one with `profiles generate`\n")
-		return
+	if len(*profiles) == 0 || profiles == nil {
+		return log.Errorf("No profiles, create one with `profiles generate`")
 	}
 
 	for name, profile := range *profiles {
@@ -89,14 +84,12 @@ func (s *StageListener) Execute(args []string) (err error) {
 	}
 
 	if implantProfile.GetName() == "" {
-		log.Errorf("could not find the implant name from the profile\n")
-		return
+		return log.Errorf("could not find the implant name from the profile")
 	}
 
 	stage2, err := GetSliverBinary(*implantProfile, rpc)
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	switch stagingURL.Scheme {
@@ -112,19 +105,16 @@ func (s *StageListener) Execute(args []string) (err error) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			log.Errorf("Error starting HTTP staging listener: %v\n", err)
-			return nil
+			return log.Errorf("Error starting HTTP staging listener: %v", err)
 		}
 		log.Infof("Job %d (http) started\n", stageListener.GetJobID())
 	case "https":
 		if s.Options.Certificate == "" || s.Options.PrivateKey == "" {
-			log.Errorf("Please provide --cert and --key if using HTTPS URL\n")
-			return nil
+			return log.Errorf("Please provide --cert and --key if using HTTPS URL")
 		}
 		cert, key, err := getLocalCertificatePair(s.Options.Certificate, s.Options.PrivateKey)
 		if err != nil {
-			log.Errorf("Failed to load local certificate %v", err)
-			return nil
+			return log.Errorf("Failed to load local certificate %v", err)
 		}
 		ctrl := make(chan bool)
 		go log.SpinUntil("Starting HTTPS staging listener...", ctrl)
@@ -140,8 +130,7 @@ func (s *StageListener) Execute(args []string) (err error) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			log.Errorf("Error starting HTTPS staging listener: %v\n", err)
-			return nil
+			return log.Errorf("Error starting HTTPS staging listener: %v", err)
 		}
 		log.Infof("Job %d (https) started\n", stageListener.GetJobID())
 	case "tcp":
@@ -156,14 +145,12 @@ func (s *StageListener) Execute(args []string) (err error) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			log.Errorf("Error starting TCP staging listener: %v\n", err)
-			return nil
+			return log.Errorf("Error starting TCP staging listener: %v", err)
 		}
 		log.Infof("Job %d (tcp) started\n", stageListener.GetJobID())
 
 	default:
-		log.Errorf("Unsupported staging protocol: %s\n", stagingURL.Scheme)
-		return
+		return log.Errorf("Unsupported staging protocol: %s", stagingURL.Scheme)
 	}
 
 	return
@@ -220,15 +207,14 @@ func buildImplantName(name string) string {
 	return strings.TrimSuffix(name, filepath.Ext(name))
 }
 
-func getSliverProfiles() *map[string]*clientpb.ImplantProfile {
+func getSliverProfiles() (profiles *map[string]*clientpb.ImplantProfile, err error) {
 	pbProfiles, err := transport.RPC.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("Error %s", err)
-		return nil
+		return nil, log.Error(err)
 	}
-	profiles := &map[string]*clientpb.ImplantProfile{}
+	profiles = &map[string]*clientpb.ImplantProfile{}
 	for _, profile := range pbProfiles.Profiles {
 		(*profiles)[profile.Name] = profile
 	}
-	return profiles
+	return profiles, nil
 }
