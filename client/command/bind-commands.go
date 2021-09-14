@@ -27,6 +27,9 @@ import (
 	"github.com/bishopfox/sliver/client/completion"
 	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
+
+	// Command implementations
+	"github.com/bishopfox/sliver/client/command/server/settings"
 )
 
 // GlobalOptions - Options appended directly to a command parser. These options will not explicitely
@@ -45,9 +48,7 @@ func BindCommands(console *gonsole.Console) {
 
 	// Pass the console to the various packages needing it
 	// 1 - Commands packages
-	server.Console = console
 	c2.Console = console
-	sliver.Console = console
 
 	// 2 - Utility packages
 	core.Console = console
@@ -69,7 +70,7 @@ func BindCommands(console *gonsole.Console) {
 		"",
 		"sliver commands",
 		[]string{""},
-		func() interface{} { return &server.SaveConfig{} })
+		func() interface{} { return &settings.SaveConfig{} })
 
 	// The gonsole library gives a help command as well.
 	console.AddHelpCommand(constants.CoreServerGroup)
