@@ -37,14 +37,14 @@ func CompleteSliverEnv() (completions []*readline.CompletionGroup) {
 	}
 
 	// Per-OS path separator
-	if core.ActiveSession.OS == "windows" {
+	if core.ActiveTarget.Session != nil && core.ActiveTarget.Session.OS == "windows" {
 		grp.PathSeparator = '\\'
 	} else {
 		grp.PathSeparator = '/'
 	}
 
 	var clientEnv = map[string]string{}
-	sessCache := Cache.GetSessionCache(core.ActiveSession.ID)
+	sessCache := Cache.GetSessionCache(core.ActiveTarget.Session.ID)
 	if sessCache == nil {
 		return nil
 	}

@@ -92,10 +92,10 @@ func SessionIfacePublicNetworks(last string, sess *clientpb.Session, alone bool)
 // ActiveSessionIfaceAddrs - Get all available addresses (including loopback) for an implant host
 func ActiveSessionIfaceAddrs() (comps []*readline.CompletionGroup) {
 	// Important, we never know from which menu we are called.
-	if core.ActiveSession == nil {
+	if core.ActiveTarget.Session == nil {
 		return
 	}
-	_, comps = sessionIfaceAddrs("", core.ActiveSession)
+	_, comps = sessionIfaceAddrs("", core.ActiveTarget.Session)
 	return
 }
 

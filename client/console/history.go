@@ -166,11 +166,17 @@ func (h *SessionHistory) RefreshLines(lines []string) {
 // called, and every new command is added through the client history.
 func (h *SessionHistory) Write(s string) (int, error) {
 
-	res, err := transport.RPC.AddToHistory(context.Background(),
-		&clientpb.AddCmdHistoryRequest{
-			Line:    s,
-			Session: core.ActiveSession,
-		})
+	req := &clientpb.AddCmdHistoryRequest{
+		Line: s,
+	}
+	if core.ActiveTarget.Session != nil {
+		req.Session = core.ActiveTarget.Session
+	}
+	if core.ActiveTarget.Beacon != nil {
+		req.Beacon = core.ActiveTarget.Beacon
+	}
+
+	res, err := transport.RPC.AddToHistory(context.Background(), req)
 	if err != nil {
 		return 0, err
 	}

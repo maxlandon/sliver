@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	cliLog "github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/tcpproxy"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -26,7 +27,7 @@ var (
 
 	portfwdID = 0
 
-	portfwdLog = log.NewClientLogger("tcpproxy").WithField("tcpproxy", "portfwd")
+	portfwdLog = cliLog.NewClientLogger("tcpproxy").WithField("tcpproxy", "portfwd")
 )
 
 // PortfwdMeta - Metadata about a portfwd listener

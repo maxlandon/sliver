@@ -201,7 +201,7 @@ func (sc *SessionCompCache) GetEnvironmentVariables() (env *sliverpb.EnvInfo) {
 
 	envInfo, err := transport.RPC.GetEnv(context.Background(), &sliverpb.EnvReq{
 		Name:    "",
-		Request: core.ActiveSessionRequest(),
+		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
 		return
@@ -222,7 +222,7 @@ func (sc *SessionCompCache) GetProcesses() (procs *sliverpb.Ps) {
 	}
 
 	ps, err := transport.RPC.Ps(context.Background(), &sliverpb.PsReq{
-		Request: core.ActiveSessionRequest(),
+		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
 		return

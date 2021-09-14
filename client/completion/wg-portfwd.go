@@ -41,7 +41,7 @@ func CompleteWireGuardPortfwds() (comps []*readline.CompletionGroup) {
 	}
 
 	fwdList, err := transport.RPC.WGListForwarders(context.Background(), &sliverpb.WGTCPForwardersReq{
-		Request: core.ActiveSessionRequest(),
+		Request: core.ActiveTarget.Request(),
 	})
 
 	if err != nil {
@@ -75,7 +75,7 @@ func CompleteWireGuardSocksServers() (comps []*readline.CompletionGroup) {
 	}
 
 	socksList, err := transport.RPC.WGListSocksServers(context.Background(), &sliverpb.WGSocksServersReq{
-		Request: core.ActiveSessionRequest(),
+		Request: core.ActiveTarget.Request(),
 	})
 
 	if err != nil {

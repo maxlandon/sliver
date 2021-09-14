@@ -23,10 +23,13 @@ import (
 	"fmt"
 	"log"
 	insecureRand "math/rand"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/maxlandon/gonsole"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command"
@@ -36,6 +39,7 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
 	clientLog "github.com/bishopfox/sliver/client/log"
+	"github.com/bishopfox/sliver/client/prelude"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/version"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -82,6 +86,10 @@ var (
 
 // ExtraCmds - Bind extra commands to the app object
 type ExtraCmds func(menu *gonsole.Menu)
+
+func init() {
+	insecureRand.Seed(time.Now().Unix())
+}
 
 // Start - Console entrypoint
 func Start(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds, config *assets.ClientConfig) error {
@@ -206,6 +214,7 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 		}
 
 		switch event.EventType {
+
 		case consts.CanaryEvent:
 			fmt.Printf("\n\n") // Clear screen a bit before announcing shitty news
 			fmt.Printf(Warning+"WARNING: %s%s has been burned (DNS Canary)\n", normal, event.Session.Name)
@@ -215,6 +224,23 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 				alert += fmt.Sprintf("\t🔥 Session #%d is affected\n", session.ID)
 			}
 			console.RefreshPromptLog(alert)
+
+		case consts.WatchtowerEvent:
+			msg := string(event.Data)
+			fmt.Printf(Warning+"WARNING: %s%s has been burned (seen on %s)\n", normal, event.Session.Name, msg)
+			sessions := getSessionsByName(event.Session.Name, transport.RPC)
+			var alert string
+			for _, session := range sessions {
+				alert += fmt.Sprintf("\t🔥 Session #%d is affected\n", session.ID)
+			}
+			console.RefreshPromptLog(alert)
+
+		case consts.JoinedEvent:
+			joined := fmt.Sprintf("%s has joined the game\n\n", event.Client.Operator.Name)
+			console.RefreshPromptLog(joined)
+		case consts.LeftEvent:
+			left := fmt.Sprintf("%s left the game\n\n", event.Client.Operator.Name)
+			console.RefreshPromptLog(left)
 
 		case consts.JobStoppedEvent:
 			job := event.Job
@@ -244,11 +270,30 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 				console.RefreshPromptCustom(news, prompt, 0)
 			}
 
+			// Prelude Operator
+			if prelude.SessionMapper != nil {
+				err = prelude.SessionMapper.AddSession(session)
+				if err != nil {
+					failed := fmt.Sprintf("Could not add session to Operator: %s", err)
+					console.RefreshPromptLog(failed)
+				}
+			}
+
 		case consts.SessionUpdateEvent:
 			session := event.Session
 			currentTime := time.Now().Format(time.RFC1123)
 			updated := fmt.Sprintf(Info+"Session #%d has been updated - %v\n", session.ID, currentTime)
-			if core.ActiveSession != nil && session.ID == core.ActiveSession.ID {
+
+			var id uint32
+			if core.ActiveTarget.Session != nil {
+				id = core.ActiveTarget.Session.ID
+			}
+			if core.ActiveTarget.Beacon != nil {
+				bid, _ := strconv.Atoi(core.ActiveTarget.Beacon.ID)
+				id = uint32(bid)
+			}
+
+			if id == session.ID {
 				prompt := console.CurrentMenu().Prompt.Render()
 				console.RefreshPromptCustom(updated, prompt, 0)
 			} else {
@@ -259,8 +304,17 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 			session := event.Session
 			var lost string
 
+			var id uint32
+			if core.ActiveTarget.Session != nil {
+				id = core.ActiveTarget.Session.ID
+			}
+			if core.ActiveTarget.Beacon != nil {
+				bid, _ := strconv.Atoi(core.ActiveTarget.Beacon.ID)
+				id = uint32(bid)
+			}
+
 			// If the session is our current session, we notify the console
-			if core.ActiveSession != nil && session.ID == core.ActiveSession.ID {
+			if id == session.ID {
 				core.UnsetActiveSession()
 			}
 
@@ -271,7 +325,34 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 
 			// In any case, delete the completion data cache for the session, if any.
 			completion.Cache.RemoveSessionData(session)
+
+			if prelude.SessionMapper != nil {
+				err = prelude.SessionMapper.RemoveSession(session)
+				if err != nil {
+					failed := fmt.Sprintf("Could not remove session from Operator: %s", err)
+					console.RefreshPromptLog(failed)
+				}
+				removed := fmt.Sprintf("Removed session %s from Operator\n", session.Name)
+				console.RefreshPromptLog(removed)
+			}
+
+		case consts.BeaconRegisteredEvent:
+			beacon := &clientpb.Beacon{}
+			proto.Unmarshal(event.Data, beacon)
+			currentTime := time.Now().Format(time.RFC1123)
+			shortID := strings.Split(beacon.ID, "-")[0]
+
+			news := fmt.Sprintf("\n\n") // Clear screen a bit before announcing the king
+			news += fmt.Sprintf("Beacon #%s %s - %s (%s) - %s/%s - %v\n\n",
+				shortID, beacon.Name, beacon.RemoteAddress, beacon.Hostname, beacon.OS, beacon.Arch, currentTime)
+			prompt := console.CurrentMenu().Prompt.Render()
+			console.RefreshPromptCustom(news, prompt, 0)
+
+		case consts.BeaconTaskResultEvent:
+			// con.triggerBeaconTaskCallback(event.Data)
 		}
+
+		// con.triggerReactions(event)
 	}
 }
 
