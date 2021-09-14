@@ -52,6 +52,7 @@ type Beacon struct {
 	ReconnectInterval int64
 	ProxyURL          string
 	PollTimeout       int64
+	WorkingDirectory  string
 
 	ImplantBuildID uuid.UUID `gorm:"type:uuid;"`
 
@@ -89,9 +90,10 @@ func (b *Beacon) ToProtobuf() *clientpb.Beacon {
 		ProxyURL: b.ProxyURL,
 		// PollTimeout: b.PollTimeout,
 		// ImplantBuildID: b.ImplantBuildID.String(),
-		Interval:    b.Interval,
-		Jitter:      b.Jitter,
-		NextCheckin: b.NextCheckin,
+		Interval:         b.Interval,
+		Jitter:           b.Jitter,
+		NextCheckin:      b.NextCheckin,
+		WorkingDirectory: b.WorkingDirectory,
 	}
 }
 
