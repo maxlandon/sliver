@@ -40,15 +40,15 @@ type GlobalOptions struct {
 
 // BindCommands - Register all commands for the different menu contexts (server or sliver).
 // Commands also declare their completions in the same place as where they're registered.
-func BindCommands(console *gonsole.Console) {
+func BindCommands() {
+
+	// The console package has setup the console and passed it to the core package,
+	// so we can use it here and bind everything; menus, commands and their completions
+	console := core.Console
 
 	// We have two different context (menus)
 	serverMenu := console.GetMenu(constants.ServerMenu)
 	sliverMenu := console.GetMenu(constants.SliverMenu)
-
-	// 2 - Utility packages
-	core.Console = console
-	completion.Console = console
 
 	// There are some completions that apply to Environment variables for each context,
 	// register them now. These completers will also be called when parsing the input

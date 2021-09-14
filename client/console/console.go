@@ -157,6 +157,12 @@ func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
 	// Setup parser details
 	console.SetParserOptions(flags.IgnoreUnknown | flags.HelpFlag)
 
+	// Now that most things are set up in the console, pass it to the core
+	// package, so that commands bound below can use it correctly.
+	// Do the same for the completion package, which is needed by commands.
+	core.Console = console
+	completion.Console = console
+
 	// Bind admin commands if we are the server binary.
 	if extraCmds != nil {
 		extraCmds(server)
@@ -164,7 +170,7 @@ func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
 
 	// Bind commands. In this function we also add some gonsole-provided
 	// default commands, for help and console configuration management.
-	command.BindCommands(console)
+	command.BindCommands()
 
 	return nil
 }
