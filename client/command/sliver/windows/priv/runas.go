@@ -55,13 +55,11 @@ func (ra *RunAs) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if runAsResp.GetResponse().GetErr() != "" {
-		log.Errorf("Error: %s\n", runAsResp.GetResponse().GetErr())
-		return
+		return log.Errorf("Error: %s", runAsResp.GetResponse().GetErr())
 	}
 
 	log.Infof("Sucessfully ran %s %s on %s\n", process, arguments, core.ActiveTarget.Session.GetName())

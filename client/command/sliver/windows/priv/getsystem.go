@@ -52,12 +52,10 @@ func (gs *GetSystem) Execute(args []string) (err error) {
 	<-ctrl
 
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	if getsystemResp.GetResponse().GetErr() != "" {
-		log.Errorf("Error: %s\n", getsystemResp.GetResponse().GetErr())
-		return
+		return log.Errorf("Error: %s", getsystemResp.GetResponse().GetErr())
 	}
 	log.Infof("A new SYSTEM session should pop soon...\n")
 

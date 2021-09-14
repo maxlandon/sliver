@@ -60,15 +60,13 @@ func (ea *ExecuteAssembly) Execute(args []string) (err error) {
 	}
 	if isDLL {
 		if ea.Options.Class == "" || ea.Options.Method == "" {
-			log.Errorf("Please provide a class name (namespace.class) and method")
-			return
+			return log.Errorf("Please provide a class name (namespace.class) and method")
 		}
 	}
 
 	assemblyBytes, err := ioutil.ReadFile(ea.Positional.Path)
 	if err != nil {
-		log.Errorf("%s", err.Error())
-		return
+		return log.Errorf("%s", err.Error())
 	}
 
 	assemblyArgs := ""
@@ -96,13 +94,11 @@ func (ea *ExecuteAssembly) Execute(args []string) (err error) {
 	<-ctrl
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if executeAssembly.GetResponse().GetErr() != "" {
-		log.Errorf("Error: %s\n", executeAssembly.GetResponse().GetErr())
-		return
+		return log.Errorf("Error: %s", executeAssembly.GetResponse().GetErr())
 	}
 	var outFilePath *os.File
 	if ea.Options.Save {

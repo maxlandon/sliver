@@ -38,8 +38,7 @@ func (rs *Rev2Self) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	log.Infof("Back to self...\n")
 	return nil

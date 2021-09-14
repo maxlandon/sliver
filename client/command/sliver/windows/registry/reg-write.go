@@ -60,8 +60,7 @@ func (rw *RegistryWrite) Execute(args []string) (err error) {
 	flagType := rw.Options.Type
 	valType, err := getType(flagType)
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	hive := rw.Options.Hive
 
@@ -82,36 +81,31 @@ func (rw *RegistryWrite) Execute(args []string) (err error) {
 		if binPath == "" {
 			v, err = hex.DecodeString(value)
 			if err != nil {
-				log.Errorf("Error: %v", err)
-				return err
+				return log.Errorf("Error: %v", err)
 			}
 		} else {
 			v, err = ioutil.ReadFile(binPath)
 			if err != nil {
-				log.Errorf("Error: %v", err)
-				return err
+				return log.Errorf("Error: %v", err)
 			}
 		}
 		binaryValue = v
 	case sliverpb.RegistryTypeDWORD:
 		v, err := strconv.ParseUint(value, 10, 32)
 		if err != nil {
-			log.Errorf("Error: %v", err)
-			return err
+			return log.Errorf("Error: %v", err)
 		}
 		dwordValue = uint32(v)
 	case sliverpb.RegistryTypeQWORD:
 		v, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			log.Errorf("Error: %v", err)
-			return err
+			return log.Errorf("Error: %v", err)
 		}
 		qwordValue = v
 	case sliverpb.RegistryTypeString:
 		stringValue = value
 	default:
-		log.Errorf("Invalid type")
-		return
+		return log.Errorf("Invalid type")
 	}
 	regWrite, err := transport.RPC.RegistryWrite(context.Background(), &sliverpb.RegistryWriteReq{
 		Request:     core.ActiveTarget.Request(),
@@ -127,12 +121,10 @@ func (rw *RegistryWrite) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	if regWrite.Response != nil && regWrite.Response.Err != "" {
-		log.Errorf("Error: %v", regWrite.Response.Err)
-		return
+		return log.Errorf("Error: %v", regWrite.Response.Err)
 	}
 	log.Infof("Value written to registry\n")
 

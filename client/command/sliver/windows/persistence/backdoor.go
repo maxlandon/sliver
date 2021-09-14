@@ -56,13 +56,11 @@ func (b *Backdoor) Execute(args []string) (err error) {
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if backdoor.Response != nil && backdoor.Response.Err != "" {
-		log.Errorf("Error: %s\n", backdoor.Response.Err)
-		return
+		return log.Errorf("Error: %s", backdoor.Response.Err)
 	}
 
 	log.Infof("Uploaded backdoored binary to %s\n", remoteFilePath)

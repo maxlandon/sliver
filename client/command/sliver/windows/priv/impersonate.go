@@ -44,12 +44,10 @@ func (i *Impersonate) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	if impResp.GetResponse().GetErr() != "" {
-		log.Errorf("Error: %s\n", impResp.GetResponse().GetErr())
-		return
+		return log.Errorf("Error: %s", impResp.GetResponse().GetErr())
 	}
 	log.Infof("Successfully impersonated %s\n", username)
 

@@ -61,13 +61,11 @@ func (rck *RegistryCreateKey) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if createKeyResp.Response != nil && createKeyResp.Response.Err != "" {
-		log.Errorf("Error: %s", createKeyResp.Response.Err)
-		return
+		return log.Errorf("Error: %s", createKeyResp.Response.Err)
 	}
 	log.Infof("Key created at %s\\%s", regPath, key)
 

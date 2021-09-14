@@ -60,8 +60,7 @@ func (s *SpawnDLL) Execute(cargs []string) (err error) {
 
 	binData, err := ioutil.ReadFile(binPath)
 	if err != nil {
-		log.Errorf("%s", err.Error())
-		return
+		return log.Errorf("%s", err.Error())
 	}
 	ctrl := make(chan bool)
 	go log.SpinUntil(fmt.Sprintf("Executing reflective dll %s", binPath), ctrl)
@@ -75,14 +74,12 @@ func (s *SpawnDLL) Execute(cargs []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	ctrl <- true
 	<-ctrl
 	if spawndll.GetResponse().GetErr() != "" {
-		log.Errorf("Error: %s\n", spawndll.GetResponse().GetErr())
-		return
+		return log.Errorf("Error: %s", spawndll.GetResponse().GetErr())
 	}
 	var outFilePath *os.File
 	if s.Options.Save {

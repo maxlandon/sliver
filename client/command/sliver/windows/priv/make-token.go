@@ -44,8 +44,7 @@ func (mt *MakeToken) Execute(args []string) (err error) {
 	domain := mt.Options.Domain
 
 	if username == "" || password == "" {
-		log.Errorf("You must provide a username and password\n")
-		return
+		return log.Errorf("You must provide a username and password")
 	}
 
 	ctrl := make(chan bool)
@@ -62,14 +61,11 @@ func (mt *MakeToken) Execute(args []string) (err error) {
 	<-ctrl
 
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if makeToken.GetResponse().GetErr() != "" {
-
-		log.Errorf("Error: %s\n", makeToken.GetResponse().GetErr())
-		return
+		return log.Errorf("Error: %s", makeToken.GetResponse().GetErr())
 	}
 	log.Infof("Successfully impersonated %s\\%s. Use `rev2self` to revert to your previous token.\n", domain, username)
 	return

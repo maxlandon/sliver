@@ -38,9 +38,9 @@ type Migrate struct {
 // Execute - Migrate into a remote process
 func (m *Migrate) Execute(args []string) (err error) {
 	pid := m.Positional.PID
-	if err != nil {
-		log.Errorf("Error: %v", err)
-	}
+	// if err != nil {
+	//         log.Errorf("Error: %v", err)
+	// }
 	config := core.GetActiveSessionConfig()
 	ctrl := make(chan bool)
 	msg := fmt.Sprintf("Migrating into %d ...", pid)
@@ -52,14 +52,12 @@ func (m *Migrate) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	ctrl <- true
 	<-ctrl
 	if !migrate.Success {
-		log.Errorf("%s\n", migrate.GetResponse().GetErr())
-		return
+		return log.Errorf("%s", migrate.GetResponse().GetErr())
 	}
 	log.Infof("Successfully migrated to %d\n", pid)
 	return

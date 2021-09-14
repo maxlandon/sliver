@@ -61,13 +61,11 @@ func (rr *RegistryRead) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if regRead.Response != nil && regRead.Response.Err != "" {
-		log.Errorf("Error: %s", regRead.Response.Err)
-		return
+		return log.Errorf("Error: %s", regRead.Response.Err)
 	}
 	log.Infof(regRead.Value)
 
