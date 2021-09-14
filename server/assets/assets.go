@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	osLog "log"
 	"os"
 	"os/user"
 	"path"
@@ -89,7 +88,7 @@ func GetUserDirectory(name string) (dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			osLog.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
+			setupLog.Errorf("Cannot write to Wiregost Data Service directory %s", err)
 		}
 	}
 	return
@@ -104,7 +103,7 @@ func GetSliverDirectory(sess *clientpb.Session) (dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			osLog.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
+			setupLog.Errorf("Cannot write to Wiregost Data Service directory %s", err)
 		}
 	}
 	return
@@ -119,7 +118,7 @@ func GetBeaconDirectory(beacon *clientpb.Beacon) (dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			osLog.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
+			setupLog.Errorf("Cannot write to Wiregost Data Service directory %s", err)
 		}
 	}
 	return
@@ -133,7 +132,7 @@ func GetUserHistoryDir(name string) (dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			osLog.Fatalf("Cannot write to Wiregost Data Service directory %s", err)
+			setupLog.Errorf("Cannot write to Wiregost Data Service directory %s", err)
 		}
 	}
 	return
