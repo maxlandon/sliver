@@ -57,6 +57,11 @@ var (
 type Generate struct {
 }
 
+// Execute - Configure and compile stage or stager payloads
+func (g *Generate) Execute(args []string) (err error) {
+	return
+}
+
 // GenerateStage - Configure and compile a Sliver (stage) implant
 type GenerateStage struct {
 	StageOptions // Command makes use of full stage options

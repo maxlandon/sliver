@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -57,7 +58,7 @@ func (m *MTLSListener) Execute(args []string) (err error) {
 		lport = defaultMTLSLPort
 	}
 
-	fmt.Printf(Info+"Starting mTLS listener (%s:%d)...\n", m.Options.LHost, m.Options.LPort)
+	log.Infof("Starting mTLS listener (%s:%d)...\n", m.Options.LHost, m.Options.LPort)
 	mtls, err := transport.RPC.StartMTLSListener(context.Background(), &clientpb.MTLSListenerReq{
 		Host:       server,
 		Port:       uint32(lport),
@@ -66,7 +67,7 @@ func (m *MTLSListener) Execute(args []string) (err error) {
 	if err != nil {
 		fmt.Printf(util.RPCError+"%s\n", err)
 	} else {
-		fmt.Printf(Info+"Successfully started job #%d\n", mtls.JobID)
+		log.Infof("Successfully started job #%d\n", mtls.JobID)
 	}
 
 	return
@@ -90,7 +91,7 @@ func (w *WireGuardListener) Execute(args []string) (err error) {
 
 	keyExchangePort := uint16(w.Options.KeyPort)
 
-	fmt.Printf(Info + "Starting Wireguard listener ...\n")
+	log.Infof("Starting Wireguard listener ...\n")
 	wg, err := transport.RPC.StartWGListener(context.Background(), &clientpb.WGListenerReq{
 		Port:       uint32(lport),
 		NPort:      uint32(nport),
@@ -98,9 +99,9 @@ func (w *WireGuardListener) Execute(args []string) (err error) {
 		Persistent: w.Options.Persistent,
 	})
 	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
+		log.Errorf("%s\n", err)
 	} else {
-		fmt.Printf(Info+"Successfully started job #%d\n", wg.JobID)
+		log.Infof("Successfully started job #%d\n", wg.JobID)
 	}
 
 	return
@@ -132,7 +133,7 @@ func (m *DNSListener) Execute(args []string) (err error) {
 		lport = defaultDNSLPort
 	}
 
-	fmt.Printf(Info+"Starting DNS listener with parent domain(s) %v ...\n", domains)
+	log.Infof("Starting DNS listener with parent domain(s) %v ...\n", domains)
 	dns, err := transport.RPC.StartDNSListener(context.Background(), &clientpb.DNSListenerReq{
 		Domains:    domains,
 		Port:       uint32(lport),
@@ -142,7 +143,7 @@ func (m *DNSListener) Execute(args []string) (err error) {
 	if err != nil {
 		fmt.Printf(util.RPCError+"%s\n", err)
 	} else {
-		fmt.Printf(Info+"Successfully started job #%d\n", dns.JobID)
+		log.Infof("Successfully started job #%d\n", dns.JobID)
 	}
 
 	return
@@ -172,11 +173,11 @@ func (m *HTTPSListener) Execute(args []string) (err error) {
 
 	cert, key, err := getLocalCertificatePair(m.Options.Certificate, m.Options.PrivateKey)
 	if err != nil {
-		fmt.Printf("\n"+Error+"Failed to load local certificate %v", err)
+		log.Errorf("Failed to load local certificate %v", err)
 		return
 	}
 
-	fmt.Printf(Info+"Starting HTTPS %s:%d listener ...\n", domain, lport)
+	log.Infof("Starting HTTPS %s:%d listener ...\n", domain, lport)
 	https, err := transport.RPC.StartHTTPSListener(context.Background(), &clientpb.HTTPListenerReq{
 		Domain:     domain,
 		Website:    website,
@@ -188,9 +189,9 @@ func (m *HTTPSListener) Execute(args []string) (err error) {
 		Persistent: m.Options.Persistent,
 	})
 	if err != nil {
-		fmt.Printf(Warning+"%s\n", err)
+		log.Errorf("%s\n", err)
 	} else {
-		fmt.Printf(Info+"Successfully started job #%d\n", https.JobID)
+		log.Infof("Successfully started job #%d\n", https.JobID)
 	}
 
 	return
@@ -230,7 +231,7 @@ func (m *HTTPListener) Execute(args []string) (err error) {
 		lport = uint16(defaultHTTPSLPort)
 	}
 
-	fmt.Printf(Info+"Starting HTTP %s:%d listener ...\n", domain, lport)
+	log.Infof("Starting HTTP %s:%d listener ...\n", domain, lport)
 	http, err := transport.RPC.StartHTTPListener(context.Background(), &clientpb.HTTPListenerReq{
 		Domain:     domain,
 		Website:    m.Options.Website,
@@ -239,9 +240,9 @@ func (m *HTTPListener) Execute(args []string) (err error) {
 		Persistent: m.Options.Persistent,
 	})
 	if err != nil {
-		fmt.Printf(util.RPCError+"%s\n", err)
+		log.RPCErrorf("%s\n", err)
 	} else {
-		fmt.Printf(Info+"Successfully started job #%d\n", http.JobID)
+		log.Infof("Successfully started job #%d\n", http.JobID)
 	}
 
 	return

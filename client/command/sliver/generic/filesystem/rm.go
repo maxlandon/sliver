@@ -21,6 +21,7 @@ package filesystem
 import (
 	"context"
 
+	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -45,7 +46,7 @@ func (rm *Rm) Execute(args []string) (err error) {
 			Path:      other,
 			Recursive: rm.Options.Recursive,
 			Force:     rm.Options.Force,
-			Request:   core.ActiveSessionRequest(),
+			Request:   core.ActiveTarget.Request(),
 		})
 		if err != nil {
 			log.Errorf("%s\n", err)

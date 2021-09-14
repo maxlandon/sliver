@@ -84,7 +84,7 @@ func (l *LoadExtension) Execute(args []string) (err error) {
 			fmt.Sprintf("%s extension commands", ext.Name), "",
 			constants.ExtensionsGroup,
 			[]string{""},
-			func() interface{} { return &ExtensionCommand{} })
+			func() gonsole.Commander { return &ExtensionCommand{} })
 
 		// If command is nil the error already has been printed, so just return
 		if root == nil {
@@ -106,7 +106,7 @@ func (l *LoadExtension) Execute(args []string) (err error) {
 				help.FormatHelpTmpl(extCmd.LongHelp),
 				"",
 				[]string{""},
-				func() interface{} { return &ExtensionCommand{root: ext, sub: &extCmd} })
+				func() gonsole.Commander { return &ExtensionCommand{root: ext, sub: &extCmd} })
 
 			// Add base & || assembly options. Also map choices for some options.
 			sub.AddGlobalOptions("base options", "", func() interface{} { return &ExtensionOptions{} })

@@ -54,32 +54,32 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.BackgroundStr),
 		constants.CoreSessionGroup,
 		[]string{""},
-		func() interface{} { return &sessions.Background{} })
+		func() gonsole.Commander { return &sessions.Background{} })
 
 	cc.AddCommand(constants.KillStr,
 		"Kill the current session",
 		help.GetHelpFor(constants.KillStr),
 		constants.CoreSessionGroup,
 		[]string{""},
-		func() interface{} { return &sessions.Kill{} })
+		func() gonsole.Commander { return &sessions.Kill{} })
 
 	cc.AddCommand(constants.SetStr,
 		"Set a value for the current session", "",
 		constants.CoreSessionGroup,
 		[]string{""},
-		func() interface{} { return &sessions.Set{} })
+		func() gonsole.Commander { return &sessions.Set{} })
 
 	cc.AddCommand(constants.PingStr,
 		"Send round trip message to implant (does not use ICMP)", "",
 		constants.CoreSessionGroup,
 		[]string{""},
-		func() interface{} { return &sessions.Ping{} })
+		func() gonsole.Commander { return &sessions.Ping{} })
 
 	shell := cc.AddCommand(constants.ShellStr,
 		"Start an interactive shell on the session host (not opsec!)", "",
 		constants.CoreSessionGroup,
 		[]string{""},
-		func() interface{} { return &shell.Shell{} })
+		func() gonsole.Commander { return &shell.Shell{} })
 	shell.AddOptionCompletionDynamic("Path", completion.CompleteRemotePathAndFiles)
 
 	// Env Commands --------------------------------------------------------------------
@@ -87,116 +87,116 @@ func BindCommands(cc *gonsole.Menu) {
 		"Manage target environment variables", "",
 		constants.CoreSessionGroup,
 		[]string{""},
-		func() interface{} { return &env.EnvCmd{} })
+		func() gonsole.Commander { return &env.EnvCmd{} })
 
 	envr.AddCommand("get",
 		"Get one or more host environment variables", "",
 		constants.CoreSessionGroup,
 		[]string{""},
-		func() interface{} { return &env.GetEnv{} })
+		func() gonsole.Commander { return &env.GetEnv{} })
 
 	envr.AddCommand("set",
 		"Set an environment variable", "",
 		constants.CoreSessionGroup,
 		[]string{""},
-		func() interface{} { return &env.SetEnv{} })
+		func() gonsole.Commander { return &env.SetEnv{} })
 
 	// Info ----------------------------------------------------------------------------
 	cc.AddCommand(constants.InfoStr,
 		"Show session information", "",
 		constants.InfoGroup,
 		[]string{""},
-		func() interface{} { return &info.SessionInfo{} })
+		func() gonsole.Commander { return &info.SessionInfo{} })
 
 	cc.AddCommand(constants.GetUIDStr,
 		"Get session User ID", "",
 		constants.InfoGroup,
 		[]string{""},
-		func() interface{} { return &info.UID{} })
+		func() gonsole.Commander { return &info.UID{} })
 
 	cc.AddCommand(constants.GetGIDStr,
 		"Get session User group ID", "",
 		constants.InfoGroup,
 		[]string{""},
-		func() interface{} { return &info.GID{} })
+		func() gonsole.Commander { return &info.GID{} })
 
 	cc.AddCommand(constants.GetPIDStr,
 		"Get session Process ID", "",
 		constants.InfoGroup,
 		[]string{""},
-		func() interface{} { return &info.PID{} })
+		func() gonsole.Commander { return &info.PID{} })
 
 	cc.AddCommand(constants.WhoamiStr,
 		"Get session username", "",
 		constants.InfoGroup,
 		[]string{""},
-		func() interface{} { return &info.Whoami{} })
+		func() gonsole.Commander { return &info.Whoami{} })
 
 	cc.AddCommand(constants.ScreenshotStr,
 		"Take a screenshot", "",
 		constants.InfoGroup,
 		[]string{""},
-		func() interface{} { return &screenshot.Screenshot{} })
+		func() gonsole.Commander { return &screenshot.Screenshot{} })
 
 	cc.AddCommand(constants.IfconfigStr,
 		"Show session network interfaces", "",
 		constants.InfoGroup,
 		[]string{""},
-		func() interface{} { return &network.Ifconfig{} })
+		func() gonsole.Commander { return &network.Ifconfig{} })
 
 	cc.AddCommand(constants.NetstatStr,
 		"Print network connection information", "",
 		constants.InfoGroup,
 		[]string{""},
-		func() interface{} { return &network.Netstat{} })
+		func() gonsole.Commander { return &network.Netstat{} })
 
 	// Filesystem ----------------------------------------------------------------------
 	cd := cc.AddCommand(constants.CdStr,
 		"Change session working directory", "",
 		constants.FilesystemGroup,
 		[]string{""},
-		func() interface{} { return &filesystem.ChangeDirectory{} })
+		func() gonsole.Commander { return &filesystem.ChangeDirectory{} })
 	cd.AddArgumentCompletionDynamic("Path", completion.CompleteRemotePath)
 
 	ls := cc.AddCommand(constants.LsStr,
 		"List session directory contents", "",
 		constants.FilesystemGroup,
 		[]string{""},
-		func() interface{} { return &filesystem.ListSessionDirectories{} })
+		func() gonsole.Commander { return &filesystem.ListSessionDirectories{} })
 	ls.AddArgumentCompletionDynamic("Path", completion.CompleteRemotePathAndFiles)
 
 	rm := cc.AddCommand(constants.RmStr,
 		"Remove directory/file contents from the session's host", "",
 		constants.FilesystemGroup,
 		[]string{""},
-		func() interface{} { return &filesystem.Rm{} })
+		func() gonsole.Commander { return &filesystem.Rm{} })
 	rm.AddArgumentCompletionDynamic("Path", completion.CompleteRemotePathAndFiles)
 
 	mkdir := cc.AddCommand(constants.MkdirStr,
 		"Create one or more directories on the implant's host", "",
 		constants.FilesystemGroup,
 		[]string{""},
-		func() interface{} { return &filesystem.Mkdir{} })
+		func() gonsole.Commander { return &filesystem.Mkdir{} })
 	mkdir.AddArgumentCompletionDynamic("Path", completion.CompleteRemotePath)
 
 	cc.AddCommand(constants.PwdStr,
 		"Print the session current working directory", "",
 		constants.FilesystemGroup,
 		[]string{""},
-		func() interface{} { return &filesystem.Pwd{} })
+		func() gonsole.Commander { return &filesystem.Pwd{} })
 
 	cat := cc.AddCommand(constants.CatStr,
 		"Print one or more files to screen", "",
 		constants.FilesystemGroup,
 		[]string{""},
-		func() interface{} { return &filesystem.Cat{} })
+		func() gonsole.Commander { return &filesystem.Cat{} })
 	cat.AddArgumentCompletionDynamic("Path", completion.CompleteRemotePathAndFiles)
 
 	download := cc.AddCommand(constants.DownloadStr,
 		"Download one or more files from the target to the client", "",
 		constants.FilesystemGroup,
 		[]string{""},
-		func() interface{} { return &filesystem.Download{} })
+		func() gonsole.Commander { return &filesystem.Download{} })
 	download.AddArgumentCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 	download.AddArgumentCompletionDynamic("RemotePath", completion.CompleteRemotePathAndFiles)
 
@@ -204,7 +204,7 @@ func BindCommands(cc *gonsole.Menu) {
 		"Upload one or more files from the client to the target filesystem", "",
 		constants.FilesystemGroup,
 		[]string{""},
-		func() interface{} { return &filesystem.Upload{} })
+		func() gonsole.Commander { return &filesystem.Upload{} })
 	upload.AddArgumentCompletionDynamic("RemotePath", completion.CompleteRemotePathAndFiles)
 	upload.AddArgumentCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 
@@ -213,13 +213,13 @@ func BindCommands(cc *gonsole.Menu) {
 		"List host processes", "",
 		constants.ProcGroup,
 		[]string{""},
-		func() interface{} { return &proc.PS{} })
+		func() gonsole.Commander { return &proc.PS{} })
 
 	procDump := cc.AddCommand(constants.ProcdumpStr,
 		"Dump process memory (process ID argument, or options)", "",
 		constants.ProcGroup,
 		[]string{""},
-		func() interface{} { return &proc.ProcDump{} })
+		func() gonsole.Commander { return &proc.ProcDump{} })
 	procDump.AddArgumentCompletion("PID", completion.SessionProcesses)
 	procDump.AddOptionCompletion("Name", completion.SessionProcessNames)
 
@@ -227,7 +227,7 @@ func BindCommands(cc *gonsole.Menu) {
 		"Kill/terminate one or more running host processes", "",
 		constants.ProcGroup,
 		[]string{""},
-		func() interface{} { return &proc.Terminate{} })
+		func() gonsole.Commander { return &proc.Terminate{} })
 	terminate.AddArgumentCompletion("PID", completion.SessionProcesses)
 
 	// Execution --------------------------------------------------------------------------
@@ -235,14 +235,14 @@ func BindCommands(cc *gonsole.Menu) {
 		"Execute a program on the remote system", "",
 		constants.ExecuteGroup,
 		[]string{""},
-		func() interface{} { return &execute.Execute{} })
+		func() gonsole.Commander { return &execute.Execute{} })
 	exec.AddArgumentCompletionDynamic("Args", completion.CompleteRemotePathAndFiles)
 
 	msf := cc.AddCommand(constants.MsfStr,
 		"Execute an MSF payload in the current process", "",
 		constants.ExecuteGroup,
 		[]string{""},
-		func() interface{} { return &execute.MSF{} })
+		func() gonsole.Commander { return &execute.MSF{} })
 	msf.AddOptionCompletion("LHost", completion.ServerInterfaceAddrs)
 	msf.AddOptionCompletion("Payload", completion.CompleteMsfVenomPayloads)
 	msf.AddOptionCompletion("Encoder", completion.CompleteMsfEncoders)
@@ -251,7 +251,7 @@ func BindCommands(cc *gonsole.Menu) {
 		"Inject an MSF payload into a process (ID as argument)", "",
 		constants.ExecuteGroup,
 		[]string{""},
-		func() interface{} { return &execute.MSFInject{} })
+		func() gonsole.Commander { return &execute.MSFInject{} })
 	msfInject.AddArgumentCompletion("PID", completion.SessionProcesses)
 	msf.AddOptionCompletion("LHost", completion.ServerInterfaceAddrs)
 	msfInject.AddOptionCompletion("Payload", completion.CompleteMsfVenomPayloads)
@@ -261,7 +261,7 @@ func BindCommands(cc *gonsole.Menu) {
 		"Executes the given shellcode in the sliver process", "",
 		constants.ExecuteGroup,
 		[]string{""},
-		func() interface{} { return &execute.ExecuteShellcode{} })
+		func() gonsole.Commander { return &execute.ExecuteShellcode{} })
 	execSh.AddArgumentCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 	execSh.AddOptionCompletionDynamic("RemotePath", completion.CompleteRemotePathAndFiles)
 	execSh.AddOptionCompletion("PID", completion.SessionProcesses)
@@ -270,7 +270,7 @@ func BindCommands(cc *gonsole.Menu) {
 		"Load and execute a shared object (shared library/DLL) in a remote process", "",
 		constants.ExecuteGroup,
 		[]string{""},
-		func() interface{} { return &execute.Sideload{} })
+		func() gonsole.Commander { return &execute.Sideload{} })
 	sideload.AddArgumentCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 	sideload.AddArgumentCompletionDynamic("Args", completion.CompleteRemotePathAndFiles)
 	sideload.AddOptionCompletionDynamic("RemotePath", completion.CompleteRemotePathAndFiles)
@@ -282,7 +282,7 @@ func BindCommands(cc *gonsole.Menu) {
 		"Load an extension through the current Sliver session", "",
 		constants.ExtensionsGroup,
 		[]string{""},
-		func() interface{} { return &extensions.LoadExtension{} })
+		func() gonsole.Commander { return &extensions.LoadExtension{} })
 	loadExtension.AddArgumentCompletionDynamic("Path", core.Console.Completer.LocalPathAndFiles)
 
 	//  Network Tools ----------------------------------------------------------------------
@@ -293,7 +293,7 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.WgPortFwdStr),
 		constants.NetworkToolsGroup,
 		[]string{constants.WireGuardGroup},
-		func() interface{} { return &wireguard.WireGuardPortFwd{} })
+		func() gonsole.Commander { return &wireguard.WireGuardPortFwd{} })
 
 	wgPortFwd.SubcommandsOptional = true
 
@@ -302,7 +302,7 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.WgPortFwdStr),
 		"",
 		[]string{""},
-		func() interface{} { return &wireguard.WireGuardPortFwdAdd{} })
+		func() gonsole.Commander { return &wireguard.WireGuardPortFwdAdd{} })
 	wgPortfwdAdd.AddOptionCompletion("Remote", completion.ServerInterfaceAddrs)
 
 	wgPortfwdRm := wgPortFwd.AddCommand("rm",
@@ -310,7 +310,7 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.WgPortFwdStr),
 		"",
 		[]string{""},
-		func() interface{} { return &wireguard.WireGuardPortFwdAdd{} })
+		func() gonsole.Commander { return &wireguard.WireGuardPortFwdAdd{} })
 	wgPortfwdRm.AddArgumentCompletion("ID", completion.CompleteWireGuardPortfwds)
 
 	wgSocks := cc.AddCommand(constants.WgSocksStr,
@@ -318,7 +318,7 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.WgSocksStr),
 		constants.NetworkToolsGroup,
 		[]string{constants.WireGuardGroup},
-		func() interface{} { return &wireguard.WireGuardSocks{} })
+		func() gonsole.Commander { return &wireguard.WireGuardSocks{} })
 
 	wgSocks.SubcommandsOptional = true
 
@@ -327,14 +327,14 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.WgSocksStr),
 		"",
 		[]string{""},
-		func() interface{} { return &wireguard.WireGuardSocksStart{} })
+		func() gonsole.Commander { return &wireguard.WireGuardSocksStart{} })
 
 	wgSocksStop := wgSocks.AddCommand(constants.RmStr,
 		"Stop one or more socks5 listeners on the WireGuard tun interface",
 		help.GetHelpFor(constants.WgSocksStr),
 		"",
 		[]string{""},
-		func() interface{} { return &wireguard.WireGuardPortFwdAdd{} })
+		func() gonsole.Commander { return &wireguard.WireGuardPortFwdAdd{} })
 	wgSocksStop.AddArgumentCompletion("ID", completion.CompleteWireGuardSocksServers)
 
 	// In-Band Port Forwards
@@ -344,7 +344,7 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.PortfwdStr),
 		constants.NetworkToolsGroup,
 		[]string{""},
-		func() interface{} { return &portfwd.Portfwd{} })
+		func() gonsole.Commander { return &portfwd.Portfwd{} })
 
 	pfwd.SubcommandsOptional = true
 
@@ -353,7 +353,7 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.PortfwdStr),
 		"",
 		[]string{""},
-		func() interface{} { return &portfwd.PortfwdAdd{} })
+		func() gonsole.Commander { return &portfwd.PortfwdAdd{} })
 	portfwdAdd.AddOptionCompletion("Bind", core.Console.Completer.ClientInterfaceAddrs)
 	portfwdAdd.AddOptionCompletion("Remote", completion.ServerInterfaceAddrs)
 
@@ -362,7 +362,7 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.PortfwdStr),
 		"",
 		[]string{""},
-		func() interface{} { return &portfwd.PortfwdRm{} })
+		func() gonsole.Commander { return &portfwd.PortfwdRm{} })
 	portfwdRm.AddArgumentCompletion("ID", completion.CompleteInBandForwarders)
 
 	// Windows -----------------------------------------------------------------------------

@@ -52,45 +52,45 @@ func BindCommands(cc *gonsole.Menu) {
 		"Impersonate a logged in user", "",
 		constants.PrivGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &priv.Impersonate{} })
+		func() gonsole.Commander { return &priv.Impersonate{} })
 
 	cc.AddCommand(constants.RevToSelfStr,
 		"Revert to self: lose stolen Windows token", "",
 		constants.PrivGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &priv.Rev2Self{} })
+		func() gonsole.Commander { return &priv.Rev2Self{} })
 
 	cc.AddCommand(constants.GetSystemStr,
 		"Spawns a new sliver session as the NT AUTHORITY\\SYSTEM user ", "",
 		constants.PrivGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &priv.GetSystem{} })
+		func() gonsole.Commander { return &priv.GetSystem{} })
 
 	cc.AddCommand(constants.MakeTokenStr,
 		"Create a new Logon Session with the specified credentials", "",
 		constants.PrivGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &priv.MakeToken{} })
+		func() gonsole.Commander { return &priv.MakeToken{} })
 
 	cc.AddCommand(constants.RunAsStr,
 		"Run a new process in the context of the designated user", "",
 		constants.ExecuteGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &priv.RunAs{} })
+		func() gonsole.Commander { return &priv.RunAs{} })
 
 	// Execution --------------------------------------------------------------------------
 	migrate := cc.AddCommand(constants.MigrateStr,
 		"Migrate into a remote host process", "",
 		constants.ProcGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &execute.Migrate{} })
+		func() gonsole.Commander { return &execute.Migrate{} })
 	migrate.AddArgumentCompletion("PID", completion.SessionProcesses)
 
 	execAssembly := cc.AddCommand(constants.ExecuteAssemblyStr,
 		"Loads and executes a .NET assembly in a child process", "",
 		constants.ExecuteGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &execute.ExecuteAssembly{} })
+		func() gonsole.Commander { return &execute.ExecuteAssembly{} })
 	execAssembly.AddArgumentCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 	execAssembly.AddArgumentCompletionDynamic("Args", completion.CompleteRemotePathAndFiles)
 	execAssembly.AddOptionCompletionDynamic("Path", completion.CompleteRemotePathAndFiles)
@@ -101,7 +101,7 @@ func BindCommands(cc *gonsole.Menu) {
 		"Load and execute a Reflective DLL in a remote process", "",
 		constants.ExecuteGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &execute.SpawnDLL{} })
+		func() gonsole.Commander { return &execute.SpawnDLL{} })
 	spawnDll.AddArgumentCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 	spawnDll.AddArgumentCompletionDynamic("Args", completion.CompleteRemotePathAndFiles)
 	spawnDll.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
@@ -111,13 +111,13 @@ func BindCommands(cc *gonsole.Menu) {
 		"Start a sliver service on the session target", "",
 		constants.PersistenceGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &persistence.Service{} })
+		func() gonsole.Commander { return &persistence.Service{} })
 
 	backdoor := cc.AddCommand(constants.BackdoorStr,
 		"Infect a remote file with a sliver shellcode", "",
 		constants.PersistenceGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &persistence.Backdoor{} })
+		func() gonsole.Commander { return &persistence.Backdoor{} })
 	backdoor.AddArgumentCompletionDynamic("RemotePath", completion.CompleteRemotePathAndFiles)
 
 	// Registry ---------------------------------------------------------------------------
@@ -126,23 +126,23 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.RegistryStr),
 		constants.PersistenceGroup,
 		[]string{constants.SliverWinHelpGroup},
-		func() interface{} { return &registry.Registry{} })
+		func() gonsole.Commander { return &registry.Registry{} })
 
 	reg.AddCommand(constants.RegistryReadStr,
 		"Read values from the Windows Registry",
 		help.GetHelpFor(constants.RegistryReadStr),
 		"", []string{constants.SliverWinHelpGroup},
-		func() interface{} { return &registry.RegistryRead{} })
+		func() gonsole.Commander { return &registry.RegistryRead{} })
 
 	reg.AddCommand(constants.RegistryWriteStr,
 		"Write values to the Windows Registry",
 		help.GetHelpFor(constants.RegistryWriteStr),
 		"", []string{constants.SliverWinHelpGroup},
-		func() interface{} { return &registry.RegistryWrite{} })
+		func() gonsole.Commander { return &registry.RegistryWrite{} })
 
 	reg.AddCommand(constants.RegistryCreateKeyStr,
 		"Create a Registry key",
 		help.GetHelpFor(constants.RegistryCreateKeyStr),
 		"", []string{constants.SliverWinHelpGroup},
-		func() interface{} { return &registry.RegistryCreateKey{} })
+		func() gonsole.Commander { return &registry.RegistryCreateKey{} })
 }

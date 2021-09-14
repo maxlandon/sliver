@@ -75,11 +75,11 @@ func (e *Execute) Execute(args []string) (err error) {
 	} else if !output {
 		if exec.Status != 0 {
 			log.Errorf("Exited with status %d!\n", exec.Status)
-			if exec.Response != "" {
-				log.Infof("Output:\n%s\n", exec.Response)
-			}
+			// if exec.Response != "" {
+			//         log.Infof("Output:\n%s\n", exec.Response)
+			// }
 		} else {
-			log.Infof("Output:\n%s", exec.Response)
+			// log.Infof("Output:\n%s", exec.Response)
 		}
 	}
 	return

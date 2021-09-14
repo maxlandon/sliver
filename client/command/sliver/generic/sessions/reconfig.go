@@ -20,7 +20,6 @@ package sessions
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 
 	"github.com/bishopfox/sliver/client/core"
@@ -34,8 +33,8 @@ import (
 type Set struct {
 	Options struct {
 		Name      string `long:"name" description:"set agent name"`
-		Reconnect int32  `long:"reconnect" short:"r" description:"reconnect interval for agent" default:"-1"`
-		Poll      int32  `long:"poll" short:"p" description:"poll interval for agent" default:"-1"`
+		Reconnect int64  `long:"reconnect" short:"r" description:"reconnect interval for agent" default:"-1"`
+		Poll      int64  `long:"poll" short:"p" description:"poll interval for agent" default:"-1"`
 	} `group:"session values"`
 }
 
@@ -47,13 +46,13 @@ func (s *Set) Execute(args []string) (err error) {
 	if name != "" {
 		isAlphanumeric := regexp.MustCompile(`^[[:alnum:]]+$`).MatchString
 		if !isAlphanumeric(name) {
-			fmt.Printf(Error + "Name must be in alphanumeric only\n")
+			log.Errorf("Name must be in alphanumeric only\n")
 			return
 		}
 	}
 
 	session, err := transport.RPC.UpdateSession(context.Background(), &clientpb.UpdateSession{
-		SessionID:         core.ActiveSession.ID,
+		SessionID:         core.ActiveTarget.Session.ID,
 		Name:              name,
 		ReconnectInterval: s.Options.Reconnect,
 		PollInterval:      s.Options.Poll,

@@ -29,6 +29,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
@@ -63,27 +64,27 @@ func (w *WireGuardConfig) Execute(args []string) (err error) {
 
 	wgConfig, err := transport.RPC.GenerateWGClientConfig(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		fmt.Printf(Error+"Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 	clientPrivKeyBytes, err := hex.DecodeString(wgConfig.ClientPrivateKey)
 	if err != nil {
-		fmt.Printf(Error+"Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 	serverPubKeyBytes, err := hex.DecodeString(wgConfig.ServerPubKey)
 	if err != nil {
-		fmt.Printf(Error+"Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 	tmpl, err := template.New("wgQuick").Parse(wgQuickTemplate)
 	if err != nil {
-		fmt.Printf(Error+"Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 	clientIP, network, err := net.ParseCIDR(wgConfig.ClientIP + "/16")
 	if err != nil {
-		fmt.Printf(Error+"Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 	output := bytes.Buffer{}
@@ -96,7 +97,7 @@ func (w *WireGuardConfig) Execute(args []string) (err error) {
 
 	save := w.Options.Save
 	if save == "" {
-		fmt.Println(Info + "New client config:")
+		log.Infof("New client config:")
 		fmt.Println(output.String())
 	} else {
 		if !strings.HasSuffix(save, ".conf") {
@@ -104,10 +105,10 @@ func (w *WireGuardConfig) Execute(args []string) (err error) {
 		}
 		err = ioutil.WriteFile(save, []byte(output.String()), 0600)
 		if err != nil {
-			fmt.Printf(Error+"Error: %s\n", err)
+			log.Errorf("Error: %s\n", err)
 			return
 		}
-		fmt.Printf(Info+"Wrote conf: %s\n", save)
+		log.Infof("Wrote conf: %s\n", save)
 	}
 
 	return

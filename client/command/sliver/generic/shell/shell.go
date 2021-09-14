@@ -102,7 +102,7 @@ func runInteractive(shellPath string, noPty bool, rpc rpcpb.SliverRPCClient) {
 		oldState, err = terminal.MakeRaw(0)
 		log.ClientLogger.Debugf("Saving terminal state: %v", oldState)
 		if err != nil {
-			fmt.Printf(Error + "Failed to save terminal state")
+			log.Errorf("Failed to save terminal state")
 			return
 		}
 	}

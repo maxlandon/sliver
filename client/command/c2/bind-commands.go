@@ -23,45 +23,8 @@ import (
 
 	"github.com/bishopfox/sliver/client/completion"
 	"github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/help"
-)
-
-const (
-	// ANSI Colors
-	normal    = "\033[0m"
-	black     = "\033[30m"
-	red       = "\033[31m"
-	green     = "\033[32m"
-	orange    = "\033[33m"
-	blue      = "\033[34m"
-	purple    = "\033[35m"
-	cyan      = "\033[36m"
-	gray      = "\033[37m"
-	bold      = "\033[1m"
-	clearln   = "\r\x1b[2K"
-	upN       = "\033[%dA"
-	downN     = "\033[%dB"
-	underline = "\033[4m"
-
-	// Info - Display colorful information
-	Info = bold + cyan + "[*] " + normal
-	// Debug - Display debug information
-	Debug = bold + purple + "[-] " + normal
-	// Error - Notify error to a user
-	Error = bold + red + "[!] " + normal
-	// Warning - Notify important information, not an error
-	Warning = bold + orange + "[!] " + normal
-	// Woot - Display success
-	Woot = bold + green + "[$] " + normal
-)
-
-var (
-	// Console Some commands might need to access the current context
-	// in the course of the application execution.
-	Console *gonsole.Console
-
-	// Most commands just need access to a precise context.
-	serverMenu *gonsole.Menu
 )
 
 // BindCommands - C2 transports might be available in either or both contexts.
@@ -79,7 +42,7 @@ func BindCommands(cc *gonsole.Menu) {
 			help.GetHelpFor(constants.MtlsStr),
 			constants.TransportsGroup,
 			[]string{""},
-			func() interface{} { return &MTLSListener{} })
+			func() gonsole.Commander { return &MTLSListener{} })
 		mtls.AddOptionCompletion("LHost", completion.ServerInterfaceAddrs)
 
 		cc.AddCommand(constants.WGStr,
@@ -87,39 +50,39 @@ func BindCommands(cc *gonsole.Menu) {
 			help.GetHelpFor(constants.WGStr),
 			constants.TransportsGroup,
 			[]string{""},
-			func() interface{} { return &WireGuardListener{} })
+			func() gonsole.Commander { return &WireGuardListener{} })
 
 		wgConfig := cc.AddCommand(constants.WgConfigStr,
 			"Generate a new WireGuard client config",
 			help.GetHelpFor(constants.WgConfigStr),
 			constants.TransportsGroup,
 			[]string{""},
-			func() interface{} { return &WireGuardConfig{} })
-		wgConfig.AddOptionCompletionDynamic("Save", Console.Completer.LocalPath)
+			func() gonsole.Commander { return &WireGuardConfig{} })
+		wgConfig.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
 
 		cc.AddCommand(constants.DnsStr,
 			"Start a DNS listener on the server",
 			help.GetHelpFor(constants.DnsStr),
 			constants.TransportsGroup,
 			[]string{""},
-			func() interface{} { return &DNSListener{} })
+			func() gonsole.Commander { return &DNSListener{} })
 
 		https := cc.AddCommand(constants.HttpsStr,
 			"Start an HTTP(S) listener on the server",
 			help.GetHelpFor(constants.HttpsStr),
 			constants.TransportsGroup,
 			[]string{""},
-			func() interface{} { return &HTTPSListener{} })
+			func() gonsole.Commander { return &HTTPSListener{} })
 		https.AddOptionCompletion("Domain", completion.ServerInterfaceAddrs)
-		https.AddOptionCompletionDynamic("Certificate", Console.Completer.LocalPathAndFiles)
-		https.AddOptionCompletionDynamic("PrivateKey", Console.Completer.LocalPathAndFiles)
+		https.AddOptionCompletionDynamic("Certificate", core.Console.Completer.LocalPathAndFiles)
+		https.AddOptionCompletionDynamic("PrivateKey", core.Console.Completer.LocalPathAndFiles)
 
 		http := cc.AddCommand(constants.HttpStr,
 			"Start an HTTP listener on the server",
 			help.GetHelpFor(constants.HttpStr),
 			constants.TransportsGroup,
 			[]string{""},
-			func() interface{} { return &HTTPListener{} })
+			func() gonsole.Commander { return &HTTPListener{} })
 		http.AddOptionCompletion("LHost", completion.ServerInterfaceAddrs)
 
 		stager := cc.AddCommand(constants.StageListenerStr,
@@ -127,10 +90,10 @@ func BindCommands(cc *gonsole.Menu) {
 			help.GetHelpFor(constants.StageListenerStr),
 			constants.TransportsGroup,
 			[]string{""},
-			func() interface{} { return &StageListener{} })
+			func() gonsole.Commander { return &StageListener{} })
 		stager.AddOptionCompletionDynamic("URL", completion.NewURLCompleterStager().CompleteURL)
-		stager.AddOptionCompletionDynamic("Certificate", Console.Completer.LocalPathAndFiles)
-		stager.AddOptionCompletionDynamic("PrivateKey", Console.Completer.LocalPathAndFiles)
+		stager.AddOptionCompletionDynamic("Certificate", core.Console.Completer.LocalPathAndFiles)
+		stager.AddOptionCompletionDynamic("PrivateKey", core.Console.Completer.LocalPathAndFiles)
 		stager.AddOptionCompletion("Profile", completion.ImplantProfiles)
 
 		// Websites -----------------------------------------------------------------
@@ -139,7 +102,7 @@ func BindCommands(cc *gonsole.Menu) {
 			"",
 			constants.TransportsGroup,
 			[]string{""},
-			func() interface{} { return &Websites{} })
+			func() gonsole.Commander { return &Websites{} })
 
 		ws.SubcommandsOptional = true
 
@@ -148,30 +111,30 @@ func BindCommands(cc *gonsole.Menu) {
 			"",
 			constants.TransportsGroup,
 			[]string{""},
-			func() interface{} { return &WebsitesShow{} })
+			func() gonsole.Commander { return &WebsitesShow{} })
 
 		ws.AddCommand(constants.RmStr,
 			"Remove an entire website",
 			"", "", []string{""},
-			func() interface{} { return &WebsitesDelete{} })
+			func() gonsole.Commander { return &WebsitesDelete{} })
 
 		wa := ws.AddCommand(constants.AddWebContentStr,
 			"Add content to a website",
 			"", "", []string{""},
-			func() interface{} { return &WebsitesAddContent{} })
-		wa.AddOptionCompletionDynamic("Content", Console.Completer.LocalPathAndFiles)
+			func() gonsole.Commander { return &WebsitesAddContent{} })
+		wa.AddOptionCompletionDynamic("Content", core.Console.Completer.LocalPathAndFiles)
 
 		wd := ws.AddCommand(constants.RmWebContentStr,
 			"Remove content from a website",
 			"", "", []string{""},
-			func() interface{} { return &WebsitesDeleteContent{} })
-		wd.AddOptionCompletionDynamic("Content", Console.Completer.LocalPathAndFiles)
+			func() gonsole.Commander { return &WebsitesDeleteContent{} })
+		wd.AddOptionCompletionDynamic("Content", core.Console.Completer.LocalPathAndFiles)
 
 		wu := ws.AddCommand(constants.WebUpdateStr,
 			"Update a website's content type",
 			"", "", []string{""},
-			func() interface{} { return &WebsiteType{} })
-		wu.AddOptionCompletionDynamic("Content", Console.Completer.LocalPathAndFiles)
+			func() gonsole.Commander { return &WebsiteType{} })
+		wu.AddOptionCompletionDynamic("Content", core.Console.Completer.LocalPathAndFiles)
 
 	// ----------------------------------------------------------------------------------------------
 	// All C2 transports that can listen on/ dial from the implant.
@@ -183,7 +146,7 @@ func BindCommands(cc *gonsole.Menu) {
 			"",
 			constants.TransportsGroup,
 			[]string{""},
-			func() interface{} { return &TCPPivot{} })
+			func() gonsole.Commander { return &TCPPivot{} })
 		tcp.AddOptionCompletion("LHost", completion.ActiveSessionIfaceAddrs)
 
 		cc.AddCommand(constants.NamedPipeStr,
@@ -191,6 +154,6 @@ func BindCommands(cc *gonsole.Menu) {
 			"",
 			constants.TransportsGroup,
 			[]string{"windows"}, // Command is only available if the sliver host OS is Windows
-			func() interface{} { return &NamedPipePivot{} })
+			func() gonsole.Commander { return &NamedPipePivot{} })
 	}
 }

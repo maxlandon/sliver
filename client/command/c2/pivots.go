@@ -25,6 +25,7 @@ import (
 	"github.com/maxlandon/readline"
 
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -54,11 +55,11 @@ func (tp *TCPPivot) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
+		log.Errorf("%s\n", err)
 		return nil
 	}
 
-	fmt.Printf(Info+"Listening on tcp://%s \n", address)
+	log.Infof("Listening on tcp://%s \n", address)
 	return
 }
 
@@ -79,11 +80,11 @@ func (tp *NamedPipePivot) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		fmt.Printf(Error+"%s\n", err)
+		log.Errorf("%s\n", err)
 		return nil
 	}
 
-	fmt.Printf(Info+"Listening on %s", "\\\\.\\pipe\\"+pipeName+" \n")
+	log.Infof("Listening on %s", "\\\\.\\pipe\\"+pipeName+" \n")
 	return
 }
 
@@ -112,11 +113,11 @@ func (p *Pivots) Execute(args []string) (err error) {
 		} else {
 			sessions, err := rpc.GetSessions(context.Background(), &commonpb.Empty{})
 			if err != nil {
-				fmt.Printf(Error+"Error: %v", err)
+				log.Errorf("Error: %v", err)
 				return nil
 			}
 			if len(sessions.Sessions) == 0 {
-				fmt.Printf(Info + "No pivoted sessions \n")
+				log.Infof("No pivoted sessions \n")
 				return nil
 			}
 			for _, session := range sessions.Sessions {
@@ -137,17 +138,17 @@ func printPivots(session *clientpb.Session, timeout int64, rpc rpcpb.SliverRPCCl
 	})
 
 	if err != nil {
-		fmt.Printf(Error+"Error: %v", err)
+		log.Errorf("Error: %v", err)
 		return
 	}
 
 	if pivotList.Response != nil && pivotList.Response.Err != "" {
-		fmt.Printf(Error+"Error: %s", pivotList.Response.Err)
+		log.Errorf("Error: %s", pivotList.Response.Err)
 		return
 	}
 
 	if pivotList.Entries == nil || len(pivotList.Entries) == 0 {
-		fmt.Printf(Info+"No pivots found for session %d\n", session.ID)
+		log.Infof("No pivots found for session %d\n", session.ID)
 		return
 	}
 

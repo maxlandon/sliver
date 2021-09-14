@@ -33,7 +33,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command"
-	cmd "github.com/bishopfox/sliver/client/command/server"
+	cmd "github.com/bishopfox/sliver/client/command/server/update"
 	"github.com/bishopfox/sliver/client/completion"
 	"github.com/bishopfox/sliver/client/constants"
 	consts "github.com/bishopfox/sliver/client/constants"

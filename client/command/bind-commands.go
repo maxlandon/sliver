@@ -46,10 +46,6 @@ func BindCommands(console *gonsole.Console) {
 	serverMenu := console.GetMenu(constants.ServerMenu)
 	sliverMenu := console.GetMenu(constants.SliverMenu)
 
-	// Pass the console to the various packages needing it
-	// 1 - Commands packages
-	c2.Console = console
-
 	// 2 - Utility packages
 	core.Console = console
 	completion.Console = console
@@ -70,7 +66,7 @@ func BindCommands(console *gonsole.Console) {
 		"",
 		"sliver commands",
 		[]string{""},
-		func() interface{} { return &settings.SaveConfig{} })
+		func() gonsole.Commander { return &settings.SaveConfig{} })
 
 	// The gonsole library gives a help command as well.
 	console.AddHelpCommand(constants.CoreServerGroup)

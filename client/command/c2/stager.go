@@ -26,8 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	consts "github.com/bishopfox/sliver/client/constants"
-	"github.com/bishopfox/sliver/client/spin"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -56,19 +55,19 @@ func (s *StageListener) Execute(args []string) (err error) {
 	listenerURL := s.Options.URL
 
 	if profileName == "" || listenerURL == "" {
-		fmt.Println(Error + "missing required flags, see `help stage-listener` for more info")
+		log.Errorf("missing required flags, see `help stage-listener` for more info")
 		return
 	}
 
 	// parse listener url
 	stagingURL, err := url.Parse(listenerURL)
 	if err != nil {
-		fmt.Printf(Error + "listener-url format not supported")
+		log.Errorf("listener-url format not supported")
 		return
 	}
 	stagingPort, err := strconv.ParseUint(stagingURL.Port(), 10, 32)
 	if err != nil {
-		fmt.Printf(Error+"error parsing staging port: %v\n", err)
+		log.Errorf("error parsing staging port: %v\n", err)
 		return
 	}
 
@@ -79,7 +78,7 @@ func (s *StageListener) Execute(args []string) (err error) {
 	}
 
 	if len(*profiles) == 0 {
-		fmt.Printf(Error+"No profiles, create one with `%s`\n", consts.NewProfileStr)
+		log.Errorf("No profiles, create one with `profiles generate`\n")
 		return
 	}
 
@@ -90,20 +89,20 @@ func (s *StageListener) Execute(args []string) (err error) {
 	}
 
 	if implantProfile.GetName() == "" {
-		fmt.Printf(Error + "could not find the implant name from the profile\n")
+		log.Errorf("could not find the implant name from the profile\n")
 		return
 	}
 
 	stage2, err := GetSliverBinary(*implantProfile, rpc)
 	if err != nil {
-		fmt.Printf(Error+"Error: %v\n", err)
+		log.Errorf("Error: %v\n", err)
 		return
 	}
 
 	switch stagingURL.Scheme {
 	case "http":
 		ctrl := make(chan bool)
-		go spin.Until("Starting HTTP staging listener...", ctrl)
+		go log.SpinUntil("Starting HTTP staging listener...", ctrl)
 		stageListener, err := rpc.StartHTTPStagerListener(context.Background(), &clientpb.StagerListenerReq{
 			Protocol: clientpb.StageProtocol_HTTP,
 			Data:     stage2,
@@ -113,22 +112,22 @@ func (s *StageListener) Execute(args []string) (err error) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			fmt.Printf(Error+"Error starting HTTP staging listener: %v\n", err)
+			log.Errorf("Error starting HTTP staging listener: %v\n", err)
 			return nil
 		}
-		fmt.Printf(Info+"Job %d (http) started\n", stageListener.GetJobID())
+		log.Infof("Job %d (http) started\n", stageListener.GetJobID())
 	case "https":
 		if s.Options.Certificate == "" || s.Options.PrivateKey == "" {
-			fmt.Printf(Error + "Please provide --cert and --key if using HTTPS URL\n")
+			log.Errorf("Please provide --cert and --key if using HTTPS URL\n")
 			return nil
 		}
 		cert, key, err := getLocalCertificatePair(s.Options.Certificate, s.Options.PrivateKey)
 		if err != nil {
-			fmt.Printf("\n"+Error+"Failed to load local certificate %v", err)
+			log.Errorf("Failed to load local certificate %v", err)
 			return nil
 		}
 		ctrl := make(chan bool)
-		go spin.Until("Starting HTTPS staging listener...", ctrl)
+		go log.SpinUntil("Starting HTTPS staging listener...", ctrl)
 		stageListener, err := rpc.StartHTTPStagerListener(context.Background(), &clientpb.StagerListenerReq{
 			Protocol: clientpb.StageProtocol_HTTPS,
 			Data:     stage2,
@@ -141,13 +140,13 @@ func (s *StageListener) Execute(args []string) (err error) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			fmt.Printf(Error+"Error starting HTTPS staging listener: %v\n", err)
+			log.Errorf("Error starting HTTPS staging listener: %v\n", err)
 			return nil
 		}
-		fmt.Printf(Info+"Job %d (https) started\n", stageListener.GetJobID())
+		log.Infof("Job %d (https) started\n", stageListener.GetJobID())
 	case "tcp":
 		ctrl := make(chan bool)
-		go spin.Until("Starting TCP staging listener...", ctrl)
+		go log.SpinUntil("Starting TCP staging listener...", ctrl)
 		stageListener, err := rpc.StartTCPStagerListener(context.Background(), &clientpb.StagerListenerReq{
 			Protocol: clientpb.StageProtocol_TCP,
 			Data:     stage2,
@@ -157,13 +156,13 @@ func (s *StageListener) Execute(args []string) (err error) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			fmt.Printf(Error+"Error starting TCP staging listener: %v\n", err)
+			log.Errorf("Error starting TCP staging listener: %v\n", err)
 			return nil
 		}
-		fmt.Printf(Info+"Job %d (tcp) started\n", stageListener.GetJobID())
+		log.Infof("Job %d (tcp) started\n", stageListener.GetJobID())
 
 	default:
-		fmt.Printf(Error+"Unsupported staging protocol: %s\n", stagingURL.Scheme)
+		log.Errorf("Unsupported staging protocol: %s\n", stagingURL.Scheme)
 		return
 	}
 
@@ -183,9 +182,9 @@ func GetSliverBinary(profile clientpb.ImplantProfile, rpc rpcpb.SliverRPCClient)
 	_, ok := builds.GetConfigs()[implantName]
 	if implantName == "" || !ok {
 		// no built implant found for profile, generate a new one
-		fmt.Printf(Info+"No builds found for profile %s, generating a new one\n", profile.GetName())
+		log.Infof("No builds found for profile %s, generating a new one\n", profile.GetName())
 		ctrl := make(chan bool)
-		go spin.Until("Compiling, please wait ...", ctrl)
+		go log.SpinUntil("Compiling, please wait ...", ctrl)
 		generated, err := rpc.Generate(context.Background(), &clientpb.GenerateReq{
 			Config: profile.GetConfig(),
 		})
@@ -204,7 +203,7 @@ func GetSliverBinary(profile clientpb.ImplantProfile, rpc rpcpb.SliverRPCClient)
 		}
 	} else {
 		// Found a build, reuse that one
-		fmt.Printf(Info+"Sliver name for profile: %s\n", implantName)
+		log.Infof("Sliver name for profile: %s\n", implantName)
 		regenerate, err := rpc.Regenerate(context.Background(), &clientpb.RegenerateReq{
 			ImplantName: profile.GetConfig().GetName(),
 		})
@@ -224,7 +223,7 @@ func buildImplantName(name string) string {
 func getSliverProfiles() *map[string]*clientpb.ImplantProfile {
 	pbProfiles, err := transport.RPC.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		fmt.Printf(Error+"Error %s", err)
+		log.Errorf("Error %s", err)
 		return nil
 	}
 	profiles := &map[string]*clientpb.ImplantProfile{}
