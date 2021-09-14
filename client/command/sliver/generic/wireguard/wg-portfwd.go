@@ -41,13 +41,11 @@ func (w *WireGuardPortFwd) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if fwdList.Response != nil && fwdList.Response.Err != "" {
-		log.Errorf("Error: %s\n", fwdList.Response.Err)
-		return
+		return log.Errorf("Error: %s", fwdList.Response.Err)
 	}
 
 	if fwdList.Forwarders == nil || len(fwdList.Forwarders) == 0 {

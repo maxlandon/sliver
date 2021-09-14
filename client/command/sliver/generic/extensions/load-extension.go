@@ -54,14 +54,13 @@ func (l *LoadExtension) Execute(args []string) (err error) {
 	manifestPath := fmt.Sprintf("%s/%s", l.Positional.Path, "manifest.json")
 	jsonBytes, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
-		log.Errorf("%v", err)
+		return log.Errorf("%v", err)
 	}
 	// parse it
 	ext := &extension{}
 	err = json.Unmarshal(jsonBytes, ext)
 	if err != nil {
-		log.Errorf("error loading extension: %v\n", err)
-		return
+		return log.Errorf("error loading extension: %v", err)
 	}
 	ext.Path = l.Positional.Path
 
@@ -69,9 +68,8 @@ func (l *LoadExtension) Execute(args []string) (err error) {
 	// by another command, return and notify
 	for _, c := range core.Console.GetMenu(constants.SliverMenu).Commands() {
 		if ext.Name == c.Name {
-			log.Errorf("Error loading extension: another command has name %s\n",
+			return log.Errorf("Error loading extension: another command has name %s",
 				readline.Yellow(ext.Name))
-			return nil
 		}
 	}
 

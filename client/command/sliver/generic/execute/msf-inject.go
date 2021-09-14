@@ -45,8 +45,7 @@ func (m *MSFInject) Execute(args []string) (err error) {
 	iterations := m.Iterations
 
 	if lhost == "" {
-		log.Errorf("Invalid lhost '%s', see `help %s`\n", lhost, constants.MsfStr)
-		return
+		return log.Errorf("Invalid lhost '%s', see `help %s`", lhost, constants.MsfStr)
 	}
 
 	ctrl := make(chan bool)
@@ -65,9 +64,9 @@ func (m *MSFInject) Execute(args []string) (err error) {
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		log.Errorf("%s\n", err)
-	} else {
-		log.Infof("Executed payload on target\n")
+		return log.Errorf("%s", err)
 	}
+
+	log.Infof("Executed payload on target\n")
 	return nil
 }

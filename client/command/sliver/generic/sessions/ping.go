@@ -41,9 +41,9 @@ func (p *Ping) Execute(args []string) (err error) {
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		log.Warnf("%s\n", err)
-	} else {
-		log.Infof("Pong %d\n", pong.Nonce)
+		return log.Errorf("%s", err)
 	}
+
+	log.Infof("Pong %d\n", pong.Nonce)
 	return nil
 }

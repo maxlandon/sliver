@@ -71,10 +71,10 @@ func (e *Execute) Execute(args []string) (err error) {
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		log.Errorf("%s", err)
+		return log.Errorf("%s", err)
 	} else if !output {
 		if exec.Status != 0 {
-			log.Errorf("Exited with status %d!\n", exec.Status)
+			return log.Errorf("Exited with status %d!\n", exec.Status)
 			// if exec.Response != "" {
 			//         log.Infof("Output:\n%s\n", exec.Response)
 			// }

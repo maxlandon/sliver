@@ -47,12 +47,10 @@ func (e *SetEnv) Execute(args []string) (err error) {
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	if envInfo.Response != nil && envInfo.Response.Err != "" {
-		log.Errorf("Error: %s", envInfo.Response.Err)
-		return
+		return log.Errorf("Error: %s", envInfo.Response.Err)
 	}
 	log.Infof("set %s to %s\n", e.Positional.Key, e.Positional.Value)
 

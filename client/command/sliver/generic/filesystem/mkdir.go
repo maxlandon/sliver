@@ -20,6 +20,7 @@ package filesystem
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
@@ -43,7 +44,8 @@ func (md *Mkdir) Execute(args []string) (err error) {
 			Request: core.ActiveTarget.Request(),
 		})
 		if err != nil {
-			log.Errorf("%s\n", err)
+			err := log.Errorf("%s", err)
+			fmt.Printf(err.Error())
 		} else {
 			log.Infof("%s\n", mkdir.Path)
 		}

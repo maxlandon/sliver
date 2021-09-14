@@ -74,8 +74,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 
 	binPath, err := ext.root.getFileForTarget(ext.sub.Name, session.GetOS(), session.GetArch())
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	var args string
@@ -101,8 +100,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 	if proc == nil {
 		processName, err = ext.sub.getDefaultProcess(session.GetOS())
 		if err != nil {
-			log.Errorf("Error: %v\n", err)
-			return
+			return log.Errorf("Error: %v", err)
 		}
 	}
 
@@ -112,8 +110,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 	}
 	binData, err := ioutil.ReadFile(binPath)
 	if err != nil {
-		log.Errorf("%s", err.Error())
-		return
+		return log.Errorf("%s", err.Error())
 	}
 
 	// Save output option
@@ -144,8 +141,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			log.Errorf("Error: %v", err)
-			return nil
+			return log.Errorf("Error: %v", err)
 		}
 		log.Infof("Output:\n%s", string(executeAssemblyResp.GetOutput()))
 		if outFilePath != nil {
@@ -172,8 +168,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 		<-ctrl
 
 		if err != nil {
-			log.Errorf("Error: %v", err)
-			return nil
+			return log.Errorf("Error: %v", err)
 		}
 
 		log.Infof("Output:\n%s", spawnDllResp.GetResult())
@@ -200,8 +195,7 @@ func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
 	<-ctrl
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return nil
+		return log.Errorf("Error: %v", err)
 	}
 
 	log.Infof("Output:\n%s", sideloadResp.GetResult())

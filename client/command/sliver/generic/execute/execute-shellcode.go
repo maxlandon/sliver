@@ -57,12 +57,10 @@ func (es *ExecuteShellcode) Execute(args []string) (err error) {
 	shellcodePath := es.Positional.LocalPath
 	shellcodeBin, err := ioutil.ReadFile(shellcodePath)
 	if err != nil {
-		log.Errorf("Error: %s\n", err.Error())
-		return
+		return log.Errorf("Error: %s", err.Error())
 	}
 	if pid != 0 && interactive {
-		log.Errorf("Cannot use both `--pid` and `--interactive`\n")
-		return
+		return log.Errorf("Cannot use both `--pid` and `--interactive`")
 	}
 	if interactive {
 		es.executeInteractive(es.Options.RemotePath, shellcodeBin, es.Options.RWX)
@@ -80,15 +78,13 @@ func (es *ExecuteShellcode) Execute(args []string) (err error) {
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	if task.Response.GetErr() != "" {
-		log.Errorf("Error: %s\n", task.Response.GetErr())
-		return
+		return log.Errorf("Error: %s", task.Response.GetErr())
 	}
-	log.Infof("Executed shellcode on target\n")
 
+	log.Infof("Executed shellcode on target\n")
 	return
 }
 
@@ -109,7 +105,8 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
+		err := log.Errorf("Error: %v", err)
+		fmt.Printf(err.Error())
 		return
 	}
 
@@ -123,7 +120,8 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v\n", err)
+		err := log.Errorf("Error: %v", err)
+		fmt.Printf(err.Error())
 		return
 	}
 	// Retrieve PID and start remote task
@@ -142,7 +140,8 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 	<-ctrl
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
+		err := log.Errorf("Error: %v", err)
+		fmt.Printf(err.Error())
 		return
 	}
 
@@ -154,7 +153,8 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 		oldState, err = terminal.MakeRaw(0)
 		clog.Tracef("Saving terminal state: %v", oldState)
 		if err != nil {
-			log.Errorf("Failed to save terminal state")
+			err := log.Errorf("Failed to save terminal state")
+			fmt.Printf(err.Error())
 			return
 		}
 	}
@@ -164,7 +164,8 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 		n, err := io.Copy(os.Stdout, tunnel)
 		clog.Tracef("Wrote %d bytes to stdout", n)
 		if err != nil {
-			log.Errorf("Error writing to stdout: %v", err)
+			err := log.Errorf("Error writing to stdout: %v", err)
+			fmt.Printf(err.Error())
 			return
 		}
 	}()
@@ -176,7 +177,8 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 			break
 		}
 		if err != nil {
-			log.Errorf("Error reading from stdin: %v", err)
+			err := log.Errorf("Error reading from stdin: %v", err)
+			fmt.Printf(err.Error())
 			break
 		}
 	}

@@ -20,6 +20,7 @@ package env
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
@@ -49,7 +50,8 @@ func (e *GetEnv) Execute(args []string) (err error) {
 		})
 
 		if err != nil {
-			log.Errorf("Error: %v", err)
+			err := log.Errorf("Error: %v", err)
+			fmt.Printf(err.Error())
 			continue
 		}
 

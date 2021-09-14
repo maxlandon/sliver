@@ -46,8 +46,7 @@ func (k *Kill) Execute(args []string) (err error) {
 	session := core.ActiveTarget.Session
 	err = killSession(session, transport.RPC)
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return
+		return log.Errorf("%s", err)
 	}
 
 	core.UnsetActiveSession()

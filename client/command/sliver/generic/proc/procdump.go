@@ -51,8 +51,7 @@ func (p *ProcDump) Execute(args []string) (err error) {
 		pid = getPIDByName(name, core.ActiveTarget.Session)
 	}
 	if pid == -1 {
-		log.Errorf("Invalid process target\n")
-		return
+		return log.Errorf("Invalid process target")
 	}
 
 	ctrl := make(chan bool)
@@ -65,16 +64,14 @@ func (p *ProcDump) Execute(args []string) (err error) {
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		log.Errorf("Error %s", err)
-		return
+		return log.Errorf("Error: %s", err)
 	}
 
 	hostname := core.ActiveTarget.Session.Hostname
 	tmpFileName := path.Base(fmt.Sprintf("procdump_%s_%d_*", hostname, pid))
 	tmpFile, err := ioutil.TempFile("", tmpFileName)
 	if err != nil {
-		log.Errorf("Error creating temporary file: %v\n", err)
-		return
+		return log.Errorf("Error creating temporary file: %v", err)
 	}
 	tmpFile.Write(dump.GetData())
 	log.Infof("Process dump stored in: %s\n", tmpFile.Name())

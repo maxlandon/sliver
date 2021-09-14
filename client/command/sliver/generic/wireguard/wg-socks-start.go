@@ -43,13 +43,11 @@ func (w *WireGuardSocksStart) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if socks.Response != nil && socks.Response.Err != "" {
-		log.Errorf("Error: %s\n", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if socks.Server != nil {

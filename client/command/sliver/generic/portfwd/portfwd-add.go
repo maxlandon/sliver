@@ -51,8 +51,7 @@ func (p *PortfwdAdd) Execute(args []string) (err error) {
 	remoteAddr := p.Options.Remote
 	remoteHost, remotePort, err := net.SplitHostPort(remoteAddr)
 	if err != nil {
-		log.Errorf("Failed to parse remote target %s\n", err)
-		return
+		return log.Errorf("Failed to parse remote target %s", err)
 	}
 	if remotePort == "3389" {
 		log.Warnf("RDP is unstable over tunneled portfwds, we recommend using WireGuard portfwds\n")

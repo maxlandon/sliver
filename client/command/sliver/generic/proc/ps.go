@@ -69,8 +69,7 @@ func (p *PS) Execute(args []string) (err error) {
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return
+		return log.Errorf("%s", err)
 	}
 
 	table := util.NewTable("")

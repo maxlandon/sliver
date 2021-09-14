@@ -60,8 +60,7 @@ func (s *Sideload) Execute(args []string) (err error) {
 
 	binData, err := ioutil.ReadFile(binPath)
 	if err != nil {
-		log.Errorf("%s", err.Error())
-		return
+		return log.Errorf("%s", err.Error())
 	}
 	ctrl := make(chan bool)
 	go log.SpinUntil(fmt.Sprintf("Sideloading %s ...", binPath), ctrl)
@@ -76,13 +75,11 @@ func (s *Sideload) Execute(args []string) (err error) {
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if sideload.GetResponse().GetErr() != "" {
-		log.Errorf("Error: %s\n", sideload.GetResponse().GetErr())
-		return
+		return log.Errorf("Error: %s", sideload.GetResponse().GetErr())
 	}
 	var outFilePath *os.File
 	if s.Options.Save {

@@ -46,8 +46,7 @@ func (s *Set) Execute(args []string) (err error) {
 	if name != "" {
 		isAlphanumeric := regexp.MustCompile(`^[[:alnum:]]+$`).MatchString
 		if !isAlphanumeric(name) {
-			log.Errorf("Name must be in alphanumeric only\n")
-			return
+			return log.Errorf("Name must be in alphanumeric only")
 		}
 	}
 
@@ -58,8 +57,7 @@ func (s *Set) Execute(args []string) (err error) {
 		PollInterval:      s.Options.Poll,
 	})
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 	core.ActiveTarget.Session = session // Will be noticed by all components in need.
 
@@ -68,10 +66,9 @@ func (s *Set) Execute(args []string) (err error) {
 		Request: core.RequestTimeout(10),
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
-	} else {
-		core.ActiveTarget.Session.WorkingDirectory = pwd.Path
+		return log.Errorf("%s", err)
 	}
+	core.ActiveTarget.Session.WorkingDirectory = pwd.Path
 
 	return
 }

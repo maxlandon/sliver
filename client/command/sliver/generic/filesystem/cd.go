@@ -48,7 +48,7 @@ func (cd *ChangeDirectory) Execute(args []string) (err error) {
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		log.RPCErrorf("%s\n", err)
+		log.Errorf("%s", err)
 	} else {
 		log.Infof("%s\n", pwd.Path)
 		core.ActiveTarget.Session.WorkingDirectory = pwd.Path

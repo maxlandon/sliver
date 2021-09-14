@@ -19,6 +19,8 @@ package portfwd
 */
 
 import (
+	"fmt"
+
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 )
@@ -36,7 +38,8 @@ func (p *PortfwdRm) Execute(args []string) (err error) {
 	for _, portfwdID := range p.Args.ID {
 		found := core.Portfwds.Remove(portfwdID)
 		if !found {
-			log.Errorf("No portfwd with id %d\n", portfwdID)
+			err := log.Errorf("No portfwd with id %d", portfwdID)
+			fmt.Printf(err.Error())
 		} else {
 			log.Infof("Removed portfwd")
 		}

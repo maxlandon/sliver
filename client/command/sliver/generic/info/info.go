@@ -66,7 +66,7 @@ func (i *SessionInfo) Execute(args []string) (err error) {
 		fmt.Printf(bold+"Remote Address: %s%s\n", normal, session.RemoteAddress)
 		fmt.Printf(bold+"     Proxy URL: %s%s\n", normal, session.ProxyURL)
 	} else {
-		log.Errorf("No target session, see `help %s`\n", consts.InfoStr)
+		return log.Errorf("No target session, see `help %s`", consts.InfoStr)
 	}
 	return
 }

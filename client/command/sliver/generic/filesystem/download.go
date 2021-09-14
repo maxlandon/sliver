@@ -51,14 +51,12 @@ func (c *Download) Execute(args []string) (err error) {
 	dlDst, _ := filepath.Abs(c.Positional.LocalPath)
 	fi, err := os.Stat(dlDst)
 	if err != nil && !os.IsNotExist(err) {
-		log.Errorf("%s\n", err)
-		return nil
+		return log.Errorf("%s", err)
 	}
 
 	// If we have more than one file to download, the destination must be a directory.
 	if len(c.Positional.RemotePath) > 1 && !fi.IsDir() {
-		log.Errorf("%s is not a directory (must be if you download multiple files)\n", dlDst)
-		return nil
+		return log.Errorf("%s is not a directory (must be if you download multiple files)", dlDst)
 	}
 
 	// This fucntion verifies that files are not directly overwritten
@@ -90,7 +88,7 @@ func (c *Download) Execute(args []string) (err error) {
 	}
 
 	// Prepare a download function & spinner to be used multiple times.
-	var downloadFile = func(src string, dst string) {
+	var downloadFile = func(src string, dst string) (err error) {
 		fileName := filepath.Base(src)
 
 		ctrl := make(chan bool)
@@ -102,29 +100,26 @@ func (c *Download) Execute(args []string) (err error) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			log.Errorf("%s\n", err)
-			return
+			return log.Errorf("%s", err)
 		}
 
 		if download.Encoder == "gzip" {
 			download.Data, err = new(encoders.Gzip).Decode(download.Data)
 			if err != nil {
-				log.Errorf("Decoding failed %s", err)
-				return
+				return log.Errorf("Decoding failed; %s", err)
 			}
 		}
 		dstFile, err := os.Create(dst)
 		if err != nil {
-			log.Errorf("Failed to open local file %s: %s\n", dst, err)
-			return
+			return log.Errorf("Failed to open local file %s: %s", dst, err)
 		}
 		defer dstFile.Close()
 		n, err := dstFile.Write(download.Data)
 		if err != nil {
-			log.Errorf("Failed to write data %v\n", err)
-		} else {
-			log.Infof("Wrote %d bytes to %s\n", n, dstFile.Name())
+			return log.Errorf("Failed to write data: %v", err)
 		}
+		log.Infof("Wrote %d bytes to %s\n", n, dstFile.Name())
+		return
 	}
 
 	// For each file in the positional arguments, download
@@ -133,7 +128,10 @@ func (c *Download) Execute(args []string) (err error) {
 		if err != nil {
 			continue
 		}
-		downloadFile(src, dst)
+		err = downloadFile(src, dst)
+		if err != nil {
+			fmt.Printf(err.Error())
+		}
 	}
 
 	return

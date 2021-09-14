@@ -20,6 +20,7 @@ package wireguard
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
@@ -49,12 +50,14 @@ func (w *WireGuardSocksStop) Execute(args []string) (err error) {
 		})
 
 		if err != nil {
-			log.Errorf("Error: %v", err)
+			err := log.Errorf("Error: %v", err)
+			fmt.Printf(err.Error())
 			continue
 		}
 
 		if stopReq.Response != nil && stopReq.Response.Err != "" {
-			log.Errorf("Error: %v\n", stopReq.Response.Err)
+			err := log.Errorf("Error: %v", stopReq.Response.Err)
+			fmt.Printf(err.Error())
 			continue
 		}
 

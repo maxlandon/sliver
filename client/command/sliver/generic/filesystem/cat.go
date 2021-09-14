@@ -53,14 +53,14 @@ func (c *Cat) Execute(args []string) (err error) {
 			Request: core.ActiveTarget.Request(),
 		})
 		if err != nil {
-			log.Errorf("%s\n", err)
+			err := log.Errorf("%s", err)
+			fmt.Printf(err.Error())
 			continue
 		}
 		if download.Encoder == "gzip" {
 			download.Data, err = new(encoders.Gzip).Decode(download.Data)
 			if err != nil {
-				log.Errorf("Encoder error: %s\n", err)
-				return nil
+				return log.Errorf("Encoder error: %s", err)
 			}
 		}
 		if c.Options.Colorize {

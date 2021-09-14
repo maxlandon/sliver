@@ -41,8 +41,7 @@ func (w *WireGuardPortFwdAdd) Execute(args []string) (err error) {
 
 	remoteHost, remotePort, err := net.SplitHostPort(w.Options.Remote)
 	if err != nil {
-		log.Errorf("Failed to parse remote target %s\n", err)
-		return
+		return log.Errorf("Failed to parse remote target %s", err)
 	}
 
 	pfwdAdd, err := transport.RPC.WGStartPortForward(context.Background(), &sliverpb.WGPortForwardStartReq{
@@ -52,13 +51,11 @@ func (w *WireGuardPortFwdAdd) Execute(args []string) (err error) {
 	})
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if pfwdAdd.Response != nil && pfwdAdd.Response.Err != "" {
-		log.Errorf("Error: %s\n", pfwdAdd.Response.Err)
-		return
+		return log.Errorf("Error: %s", pfwdAdd.Response.Err)
 	}
 	log.Infof("Port forwarding %s -> %s:%s\n", pfwdAdd.Forwarder.LocalAddr, remoteHost, remotePort)
 

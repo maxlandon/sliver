@@ -39,29 +39,25 @@ func (s *Screenshot) Execute(args []string) (err error) {
 	session := core.ActiveTarget.Session
 
 	if session.OS != "windows" && session.OS != "linux" {
-		log.Errorf("Not implemented for %s\n", session.OS)
-		return
+		return log.Errorf("Not implemented for %s", session.OS)
 	}
 
 	screenshot, err := transport.RPC.Screenshot(context.Background(), &sliverpb.ScreenshotReq{
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return
+		return log.Errorf("%s", err)
 	}
 
 	timestamp := time.Now().Format("20060102150405")
 	tmpFileName := path.Base(fmt.Sprintf("screenshot_%s_%d_%s_*.png", session.Name, session.ID, timestamp))
 	tmpFile, err := ioutil.TempFile("", tmpFileName)
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return
+		return log.Errorf("%s", err)
 	}
 	err = ioutil.WriteFile(tmpFile.Name(), screenshot.Data, 0600)
 	if err != nil {
-		log.Errorf("Error writting file: %s\n", err)
-		return
+		return log.Errorf("Error writting file: %s", err)
 	}
 	log.Infof("Screenshot written to %s\n", tmpFile.Name())
 	return

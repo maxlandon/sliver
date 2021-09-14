@@ -37,10 +37,9 @@ func (p *Pwd) Execute(args []string) (err error) {
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
-	} else {
-		log.Infof("%s\n", pwd.Path)
+		return log.Errorf("%s", err)
 	}
 
+	log.Infof("%s\n", pwd.Path)
 	return
 }

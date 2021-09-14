@@ -20,6 +20,7 @@ package proc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
@@ -48,7 +49,8 @@ func (t *Terminate) Execute(args []string) (err error) {
 			Request: core.ActiveTarget.Request(),
 		})
 		if err != nil {
-			log.Errorf("%s\n", err)
+			err := log.Errorf("%s\n", err)
+			fmt.Printf(err.Error())
 		} else {
 			log.Infof("Process %d has been terminated\n", terminated.Pid)
 		}

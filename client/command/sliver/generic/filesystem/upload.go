@@ -54,12 +54,10 @@ func (c *Upload) Execute(args []string) (err error) {
 			Request: core.ActiveTarget.Request(),
 		})
 		if err != nil {
-			log.Errorf("%s\n", err)
-			return nil
+			return log.Errorf("%s", err)
 		}
 		if !resp.Exists {
-			log.Errorf("%s does not exists or is not a directory\n", c.Positional.RemotePath)
-			return nil
+			return log.Errorf("%s does not exists or is not a directory", c.Positional.RemotePath)
 		}
 		dst = resp.Path
 	}
@@ -69,7 +67,8 @@ func (c *Upload) Execute(args []string) (err error) {
 		src, _ := filepath.Abs(file)
 		_, err := os.Stat(src)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			err := log.Errorf("%s", err)
+			fmt.Printf(err.Error())
 			continue
 		}
 		fileBuf, err := ioutil.ReadFile(src)
@@ -89,7 +88,8 @@ func (c *Upload) Execute(args []string) (err error) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			log.Errorf("Upload error: %s\n", err)
+			err := log.Errorf("Upload error: %s", err)
+			fmt.Printf(err.Error())
 		} else {
 			log.Infof("Wrote file to %s\n", upload.Path)
 		}

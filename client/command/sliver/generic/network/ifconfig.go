@@ -44,8 +44,7 @@ func (i *Ifconfig) Execute(args []string) (err error) {
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return
+		return log.Errorf("%s", err)
 	}
 
 	for ifaceIndex, iface := range ifconfig.NetInterfaces {

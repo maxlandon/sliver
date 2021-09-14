@@ -56,7 +56,8 @@ func (ls *ListSessionDirectories) Execute(args []string) error {
 			Request: core.ActiveTarget.Request(),
 		})
 		if err != nil {
-			log.Errorf("%s\n", err)
+			err := log.Errorf("%s", err)
+			fmt.Printf(err.Error())
 		} else {
 			printDirList(resp)
 		}
