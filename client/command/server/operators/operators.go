@@ -20,7 +20,6 @@ package operators
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
@@ -37,7 +36,7 @@ func (o *Operators) Execute(args []string) (err error) {
 
 	operators, err := transport.RPC.GetOperators(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		fmt.Printf(util.RPCError+"%s\n", err)
+		return log.Error(err)
 	} else if 0 < len(operators.Operators) {
 		displayOperators(operators.Operators)
 	} else {

@@ -40,7 +40,7 @@ func (c *SaveConfig) Execute(args []string) (err error) {
 	currentConf := core.Console.GetConfig()
 	confBytes, err := json.Marshal(currentConf)
 	if err != nil {
-		log.Errorf("Error marshaling config: %s\n", err.Error())
+		return log.Errorf("Error marshaling config: %s", err.Error())
 	}
 
 	req := &clientpb.SaveConsoleConfigReq{
@@ -48,14 +48,13 @@ func (c *SaveConfig) Execute(args []string) (err error) {
 	}
 	res, err := transport.RPC.SaveUserConsoleConfig(context.Background(), req, grpc.EmptyCallOption{})
 	if err != nil {
-		log.RPCErrorf("%v\n", err)
-		return
+		return log.Error(err)
 	}
 
 	if res.Response.Err != "" {
-		log.Errorf("Error saving config: %s\n", res.Response.Err)
-	} else {
-		log.Infof("Saved console config\n")
+		return log.Errorf("Error saving config: %s\n", res.Response.Err)
 	}
+
+	log.Infof("Saved console config\n")
 	return
 }

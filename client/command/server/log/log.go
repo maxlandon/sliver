@@ -35,8 +35,7 @@ func (l *Log) Execute(args []string) (err error) {
 	// Check level
 	level, valid := logrusLevels[l.Positional.Level]
 	if !valid {
-		log.Errorf("Invalid log level (trace, debug, info, warn, error)\n")
-		return
+		return log.Errorf("Invalid log level (trace, debug, info, warn, error)")
 	}
 
 	for _, comp := range l.Positional.Components {

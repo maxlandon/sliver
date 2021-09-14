@@ -56,8 +56,7 @@ func (g *GenerateStager) Execute(args []string) (err error) {
 	var stageProto clientpb.StageProtocol
 	lhost := g.TransportOptions.LHost
 	if lhost == "" {
-		log.Errorf("please specify a listening host")
-		return
+		return log.Errorf("please specify a listening host")
 	}
 	match, err := regexp.MatchString(`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`, lhost)
 	if err != nil {
@@ -66,8 +65,7 @@ func (g *GenerateStager) Execute(args []string) (err error) {
 	if !match {
 		addr, err := net.LookupHost(lhost)
 		if err != nil {
-			log.Errorf("Error resolving %s: %v\n", lhost, err)
-			return err
+			return log.Errorf("Error resolving %s: %v", lhost, err)
 		}
 		if len(addr) > 1 {
 			prompt := &survey.Select{
@@ -76,8 +74,7 @@ func (g *GenerateStager) Execute(args []string) (err error) {
 			}
 			err := survey.AskOne(prompt, &lhost, nil)
 			if err != nil {
-				log.Errorf("Error: %v\n", err)
-				return err
+				return log.Error(err)
 			}
 		} else {
 			lhost = addr[0]
@@ -106,8 +103,7 @@ func (g *GenerateStager) Execute(args []string) (err error) {
 	case "https":
 		stageProto = clientpb.StageProtocol_HTTPS
 	default:
-		log.Errorf("%s staging protocol not supported\n", proto)
-		return
+		return log.Errorf("%s staging protocol not supported", proto)
 	}
 
 	ctrl := make(chan bool)
@@ -125,24 +121,21 @@ func (g *GenerateStager) Execute(args []string) (err error) {
 	<-ctrl
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
-		return
+		return log.Errorf("Error: %v", err)
 	}
 
 	if save != "" || format == "raw" {
 		saveTo, _ := filepath.Abs(save)
 		fi, err := os.Stat(saveTo)
 		if err != nil {
-			log.Errorf("Failed to generate sliver stager %v\n", err)
-			return err
+			return log.Errorf("Failed to generate sliver stager: %v", err)
 		}
 		if fi.IsDir() {
 			saveTo = filepath.Join(saveTo, stageFile.GetFile().GetName())
 		}
 		err = ioutil.WriteFile(saveTo, stageFile.GetFile().GetData(), 0700)
 		if err != nil {
-			log.Errorf("Failed to write to: %s\n", saveTo)
-			return err
+			return log.Errorf("Failed to write to: %s", saveTo)
 		}
 		log.Infof("Sliver stager saved to: %s\n", saveTo)
 	} else {

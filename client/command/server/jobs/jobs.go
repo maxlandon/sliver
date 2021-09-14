@@ -42,8 +42,7 @@ func (j *Jobs) Execute(args []string) (err error) {
 
 	jobs, err := transport.RPC.GetJobs(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		fmt.Printf(util.RPCError+"%s", err)
-		return
+		return log.Errorf("%s", err)
 	}
 	// Convert to a map
 	activeJobs := map[uint32]*clientpb.Job{}
@@ -73,9 +72,11 @@ func (j *JobsKill) Execute(args []string) (err error) {
 			ID: jobID,
 		})
 		if err != nil {
-			log.Errorf("%s\n", err)
+			errKill := log.Error(err)
+			fmt.Printf(errKill.Error())
 		}
 	}
+
 	return
 }
 
@@ -87,25 +88,27 @@ func (j *JobsKillAll) Execute(args []string) (err error) {
 
 	jobs, err := transport.RPC.GetJobs(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		fmt.Printf(util.RPCError+"%s\n", err)
-		return
+		return log.RPCErrorf("%s", err)
 	}
 	for _, job := range jobs.Active {
-		killJob(job.ID)
+		err := killJob(job.ID)
+		if err != nil {
+			fmt.Printf(err.Error())
+		}
 	}
 	return
 }
 
-func killJob(jobID uint32) {
+func killJob(jobID uint32) (err error) {
 	log.Infof("Killing job #%d ...\n", jobID)
 	jobKill, err := transport.RPC.KillJob(context.Background(), &clientpb.KillJobReq{
 		ID: jobID,
 	})
 	if err != nil {
-		fmt.Printf(util.RPCError+"%s\n", err)
-	} else {
-		log.Infof("Successfully killed job #%d\n", jobKill.ID)
+		return log.RPCErrorf("%s", err)
 	}
+	log.Infof("Successfully killed job #%d\n", jobKill.ID)
+	return
 }
 
 func printJobs(jobs map[uint32]*clientpb.Job) {

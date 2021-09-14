@@ -20,6 +20,7 @@ package sessions
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
@@ -37,8 +38,7 @@ func (ka *SessionsClean) Execute(args []string) (err error) {
 	// Get a map of all sessions
 	sessions, err := transport.RPC.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return
+		return log.Error(err)
 	}
 	sessionsMap := map[uint32]*clientpb.Session{}
 	for _, session := range sessions.GetSessions() {
@@ -53,12 +53,18 @@ func (ka *SessionsClean) Execute(args []string) (err error) {
 	for i := range sessionsMap {
 		sess, ok := sessionsMap[i]
 		if !ok || sess == nil {
-			log.Errorf("Invalid session ID: %d\n", i)
+			err := log.Errorf("Invalid session ID: %d\n", i)
+			if err != nil {
+				fmt.Printf(err.Error())
+			}
 		}
 
 		if sess.IsDead {
 			// Kill session
 			err = killSession(sess, true, transport.RPC)
+			if err != nil {
+				fmt.Printf(err.Error())
+			}
 
 			// Change context if we are killing the current session
 			active := core.ActiveTarget.Session

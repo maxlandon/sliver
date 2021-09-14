@@ -21,6 +21,7 @@ package sessions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/bishopfox/sliver/client/log"
@@ -47,8 +48,7 @@ func (sk *SessionsKill) Execute(args []string) (err error) {
 	// Get a map of all sessions
 	sessions, err := transport.RPC.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return
+		return log.Error(err)
 	}
 	sessionsMap := map[uint32]*clientpb.Session{}
 	for _, session := range sessions.GetSessions() {
@@ -63,11 +63,16 @@ func (sk *SessionsKill) Execute(args []string) (err error) {
 	for _, id := range sk.Positional.SessionID {
 		sess, ok := sessionsMap[id]
 		if !ok || sess == nil {
-			log.Errorf("Invalid session ID: %d\n", id)
+			err := log.Errorf("Invalid session ID: %d\n", id)
+			fmt.Printf(err.Error())
+			continue
 		}
 
 		// Kill session
 		err = killSession(sess, sk.Options.Force, transport.RPC)
+		if err != nil {
+			fmt.Printf(err.Error())
+		}
 
 		// The context will be updated as soon
 		// as we receive confirmation from the server
@@ -84,8 +89,7 @@ func (ka *SessionsKillAll) Execute(args []string) (err error) {
 	// Get a map of all sessions
 	sessions, err := transport.RPC.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return
+		return log.Error(err)
 	}
 	sessionsMap := map[uint32]*clientpb.Session{}
 	for _, session := range sessions.GetSessions() {
@@ -100,13 +104,18 @@ func (ka *SessionsKillAll) Execute(args []string) (err error) {
 	for i := range sessionsMap {
 		sess, ok := sessionsMap[i]
 		if !ok || sess == nil {
-			log.Errorf("Invalid session ID: %d\n", i)
+			err := log.Errorf("Invalid session ID: %d\n", i)
+			fmt.Printf(err.Error())
+			continue
 		}
 
 		// Kill session
 		// The context will be updated as soon
 		// as we receive confirmation from the server
 		err = killSession(sess, true, transport.RPC)
+		if err != nil {
+			fmt.Printf(err.Error())
+		}
 	}
 
 	return

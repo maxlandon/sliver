@@ -43,8 +43,7 @@ func (s *Sessions) Execute(args []string) (err error) {
 	// Get a map of all sessions
 	sessions, err := transport.RPC.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.RPCErrorf("%s\n", err)
-		return
+		return log.Error(err)
 	}
 	sessionsMap := map[uint32]*clientpb.Session{}
 	for _, session := range sessions.GetSessions() {

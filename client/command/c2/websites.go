@@ -62,11 +62,11 @@ type Websites struct {
 
 // Execute - Command
 func (w *Websites) Execute(args []string) (err error) {
-	listWebsites(w, transport.RPC)
+	err = listWebsites(w, transport.RPC)
 	return
 }
 
-func listWebsites(w *Websites, rpc rpcpb.SliverRPCClient) {
+func listWebsites(w *Websites, rpc rpcpb.SliverRPCClient) (err error) {
 	websites, err := rpc.Websites(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return log.Errorf("Failed to list websites %s", err)
@@ -80,6 +80,8 @@ func listWebsites(w *Websites, rpc rpcpb.SliverRPCClient) {
 	for _, site := range websites.Websites {
 		fmt.Printf("%s%s%s - %d page(s)\n", readline.BOLD, site.Name, readline.RESET, len(site.Contents))
 	}
+
+	return
 }
 
 // WebsitesShow - Print the contents of a website.
@@ -91,11 +93,11 @@ type WebsitesShow struct {
 
 // Execute - Print the contents of a website.
 func (w *WebsitesShow) Execute(args []string) (err error) {
-	listWebsiteContent(w, transport.RPC)
+	err = listWebsiteContent(w, transport.RPC)
 	return
 }
 
-func listWebsiteContent(w *WebsitesShow, rpc rpcpb.SliverRPCClient) {
+func listWebsiteContent(w *WebsitesShow, rpc rpcpb.SliverRPCClient) (err error) {
 	if w.Args.Name == "" {
 		return
 	}
@@ -110,6 +112,8 @@ func listWebsiteContent(w *WebsitesShow, rpc rpcpb.SliverRPCClient) {
 	} else {
 		log.Infof("No content for '%s'\n", w.Args.Name)
 	}
+
+	return
 }
 
 func displayWebsite(web *clientpb.Website) {

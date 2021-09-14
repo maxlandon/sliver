@@ -40,28 +40,27 @@ type Interact struct {
 // Execute - Interact with a Sliver implant.
 func (i *Interact) Execute(args []string) (err error) {
 
-	session := getSession(i.Positional.SessionID)
+	session, err := getSession(i.Positional.SessionID)
+	if err != nil {
+		return log.Error(err)
+	}
 	if session != nil {
 		core.SetActiveSession(session)
 		log.Infof("Active session %s (%d)\n", session.Name, session.ID)
-	} else {
-		log.Errorf("Invalid session name or session number '%s'\n", i.Positional.SessionID)
-		return
 	}
 
 	return
 }
 
-func getSession(arg string) *clientpb.Session {
+func getSession(arg string) (sess *clientpb.Session, err error) {
 	sessions, err := transport.RPC.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return nil
+		return nil, log.Error(err)
 	}
 	for _, session := range sessions.GetSessions() {
 		if fmt.Sprintf("%d", session.ID) == arg {
-			return session
+			return session, nil
 		}
 	}
-	return nil
+	return nil, log.Errorf("Invalid session name or session number '%s'", arg)
 }

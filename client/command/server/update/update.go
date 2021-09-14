@@ -44,7 +44,6 @@ import (
 	"github.com/bishopfox/sliver/client/licenses"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
-	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/client/version"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	serverUtil "github.com/bishopfox/sliver/util"
@@ -94,8 +93,7 @@ func (u *Updates) Execute(args []string) (err error) {
 	if proxy != "" {
 		proxyURL, err = url.Parse(proxy)
 		if err != nil {
-			log.Errorf(err.Error())
-			return
+			return log.Errorf(err.Error())
 		}
 	}
 
@@ -118,15 +116,13 @@ func (u *Updates) Execute(args []string) (err error) {
 	release, err := version.CheckForUpdates(client, prereleases)
 	log.Infof("done!")
 	if err != nil {
-		log.Errorf("Update check failed %s", err)
-		return
+		return log.Errorf("Update check failed %s", err)
 	}
 
 	if release != nil {
 		saveTo, err := updateSavePath(u)
 		if err != nil {
-			log.Errorf(err.Error())
-			return nil
+			return log.Errorf(err.Error())
 		}
 		updateAvailable(client, release, saveTo)
 	} else {
@@ -138,7 +134,7 @@ func (u *Updates) Execute(args []string) (err error) {
 	lastUpdateCheckPath := path.Join(appDir, lastCheckFileName)
 	err = ioutil.WriteFile(lastUpdateCheckPath, lastCheck, 0600)
 	if err != nil {
-		log.Errorf("Failed to save update check time %s", err)
+		return log.Errorf("Failed to save update check time: %s", err)
 	}
 
 	return
@@ -150,12 +146,14 @@ func GetLastUpdateCheck() *time.Time {
 	lastUpdateCheckPath := path.Join(appDir, lastCheckFileName)
 	data, err := ioutil.ReadFile(lastUpdateCheckPath)
 	if err != nil {
-		log.Errorf("Failed to read last update check %s", err)
+		err := log.Errorf("Failed to read last update check: %s", err)
+		fmt.Printf(err.Error())
 		return nil
 	}
 	unixTime, err := strconv.Atoi(string(data))
 	if err != nil {
-		log.Errorf("Failed to parse last update check %s", err)
+		err := log.Errorf("Failed to parse last update check: %s", err)
+		fmt.Printf(err.Error())
 		return nil
 	}
 	lastUpdate := time.Unix(int64(unixTime), 0)
@@ -167,16 +165,14 @@ type Version struct{}
 
 // Execute - Display version information
 func (v *Version) Execute(args []string) (err error) {
-	verboseVersions()
-	return
+	return verboseVersions()
 }
 
-func verboseVersions() {
+func verboseVersions() (err error) {
 	clientVer := version.FullVersion()
 	serverVer, err := transport.RPC.GetVersion(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		fmt.Printf(util.Warn+"Failed to check server version %s", err)
-		return
+		return log.Errorf("Failed to check server version %s", err)
 	}
 
 	log.Infof("Client v%s - %s/%s\n", clientVer, runtime.GOOS, runtime.GOARCH)
@@ -188,6 +184,8 @@ func verboseVersions() {
 		serverVer.OS, serverVer.Arch)
 	serverCompiledAt := time.Unix(serverVer.CompiledAt, 0)
 	log.Infof("    Compiled at %s\n", serverCompiledAt)
+
+	return
 }
 
 // Licenses - Display licenses

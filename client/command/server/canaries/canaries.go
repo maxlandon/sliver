@@ -48,7 +48,7 @@ func (c *Canaries) Execute(args []string) (err error) {
 
 	canaries, err := transport.RPC.Canaries(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.RPCErrorf("Failed to list canaries %s", err)
+		log.Errorf("Failed to list canaries %s", err)
 		return
 	}
 	if 0 < len(canaries.Canaries) {

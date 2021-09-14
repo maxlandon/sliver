@@ -54,14 +54,12 @@ func (p *NewProfile) Execute(args []string) (err error) {
 
 	name := p.CoreOptions.Profile
 	if name == "" {
-		log.Errorf("Invalid profile name\n")
-		return
+		return log.Errorf("Invalid profile name")
 	}
 
 	config, err := parseCompileFlags(p.StageOptions)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return log.Error(err)
 	}
 
 	profile := &clientpb.ImplantProfile{
@@ -71,11 +69,10 @@ func (p *NewProfile) Execute(args []string) (err error) {
 	resp, err := transport.RPC.SaveImplantProfile(context.Background(), profile)
 
 	if err != nil {
-		log.Errorf("%s\n", err)
-	} else {
-		log.Infof("Saved new profile %s\n", resp.Name)
+		return log.Error(err)
 	}
 
+	log.Infof("Saved new profile %s\n", resp.Name)
 	return
 }
 
@@ -84,11 +81,11 @@ type Profiles struct{}
 
 // Execute - List saved implant profiles.
 func (p *Profiles) Execute(args []string) (err error) {
-	profiles := getSliverProfiles()
-	if profiles == nil {
-		return
+	profiles, err := getSliverProfiles()
+	if err != nil {
+		return log.Error(err)
 	}
-	if len(*profiles) == 0 {
+	if len(*profiles) == 0 || profiles == nil {
 		log.Infof("No profiles, create one with `profiles new`\n")
 		return
 	}
@@ -189,7 +186,10 @@ func (p *ProfileGenerate) Execute(args []string) (err error) {
 	if save == "" {
 		save, _ = os.Getwd()
 	}
-	profiles := getSliverProfiles()
+	profiles, err := getSliverProfiles()
+	if err != nil {
+		return log.Error(err)
+	}
 	if profile, ok := (*profiles)[name]; ok {
 		implantFile, err := compile(profile.Config, save)
 		if err != nil {
@@ -198,26 +198,24 @@ func (p *ProfileGenerate) Execute(args []string) (err error) {
 		profile.Config.Name = buildImplantName(implantFile.Name)
 		_, err = transport.RPC.SaveImplantProfile(context.Background(), profile)
 		if err != nil {
-			log.Errorf("could not update implant profile: %v\n", err)
-			return err
+			return log.Errorf("could not update implant profile: %v", err)
 		}
 	} else {
-		log.Errorf("No profile with name '%s'", name)
+		return log.Errorf("No profile with name '%s'", name)
 	}
 	return
 }
 
-func getSliverProfiles() *map[string]*clientpb.ImplantProfile {
+func getSliverProfiles() (profiles *map[string]*clientpb.ImplantProfile, err error) {
 	pbProfiles, err := transport.RPC.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("Error %s", err)
-		return nil
+		return nil, log.Error(err)
 	}
-	profiles := &map[string]*clientpb.ImplantProfile{}
+	profiles = &map[string]*clientpb.ImplantProfile{}
 	for _, profile := range pbProfiles.Profiles {
 		(*profiles)[profile.Name] = profile
 	}
-	return profiles
+	return profiles, nil
 }
 
 func getLimitsString(config *clientpb.ImplantConfig) string {
@@ -254,7 +252,8 @@ func (pd *ProfileDelete) Execute(args []string) (err error) {
 			Name: p,
 		})
 		if err != nil {
-			log.Errorf("Failed to delete profile %s\n", err)
+			err := log.Errorf("Failed to delete profile: %s\n", err)
+			fmt.Printf(err.Error())
 			continue
 		} else {
 			log.Infof("Deleted profile %s\n", p)

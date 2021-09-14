@@ -118,14 +118,13 @@ type StageOptions struct {
 func (g *GenerateStage) Execute(args []string) (err error) {
 	config, err := parseCompileFlags(g.StageOptions)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return log.Error(err)
 	}
 	save := g.CoreOptions.Save
 	if save == "" {
 		save, _ = os.Getwd()
 	}
-	compile(config, save)
+	_, err = compile(config, save)
 
 	return
 }
@@ -143,8 +142,7 @@ type Regenerate struct {
 // Execute - Recompile an implant with a given profile
 func (r *Regenerate) Execute(args []string) (err error) {
 	if r.Positional.ImplantName == "" {
-		log.Errorf("Invalid implant name, see `help %s`\n", constants.RegenerateStr)
-		return
+		return log.Errorf("Invalid implant name, see `help %s`\n", constants.RegenerateStr)
 	}
 	save := r.Options.Save
 	if save == "" {
@@ -155,25 +153,21 @@ func (r *Regenerate) Execute(args []string) (err error) {
 		ImplantName: r.Positional.ImplantName,
 	})
 	if err != nil {
-		log.RPCErrorf("Failed to regenerate implant %s\n", err)
-		return
+		return log.Errorf("Failed to regenerate implant %s", err)
 	}
 	if regenerate.File == nil {
-		log.Errorf("Failed to regenerate implant (no data)\n")
-		return
+		return log.Errorf("Failed to regenerate implant (no data)")
 	}
 	saveTo, err := saveLocation(save, regenerate.File.Name)
 	if err != nil {
-		log.Errorf("%s\n", err)
-		return
+		return log.Error(err)
 	}
 	err = ioutil.WriteFile(saveTo, regenerate.File.Data, 0500)
 	if err != nil {
-		log.Errorf("Failed to write to %s\n", err)
-		return
+		return log.Errorf("Failed to write to %s", err)
 	}
-	log.Infof("Implant binary saved to: %s\n", saveTo)
 
+	log.Infof("Implant binary saved to: %s\n", saveTo)
 	return
 }
 
@@ -513,7 +507,6 @@ func compile(config *clientpb.ImplantConfig, save string) (*commonpb.File, error
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		log.Errorf("%s\n", err)
 		return nil, err
 	}
 
@@ -521,8 +514,7 @@ func compile(config *clientpb.ImplantConfig, save string) (*commonpb.File, error
 	elapsed := time.Time{}.Add(end.Sub(start))
 	log.Infof("Build completed in %s\n", elapsed.Format("15:04:05"))
 	if len(generated.File.Data) == 0 {
-		log.Errorf("Build failed, no file data\n")
-		return nil, errors.New("No file data")
+		return nil, errors.New("Build failed, No file data")
 	}
 
 	saveTo, err := saveLocation(save, generated.File.Name)
@@ -532,8 +524,7 @@ func compile(config *clientpb.ImplantConfig, save string) (*commonpb.File, error
 
 	err = ioutil.WriteFile(saveTo, generated.File.Data, 0700)
 	if err != nil {
-		log.Errorf("Failed to write to: %s\n", saveTo)
-		return nil, err
+		return nil, log.Errorf("Failed to write to %s: %s", saveTo, err.Error())
 	}
 	log.Infof("Implant saved to %s\n", saveTo)
 	return generated.File, err

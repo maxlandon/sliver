@@ -149,7 +149,8 @@ func (r *RemoveBuild) Execute(args []string) (err error) {
 			Name: name,
 		})
 		if err != nil {
-			log.Errorf("Failed to delete implant %s\n", err)
+			err := log.Errorf("Failed to delete implant %s", err)
+			fmt.Printf(err.Error())
 			continue
 		}
 		log.Infof("Deleted implant %s\n", name)
