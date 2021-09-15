@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"sync"
@@ -27,7 +26,7 @@ var (
 
 	portfwdID = 0
 
-	portfwdLog = cliLog.NewClientLogger("tcpproxy").WithField("tcpproxy", "portfwd")
+	portfwdLog = cliLog.NewClientLogger("portfwd").WithField("tcpproxy", "portfwd")
 )
 
 // PortfwdMeta - Metadata about a portfwd listener
@@ -113,7 +112,7 @@ type ChannelProxy struct {
 // HandleConn - Handle a TCP connection
 func (p *ChannelProxy) HandleConn(conn net.Conn) {
 	portfwdLog.Info("Handling new connection")
-	log.Printf("[tcpproxy] Handling new connection")
+	// log.Printf("[tcpproxy] Handling new connection")
 	ctx := context.Background()
 	var cancel context.CancelFunc
 	if p.DialTimeout >= 0 {
@@ -140,7 +139,8 @@ func (p *ChannelProxy) HandleConn(conn net.Conn) {
 	// Block until error, then cleanup
 	err = <-errs
 	if err != nil {
-		log.Printf("[tcpproxy] Closing tunnel %d with error %s", tunnel.ID, err)
+		portfwdLog.Errorf("Closing tunnel %d with error %s", tunnel.ID, err)
+		// log.Printf("[tcpproxy] Closing tunnel %d with error %s", tunnel.ID, err)
 	}
 }
 
@@ -149,17 +149,17 @@ func (p *ChannelProxy) HostPort() (string, uint32) {
 	defaultPort := uint32(8080)
 	host, rawPort, err := net.SplitHostPort(p.RemoteAddr)
 	if err != nil {
-		log.Printf("Failed to parse addr %s", p.RemoteAddr)
+		portfwdLog.Errorf("Failed to parse addr %s", p.RemoteAddr)
 		return "", defaultPort
 	}
 	portNumber, err := strconv.Atoi(rawPort)
 	if err != nil {
-		log.Printf("Failed to parse number from %s", rawPort)
+		portfwdLog.Errorf("Failed to parse number from %s", rawPort)
 		return "", defaultPort
 	}
 	port := uint32(portNumber)
 	if port < 1 || 65535 < port {
-		log.Printf("Invalid port number %d", port)
+		portfwdLog.Errorf("Invalid port number %d", port)
 		return "", defaultPort
 	}
 	return host, port
@@ -180,23 +180,23 @@ func (p *ChannelProxy) Host() string {
 func (p *ChannelProxy) dialImplant(ctx context.Context) (*Tunnel, error) {
 
 	portfwdLog.Debugf("Dialing implant to create tunnel ...")
-	log.Printf("[tcpproxy] Dialing implant to create tunnel ...")
+	// log.Printf("[tcpproxy] Dialing implant to create tunnel ...")
 
 	// Create an RPC tunnel, then start it before binding the shell to the newly created tunnel
 	rpcTunnel, err := p.Rpc.CreateTunnel(ctx, &sliverpb.Tunnel{
 		SessionID: p.Session.ID,
 	})
 	if err != nil {
-		portfwdLog.Errorf("Failed to dial implant %s", err)
-		log.Printf("[tcpproxy] Failed to dial implant %s", err)
+		portfwdLog.Errorf("Failed to dial implant: %s", err)
+		// log.Printf("[tcpproxy] Failed to dial implant %s", err)
 		return nil, err
 	}
 	portfwdLog.Debugf("Created new tunnel with id %d (session %d)", rpcTunnel.TunnelID, p.Session.ID)
-	log.Printf("[tcpproxy] Created new tunnel with id %d (session %d)", rpcTunnel.TunnelID, p.Session.ID)
+	// log.Printf("[tcpproxy] Created new tunnel with id %d (session %d)", rpcTunnel.TunnelID, p.Session.ID)
 	tunnel := Tunnels.Start(rpcTunnel.TunnelID, rpcTunnel.SessionID)
 
 	portfwdLog.Debugf("Binding tunnel to portfwd %d", p.Port())
-	log.Printf("[tcpproxy] Binding tunnel to portfwd %d", p.Port())
+	// log.Printf("[tcpproxy] Binding tunnel to portfwd %d", p.Port())
 	portfwdResp, err := p.Rpc.Portfwd(ctx, &sliverpb.PortfwdReq{
 		Request: &commonpb.Request{
 			SessionID: p.Session.ID,
@@ -210,7 +210,7 @@ func (p *ChannelProxy) dialImplant(ctx context.Context) (*Tunnel, error) {
 		return nil, err
 	}
 	portfwdLog.Debugf("Portfwd response: %v", portfwdResp)
-	log.Printf("Portfwd response: %v", portfwdResp)
+	// log.Printf("Portfwd response: %v", portfwdResp)
 
 	return tunnel, nil
 }
@@ -239,14 +239,14 @@ func toImplantLoop(conn net.Conn, tunnel *Tunnel, errs chan<- error) {
 	}
 	n, err := io.Copy(tunnel, conn)
 	portfwdLog.Debugf("Closing to-implant after %d byte(s)", n)
-	log.Printf("[tcpproxy] Closing to-implant after %d byte(s)", n)
+	// log.Printf("[tcpproxy] Closing to-implant after %d byte(s)", n)
 	errs <- err
 }
 
 func fromImplantLoop(conn net.Conn, tunnel *Tunnel, errs chan<- error) {
 	n, err := io.Copy(conn, tunnel)
 	portfwdLog.Debugf("Closing from-implant after %d byte(s)", n)
-	log.Printf("[tcpproxy] Closing from-implant after %d byte(s)", n)
+	// log.Printf("[tcpproxy] Closing from-implant after %d byte(s)", n)
 	errs <- err
 }
 

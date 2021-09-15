@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"log"
 	"sync"
 
+	cliLog "github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
@@ -14,6 +14,8 @@ import (
 var (
 	// Tunnels - Holds refs to all tunnels
 	Tunnels tunnels
+
+	tunLog = cliLog.NewClientLogger("tunnel")
 )
 
 // Holds the tunnels locally so we can map incoming data
@@ -45,7 +47,8 @@ func (t *tunnels) Start(tunnelID uint64, sessionID uint32) *Tunnel {
 	go func() {
 		tunnel.IsOpen = true
 		for data := range tunnel.Send {
-			log.Printf("Send %d bytes on tunnel %d", len(data), tunnel.ID)
+			tunLog.Debugf("Send %d bytes on tunnel %d", len(data), tunnel.ID)
+			// log.Printf("Send %d bytes on tunnel %d", len(data), tunnel.ID)
 			t.stream.Send(&sliverpb.TunnelData{
 				TunnelID:  tunnel.ID,
 				SessionID: tunnel.SessionID,
@@ -59,7 +62,8 @@ func (t *tunnels) Start(tunnelID uint64, sessionID uint32) *Tunnel {
 
 // Close - Close the tunnel channels
 func (t *tunnels) Close(tunnelID uint64) {
-	log.Printf("Closing tunnel %d", tunnelID)
+	tunLog.Debugf("Closing tunnel %d", tunnelID)
+	// log.Printf("Closing tunnel %d", tunnelID)
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	tunnel := (*t.tunnels)[tunnelID]
@@ -83,7 +87,8 @@ type Tunnel struct {
 
 // Write - Writer method for interface
 func (tun *Tunnel) Write(data []byte) (int, error) {
-	log.Printf("Write %d bytes", len(data))
+	tunLog.Debugf("Write %d bytes", len(data))
+	// log.Printf("Write %d bytes", len(data))
 	if !tun.IsOpen {
 		return 0, io.EOF
 	}
@@ -96,12 +101,14 @@ func (tun *Tunnel) Write(data []byte) (int, error) {
 func (tun *Tunnel) Read(data []byte) (int, error) {
 	var buff bytes.Buffer
 	if !tun.IsOpen {
-		log.Printf("Warning: Read on closed tunnel %d", tun.ID)
+		tunLog.Debugf("Warning: Read on closed tunnel %d", tun.ID)
+		// log.Printf("Warning: Read on closed tunnel %d", tun.ID)
 		return 0, io.EOF
 	}
 	select {
 	case data := <-tun.Recv:
-		log.Printf("Read %d bytes", len(data))
+		tunLog.Debugf("Read %d bytes", len(data))
+		// log.Printf("Read %d bytes", len(data))
 		buff.Write(data)
 	}
 	n := copy(data, buff.Bytes())
@@ -111,8 +118,10 @@ func (tun *Tunnel) Read(data []byte) (int, error) {
 // TunnelLoop - Parses incoming tunnel messages and distributes them
 //              to session/tunnel objects
 func TunnelLoop(rpc rpcpb.SliverRPCClient) error {
-	log.Println("Starting tunnel data loop ...")
-	defer log.Printf("Warning: TunnelLoop exited")
+	tunLog.Debugf("Starting tunnel data loop ...")
+	// log.Println("Starting tunnel data loop ...")
+	defer tunLog.Debugf("Warning: TunnelLoop exited")
+	// defer log.Printf("Warning: TunnelLoop exited")
 	stream, err := rpc.TunnelData(context.Background())
 	if err != nil {
 		return err
@@ -128,26 +137,31 @@ func TunnelLoop(rpc rpcpb.SliverRPCClient) error {
 		incoming, err := stream.Recv()
 		// log.Printf("Recv stream msg: %v", incoming)
 		if err == io.EOF {
-			log.Printf("EOF Error: Tunnel data stream closed")
+			tunLog.Debugf("EOF Error: Tunnel data stream closed")
+			// log.Printf("EOF Error: Tunnel data stream closed")
 			return nil
 		}
 		if err != nil {
-			log.Printf("Tunnel data read error: %s", err)
+			tunLog.Errorf("Tunnel data read error: %s", err)
+			// log.Printf("Tunnel data read error: %s", err)
 			return err
 		}
 		// log.Printf("Received TunnelData for tunnel %d", incoming.TunnelID)
 		tunnel := Tunnels.Get(incoming.TunnelID)
 		if tunnel != nil {
 			if !incoming.Closed {
-				log.Printf("Received data on tunnel %d", tunnel.ID)
+				tunLog.Debugf("Received data on tunnel %d", tunnel.ID)
+				// log.Printf("Received data on tunnel %d", tunnel.ID)
 				tunnel.Recv <- incoming.GetData()
 			} else {
-				log.Printf("Closing tunnel %d", tunnel.ID)
+				tunLog.Debugf("Closing tunnel %d", tunnel.ID)
+				// log.Printf("Closing tunnel %d", tunnel.ID)
 				tunnel.IsOpen = false
 				close(tunnel.Recv)
 			}
 		} else {
-			log.Printf("Received tunnel data for non-existent tunnel id %d", incoming.TunnelID)
+			tunLog.Errorf("Received tunnel data for non-existent tunnel id %d", incoming.TunnelID)
+			// log.Printf("Received tunnel data for non-existent tunnel id %d", incoming.TunnelID)
 		}
 	}
 }

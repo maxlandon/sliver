@@ -59,9 +59,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"time"
+
+	cliLog "github.com/bishopfox/sliver/client/log"
+)
+
+var (
+	tcpproxyLog = cliLog.NewClientLogger("tcpproxy").WithField("tcpproxy", "portfwd")
 )
 
 // Proxy is a proxy. Its zero value is a valid proxy that does
@@ -242,7 +247,8 @@ func (p *Proxy) serveConn(c net.Conn, routes []route) bool {
 		}
 	}
 	// TODO: hook for this?
-	log.Printf("tcpproxy: no routes matched conn %v/%v; closing", c.RemoteAddr().String(), c.LocalAddr().String())
+	tcpproxyLog.Errorf("no routes matched conn %v/%v; closing", c.RemoteAddr().String(), c.LocalAddr().String())
+	// log.Printf("tcpproxy: no routes matched conn %v/%v; closing", c.RemoteAddr().String(), c.LocalAddr().String())
 	c.Close()
 	return false
 }
@@ -469,7 +475,8 @@ func (dp *DialProxy) onDialError() func(src net.Conn, dstDialErr error) {
 		return dp.OnDialError
 	}
 	return func(src net.Conn, dstDialErr error) {
-		log.Printf("tcpproxy: for incoming conn %v, error dialing %q: %v", src.RemoteAddr().String(), dp.Addr, dstDialErr)
+		tcpproxyLog.Errorf("for incoming conn %v, error dialing %q: %v", src.RemoteAddr().String(), dp.Addr, dstDialErr)
+		// log.Printf("tcpproxy: for incoming conn %v, error dialing %q: %v", src.RemoteAddr().String(), dp.Addr, dstDialErr)
 		src.Close()
 	}
 }
