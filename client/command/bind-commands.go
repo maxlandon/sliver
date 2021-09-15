@@ -112,4 +112,12 @@ func bindConfigurationCommands() {
 		"sliver commands",
 		[]string{""},
 		func() gonsole.Commander { return &settings.AutoAdult{} })
+
+	// Beacon auto-results
+	core.Console.AddConfigSubCommand("beacon-auto-results",
+		"set whether to automatically print the results from requests to beacons",
+		"",
+		"sliver commands",
+		[]string{""},
+		func() gonsole.Commander { return &settings.BeaconAutoResults{} })
 }
