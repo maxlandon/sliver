@@ -15,6 +15,7 @@ require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/alecthomas/chroma v0.8.1
 	github.com/cheggaaa/pb/v3 v3.0.5
+	github.com/desertbit/go-shlex v0.1.1
 	github.com/evilsocket/islazy v1.10.6
 	github.com/gen2brain/shm v0.0.0-20200228170931-49f9650110c5 // indirect
 	github.com/go-cmd/cmd v1.3.0
@@ -72,7 +73,6 @@ require (
 	github.com/demisto/goxforce v0.0.0-20160322194047-db8357535b1d // indirect
 	github.com/desertbit/closer/v3 v3.1.2 // indirect
 	github.com/desertbit/columnize v2.1.0+incompatible // indirect
-	github.com/desertbit/go-shlex v0.1.1 // indirect
 	github.com/desertbit/grumble v1.1.1 // indirect
 	github.com/desertbit/readline v1.5.1 // indirect
 	github.com/dlclark/regexp2 v1.2.0 // indirect

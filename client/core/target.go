@@ -24,6 +24,12 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
+var (
+
+	// ActiveTarget - Either the active session or the active beacon
+	ActiveTarget = &activeTarget{}
+)
+
 // Target - An interface allowing us to transparently use the active
 // target, regardless of it being a Session or a Beacon.
 type Target interface {

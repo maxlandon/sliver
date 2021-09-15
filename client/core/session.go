@@ -35,10 +35,6 @@ import (
 )
 
 var (
-
-	// ActiveTarget - Either the active session or the active beacon
-	ActiveTarget = &activeTarget{}
-
 	// Console - At startup the console has passed itself to this package, so that
 	// we can question the application parser for timeout/request options.
 	Console *gonsole.Console
@@ -98,10 +94,10 @@ func UnsetActiveSession() {
 	Console.SwitchMenu(constants.ServerMenu)
 
 	// We don't have a working Sliver object anymore.
-	if ActiveTarget.Session != nil {
+	if ActiveTarget.Session() != nil {
 		ActiveTarget.session = nil
 	}
-	if ActiveTarget.Beacon != nil {
+	if ActiveTarget.Beacon() != nil {
 		ActiveTarget.beacon = nil
 	}
 }
