@@ -42,6 +42,8 @@ import (
 // eventLoop - Print events coming from the server
 func eventLoop(rpc rpcpb.SliverRPCClient) {
 
+	console := core.Console
+
 	// Call the server events stream.
 	events, err := rpc.Events(context.Background(), &commonpb.Empty{})
 	if err != nil {
@@ -60,10 +62,13 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 
 		// Operators ---------------------------------------------------------------------------------
 		case consts.JoinedEvent:
-			joined := fmt.Sprintf("%s has joined the game\n\n", event.Client.Operator.Name)
+			joined := fmt.Sprintf(Woot+"%s has joined the game\n", event.Client.Operator.Name)
+			// joined := fmt.Sprintf("%s has joined the game", event.Client.Operator.Name)
+			// joined := fmt.Sprintf("%s has joined the game\n\n", event.Client.Operator.Name)
 			console.RefreshPromptLog(joined)
 		case consts.LeftEvent:
-			left := fmt.Sprintf("%s left the game\n\n", event.Client.Operator.Name)
+			left := fmt.Sprintf(Info+"%s left the game\n", event.Client.Operator.Name)
+			// left := fmt.Sprintf("%s left the game\n\n", event.Client.Operator.Name)
 			console.RefreshPromptLog(left)
 
 			// Jobs --------------------------------------------------------------------------------------

@@ -74,11 +74,6 @@ const (
 	seqClearScreenBelow = "\x1b[0J"
 )
 
-var (
-	// console - The console instance of this client.
-	console = gonsole.NewConsole()
-)
-
 // ExtraCmds - Bind extra commands to the app object
 type ExtraCmds func(menu *gonsole.Menu)
 
@@ -106,7 +101,7 @@ func Start(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds, config *assets.Client
 	}
 
 	// Start monitoring all logs from the server and the client.
-	err = clientLog.Init(console, rpc)
+	err = clientLog.Init(core.Console, rpc)
 	if err != nil {
 		return fmt.Errorf("Failed to start log monitor (%s)", err.Error())
 	}
@@ -118,7 +113,7 @@ func Start(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds, config *assets.Client
 	printLogo(rpc)
 
 	// Run the console. All errors are handled internally.
-	console.Run()
+	core.Console.Run()
 
 	return nil
 }
@@ -126,6 +121,8 @@ func Start(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds, config *assets.Client
 // setup - Sets everything directly related to the client "part". This includes the full
 // console configuration, setup, history loading, menu contexts, command registration, etc..
 func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
+
+	console := core.Console
 
 	// Declare server and sliver contexts (menus).
 	server := console.NewMenu(consts.ServerMenu)
@@ -180,6 +177,8 @@ func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
 
 // setHistorySources - Both contexts have different history sources available to the user.
 func setHistorySources() {
+
+	console := core.Console
 
 	// Server context
 	server := console.GetMenu(constants.ServerMenu)

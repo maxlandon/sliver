@@ -24,8 +24,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/maxlandon/gonsole"
-
 	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/transport"
 
@@ -37,7 +35,7 @@ import (
 var (
 	// Console - At startup the console has passed itself to this package, so that
 	// we can question the application parser for timeout/request options.
-	Console *gonsole.Console
+	// Console *gonsole.Console
 
 	//SessionHistoryFunc - Will pass the session history to the console package.
 	// This is needed as we cannot import the console package, which contains histories.
