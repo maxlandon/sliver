@@ -120,12 +120,12 @@ func (l *LoadExtension) Execute(args []string) (err error) {
 	}
 
 	// Bind the extension to a given session. Create the extensions map if needed.
-	sessionExtensions, found := LoadedExtensions[core.ActiveTarget.Session.ID]
+	sessionExtensions, found := LoadedExtensions[core.ActiveTarget.Session().ID]
 	if found {
 		sessionExtensions[ext.Path] = bindExtensionCommands
 	} else {
-		LoadedExtensions[core.ActiveTarget.Session.ID] = map[string]func(){}
-		LoadedExtensions[core.ActiveTarget.Session.ID][ext.Path] = bindExtensionCommands
+		LoadedExtensions[core.ActiveTarget.Session().ID] = map[string]func(){}
+		LoadedExtensions[core.ActiveTarget.Session().ID][ext.Path] = bindExtensionCommands
 	}
 
 	return

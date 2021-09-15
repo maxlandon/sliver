@@ -50,7 +50,7 @@ type ExecuteShellcode struct {
 
 // Execute - Executes the given shellcode in the sliver process
 func (es *ExecuteShellcode) Execute(args []string) (err error) {
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget
 
 	interactive := es.Options.Interactive
 	pid := es.Options.PID
@@ -67,7 +67,7 @@ func (es *ExecuteShellcode) Execute(args []string) (err error) {
 		return
 	}
 	ctrl := make(chan bool)
-	msg := fmt.Sprintf("Sending shellcode to %s ...", session.GetName())
+	msg := fmt.Sprintf("Sending shellcode to %s ...", session.Name())
 	go log.SpinUntil(msg, ctrl)
 	task, err := transport.RPC.Task(context.Background(), &sliverpb.TaskReq{
 		Data:     shellcodeBin,
@@ -89,19 +89,19 @@ func (es *ExecuteShellcode) Execute(args []string) (err error) {
 }
 
 func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte, rwxPages bool) {
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget
 
 	// Use the client logger for controlling log output
 	clog := log.ClientLogger
 
 	// Start remote process and tunnel
 	noPty := false
-	if session.GetOS() == "windows" {
+	if session.OS() == "windows" {
 		noPty = true // Windows of course doesn't have PTYs
 	}
 
 	rpcTunnel, err := transport.RPC.CreateTunnel(context.Background(), &sliverpb.Tunnel{
-		SessionID: session.ID,
+		// SessionID: session.ID(),
 	})
 
 	if err != nil {
@@ -128,7 +128,7 @@ func (es *ExecuteShellcode) executeInteractive(hostProc string, shellcode []byte
 	pid := shell.GetPid()
 
 	ctrl := make(chan bool)
-	msg := fmt.Sprintf("Sending shellcode to %s ...", session.GetName())
+	msg := fmt.Sprintf("Sending shellcode to %s ...", session.Name())
 	go log.SpinUntil(msg, ctrl)
 	_, err = transport.RPC.Task(context.Background(), &sliverpb.TaskReq{
 		Pid:      pid,

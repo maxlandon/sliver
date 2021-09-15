@@ -50,7 +50,7 @@ type Sideload struct {
 
 // Execute - Load and execute a shared object (shared library/DLL) in a remote process
 func (s *Sideload) Execute(args []string) (err error) {
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget
 
 	binPath := s.Positional.LocalPath
 
@@ -83,7 +83,7 @@ func (s *Sideload) Execute(args []string) (err error) {
 	}
 	var outFilePath *os.File
 	if s.Options.Save {
-		outFile := path.Base(fmt.Sprintf("%s_%s*.log", constants.SideloadStr, session.GetHostname()))
+		outFile := path.Base(fmt.Sprintf("%s_%s*.log", constants.SideloadStr, session.Hostname()))
 		outFilePath, err = ioutil.TempFile("", outFile)
 	}
 	log.Infof("Output:\n%s", sideload.GetResult())

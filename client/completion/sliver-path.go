@@ -21,6 +21,7 @@ package completion
 import (
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/maxlandon/readline"
@@ -30,13 +31,13 @@ import (
 )
 
 func getHomeDirectory() string {
-	switch core.ActiveTarget.Session.OS {
+	switch core.ActiveTarget.OS() {
 	case "windows":
-		return "C:\\Users\\" + core.ActiveTarget.Session.Username
+		return "C:\\Users\\" + core.ActiveTarget.Username()
 	case "darwin", "macos":
-		return path.Join("/Users", core.ActiveTarget.Session.Username)
+		return path.Join("/Users", core.ActiveTarget.Username())
 	default:
-		return path.Join("/home", core.ActiveTarget.Session.Username)
+		return path.Join("/home", core.ActiveTarget.Username())
 	}
 }
 
@@ -52,7 +53,7 @@ func CompleteRemotePath(last string) (string, []*readline.CompletionGroup) {
 	}
 
 	// Per-OS path separator
-	if core.ActiveTarget.Session.OS == "windows" {
+	if core.ActiveTarget.OS() == "windows" {
 		completion.PathSeparator = '\\'
 	} else {
 		completion.PathSeparator = '/'
@@ -114,7 +115,8 @@ func CompleteRemotePath(last string) (string, []*readline.CompletionGroup) {
 	var dirs []string
 
 	// Get the session completions cache
-	sessCache := Cache.GetSessionCache(core.ActiveTarget.Session.ID)
+	id, _ := strconv.Atoi(core.ActiveTarget.ID())
+	sessCache := Cache.GetSessionCache(uint32(id))
 	if sessCache == nil {
 		return lastPath, []*readline.CompletionGroup{completion}
 	}
@@ -172,7 +174,7 @@ func CompleteRemotePathAndFiles(last string) (string, []*readline.CompletionGrou
 	}
 
 	// Per-OS path separator
-	if core.ActiveTarget.Session.OS == "windows" {
+	if core.ActiveTarget.OS() == "windows" {
 		completion.PathSeparator = '\\'
 	} else {
 		completion.PathSeparator = '/'
@@ -272,7 +274,8 @@ func CompleteRemotePathAndFiles(last string) (string, []*readline.CompletionGrou
 	// }
 
 	// Get the session completions cache
-	sessCache := Cache.GetSessionCache(core.ActiveTarget.Session.ID)
+	id, _ := strconv.Atoi(core.ActiveTarget.ID())
+	sessCache := Cache.GetSessionCache(uint32(id))
 	if sessCache == nil {
 		return lastPath, []*readline.CompletionGroup{completion}
 	}
@@ -292,7 +295,7 @@ func CompleteRemotePathAndFiles(last string) (string, []*readline.CompletionGrou
 			tokenized := addSpaceTokens(f.Name)
 			search := ""
 			if f.IsDir {
-				if core.ActiveTarget.Session.OS == "windows" {
+				if core.ActiveTarget.OS() == "windows" {
 					search = tokenized + "\\"
 				} else {
 					search = tokenized + "/"
@@ -316,7 +319,7 @@ func CompleteRemotePathAndFiles(last string) (string, []*readline.CompletionGrou
 			tokenized := addSpaceTokens(f.Name)
 			search := ""
 			if f.IsDir {
-				if core.ActiveTarget.Session.OS == "windows" {
+				if core.ActiveTarget.OS() == "windows" {
 					search = tokenized + "\\"
 				} else {
 					search = tokenized + "/"

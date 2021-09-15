@@ -39,8 +39,8 @@ type ChangeDirectory struct {
 func (cd *ChangeDirectory) Execute(args []string) (err error) {
 
 	path := cd.Positional.Path
-	if (path == "~" || path == "~/") && core.ActiveTarget.Session.OS == "linux" {
-		path = filepath.Join("/home", core.ActiveTarget.Session.Username)
+	if (path == "~" || path == "~/") && core.ActiveTarget.OS() == "linux" {
+		path = filepath.Join("/home", core.ActiveTarget.Username())
 	}
 
 	pwd, err := transport.RPC.Cd(context.Background(), &sliverpb.CdReq{
@@ -51,7 +51,7 @@ func (cd *ChangeDirectory) Execute(args []string) (err error) {
 		log.Errorf("%s", err)
 	} else {
 		log.Infof("%s\n", pwd.Path)
-		core.ActiveTarget.Session.WorkingDirectory = pwd.Path
+		core.ActiveTarget.Session().WorkingDirectory = pwd.Path
 	}
 
 	return

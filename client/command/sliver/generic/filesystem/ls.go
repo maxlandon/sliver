@@ -48,8 +48,8 @@ func (ls *ListSessionDirectories) Execute(args []string) error {
 
 	// Other paths/files
 	for _, path := range ls.Positional.Path {
-		if (path == "~" || path == "~/") && core.ActiveTarget.Session.OS == "linux" {
-			path = filepath.Join("/home", core.ActiveTarget.Session.Username)
+		if (path == "~" || path == "~/") && core.ActiveTarget.OS() == "linux" {
+			path = filepath.Join("/home", core.ActiveTarget.Username())
 		}
 		resp, err := transport.RPC.Ls(context.Background(), &sliverpb.LsReq{
 			Path:    path,

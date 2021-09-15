@@ -50,7 +50,7 @@ func (m *MSFInject) Execute(args []string) (err error) {
 
 	ctrl := make(chan bool)
 	msg := fmt.Sprintf("Injecting payload %s %s/%s -> %s:%d ...",
-		payloadName, core.ActiveTarget.Session.OS, core.ActiveTarget.Session.Arch, lhost, lport)
+		payloadName, core.ActiveTarget.OS(), core.ActiveTarget.Arch(), lhost, lport)
 	go log.SpinUntil(msg, ctrl)
 	_, err = transport.RPC.MsfRemote(context.Background(), &clientpb.MSFRemoteReq{
 		Payload:    payloadName,

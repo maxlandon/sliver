@@ -67,7 +67,7 @@ func (ka *SessionsClean) Execute(args []string) (err error) {
 			}
 
 			// Change context if we are killing the current session
-			active := core.ActiveTarget.Session
+			active := core.ActiveTarget.Session()
 			if active != nil && sess.ID == active.ID {
 				core.UnsetActiveSession()
 			}

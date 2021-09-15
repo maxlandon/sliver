@@ -299,13 +299,14 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 			updated := fmt.Sprintf(Info+"Session #%d has been updated - %v\n", session.ID, currentTime)
 
 			var id uint32
-			if core.ActiveTarget.Session != nil {
-				id = core.ActiveTarget.Session.ID
+			if core.ActiveTarget.IsSession() {
+				sid, _ := strconv.Atoi(core.ActiveTarget.ID())
+				id = uint32(sid)
 			}
-			if core.ActiveTarget.Beacon != nil {
-				bid, _ := strconv.Atoi(core.ActiveTarget.Beacon.ID)
-				id = uint32(bid)
-			}
+			// if core.ActiveTarget.Beacon != nil {
+			//         bid, _ := strconv.Atoi(core.ActiveTarget.Beacon.ID)
+			//         id = uint32(bid)
+			// }
 
 			if id == session.ID {
 				prompt := console.CurrentMenu().Prompt.Render()
@@ -319,13 +320,14 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 			var lost string
 
 			var id uint32
-			if core.ActiveTarget.Session != nil {
-				id = core.ActiveTarget.Session.ID
+			if core.ActiveTarget.IsSession() {
+				sid, _ := strconv.Atoi(core.ActiveTarget.ID())
+				id = uint32(sid)
 			}
-			if core.ActiveTarget.Beacon != nil {
-				bid, _ := strconv.Atoi(core.ActiveTarget.Beacon.ID)
-				id = uint32(bid)
-			}
+			// if core.ActiveTarget.Beacon != nil {
+			//         bid, _ := strconv.Atoi(core.ActiveTarget.Beacon.ID)
+			//         id = uint32(bid)
+			// }
 
 			// If the session is our current session, we notify the console
 			if id == session.ID {

@@ -48,7 +48,7 @@ func (p *ProcDump) Execute(args []string) (err error) {
 	name := p.Options.Name
 
 	if pid == 0 && name != "" {
-		pid = getPIDByName(name, core.ActiveTarget.Session)
+		pid = getPIDByName(name, core.ActiveTarget.Session())
 	}
 	if pid == -1 {
 		return log.Errorf("Invalid process target")
@@ -58,7 +58,7 @@ func (p *ProcDump) Execute(args []string) (err error) {
 	go log.SpinUntil("Dumping remote process memory ...", ctrl)
 	dump, err := transport.RPC.ProcessDump(context.Background(), &sliverpb.ProcessDumpReq{
 		Pid:     pid,
-		Timeout: int32(core.SessionRequest(core.ActiveTarget.Session).Timeout),
+		Timeout: int32(core.SessionRequest(core.ActiveTarget.Session()).Timeout),
 		Request: core.ActiveTarget.Request(),
 	})
 	ctrl <- true
@@ -67,7 +67,7 @@ func (p *ProcDump) Execute(args []string) (err error) {
 		return log.Errorf("Error: %s", err)
 	}
 
-	hostname := core.ActiveTarget.Session.Hostname
+	hostname := core.ActiveTarget.Session().Hostname
 	tmpFileName := path.Base(fmt.Sprintf("procdump_%s_%d_*", hostname, pid))
 	tmpFile, err := ioutil.TempFile("", tmpFileName)
 	if err != nil {

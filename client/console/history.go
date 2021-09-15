@@ -169,11 +169,11 @@ func (h *SessionHistory) Write(s string) (int, error) {
 	req := &clientpb.AddCmdHistoryRequest{
 		Line: s,
 	}
-	if core.ActiveTarget.Session != nil {
-		req.Session = core.ActiveTarget.Session
+	if core.ActiveTarget.IsSession() {
+		req.Session = core.ActiveTarget.Session()
 	}
-	if core.ActiveTarget.Beacon != nil {
-		req.Beacon = core.ActiveTarget.Beacon
+	if core.ActiveTarget.IsBeacon() {
+		req.Beacon = core.ActiveTarget.Beacon()
 	}
 
 	res, err := transport.RPC.AddToHistory(context.Background(), req)

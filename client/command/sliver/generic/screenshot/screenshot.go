@@ -36,7 +36,7 @@ type Screenshot struct{}
 
 // Execute - Take a screenshot
 func (s *Screenshot) Execute(args []string) (err error) {
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget.Session()
 
 	if session.OS != "windows" && session.OS != "linux" {
 		return log.Errorf("Not implemented for %s", session.OS)

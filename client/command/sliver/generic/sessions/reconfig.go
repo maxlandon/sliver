@@ -51,7 +51,7 @@ func (s *Set) Execute(args []string) (err error) {
 	}
 
 	session, err := transport.RPC.UpdateSession(context.Background(), &clientpb.UpdateSession{
-		SessionID:         core.ActiveTarget.Session.ID,
+		SessionID:         core.ActiveTarget.Session().ID,
 		Name:              name,
 		ReconnectInterval: s.Options.Reconnect,
 		PollInterval:      s.Options.Poll,
@@ -59,7 +59,7 @@ func (s *Set) Execute(args []string) (err error) {
 	if err != nil {
 		return log.Errorf("Error: %v", err)
 	}
-	core.ActiveTarget.Session = session // Will be noticed by all components in need.
+	core.ActiveTarget.SetSession(session) // Will be noticed by all components in need.
 
 	// For the moment, we ask the current working directory to implant...
 	pwd, err := transport.RPC.Pwd(context.Background(), &sliverpb.PwdReq{
@@ -68,7 +68,7 @@ func (s *Set) Execute(args []string) (err error) {
 	if err != nil {
 		return log.Errorf("%s", err)
 	}
-	core.ActiveTarget.Session.WorkingDirectory = pwd.Path
+	core.ActiveTarget.Session().WorkingDirectory = pwd.Path
 
 	return
 }

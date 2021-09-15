@@ -62,7 +62,7 @@ func (ra *RunAs) Execute(args []string) (err error) {
 		return log.Errorf("Error: %s", runAsResp.GetResponse().GetErr())
 	}
 
-	log.Infof("Sucessfully ran %s %s on %s\n", process, arguments, core.ActiveTarget.Session.GetName())
+	log.Infof("Sucessfully ran %s %s on %s\n", process, arguments, core.ActiveTarget.Name())
 
 	return
 }

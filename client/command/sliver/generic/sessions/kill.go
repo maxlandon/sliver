@@ -43,7 +43,7 @@ type Kill struct {
 // Execute - Kill the active session.
 func (k *Kill) Execute(args []string) (err error) {
 
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget.Session()
 	err = killSession(session, transport.RPC)
 	if err != nil {
 		return log.Errorf("%s", err)

@@ -67,7 +67,7 @@ func (p *Portfwd) Execute(args []string) (err error) {
 	// Add forwarders to their table
 	for _, p := range portfwds {
 		row := []string{strconv.Itoa(p.ID), strconv.Itoa(int(p.SessionID)), p.BindAddr, p.RemoteAddr}
-		if core.ActiveTarget.Session != nil && p.SessionID == core.ActiveTarget.Session.ID {
+		if core.ActiveTarget.Session() != nil && p.SessionID == core.ActiveTarget.Session().ID {
 			sessForwarders.Append(row)
 			sessCount++
 		} else {

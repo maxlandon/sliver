@@ -50,7 +50,7 @@ type SpawnDLL struct {
 
 // Execute - Load and execute a Reflective DLL in a remote process
 func (s *SpawnDLL) Execute(cargs []string) (err error) {
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget.Session()
 
 	var args = strings.Join(s.Positional.Args, " ")
 

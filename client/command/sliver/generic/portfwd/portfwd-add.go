@@ -38,7 +38,7 @@ type PortfwdAdd struct {
 
 // Execute - Create a new port forwarding tunnel.
 func (p *PortfwdAdd) Execute(args []string) (err error) {
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget.Session()
 
 	if session.GetActiveC2() == "dns" {
 		log.Warnf("Current C2 is DNS, this is going to be a very slow tunnel!\n")

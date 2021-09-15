@@ -55,7 +55,7 @@ func (sh *Shell) Execute(args []string) (err error) {
 
 	shellPath := sh.Options.Path
 	noPty := sh.Options.NoPty
-	if core.ActiveTarget.Session.OS == windows {
+	if core.ActiveTarget.Session().OS == windows {
 		noPty = true // Windows of course doesn't have PTYs
 	}
 	err = runInteractive(shellPath, noPty, transport.RPC)
@@ -69,7 +69,7 @@ func (sh *Shell) Execute(args []string) (err error) {
 
 func runInteractive(shellPath string, noPty bool, rpc rpcpb.SliverRPCClient) (err error) {
 	log.Infof("Opening shell tunnel (EOF to exit) ...\n\n")
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget.Session()
 	if session == nil {
 		return
 	}

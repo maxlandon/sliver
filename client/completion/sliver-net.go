@@ -95,7 +95,7 @@ func ActiveSessionIfaceAddrs() (comps []*readline.CompletionGroup) {
 	if core.ActiveTarget.Session == nil {
 		return
 	}
-	_, comps = sessionIfaceAddrs("", core.ActiveTarget.Session)
+	_, comps = sessionIfaceAddrs("", core.ActiveTarget.Session())
 	return
 }
 

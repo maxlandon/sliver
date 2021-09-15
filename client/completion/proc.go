@@ -36,13 +36,14 @@ func SessionProcesses() (comps []*readline.CompletionGroup) {
 		MaxLength:    20,
 	}
 
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget.Session()
 	if session == nil {
 		return
 	}
 
 	// Get the session completions cache
-	sessCache := Cache.GetSessionCache(core.ActiveTarget.Session.ID)
+	id, _ := strconv.Atoi(core.ActiveTarget.ID())
+	sessCache := Cache.GetSessionCache(uint32(id))
 	if sessCache == nil {
 		return
 	}
@@ -76,13 +77,14 @@ func SessionProcessNames() (comps []*readline.CompletionGroup) {
 		MaxLength:    20,
 	}
 
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget.Session()
 	if session == nil {
 		return
 	}
 
 	// Get the session completions cache
-	sessCache := Cache.GetSessionCache(core.ActiveTarget.Session.ID)
+	id, _ := strconv.Atoi(core.ActiveTarget.ID())
+	sessCache := Cache.GetSessionCache(uint32(id))
 	if sessCache == nil {
 		return
 	}

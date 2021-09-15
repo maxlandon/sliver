@@ -106,92 +106,48 @@ var (
 var (
 	sliverCallbacks = map[string]func() string{
 		"{session_name}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return core.ActiveTarget.Session.Name
-			}
-			return core.ActiveTarget.Beacon.Name
+			return core.ActiveTarget.Name()
 		},
 		"{wd}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return core.ActiveTarget.Session.WorkingDirectory
-			}
-			return core.ActiveTarget.Beacon.WorkingDirectory
+			return core.ActiveTarget.WorkingDirectory()
 		},
 		"{user}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return core.ActiveTarget.Session.Username
-			}
-			return core.ActiveTarget.Beacon.Username
+			return core.ActiveTarget.Username()
 		},
 		"{host}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return core.ActiveTarget.Session.Hostname
-			}
-			return core.ActiveTarget.Beacon.Hostname
+			return core.ActiveTarget.Hostname()
 		},
 		"{address}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return core.ActiveTarget.Session.RemoteAddress
-			}
-			return core.ActiveTarget.Beacon.RemoteAddress
+			return core.ActiveTarget.RemoteAddress()
 		},
 		"{platform}": func() string {
-			if core.ActiveTarget.Session != nil {
-				os := core.ActiveTarget.Session.OS
-				arch := core.ActiveTarget.Session.Arch
-				return fmt.Sprintf("%s/%s", os, arch)
-			}
-			os := core.ActiveTarget.Beacon.OS
-			arch := core.ActiveTarget.Beacon.Arch
+			os := core.ActiveTarget.OS()
+			arch := core.ActiveTarget.Arch()
 			return fmt.Sprintf("%s/%s", os, arch)
 		},
 		"{os}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return core.ActiveTarget.Session.OS
-			}
-			return core.ActiveTarget.Beacon.OS
+			return core.ActiveTarget.OS()
 		},
 		"{arch}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return core.ActiveTarget.Session.Arch
-			}
-			return core.ActiveTarget.Beacon.Arch
+			return core.ActiveTarget.Arch()
 		},
 		"{status}": func() string {
-			if core.ActiveTarget.Session != nil {
-				if core.ActiveTarget.Session.IsDead {
-					return "DEAD"
-				}
-				return "up"
-			}
-			if core.ActiveTarget.Beacon.IsDead {
+			if core.ActiveTarget.IsDead() {
 				return "DEAD"
 			}
 			return "up"
 		},
 		"{version}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return core.ActiveTarget.Session.Version
-			}
-			return core.ActiveTarget.Beacon.Version
+			return core.ActiveTarget.Version()
 		},
 		"{uid}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return core.ActiveTarget.Session.UID
-			}
-			return core.ActiveTarget.Beacon.UID
+			return core.ActiveTarget.UID()
 		},
 		"{gid}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return core.ActiveTarget.Session.GID
-			}
-			return core.ActiveTarget.Beacon.GID
+			return core.ActiveTarget.GID()
 		},
 		"{pid}": func() string {
-			if core.ActiveTarget.Session != nil {
-				return strconv.Itoa(int(core.ActiveTarget.Session.PID))
-			}
-			return strconv.Itoa(int(core.ActiveTarget.Beacon.PID))
+			return strconv.Itoa(int(core.ActiveTarget.PID()))
 		},
 	}
 

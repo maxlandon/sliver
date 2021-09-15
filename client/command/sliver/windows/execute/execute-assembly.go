@@ -52,7 +52,7 @@ type ExecuteAssembly struct {
 
 // Execute - Loads and executes a .NET assembly in a child process (Windows Only)
 func (ea *ExecuteAssembly) Execute(args []string) (err error) {
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget.Session()
 
 	var isDLL = false
 	if filepath.Ext(ea.Positional.Path) == ".dll" {

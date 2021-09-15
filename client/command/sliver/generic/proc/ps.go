@@ -81,16 +81,16 @@ func (p *PS) Execute(args []string) (err error) {
 		var lineColor = ""
 
 		if pidFilter != -1 && proc.Pid == pidFilter {
-			lineColor = printProcInfo(proc, core.ActiveTarget.Session)
+			lineColor = printProcInfo(proc, core.ActiveTarget.Session())
 		}
 		if exeFilter != "" && strings.HasPrefix(proc.Executable, exeFilter) {
-			lineColor = printProcInfo(proc, core.ActiveTarget.Session)
+			lineColor = printProcInfo(proc, core.ActiveTarget.Session())
 		}
 		if ownerFilter != "" && strings.HasPrefix(proc.Owner, ownerFilter) {
-			lineColor = printProcInfo(proc, core.ActiveTarget.Session)
+			lineColor = printProcInfo(proc, core.ActiveTarget.Session())
 		}
 		if pidFilter == -1 && exeFilter == "" && ownerFilter == "" {
-			lineColor = printProcInfo(proc, core.ActiveTarget.Session)
+			lineColor = printProcInfo(proc, core.ActiveTarget.Session())
 		}
 
 		pid := fmt.Sprintf("%s%d%s", lineColor, proc.Pid, readline.RESET)

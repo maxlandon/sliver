@@ -85,7 +85,7 @@ func displayEntries(entries []*sliverpb.SockTabEntry) {
 		}
 		srcAddr := lookup(e.LocalAddr)
 		dstAddr := lookup(e.RemoteAddr)
-		if e.Process != nil && e.Process.Pid == core.ActiveTarget.Session.PID && isSliverAddr(dstAddr) {
+		if e.Process != nil && e.Process.Pid == core.ActiveTarget.PID() && isSliverAddr(dstAddr) {
 			fmt.Printf("%s%-5s %-23.23s %-23.23s %-12s %-16s%s\n",
 				green, e.Protocol, srcAddr, dstAddr, e.SkState, p, normal)
 		} else {
@@ -100,6 +100,6 @@ func isSliverAddr(dstAddr string) bool {
 	if len(parts) != 3 {
 		return false
 	}
-	c2Addr := strings.Split(core.ActiveTarget.Session.ActiveC2, "://")[1]
+	c2Addr := strings.Split(core.ActiveTarget.ActiveC2(), "://")[1]
 	return strings.Join(parts[:2], ":") == c2Addr
 }

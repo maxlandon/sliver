@@ -46,7 +46,7 @@ func (i *SessionInfo) Execute(args []string) (err error) {
 
 	var session *clientpb.Session
 	if core.ActiveTarget.Session != nil {
-		session = core.ActiveTarget.Session
+		session = core.ActiveTarget.Session()
 	} else if i.Positional.SessionID != "" {
 		session = core.GetSession(i.Positional.SessionID)
 	}
@@ -76,7 +76,7 @@ type PID struct{}
 
 // Execute - Command
 func (p *PID) Execute(args []string) (err error) {
-	log.Infof("Process ID: %d\n", core.ActiveTarget.Session.PID)
+	log.Infof("Process ID: %d\n", core.ActiveTarget.PID())
 	return
 }
 
@@ -85,7 +85,7 @@ type UID struct{}
 
 // Execute - Command
 func (u *UID) Execute(args []string) (err error) {
-	log.Infof("User ID: %s\n", readline.Bold(core.ActiveTarget.Session.UID))
+	log.Infof("User ID: %s\n", readline.Bold(core.ActiveTarget.UID()))
 	return
 }
 
@@ -94,7 +94,7 @@ type GID struct{}
 
 // Execute - Command
 func (p *GID) Execute(args []string) (err error) {
-	log.Infof("User group ID: %s\n", readline.Bold(core.ActiveTarget.Session.GID))
+	log.Infof("User group ID: %s\n", readline.Bold(core.ActiveTarget.GID()))
 	return
 }
 
@@ -103,6 +103,6 @@ type Whoami struct{}
 
 // Execute - Command
 func (w *Whoami) Execute(args []string) (err error) {
-	log.Infof("User: %s\n", readline.Bold(core.ActiveTarget.Session.Username))
+	log.Infof("User: %s\n", readline.Bold(core.ActiveTarget.Username()))
 	return
 }

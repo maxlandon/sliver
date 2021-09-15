@@ -70,7 +70,7 @@ type ExtensionLibraryOptions struct {
 
 // Execute - The extension command works like a normal command.
 func (ext *ExtensionCommand) Execute(cArgs []string) (err error) {
-	session := core.ActiveTarget.Session
+	session := core.ActiveTarget.Session()
 
 	binPath, err := ext.root.getFileForTarget(ext.sub.Name, session.GetOS(), session.GetArch())
 	if err != nil {

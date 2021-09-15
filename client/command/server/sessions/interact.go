@@ -45,7 +45,7 @@ func (i *Interact) Execute(args []string) (err error) {
 		return log.Error(err)
 	}
 	if session != nil {
-		core.SetActiveSession(session)
+		core.SetActiveTarget(session, nil)
 		log.Infof("Active session %s (%d)\n", session.Name, session.ID)
 	}
 

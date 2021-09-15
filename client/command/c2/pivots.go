@@ -106,7 +106,7 @@ func (p *Pivots) Execute(args []string) (err error) {
 		}
 		printPivots(session, int64(timeout), rpc)
 	} else {
-		session := core.ActiveTarget.Session
+		session := core.ActiveTarget.Session()
 		if session != nil {
 			printPivots(session, int64(timeout), rpc)
 		} else {

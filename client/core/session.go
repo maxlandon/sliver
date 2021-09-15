@@ -21,6 +21,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/maxlandon/gonsole"
@@ -51,78 +52,32 @@ var (
 	UserHistoryFunc func()
 )
 
-// activeTarget - Either an active session, or an active beacon.
-// This allows to transparently use either of these in the other packages.
-type activeTarget struct {
-	Session *clientpb.Session
-	Beacon  *clientpb.Beacon
-}
-
 // SetActiveTarget - Sets a session/beacon as active and
 // pulls out all informations needed by the console.
 func SetActiveTarget(sess *clientpb.Session, beacon *clientpb.Beacon) {
-	// We should panic if both are non nil...
 
 	// We set the session as active...
 	if sess != nil {
-		SetActiveSession(sess)
-		return
+		ActiveTarget.session = sess
 	}
 
 	// Or the beacon.
 	if beacon != nil {
-		SetActiveBeacon(beacon)
+		ActiveTarget.beacon = beacon
 	}
-}
 
-// SetActiveSession - Sets a session as active and
-// pulls out all informations needed by the console.
-func SetActiveSession(sess *clientpb.Session) {
-	ActiveTarget.Session = sess
-
-	// Switch the console context
+	// Then switch the console context
 	Console.SwitchMenu(constants.SliverMenu)
 
-	// Hidden Commands -----------------------------------------------------
-
 	// Hide Windows commands if this implant is not Windows-based
-	if ActiveTarget.Session.OS != "windows" {
+	if ActiveTarget.OS() != "windows" {
 		Console.HideCommands(constants.SliverWinHelpGroup)
 	} else {
 		Console.ShowCommands(constants.SliverWinHelpGroup)
 	}
 
 	// Hide WireGuard commands if not the current transport
-	if ActiveTarget.Session.Transport != "wg" {
-		Console.HideCommands(constants.WireGuardGroup)
-	} else {
-		Console.ShowCommands(constants.WireGuardGroup)
-	}
-
-	// Then we get the history
-	sessionHistory := GetActiveSessionHistory()
-	SessionHistoryFunc(sessionHistory)
-}
-
-// SetActiveBeacon - Sets a beacon as active and
-// pulls out all informations needed by the console.
-func SetActiveBeacon(beacon *clientpb.Beacon) {
-	ActiveTarget.Beacon = beacon
-
-	// Switch the console context
-	Console.SwitchMenu(constants.SliverMenu)
-
-	// Hidden Commands -----------------------------------------------------
-
-	// Hide Windows commands if this implant is not Windows-based
-	if ActiveTarget.Beacon.OS != "windows" {
-		Console.HideCommands(constants.SliverWinHelpGroup)
-	} else {
-		Console.ShowCommands(constants.SliverWinHelpGroup)
-	}
-
-	// Hide WireGuard commands if not the current transport
-	if ActiveTarget.Beacon.Transport != "wg" {
+	if ActiveTarget.Transport() != "wg" {
 		Console.HideCommands(constants.WireGuardGroup)
 	} else {
 		Console.ShowCommands(constants.WireGuardGroup)
@@ -144,29 +99,69 @@ func UnsetActiveSession() {
 
 	// We don't have a working Sliver object anymore.
 	if ActiveTarget.Session != nil {
-		ActiveTarget.Session = nil
+		ActiveTarget.session = nil
 	}
 	if ActiveTarget.Beacon != nil {
-		ActiveTarget.Beacon = nil
+		ActiveTarget.beacon = nil
 	}
 }
 
-// RequestTimeout - Prepare a RPC request for the current Session.
-func RequestTimeout(timeOut int) *commonpb.Request {
-	timeout := int(time.Second) * timeOut
-	return &commonpb.Request{
-		Timeout: int64(timeout),
+// GetSession - Get session by session ID or name
+func GetSession(arg string) *clientpb.Session {
+	sessions, err := transport.RPC.GetSessions(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return nil
 	}
+	for _, session := range sessions.GetSessions() {
+		if fmt.Sprintf("%d", session.ID) == arg {
+			return session
+		}
+	}
+	return nil
 }
 
-// ActiveSessionRequest - Make a request for the active target
+// GetSessionsByName - Return all sessions for an Implant by name
+func GetSessionsByName(name string, rpc rpcpb.SliverRPCClient) []*clientpb.Session {
+	sessions, err := rpc.GetSessions(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		return nil
+	}
+	matched := []*clientpb.Session{}
+	for _, session := range sessions.GetSessions() {
+		if session.Name == name {
+			matched = append(matched, session)
+		}
+	}
+	return matched
+}
+
+// Request - Forge a request for the active target.
 func (t *activeTarget) Request() (req *commonpb.Request) {
-	if t.Session != nil {
-		return SessionRequest(t.Session)
+	req = &commonpb.Request{}
+
+	// The current parser holds some data we want
+	var parser = Console.CommandParser()
+	if parser == nil {
+		return req
 	}
 
-	if t.Beacon != nil {
-		return BeaconRequest(t.Beacon)
+	// Get timeout
+	if opt := parser.FindOptionByLongName("timeout"); opt != nil {
+		if val, ok := opt.Value().(int64); ok {
+			req.Timeout = val
+		}
+	}
+
+	// Session/Beacon specifics
+	if t.IsSession() {
+		req.Async = false
+		id, _ := strconv.Atoi(t.ID())
+		req.SessionID = uint32(id)
+	}
+	if t.IsBeacon() {
+		req.Async = true
+		req.BeaconID = t.ID()
 	}
 
 	return
@@ -177,7 +172,6 @@ func SessionRequest(sess *clientpb.Session) (req *commonpb.Request) {
 	req = &commonpb.Request{}
 
 	if sess != nil {
-		req.Async = false
 		req.SessionID = sess.ID
 	}
 
@@ -197,62 +191,30 @@ func SessionRequest(sess *clientpb.Session) (req *commonpb.Request) {
 	return
 }
 
-// BeaconRequest - Forge a Request Protobuf metadata to be sent in a RPC request.
-func BeaconRequest(beacon *clientpb.Beacon) (req *commonpb.Request) {
-	req = &commonpb.Request{}
-
-	if beacon != nil {
-		req.Async = true
-		req.BeaconID = beacon.ID
+// RequestTimeout - Prepare a RPC request for the current Session.
+func RequestTimeout(timeOut int) *commonpb.Request {
+	timeout := int(time.Second) * timeOut
+	return &commonpb.Request{
+		Timeout: int64(timeout),
 	}
-
-	// The current parser holds some data we want
-	var parser = Console.CommandParser()
-	if parser == nil {
-		return req
-	}
-
-	// Get timeout
-	if opt := parser.FindOptionByLongName("timeout"); opt != nil {
-		if val, ok := opt.Value().(int64); ok {
-			req.Timeout = val
-		}
-	}
-
-	return
-}
-
-// GetSession - Get session by session ID or name
-func GetSession(arg string) *clientpb.Session {
-	sessions, err := transport.RPC.GetSessions(context.Background(), &commonpb.Empty{})
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return nil
-	}
-	for _, session := range sessions.GetSessions() {
-		if fmt.Sprintf("%d", session.ID) == arg {
-			return session
-		}
-	}
-	return nil
 }
 
 func GetActiveSessionConfig() *clientpb.ImplantConfig {
-	session := ActiveTarget.Session
-	if session == nil {
-		return nil
-	}
+	// session := ActiveTarget.Session
+	// if session == nil {
+	//         return nil
+	// }
 	c2s := []*clientpb.ImplantC2{}
 	c2s = append(c2s, &clientpb.ImplantC2{
-		URL:      session.GetActiveC2(),
+		URL:      ActiveTarget.ActiveC2(),
 		Priority: uint32(0),
 	})
 	config := &clientpb.ImplantConfig{
-		Name:    session.GetName(),
-		GOOS:    session.GetOS(),
-		GOARCH:  session.GetArch(),
+		Name:    ActiveTarget.Name(),
+		GOOS:    ActiveTarget.OS(),
+		GOARCH:  ActiveTarget.Arch(),
 		Debug:   true,
-		Evasion: session.GetEvasion(),
+		Evasion: ActiveTarget.Evasion(),
 
 		MaxConnectionErrors: uint32(1000),
 		ReconnectInterval:   int64(60),
@@ -264,31 +226,16 @@ func GetActiveSessionConfig() *clientpb.ImplantConfig {
 	return config
 }
 
-// GetSessionsByName - Return all sessions for an Implant by name
-func GetSessionsByName(name string, rpc rpcpb.SliverRPCClient) []*clientpb.Session {
-	sessions, err := rpc.GetSessions(context.Background(), &commonpb.Empty{})
-	if err != nil {
-		return nil
-	}
-	matched := []*clientpb.Session{}
-	for _, session := range sessions.GetSessions() {
-		if session.Name == name {
-			matched = append(matched, session)
-		}
-	}
-	return matched
-}
-
 // GetActiveSessionHistory - Get the command history that matches all occurences for the user_UUID session.
 func GetActiveSessionHistory() []string {
 	req := &clientpb.HistoryRequest{
 		AllConsoles: true,
 	}
-	if ActiveTarget.Session != nil {
-		req.Session = ActiveTarget.Session
+	if ActiveTarget.IsSession() {
+		req.Session = ActiveTarget.Session()
 	}
-	if ActiveTarget.Beacon != nil {
-		req.Beacon = ActiveTarget.Beacon
+	if ActiveTarget.IsBeacon() {
+		req.Beacon = ActiveTarget.Beacon()
 	}
 
 	res, err := transport.RPC.GetHistory(context.Background(), req)
