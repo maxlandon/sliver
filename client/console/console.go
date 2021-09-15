@@ -147,6 +147,14 @@ func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
 	}
 	console.LoadConfig(config)
 
+	// Do the same for Sliver-specific settings
+	settings, err := loadSliverSettings(rpc)
+	if err != nil {
+		fmt.Printf(Warning + "Failed to load Sliver-specific settings from server.\n")
+		fmt.Printf(Info + "Defaulting to builtin values.\n")
+	}
+	assets.UserClientSettings = settings
+
 	// Set prompts callback functions for both contexts
 	server.Prompt.Callbacks = serverCallbacks
 	sliver.Prompt.Callbacks = sliverCallbacks

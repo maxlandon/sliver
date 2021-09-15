@@ -20,6 +20,10 @@ service SliverRPC {
     rpc LoadConsoleConfig(clientpb.GetConsoleConfigReq) returns (clientpb.GetConsoleConfig);
     rpc SaveUserConsoleConfig(clientpb.SaveConsoleConfigReq) returns (clientpb.SaveConsoleConfig);
 
+    // *** Sliver settings management
+    rpc LoadSliverSettings(clientpb.GetSliverSettingsReq) returns (clientpb.GetSliverSettings);
+    rpc SaveUserSliverSettings(clientpb.SaveSliverSettingsReq) returns (clientpb.SaveSliverSettings);
+
     // *** Operator Commands *** 
     rpc GetOperators(commonpb.Empty) returns (clientpb.Operators);
 

@@ -24,6 +24,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
@@ -37,6 +38,7 @@ type SaveConfig struct{}
 // Execute - Save the current console configuration.
 func (c *SaveConfig) Execute(args []string) (err error) {
 
+	// Console config ----------------------------------------------------
 	currentConf := core.Console.GetConfig()
 	confBytes, err := json.Marshal(currentConf)
 	if err != nil {
@@ -56,5 +58,27 @@ func (c *SaveConfig) Execute(args []string) (err error) {
 	}
 
 	log.Infof("Saved console config\n")
+
+	// Sliver settings ----------------------------------------------------
+	sliverSettings := assets.UserClientSettings
+	settingsBytes, settingsReqErr := json.Marshal(sliverSettings)
+	if settingsReqErr != nil {
+		return log.Errorf("Error marshaling Sliver settings: %s", err.Error())
+	}
+
+	settingsReq := &clientpb.SaveSliverSettingsReq{
+		Settings: settingsBytes,
+	}
+	settingsRes, settingsErr := transport.RPC.SaveUserSliverSettings(context.Background(), settingsReq, grpc.EmptyCallOption{})
+	if settingsErr != nil {
+		return log.Error(err)
+	}
+
+	if settingsRes.Response.Err != "" {
+		return log.Errorf("Error saving Sliver settings: %s\n", settingsRes.Response.Err)
+	}
+
+	log.Infof("Saved Sliver-specific settings\n")
+
 	return
 }

@@ -29,8 +29,8 @@ import (
 	"github.com/bishopfox/sliver/server/assets"
 )
 
-// LoadConsoleConfig - The client requires its console configuration (per-user)
-func (rpc *Server) LoadConsoleConfig(ctx context.Context, req *clientpb.GetConsoleConfigReq) (*clientpb.GetConsoleConfig, error) {
+// LoadSliverSettings - The client requires its Sliver-specific settings (per-user)
+func (rpc *Server) LoadSliverSettings(ctx context.Context, req *clientpb.GetSliverSettingsReq) (*clientpb.GetSliverSettings, error) {
 
 	// Get an ID/operator name for this client
 	name := rpc.getClientCommonName(ctx)
@@ -39,26 +39,26 @@ func (rpc *Server) LoadConsoleConfig(ctx context.Context, req *clientpb.GetConso
 	// we are the server and we write to a dedicated file.
 	var filename string
 	if name == "" {
-		filename = filepath.Join(assets.GetRootAppDir(), "console.config")
+		filename = filepath.Join(assets.GetRootAppDir(), "sliver.settings")
 	} else {
 		path := assets.GetUserDirectory(name)
-		filename = filepath.Join(path, "console.config")
+		filename = filepath.Join(path, "sliver.settings")
 	}
 
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return &clientpb.GetConsoleConfig{Response: &commonpb.Response{Err: "could not find user console configuration"}}, nil
+		return &clientpb.GetSliverSettings{Response: &commonpb.Response{Err: "could not find user Sliver settings"}}, nil
 	}
 
 	if err != nil {
-		return &clientpb.GetConsoleConfig{Response: &commonpb.Response{Err: "failed to unmarshal user console configuration"}}, nil
+		return &clientpb.GetSliverSettings{Response: &commonpb.Response{Err: "failed to unmarshal user Sliver settings"}}, nil
 	}
 
-	return &clientpb.GetConsoleConfig{Config: data, Response: &commonpb.Response{}}, nil
+	return &clientpb.GetSliverSettings{Settings: data, Response: &commonpb.Response{}}, nil
 }
 
-// SaveUserConsoleConfig - The client user wants to save its current console configuration.
-func (rpc *Server) SaveUserConsoleConfig(ctx context.Context, req *clientpb.SaveConsoleConfigReq) (*clientpb.SaveConsoleConfig, error) {
+// SaveUserSliverSettings - The client user wants to save its current Sliver-specific settings.
+func (rpc *Server) SaveUserSliverSettings(ctx context.Context, req *clientpb.SaveSliverSettingsReq) (*clientpb.SaveSliverSettings, error) {
 
 	// Get an ID/operator name for this client
 	name := rpc.getClientCommonName(ctx)
@@ -67,21 +67,21 @@ func (rpc *Server) SaveUserConsoleConfig(ctx context.Context, req *clientpb.Save
 	// we are the server and we write to a dedicated file.
 	var filename string
 	if name == "" {
-		filename = filepath.Join(assets.GetRootAppDir(), "console.config")
+		filename = filepath.Join(assets.GetRootAppDir(), "sliver.settings")
 	} else {
 		path := assets.GetUserDirectory(name)
-		filename = filepath.Join(path, "console.config")
+		filename = filepath.Join(path, "sliver.settings")
 	}
 
 	// Write to client history file
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
-		return &clientpb.SaveConsoleConfig{Response: &commonpb.Response{Err: "Could not find and/or overwrite console config file"}}, nil
+		return &clientpb.SaveSliverSettings{Response: &commonpb.Response{Err: "Could not find and/or overwrite Sliver settings file"}}, nil
 	}
-	if _, err = f.Write(req.Config); err != nil {
-		return &clientpb.SaveConsoleConfig{Response: &commonpb.Response{Err: "Could not write/overwrite console config file"}}, nil
+	if _, err = f.Write(req.Settings); err != nil {
+		return &clientpb.SaveSliverSettings{Response: &commonpb.Response{Err: "Could not write/overwrite Sliver settings file"}}, nil
 	}
 	f.Close()
 
-	return &clientpb.SaveConsoleConfig{Response: &commonpb.Response{}}, nil
+	return &clientpb.SaveSliverSettings{Response: &commonpb.Response{}}, nil
 }

@@ -88,6 +88,30 @@ message SaveConsoleConfig {
   commonpb.Response Response = 9;
 }
 
+// [ Sliver Settings] ----------------------------------------
+
+// Ask for settings 
+message GetSliverSettingsReq {
+  commonpb.Request Request = 9;
+}
+
+// Get settings 
+message GetSliverSettings {
+  bytes Settings = 1;
+  commonpb.Response Response = 9;
+}
+
+// Save the settings 
+message SaveSliverSettingsReq {
+  bytes Settings = 1;
+  commonpb.Request Request = 9;
+}
+
+// Saved
+message SaveSliverSettings {
+  commonpb.Response Response = 9;
+}
+
 // [ Core ] ----------------------------------------
 message Session {
   uint32 ID = 1;

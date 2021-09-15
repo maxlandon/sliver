@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/maxlandon/gonsole"
 
 	"github.com/bishopfox/sliver/client/constants"
@@ -38,9 +37,6 @@ var (
 
 	// ActiveTarget - Either the active session or the active beacon
 	ActiveTarget = &activeTarget{}
-
-	// ActiveSession - The Sliver session we are currently interacting with.
-	//ActiveSession *clientpb.Session
 
 	// Console - At startup the console has passed itself to this package, so that
 	// we can question the application parser for timeout/request options.
@@ -300,16 +296,6 @@ func GetActiveSessionHistory() []string {
 		return []string{}
 	}
 	return res.Sliver
-}
-
-// IsUserAnAdult - This should be called for any dangerous (OPSEC-wise) functions
-// Part of the core package because... well why not ?
-// Please insert good reason here:
-func IsUserAnAdult() bool {
-	confirm := false
-	prompt := &survey.Confirm{Message: "This action is bad OPSEC, are you an adult?"}
-	survey.AskOne(prompt, &confirm, nil)
-	return confirm
 }
 
 // GetCommandTimeout - Get the current --timeout option value

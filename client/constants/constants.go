@@ -158,7 +158,7 @@ const (
 	TCPListenerStr = "tcp-pivot"
 
 	LogStr        = "log"
-	ConfigStr     = "config"
+	ConfigStr     = "settings"
 	ConfigSaveStr = "save"
 	MsfStr        = "msf"
 	MsfInjectStr  = "msf-inject"

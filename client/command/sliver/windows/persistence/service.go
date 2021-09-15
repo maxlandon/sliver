@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bishopfox/sliver/client/command/server/settings"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
@@ -64,7 +65,7 @@ func (s *Service) Execute(args []string) (err error) {
 	if serviceName == "Sliver" || serviceDesc == "Sliver implant" {
 		log.Warnf("Warning: you're going to deploy the following service:\n- Name: %s\n- Description: %s\n", serviceName, serviceDesc)
 		log.Warnf("You might want to change that before going further...\n")
-		if !core.IsUserAnAdult() {
+		if !settings.IsUserAnAdult() {
 			return
 		}
 	}

@@ -57,16 +57,8 @@ func BindCommands() {
 	sliverMenu.AddExpansionCompletion('%', completion.CompleteSliverEnv)
 	sliverMenu.AddExpansionCompletion('$', console.Completer.EnvironmentVariables)
 
-	// Configuration command, to which we bind a special 'save' subcommand,
-	// which allows us to save console configurations for our user, on the server.
-	// These commands are available in all menus, and their arguments may thus vary.
-	console.AddConfigCommand(constants.ConfigStr, constants.CoreServerGroup)
-	console.AddConfigSubCommand(constants.ConfigSaveStr,
-		"save the current console configuration on the Sliver server, to be used by all user clients",
-		"",
-		"sliver commands",
-		[]string{""},
-		func() gonsole.Commander { return &settings.SaveConfig{} })
+	// Bind configuration commands and subcommands
+	bindConfigurationCommands()
 
 	// The gonsole library gives a help command as well.
 	console.AddHelpCommand(constants.CoreServerGroup)
@@ -95,4 +87,29 @@ func BindCommands() {
 	// We then register Sliver session commands to their own menu.
 	// This also takes care of registering/filtering Windows commands.
 	sliver.BindCommands(sliverMenu)
+}
+
+// bindConfigurationCommands - The user has access to some commands and their subcommands for
+// configuring the console appeareance, prompt, completions, as well Sliver-specific settings,
+// such as opsec-control on some commands, etc.
+func bindConfigurationCommands() {
+
+	// Configuration root command, available in all menus, and their arguments may thus vary.
+	core.Console.AddConfigCommand(constants.ConfigStr, constants.CoreServerGroup)
+
+	// Save the configuration and Sliver specific settings
+	core.Console.AddConfigSubCommand(constants.ConfigSaveStr,
+		"save the current console configuration and Sliver-specific settings on the server, to be used by all user clients",
+		"",
+		"sliver commands",
+		[]string{""},
+		func() gonsole.Commander { return &settings.SaveConfig{} })
+
+	// Auto opsec control settings
+	core.Console.AddConfigSubCommand("auto-adult",
+		"set the AutoAdult parameter for this user (opsec prompts for sensitive commands)",
+		"",
+		"sliver commands",
+		[]string{""},
+		func() gonsole.Commander { return &settings.AutoAdult{} })
 }

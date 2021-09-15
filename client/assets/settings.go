@@ -28,6 +28,12 @@ const (
 	settingsFileName = "tui-settings.json"
 )
 
+var (
+	// UserClientSettings - The user Sliver-specific settings, loaded
+	// at startup either from the server or from a default configuration.
+	UserClientSettings *ClientSettings
+)
+
 // ClientSettings - Client JSON config
 type ClientSettings struct {
 	TableStyle        string `json:"tables"`
