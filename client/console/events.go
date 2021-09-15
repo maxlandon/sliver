@@ -76,7 +76,7 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 		case consts.CanaryEvent:
 			fmt.Printf("\n\n") // Clear screen a bit before announcing shitty news
 			fmt.Printf(Warning+"WARNING: %s%s has been burned (DNS Canary)\n", normal, event.Session.Name)
-			sessions := getSessionsByName(event.Session.Name, transport.RPC)
+			sessions := core.GetSessionsByName(event.Session.Name, transport.RPC)
 			var alert string
 			for _, session := range sessions {
 				alert += fmt.Sprintf("\t🔥 Session #%d is affected\n", session.ID)
@@ -86,7 +86,7 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 		case consts.WatchtowerEvent:
 			msg := string(event.Data)
 			fmt.Printf(Warning+"WARNING: %s%s has been burned (seen on %s)\n", normal, event.Session.Name, msg)
-			sessions := getSessionsByName(event.Session.Name, transport.RPC)
+			sessions := core.GetSessionsByName(event.Session.Name, transport.RPC)
 			var alert string
 			for _, session := range sessions {
 				alert += fmt.Sprintf("\t🔥 Session #%d is affected\n", session.ID)

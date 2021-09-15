@@ -38,7 +38,6 @@ import (
 	clientLog "github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/version"
-	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 )
@@ -213,21 +212,6 @@ func isDone(ctx context.Context) bool {
 	default:
 		return false
 	}
-}
-
-// getSessionsByName - Return all sessions for an Implant by name
-func getSessionsByName(name string, rpc rpcpb.SliverRPCClient) []*clientpb.Session {
-	sessions, err := rpc.GetSessions(context.Background(), &commonpb.Empty{})
-	if err != nil {
-		return nil
-	}
-	matched := []*clientpb.Session{}
-	for _, session := range sessions.GetSessions() {
-		if session.Name == name {
-			matched = append(matched, session)
-		}
-	}
-	return matched
 }
 
 func printLogo(rpc rpcpb.SliverRPCClient) {

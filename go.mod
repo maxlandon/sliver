@@ -33,8 +33,8 @@ require (
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/mattn/go-sqlite3 v1.14.5
-	github.com/maxlandon/gonsole v0.0.0-20210915011932-d9db093fa4e5
-	github.com/maxlandon/readline v0.1.0-beta.0.20210725170202-3c7ec2ce14c7
+	github.com/maxlandon/gonsole v0.0.0-20210915231133-9593cafabff9
+	github.com/maxlandon/readline v0.1.0-beta.0.20210915230901-72c1f2edcc01
 	github.com/miekg/dns v1.1.35
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/olekukonko/tablewriter v0.0.5
@@ -49,7 +49,7 @@ require (
 	golang.zx2c4.com/wireguard v0.0.20200121
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200609130330-bd2cb7843e1b
 	google.golang.org/genproto v0.0.0-20210406143921-e86de6bf7a46 // indirect
-	google.golang.org/grpc v1.37.0
+	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.8
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
