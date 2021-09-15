@@ -356,6 +356,8 @@ github.com/maxlandon/gonsole v0.0.0-20210914205643-8721d3d14aac h1:2Ukn57ei/Di3d
 github.com/maxlandon/gonsole v0.0.0-20210914205643-8721d3d14aac/go.mod h1:iVj2rIEVxE+UCcJmx2GzaoPSkdT94JnKhLX8MhLlVmk=
 github.com/maxlandon/gonsole v0.0.0-20210914210026-54871ab87d0b h1:lCiHR9HBk3WTcs6HEiRj1z1MNmkO9T4r7RIZz83El7A=
 github.com/maxlandon/gonsole v0.0.0-20210914210026-54871ab87d0b/go.mod h1:iVj2rIEVxE+UCcJmx2GzaoPSkdT94JnKhLX8MhLlVmk=
+github.com/maxlandon/gonsole v0.0.0-20210915011932-d9db093fa4e5 h1:3akUYXqJQZoX95vm5q7jveJvFxZFqHT8xceDlSxxHZU=
+github.com/maxlandon/gonsole v0.0.0-20210915011932-d9db093fa4e5/go.mod h1:iVj2rIEVxE+UCcJmx2GzaoPSkdT94JnKhLX8MhLlVmk=
 github.com/maxlandon/readline v0.1.0-beta.0.20210725170202-3c7ec2ce14c7 h1:Blhj04ppywrxZEGZjGVqQb80kHnRMhT16Ir2daldraw=
 github.com/maxlandon/readline v0.1.0-beta.0.20210725170202-3c7ec2ce14c7/go.mod h1:aFr9p9hYasNQHuFAGOowWYa0e25uXzAR8gJrBXEKkNY=
 github.com/mdlayher/genetlink v1.0.0/go.mod h1:0rJ0h4itni50A86M2kHcgS85ttZazNt7a8H2a2cw0Gc=

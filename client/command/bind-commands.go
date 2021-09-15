@@ -106,18 +106,20 @@ func bindConfigurationCommands() {
 		func() gonsole.Commander { return &settings.SaveConfig{} })
 
 	// Auto opsec control settings
-	core.Console.AddConfigSubCommand("auto-adult",
+	autoAdult := core.Console.AddConfigSubCommand("auto-adult",
 		"set the AutoAdult parameter for this user (opsec prompts for sensitive commands)",
 		"",
 		"sliver commands",
 		[]string{""},
 		func() gonsole.Commander { return &settings.AutoAdult{} })
+	autoAdult.AddArgumentCompletion("Setting", completion.CompleteAutoAdult)
 
 	// Beacon auto-results
-	core.Console.AddConfigSubCommand("beacon-auto-results",
+	autoResult := core.Console.AddConfigSubCommand("beacon-auto-results",
 		"set whether to automatically print the results from requests to beacons",
 		"",
 		"sliver commands",
 		[]string{""},
 		func() gonsole.Commander { return &settings.BeaconAutoResults{} })
+	autoResult.AddArgumentCompletion("Setting", completion.CompleteBeaconAutoResult)
 }
