@@ -31,6 +31,7 @@ import (
 
 	// Commands implementations
 	"github.com/bishopfox/sliver/client/command/c2"
+	"github.com/bishopfox/sliver/client/command/server/beacons"
 	"github.com/bishopfox/sliver/client/command/server/canaries"
 	ccore "github.com/bishopfox/sliver/client/command/server/core"
 	"github.com/bishopfox/sliver/client/command/server/generate"
@@ -189,6 +190,22 @@ func BindCommands(cc *gonsole.Menu) {
 		[]string{""},
 		func() gonsole.Commander { return &c2.Pivots{} })
 	pivots.AddOptionCompletion("SessionID", completion.SessionIDs)
+
+	// Beacon Management ----------------------------------------------------------------------------
+	beac := cc.AddCommand(constants.BeaconsStr,
+		"Beacon management (all contexts)",
+		help.GetHelpFor(constants.BeaconsStr),
+		constants.SessionsGroup,
+		[]string{""},
+		func() gonsole.Commander { return &beacons.Beacons{} })
+
+	beac.SubcommandsOptional = true
+
+	beacRm := beac.AddCommand(constants.RmStr,
+		"Remove one or more implant beacons",
+		"", "", []string{""},
+		func() gonsole.Commander { return &beacons.BeaconsRm{} })
+	beacRm.AddArgumentCompletion("BeaconID", completion.BeaconIDs)
 
 	// Stage / Stager Generation -------------------------------------------------------------------------
 	g := cc.AddCommand(constants.GenerateStr,
