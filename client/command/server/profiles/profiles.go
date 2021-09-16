@@ -137,3 +137,17 @@ func getSliverProfiles() (profiles *map[string]*clientpb.ImplantProfile, err err
 	}
 	return profiles, nil
 }
+
+// GetImplantProfileByName - Get a sliver implant profile
+func GetImplantProfileByName(name string) (profile *clientpb.ImplantProfile, err error) {
+	pbProfiles, err := transport.RPC.ImplantProfiles(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		return nil, err
+	}
+	for _, profile := range pbProfiles.Profiles {
+		if profile.Name == name {
+			return profile, nil
+		}
+	}
+	return nil, fmt.Errorf("Failed to find a profile matching name %s", name)
+}

@@ -1,4 +1,4 @@
-package completion
+package websites
 
 /*
 	Sliver Implant Framework
@@ -24,28 +24,31 @@ import (
 
 	"github.com/maxlandon/readline"
 
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
-	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
-// BeaconIDs - Completes beacon IDs along with a description.
-func BeaconIDs() (comps []*readline.CompletionGroup) {
+// WebsitesDelete - Remove an entire website
+type WebsitesDelete struct {
+	Positional struct {
+		WebsiteName []string `description:"website content name to display" required:"1"`
+	} `positional-args:"yes" required:"yes"`
+}
 
-	comp := &readline.CompletionGroup{
-		Name:         "beacons",
-		Descriptions: map[string]string{},
-		DisplayType:  readline.TabDisplayList,
-	}
+// Execute - Command
+func (w *WebsitesDelete) Execute(args []string) (err error) {
 
-	beacons, err := transport.RPC.GetBeacons(context.Background(), &commonpb.Empty{})
-	if err != nil {
-		return
+	for _, name := range w.Positional.WebsiteName {
+		_, err := transport.RPC.WebsiteRemove(context.Background(), &clientpb.Website{
+			Name: name,
+		})
+		if err != nil {
+			err := log.Errorf("Failed to remove website %s", err)
+			fmt.Printf(err.Error())
+		} else {
+			log.Infof("Removed website %s%s%s", readline.YELLOW, name, readline.RESET)
+		}
 	}
-	for _, b := range beacons.Beacons {
-		comp.Suggestions = append(comp.Suggestions, b.ID)
-		desc := fmt.Sprintf("[%s] - %s@%s - %s", b.Name, b.Username, b.Hostname, b.RemoteAddress)
-		comp.Descriptions[b.ID] = readline.DIM + desc + readline.RESET
-	}
-
-	return []*readline.CompletionGroup{comp}
+	return
 }

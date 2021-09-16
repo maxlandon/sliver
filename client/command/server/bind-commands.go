@@ -30,7 +30,8 @@ import (
 	"github.com/bishopfox/sliver/client/util"
 
 	// Commands implementations
-	"github.com/bishopfox/sliver/client/command/c2"
+
+	"github.com/bishopfox/sliver/client/command/c2/pivots"
 	"github.com/bishopfox/sliver/client/command/server/beacons"
 	"github.com/bishopfox/sliver/client/command/server/canaries"
 	ccore "github.com/bishopfox/sliver/client/command/server/core"
@@ -188,7 +189,7 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.PivotsListStr),
 		"",
 		[]string{""},
-		func() gonsole.Commander { return &c2.Pivots{} })
+		func() gonsole.Commander { return &pivots.Pivots{} })
 	pivots.AddOptionCompletion("SessionID", completion.SessionIDs)
 
 	// Beacon Management ----------------------------------------------------------------------------

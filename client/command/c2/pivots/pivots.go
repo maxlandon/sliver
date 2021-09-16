@@ -1,4 +1,4 @@
-package c2
+package pivots
 
 /*
 	Sliver Implant Framework
@@ -35,58 +35,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// TCPPivot - Start a TCP pivot listener
-type TCPPivot struct {
-	Options struct {
-		LHost string `long:"lhost" short:"l" description:"interface address to bind listener to" default:"0.0.0.0"`
-		LPort int    `long:"lport" short:"p" description:"listener TCP listen port" default:"9898"`
-	} `group:"mTLS listener options"`
-}
-
-// Execute - Start a TCP pivot listener
-func (tp *TCPPivot) Execute(args []string) (err error) {
-
-	server := tp.Options.LHost
-	lport := uint16(tp.Options.LPort)
-	address := fmt.Sprintf("%s:%d", server, lport)
-
-	_, err = transport.RPC.TCPListener(context.Background(), &sliverpb.TCPPivotReq{
-		Address: address,
-		Request: core.ActiveTarget.Request(),
-	})
-
-	if err != nil {
-		return log.Error(err)
-	}
-
-	log.Infof("Listening on tcp://%s \n", address)
-	return
-}
-
-// NamedPipePivot - Start a Named pipe pivot listener
-type NamedPipePivot struct {
-	Options struct {
-		Name string `long:"name" short:"n" description:"name of the pipe" required:"yes"`
-	} `group:"named pipe options"`
-}
-
-// Execute - Start a named pipe pivot listener
-func (tp *NamedPipePivot) Execute(args []string) (err error) {
-
-	pipeName := tp.Options.Name
-	_, err = transport.RPC.NamedPipes(context.Background(), &sliverpb.NamedPipesReq{
-		PipeName: pipeName,
-		Request:  core.ActiveTarget.Request(),
-	})
-
-	if err != nil {
-		return log.Error(err)
-	}
-
-	log.Infof("Listening on %s", "\\\\.\\pipe\\"+pipeName+" \n")
-	return
-}
-
 // Pivots - Pivots management command, prints them by default
 type Pivots struct {
 	Options struct {
@@ -115,7 +63,7 @@ func (p *Pivots) Execute(args []string) (err error) {
 				return log.Error(err)
 			}
 			if len(sessions.Sessions) == 0 {
-				log.Infof("No pivoted sessions \n")
+				log.Infof("No pivoted sessions")
 				return nil
 			}
 			for _, session := range sessions.Sessions {
@@ -147,7 +95,7 @@ func printPivots(session *clientpb.Session, timeout int64, rpc rpcpb.SliverRPCCl
 		return fmt.Errorf("No pivots found for session %d", session.ID)
 	}
 
-	table := util.NewTable(readline.Bold(readline.Blue(fmt.Sprintf("Session %d\n", session.ID))))
+	table := util.NewTable(readline.Bold(readline.Blue(fmt.Sprintf("Session %d", session.ID))))
 	headers := []string{"Type", "Address"}
 	headLen := []int{10, 20}
 	table.SetColumns(headers, headLen)
