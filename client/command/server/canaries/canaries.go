@@ -80,54 +80,5 @@ func displayCanaries(canaries []*clientpb.DNSCanary, burnedOnly bool) {
 		table.AppendRow([]string{canary.ImplantName, canary.Domain, triggered, canary.FirstTriggered, canary.LatestTrigger})
 	}
 
-	// Print table
 	table.Output()
 }
-
-// func displayCanaries(canaries []*clientpb.DNSCanary, burnedOnly bool) {
-//
-//         outputBuf := bytes.NewBufferString("")
-//         table := tabwriter.NewWriter(outputBuf, 0, 2, 2, ' ', 0)
-//
-//         fmt.Fprintf(table, "Sliver Name\tDomain\tTriggered\tFirst Trigger\tLatest Trigger\t\n")
-//         fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%s\t\n",
-//                 strings.Repeat("=", len("Sliver Name")),
-//                 strings.Repeat("=", len("Domain")),
-//                 strings.Repeat("=", len("Triggered")),
-//                 strings.Repeat("=", len("First Trigger")),
-//                 strings.Repeat("=", len("Latest Trigger")),
-//         )
-//
-//         lineColors := []string{}
-//         for _, canary := range canaries {
-//                 if burnedOnly && !canary.Triggered {
-//                         continue
-//                 }
-//                 fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%s\t\n",
-//                         canary.ImplantName,
-//                         canary.Domain,
-//                         fmt.Sprintf("%v", canary.Triggered),
-//                         canary.FirstTriggered,
-//                         canary.LatestTrigger,
-//                 )
-//                 if canary.Triggered {
-//                         lineColors = append(lineColors, bold+red)
-//                 } else {
-//                         lineColors = append(lineColors, normal)
-//                 }
-//         }
-//         table.Flush()
-//
-//         for index, line := range strings.Split(outputBuf.String(), "\n") {
-//                 if len(line) == 0 {
-//                         continue
-//                 }
-//                 // We need to account for the two rows of column headers
-//                 if 0 < len(line) && 2 <= index {
-//                         lineColor := lineColors[index-2]
-//                         fmt.Printf("%s%s%s\n", lineColor, line, normal)
-//                 } else {
-//                         fmt.Printf("%s\n", line)
-//                 }
-//         }
-// }

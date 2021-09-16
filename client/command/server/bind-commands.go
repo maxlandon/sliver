@@ -30,12 +30,12 @@ import (
 	"github.com/bishopfox/sliver/client/util"
 
 	// Commands implementations
-
 	"github.com/bishopfox/sliver/client/command/c2/pivots"
 	"github.com/bishopfox/sliver/client/command/server/beacons"
 	"github.com/bishopfox/sliver/client/command/server/canaries"
 	ccore "github.com/bishopfox/sliver/client/command/server/core"
 	"github.com/bishopfox/sliver/client/command/server/generate"
+	"github.com/bishopfox/sliver/client/command/server/hosts"
 	"github.com/bishopfox/sliver/client/command/server/jobs"
 	"github.com/bishopfox/sliver/client/command/server/log"
 	"github.com/bishopfox/sliver/client/command/server/operators"
@@ -191,6 +191,41 @@ func BindCommands(cc *gonsole.Menu) {
 		[]string{""},
 		func() gonsole.Commander { return &pivots.Pivots{} })
 	pivots.AddOptionCompletion("SessionID", completion.SessionIDs)
+
+	// Hosts & IOCs Management ----------------------------------------------------------------------
+	hst := cc.AddCommand(constants.HostsStr,
+		"Manage the database of hosts",
+		help.GetHelpFor(constants.HostsStr),
+		constants.SessionsGroup,
+		[]string{""},
+		func() gonsole.Commander { return &hosts.Hosts{} })
+
+	hst.SubcommandsOptional = true
+
+	hstRm := hst.AddCommand(constants.RmStr,
+		"Remove one or more hosts from the database",
+		help.GetHelpFor(constants.RmStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &hosts.RmHost{} })
+	hstRm.AddArgumentCompletion("HostID", completion.HostUUIDs)
+
+	iocs := cc.AddCommand(constants.IOCStr,
+		"Manage the list of IOCs for hosts",
+		help.GetHelpFor(constants.IOCStr),
+		constants.SessionsGroup,
+		[]string{""},
+		func() gonsole.Commander { return &hosts.IOCs{} })
+
+	iocs.SubcommandsOptional = true
+
+	iocsRm := iocs.AddCommand(constants.RmStr,
+		"Remove one or more IOCs from the database",
+		help.GetHelpFor(constants.RmStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &hosts.RemoveIOCs{} })
+	iocsRm.AddArgumentCompletion("IOC", completion.HostIOCs)
 
 	// Beacon Management ----------------------------------------------------------------------------
 	beac := cc.AddCommand(constants.BeaconsStr,

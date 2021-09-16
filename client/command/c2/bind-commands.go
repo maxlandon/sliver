@@ -114,7 +114,7 @@ func BindCommands(cc *gonsole.Menu) {
 		ws.AddCommand(constants.WebsitesShowStr,
 			"Print the contents of a website",
 			"",
-			constants.TransportsGroup,
+			"",
 			[]string{""},
 			func() gonsole.Commander { return &websites.WebsitesShow{} })
 
