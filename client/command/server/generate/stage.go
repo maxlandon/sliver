@@ -60,9 +60,9 @@ type StageOptions struct {
 	// SecurityOptions - All security-oriented options like restrictions.
 	SecurityOptions struct {
 		LimitDatetime  string `long:"limit-datetime" short:"w" description:"limit execution to before datetime"`
-		LimitDomain    bool   `long:"limit-domain-joined" short:"D" description:"limit execution to domain joined machines"`
-		LimitUsername  string `long:"limit-username" short:"U" description:"limit execution to specified username"`
-		LimitHosname   string `long:"limit-hostname" short:"H" description:"limit execution to specified hostname"`
+		LimitDomain    bool   `long:"limit-domain-joined" short:"x" description:"limit execution to domain joined machines"`
+		LimitUsername  string `long:"limit-username" short:"y" description:"limit execution to specified username"`
+		LimitHosname   string `long:"limit-hostname" short:"z" description:"limit execution to specified hostname"`
 		LimitFileExits string `long:"limit-file-exists" short:"F" description:"limit execution to hosts with this file in the filesystem"`
 	} `group:"security options"`
 

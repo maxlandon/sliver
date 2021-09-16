@@ -198,6 +198,19 @@ func BindCommands(cc *gonsole.Menu) {
 		[]string{""},
 		func() gonsole.Commander { return &generate.Generate{} })
 
+	gb := g.AddCommand("beacon",
+		"Configure and compile a Sliver (beacon) stage implant",
+		help.GetHelpFor(constants.GenerateStr),
+		"", []string{""},
+		func() gonsole.Commander { return &generate.GenerateBeacon{} })
+	gb.AddOptionCompletion("Platform", completion.CompleteStagePlatforms)
+	gb.AddOptionCompletion("Format", completion.CompleteStageFormats)
+	gb.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
+	gb.AddOptionCompletion("MTLS", completion.ServerInterfaceAddrs)
+	gb.AddOptionCompletion("HTTP", completion.ServerInterfaceAddrs)
+	gb.AddOptionCompletion("DNS", completion.ServerInterfaceAddrs)
+	gb.AddOptionCompletion("TCPPivot", completion.ActiveSessionIfaceAddrs)
+
 	st := g.AddCommand("stage",
 		"Configure and compile a Sliver (stage) implant",
 		help.GetHelpFor(constants.GenerateStr),
