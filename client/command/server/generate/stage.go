@@ -24,18 +24,6 @@ import (
 	"github.com/bishopfox/sliver/client/log"
 )
 
-var (
-	// SupportedCompilerTargets - Supported compiler targets
-	SupportedCompilerTargets = map[string]bool{
-		"darwin/amd64":  true,
-		"darwin/arm64":  true,
-		"linux/386":     true,
-		"linux/amd64":   true,
-		"windows/386":   true,
-		"windows/amd64": true,
-	}
-)
-
 // Generate - Configure and compile stage or stager payloads
 type Generate struct {
 }
@@ -55,8 +43,6 @@ type GenerateStage struct {
 type StageOptions struct {
 	// CoreOptions - All options about OS/arch, files to save, debugs, etc.
 	CoreOptions struct {
-		// OS       string `long:"os" short:"o" description:"target host operating system" default:"windows" value-name:"stage OS"`
-		// Arch     string `long:"arch" short:"a" description:"target host CPU architecture" default:"amd64" value-name:"stage architectures"`
 		Platform string `long:"platform" short:"O" description:"os/arch target platform (completed)" default:"windows/amd64" value-name:"target platform"`
 		Format   string `long:"format" short:"f" description:"output formats (exe, shared (DLL), service (see 'psexec' for info), shellcode (Windows only)" default:"exe" value-name:"stage formats"`
 		Profile  string `long:"profile-name" description:"implant profile name to use (use only with 'profiles new' command)"`
@@ -67,17 +53,17 @@ type StageOptions struct {
 
 	// TransportOptions - All options pertaining to transport/RPC matters
 	TransportOptions struct {
-		MTLS         []string `long:"mtls" short:"m" description:"mTLS C2 domain(s), comma-separated (ex: host:port)" env-delim:","`
-		WireGuard    []string `long:"wg" short:"g" description:"WireGuard connection strings" env-delim:","`
-		DNS          []string `long:"dns" short:"n" description:"DNS C2 domain(s), comma-separated (ex: mydomain.com)" env-delim:","`
-		HTTP         []string `long:"http" short:"h" description:"HTTP(S) C2 domain(s)" env-delim:","`
-		NamedPipe    []string `long:"named-pipe" short:"p" description:"Named pipe transport strings, comma-separated" env-delim:","`
-		TCPPivot     []string `long:"tcp-pivot" short:"i" description:"TCP pivot transport strings, comma-separated" env-delim:","`
-		KeyExchange  int      `long:"key-exchange" short:"X" description:"WireGuard key exchange port" default:"1337"`
-		TCPComms     int      `long:"tcp-comms" short:"T" description:"WireGuard C2 comms port" default:"8888"`
-		Reconnect    int      `long:"reconnect" short:"j" description:"attempt to reconnect every n second(s)" default:"60"`
-		PollInterval int      `long:"poll" short:"P" description:"attempt to poll every n second(s)" default:"1"`
-		MaxErrors    int      `long:"max-errors" short:"k" description:"max number of transport errors" default:"10"`
+		MTLS        []string `long:"mtls" short:"m" description:"mTLS C2 domain(s), comma-separated (ex: host:port)" env-delim:","`
+		WireGuard   []string `long:"wg" short:"g" description:"WireGuard connection strings" env-delim:","`
+		DNS         []string `long:"dns" short:"n" description:"DNS C2 domain(s), comma-separated (ex: mydomain.com)" env-delim:","`
+		HTTP        []string `long:"http" short:"h" description:"HTTP(S) C2 domain(s)" env-delim:","`
+		NamedPipe   []string `long:"named-pipe" short:"p" description:"Named pipe transport strings, comma-separated" env-delim:","`
+		TCPPivot    []string `long:"tcp-pivot" short:"i" description:"TCP pivot transport strings, comma-separated" env-delim:","`
+		KeyExchange int      `long:"key-exchange" short:"X" description:"WireGuard key exchange port" default:"1337"`
+		TCPComms    int      `long:"tcp-comms" short:"T" description:"WireGuard C2 comms port" default:"8888"`
+		Reconnect   int      `long:"reconnect" short:"j" description:"attempt to reconnect every n second(s)" default:"60"`
+		PollTimeout int      `long:"poll-timeout" short:"P" description:"attempt to poll every n second(s)" default:"360"`
+		MaxErrors   int      `long:"max-errors" short:"k" description:"max number of transport errors" default:"1000"`
 	} `group:"transport options"`
 
 	// SecurityOptions - All security-oriented options like restrictions.

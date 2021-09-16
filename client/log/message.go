@@ -90,12 +90,12 @@ func Debugf(format string, args ...interface{}) (n int, err error) {
 
 // Infof - Notify an info message.
 func Infof(format string, args ...interface{}) (n int, err error) {
-	return fmt.Printf(info+format, args...)
+	return fmt.Printf(info+format+"\n", args...)
 }
 
 // Warnf - Notify a warning message.
 func Warnf(format string, args ...interface{}) (n int, err error) {
-	return fmt.Printf(warn+format, args...)
+	return fmt.Printf(warn+format+"\n", args...)
 }
 
 // Errorf - Notify an error message without returning the error itself.
