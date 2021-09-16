@@ -55,7 +55,7 @@ func (sk *SessionsKill) Execute(args []string) (err error) {
 		sessionsMap[session.ID] = session
 	}
 	if len(sessionsMap) == 0 {
-		log.Infof("No sessions \n")
+		log.Infof("No sessions")
 		return
 	}
 
@@ -63,7 +63,7 @@ func (sk *SessionsKill) Execute(args []string) (err error) {
 	for _, id := range sk.Positional.SessionID {
 		sess, ok := sessionsMap[id]
 		if !ok || sess == nil {
-			err := log.Errorf("Invalid session ID: %d\n", id)
+			err := log.Errorf("Invalid session ID: %d", id)
 			fmt.Printf(err.Error())
 			continue
 		}
@@ -96,7 +96,7 @@ func (ka *SessionsKillAll) Execute(args []string) (err error) {
 		sessionsMap[session.ID] = session
 	}
 	if len(sessionsMap) == 0 {
-		log.Infof("No sessions \n")
+		log.Infof("No sessions")
 		return
 	}
 
@@ -104,7 +104,7 @@ func (ka *SessionsKillAll) Execute(args []string) (err error) {
 	for i := range sessionsMap {
 		sess, ok := sessionsMap[i]
 		if !ok || sess == nil {
-			err := log.Errorf("Invalid session ID: %d\n", i)
+			err := log.Errorf("Invalid session ID: %d", i)
 			fmt.Printf(err.Error())
 			continue
 		}
@@ -140,7 +140,7 @@ func killSession(session *clientpb.Session, force bool, rpc rpcpb.SliverRPCClien
 	time.Sleep(time.Second * 1)
 	ctrl <- true
 	<-ctrl
-	log.Infof("Killed %s (%d)\n", session.Name, session.ID)
+	log.Infof("Killed %s (%d)", session.Name, session.ID)
 
 	return nil
 }

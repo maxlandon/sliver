@@ -45,7 +45,7 @@ func (ka *SessionsClean) Execute(args []string) (err error) {
 		sessionsMap[session.ID] = session
 	}
 	if len(sessionsMap) == 0 {
-		log.Infof("No sessions \n")
+		log.Infof("No sessions")
 		return
 	}
 
@@ -53,16 +53,16 @@ func (ka *SessionsClean) Execute(args []string) (err error) {
 	for i := range sessionsMap {
 		sess, ok := sessionsMap[i]
 		if !ok || sess == nil {
-			err := log.Errorf("Invalid session ID: %d\n", i)
-			if err != nil {
-				fmt.Printf(err.Error())
-			}
+			err := log.Errorf("Invalid session ID: %d", i)
+			fmt.Printf(err.Error())
+			continue
 		}
 
 		if sess.IsDead {
 			// Kill session
 			err = killSession(sess, true, transport.RPC)
 			if err != nil {
+				err := log.Error(err)
 				fmt.Printf(err.Error())
 			}
 

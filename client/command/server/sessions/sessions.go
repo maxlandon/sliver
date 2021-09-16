@@ -54,7 +54,7 @@ func (s *Sessions) Execute(args []string) (err error) {
 	if 0 < len(sessionsMap) {
 		printSessions(sessionsMap)
 	} else {
-		log.Infof("No sessions \n")
+		log.Infof("No sessions")
 	}
 
 	return
@@ -84,8 +84,12 @@ func printSessions(sessions map[uint32]*clientpb.Session) {
 		} else {
 			status = "Alive"
 		}
+		burned := ""
+		if s.Burned {
+			burned = "🔥"
+		}
 		row := []string{strconv.Itoa(int(s.ID)), s.Name, osArch, s.RemoteAddress, s.Username,
-			s.Hostname, strconv.Itoa(int(s.LastCheckin)), status}
+			s.Hostname, strconv.Itoa(int(s.LastCheckin)), burned + status}
 
 		table.AppendRow(row)
 	}
