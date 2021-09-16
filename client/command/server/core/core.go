@@ -67,7 +67,7 @@ func (cd *ChangeClientDirectory) Execute(args []string) (err error) {
 		log.Error(err)
 	}
 
-	log.Infof("Changed directory to %s \n", dir)
+	log.Infof("Changed directory to %s", dir)
 	return
 }
 

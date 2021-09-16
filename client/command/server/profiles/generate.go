@@ -22,9 +22,10 @@ import (
 	"context"
 	"os"
 
-	"github.com/bishopfox/sliver/client/command/server/generate"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
+
+	"github.com/bishopfox/sliver/client/command/server/generate"
 )
 
 // ProfileGenerate - Generate implant from a profile given as argment (completed)

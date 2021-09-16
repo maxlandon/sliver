@@ -46,13 +46,13 @@ func (c *Canaries) Execute(args []string) (err error) {
 
 	canaries, err := transport.RPC.Canaries(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("Failed to list canaries %s", err)
+		log.Errorf("Failed to list canaries: %s", err)
 		return
 	}
 	if 0 < len(canaries.Canaries) {
 		displayCanaries(canaries.Canaries, c.Burned)
 	} else {
-		log.Infof("No canaries in database\n")
+		log.Infof("No canaries in database")
 	}
 	return
 }

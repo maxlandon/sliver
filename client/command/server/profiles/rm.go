@@ -45,7 +45,7 @@ func (pd *ProfileDelete) Execute(args []string) (err error) {
 			fmt.Printf(err.Error())
 			continue
 		} else {
-			log.Infof("Deleted profile %s\n", p)
+			log.Infof("Deleted profile %s", p)
 		}
 	}
 	return

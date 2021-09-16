@@ -52,7 +52,7 @@ func (j *Jobs) Execute(args []string) (err error) {
 	if 0 < len(activeJobs) {
 		printJobs(activeJobs)
 	} else {
-		log.Infof("No active jobs\n")
+		log.Infof("No active jobs")
 	}
 	return
 }
@@ -67,7 +67,7 @@ type JobsKill struct {
 // Execute - Kill a job given an ID
 func (j *JobsKill) Execute(args []string) (err error) {
 	for _, jobID := range j.Positional.JobID {
-		log.Infof("Killing job #%d ... \n", jobID)
+		log.Infof("Killing job #%d ... ", jobID)
 		_, err := transport.RPC.KillJob(context.Background(), &clientpb.KillJobReq{
 			ID: jobID,
 		})
@@ -100,14 +100,14 @@ func (j *JobsKillAll) Execute(args []string) (err error) {
 }
 
 func killJob(jobID uint32) (err error) {
-	log.Infof("Killing job #%d ...\n", jobID)
+	log.Infof("Killing job #%d ...", jobID)
 	jobKill, err := transport.RPC.KillJob(context.Background(), &clientpb.KillJobReq{
 		ID: jobID,
 	})
 	if err != nil {
 		return log.RPCErrorf("%s", err)
 	}
-	log.Infof("Successfully killed job #%d\n", jobKill.ID)
+	log.Infof("Successfully killed job #%d", jobKill.ID)
 	return
 }
 

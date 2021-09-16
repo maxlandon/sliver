@@ -43,7 +43,7 @@ func (p *Profiles) Execute(args []string) (err error) {
 		return log.Error(err)
 	}
 	if len(*profiles) == 0 || profiles == nil {
-		log.Infof("No profiles, create one with `profiles new`\n")
+		log.Infof("No profiles, create one with `profiles new`")
 		return
 	}
 	table := util.NewTable(readline.Bold(readline.Yellow("Implant Profiles")))

@@ -21,10 +21,11 @@ package profiles
 import (
 	"context"
 
-	"github.com/bishopfox/sliver/client/command/server/generate"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+
+	"github.com/bishopfox/sliver/client/command/server/generate"
 )
 
 // NewProfile - Configure and save a new implant profile.
@@ -55,6 +56,6 @@ func (p *NewProfile) Execute(args []string) (err error) {
 		return log.Error(err)
 	}
 
-	log.Infof("Saved new profile %s\n", resp.Name)
+	log.Infof("Saved new profile %s", resp.Name)
 	return
 }
