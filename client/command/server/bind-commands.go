@@ -244,6 +244,7 @@ func BindCommands(cc *gonsole.Menu) {
 		[]string{""},
 		func() gonsole.Commander { return &generate.Regenerate{} })
 	regenerate.AddArgumentCompletion("ImplantName", completion.ImplantNames)
+	regenerate.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
 
 	// Profiles Management / Generation ----------------------------------------------------------------
 	p := cc.AddCommand(constants.ProfilesStr,
@@ -262,6 +263,11 @@ func BindCommands(cc *gonsole.Menu) {
 		func() gonsole.Commander { return &profiles.NewProfile{} })
 	pn.AddOptionCompletion("Platform", completion.CompleteStagePlatforms)
 	pn.AddOptionCompletion("Format", completion.CompleteStageFormats)
+	pn.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
+	pn.AddOptionCompletion("MTLS", completion.ServerInterfaceAddrs)
+	pn.AddOptionCompletion("HTTP", completion.ServerInterfaceAddrs)
+	pn.AddOptionCompletion("DNS", completion.ServerInterfaceAddrs)
+	pn.AddOptionCompletion("TCPPivot", completion.ActiveSessionIfaceAddrs)
 
 	profileDelete := p.AddCommand(constants.RmStr,
 		"Delete one or more existing implant profiles",
@@ -271,12 +277,13 @@ func BindCommands(cc *gonsole.Menu) {
 		func() gonsole.Commander { return &profiles.ProfileDelete{} })
 	profileDelete.AddArgumentCompletion("Profile", completion.ImplantProfiles)
 
-	p.AddCommand(constants.GenerateStr,
+	pg := p.AddCommand(constants.GenerateStr,
 		"Compile an implant based on a profile, passed as argument (completed)",
 		help.GetHelpFor(constants.GenerateStr),
 		"",
 		[]string{""},
 		func() gonsole.Commander { return &profiles.ProfileGenerate{} })
+	pg.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
 
 	cc.AddCommand(constants.CanariesStr,
 		"List previously generated DNS canaries",

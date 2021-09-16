@@ -59,7 +59,7 @@ type StageOptions struct {
 		// Arch     string `long:"arch" short:"a" description:"target host CPU architecture" default:"amd64" value-name:"stage architectures"`
 		Platform string `long:"platform" short:"O" description:"os/arch target platform (completed)" default:"windows/amd64" value-name:"target platform"`
 		Format   string `long:"format" short:"f" description:"output formats (exe, shared (DLL), service (see 'psexec' for info), shellcode (Windows only)" default:"exe" value-name:"stage formats"`
-		Profile  string `long:"profile-name" description:"implant profile name to use (use with generate-profile)"`
+		Profile  string `long:"profile-name" description:"implant profile name to use (use only with 'profiles new' command)"`
 		Name     string `long:"name" short:"N" description:"implant name to use (overrides random name generation)"`
 		Save     string `long:"save" short:"s" description:"directory/file where to save binary"`
 		Debug    bool   `long:"debug" short:"d" description:"enable debug features (incompatible with obfuscation, and prevailing)"`
