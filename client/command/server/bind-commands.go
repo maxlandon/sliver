@@ -216,9 +216,17 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.StagerStr),
 		"", []string{""},
 		func() gonsole.Commander { return &generate.GenerateStager{} })
+	sg.AddOptionCompletion("Arch", completion.CompleteMsfArchs)
 	sg.AddOptionCompletion("Format", completion.CompleteMsfFormats)
 	sg.AddOptionCompletion("Protocol", completion.CompleteMsfProtocols)
 	sg.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
+	sg.AddOptionCompletion("LHost", completion.ServerInterfaceAddrs)
+
+	g.AddCommand(constants.InfoStr,
+		"Display information on the Sliver server's compiler configuration",
+		"",
+		"", []string{""},
+		func() gonsole.Commander { return &generate.GenerateInfo{} })
 
 	// Builds Management / Generation ------------------------------------------------------------------
 	builds := cc.AddCommand(constants.ImplantBuildsStr,

@@ -137,7 +137,7 @@ func (g *GenerateStager) Execute(args []string) (err error) {
 		if err != nil {
 			return log.Errorf("Failed to write to: %s", saveTo)
 		}
-		log.Infof("Sliver stager saved to: %s\n", saveTo)
+		log.Infof("Sliver stager saved to: %s", saveTo)
 	} else {
 		log.Infof("Here's your stager:")
 		fmt.Println(string(stageFile.GetFile().GetData()))
