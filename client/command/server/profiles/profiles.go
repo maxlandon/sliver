@@ -1,4 +1,4 @@
-package generate
+package profiles
 
 /*
 	Sliver Implant Framework
@@ -21,8 +21,6 @@ package generate
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -35,48 +33,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
-// ProfilesCmd - Root profile management command
-type ProfilesCmd struct {
-}
-
-// Execute - Root profile management command
-func (p *ProfilesCmd) Execute(args []string) (err error) {
-	return
-}
-
-// NewProfile - Configure and save a new implant profile.
-type NewProfile struct {
-	StageOptions // This commands works the same as generate, and needs full options.
-}
-
-// Execute - Configure and save a new implant profile.
-func (p *NewProfile) Execute(args []string) (err error) {
-
-	name := p.CoreOptions.Profile
-	if name == "" {
-		return log.Errorf("Invalid profile name")
-	}
-
-	config, err := parseCompileFlags(p.StageOptions)
-	if err != nil {
-		return log.Error(err)
-	}
-
-	profile := &clientpb.ImplantProfile{
-		Name:   name,
-		Config: config,
-	}
-	resp, err := transport.RPC.SaveImplantProfile(context.Background(), profile)
-
-	if err != nil {
-		return log.Error(err)
-	}
-
-	log.Infof("Saved new profile %s\n", resp.Name)
-	return
-}
-
-// Profiles - List saved implant profiles.
+// Profiles - List saved implant profiles, and root command
 type Profiles struct{}
 
 // Execute - List saved implant profiles.
@@ -169,43 +126,6 @@ func (p *Profiles) Execute(args []string) (err error) {
 	return
 }
 
-// ProfileGenerate - Generate implant from a profile given as argment (completed)
-type ProfileGenerate struct {
-	Positional struct {
-		Profile string `description:"name of profile to use" required:"1-1"`
-	} `positional-args:"true" required:"true"`
-	Options struct {
-		Save string `long:"save" short:"s" description:"directory/file where to save binary"`
-	} `group:"profile options"`
-}
-
-// Execute - Generate implant from a profile given as argment (completed)
-func (p *ProfileGenerate) Execute(args []string) (err error) {
-	name := p.Positional.Profile
-	save := p.Options.Save
-	if save == "" {
-		save, _ = os.Getwd()
-	}
-	profiles, err := getSliverProfiles()
-	if err != nil {
-		return log.Error(err)
-	}
-	if profile, ok := (*profiles)[name]; ok {
-		implantFile, err := compile(profile.Config, save)
-		if err != nil {
-			return err
-		}
-		profile.Config.Name = buildImplantName(implantFile.Name)
-		_, err = transport.RPC.SaveImplantProfile(context.Background(), profile)
-		if err != nil {
-			return log.Errorf("could not update implant profile: %v", err)
-		}
-	} else {
-		return log.Errorf("No profile with name '%s'", name)
-	}
-	return
-}
-
 func getSliverProfiles() (profiles *map[string]*clientpb.ImplantProfile, err error) {
 	pbProfiles, err := transport.RPC.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
@@ -216,52 +136,4 @@ func getSliverProfiles() (profiles *map[string]*clientpb.ImplantProfile, err err
 		(*profiles)[profile.Name] = profile
 	}
 	return profiles, nil
-}
-
-func getLimitsString(config *clientpb.ImplantConfig) string {
-	limits := []string{}
-	if config.LimitDatetime != "" {
-		limits = append(limits, fmt.Sprintf("datetime=%s", config.LimitDatetime))
-	}
-	if config.LimitDomainJoined {
-		limits = append(limits, fmt.Sprintf("domainjoined=%v", config.LimitDomainJoined))
-	}
-	if config.LimitUsername != "" {
-		limits = append(limits, fmt.Sprintf("username=%s", config.LimitUsername))
-	}
-	if config.LimitHostname != "" {
-		limits = append(limits, fmt.Sprintf("hostname=%s", config.LimitHostname))
-	}
-	if config.LimitFileExists != "" {
-		limits = append(limits, fmt.Sprintf("fileexists=%s", config.LimitFileExists))
-	}
-	return strings.Join(limits, "; ")
-}
-
-// ProfileDelete - Delete one or more profiles from the server
-type ProfileDelete struct {
-	Positional struct {
-		Profiles []string `description:"name of profile to delete" required:"1"`
-	} `positional-args:"yes" required:"true"`
-}
-
-// Execute - Command
-func (pd *ProfileDelete) Execute(args []string) (err error) {
-	for _, p := range pd.Positional.Profiles {
-		_, err := transport.RPC.DeleteImplantProfile(context.Background(), &clientpb.DeleteReq{
-			Name: p,
-		})
-		if err != nil {
-			err := log.Errorf("Failed to delete profile: %s\n", err)
-			fmt.Printf(err.Error())
-			continue
-		} else {
-			log.Infof("Deleted profile %s\n", p)
-		}
-	}
-	return
-}
-
-func buildImplantName(name string) string {
-	return strings.TrimSuffix(name, filepath.Ext(name))
 }
