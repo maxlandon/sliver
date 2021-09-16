@@ -37,6 +37,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/server/jobs"
 	"github.com/bishopfox/sliver/client/command/server/log"
 	"github.com/bishopfox/sliver/client/command/server/operators"
+	"github.com/bishopfox/sliver/client/command/server/profiles"
 	"github.com/bishopfox/sliver/client/command/server/sessions"
 	"github.com/bishopfox/sliver/client/command/server/update"
 	"github.com/bishopfox/sliver/client/command/sliver/generic/info"
@@ -219,58 +220,13 @@ func BindCommands(cc *gonsole.Menu) {
 	sg.AddOptionCompletion("Protocol", completion.CompleteMsfProtocols)
 	sg.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
 
-	// Profiles Management / Generation ----------------------------------------------------------------
-	p := cc.AddCommand(constants.ProfilesStr,
-		"Implant profiles management commands",
-		help.GetHelpFor(constants.ProfilesStr),
-		constants.BuildsGroup,
-		[]string{""},
-		func() gonsole.Commander { return &generate.ProfilesCmd{} })
-
-	pn := p.AddCommand(constants.NewStr,
-		"Configure and save a new (stage) implant profile",
-		help.GetHelpFor(constants.ProfilesStr),
-		constants.BuildsGroup,
-		[]string{""},
-		func() gonsole.Commander { return &generate.NewProfile{} })
-	pn.AddOptionCompletion("Platform", completion.CompleteStagePlatforms)
-	pn.AddOptionCompletion("Format", completion.CompleteStageFormats)
-
-	pr := p.AddCommand("list",
-		"List existing implant profiles",
-		help.GetHelpFor(constants.ProfilesStr),
-		constants.BuildsGroup,
-		[]string{""},
-		func() gonsole.Commander { return &generate.Profiles{} })
-	pr.SubcommandsOptional = true
-
-	profileDelete := p.AddCommand(constants.RmStr,
-		"Delete one or more existing implant profiles",
-		"", "", []string{""},
-		func() gonsole.Commander { return &generate.ProfileDelete{} })
-	profileDelete.AddArgumentCompletion("Profile", completion.ImplantProfiles)
-
-	p.AddCommand(constants.GenerateStr,
-		"Compile an implant based on a profile, passed as argument (completed)",
-		help.GetHelpFor(constants.GenerateStr),
-		constants.BuildsGroup,
-		[]string{""},
-		func() gonsole.Commander { return &generate.ProfileGenerate{} })
-
+	// Builds Management / Generation ------------------------------------------------------------------
 	builds := cc.AddCommand(constants.ImplantBuildsStr,
 		"List old implant builds",
 		help.GetHelpFor(constants.ImplantBuildsStr),
 		constants.BuildsGroup,
 		[]string{""},
 		func() gonsole.Commander { return &generate.Builds{} })
-
-	regenerate := cc.AddCommand(constants.RegenerateStr,
-		"Recompile an implant by name, passed as argument (completed)",
-		help.GetHelpFor(constants.RegenerateStr),
-		constants.BuildsGroup,
-		[]string{""},
-		func() gonsole.Commander { return &generate.Regenerate{} })
-	regenerate.AddArgumentCompletion("ImplantName", completion.ImplantNames)
 
 	builds.SubcommandsOptional = true
 	buildsRm := builds.AddCommand(constants.RmStr,
@@ -280,6 +236,47 @@ func BindCommands(cc *gonsole.Menu) {
 		[]string{""},
 		func() gonsole.Commander { return &generate.RemoveBuild{} })
 	buildsRm.AddArgumentCompletion("Names", completion.ImplantNames)
+
+	regenerate := builds.AddCommand(constants.RegenerateStr,
+		"Recompile an implant by name, passed as argument (completed)",
+		help.GetHelpFor(constants.RegenerateStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &generate.Regenerate{} })
+	regenerate.AddArgumentCompletion("ImplantName", completion.ImplantNames)
+
+	// Profiles Management / Generation ----------------------------------------------------------------
+	p := cc.AddCommand(constants.ProfilesStr,
+		"Implant profiles management commands",
+		help.GetHelpFor(constants.ProfilesStr),
+		constants.BuildsGroup,
+		[]string{""},
+		func() gonsole.Commander { return &profiles.Profiles{} })
+	p.SubcommandsOptional = true
+
+	pn := p.AddCommand(constants.NewStr,
+		"Configure and save a new (stage) implant profile",
+		help.GetHelpFor(constants.ProfilesStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &profiles.NewProfile{} })
+	pn.AddOptionCompletion("Platform", completion.CompleteStagePlatforms)
+	pn.AddOptionCompletion("Format", completion.CompleteStageFormats)
+
+	profileDelete := p.AddCommand(constants.RmStr,
+		"Delete one or more existing implant profiles",
+		"",
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &profiles.ProfileDelete{} })
+	profileDelete.AddArgumentCompletion("Profile", completion.ImplantProfiles)
+
+	p.AddCommand(constants.GenerateStr,
+		"Compile an implant based on a profile, passed as argument (completed)",
+		help.GetHelpFor(constants.GenerateStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &profiles.ProfileGenerate{} })
 
 	cc.AddCommand(constants.CanariesStr,
 		"List previously generated DNS canaries",
