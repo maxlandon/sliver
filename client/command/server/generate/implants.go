@@ -133,28 +133,3 @@ func printImplantBuilds(configs map[string]*clientpb.ImplantConfig) {
 	// Print table
 	table.Output()
 }
-
-// RemoveBuild - Remove one or more implant builds from the server database
-type RemoveBuild struct {
-	Args struct {
-		Names []string `description:"implant build name" required:"1"`
-	} `positional-args:"yes" required:"yes"`
-}
-
-// Execute - Remove one or more implant builds from the server database
-func (r *RemoveBuild) Execute(args []string) (err error) {
-
-	for _, name := range r.Args.Names {
-		_, err := transport.RPC.DeleteImplantBuild(context.Background(), &clientpb.DeleteReq{
-			Name: name,
-		})
-		if err != nil {
-			err := log.Errorf("Failed to delete implant %s", err)
-			fmt.Printf(err.Error())
-			continue
-		}
-		log.Infof("Deleted implant %s\n", name)
-
-	}
-	return
-}
