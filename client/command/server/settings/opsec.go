@@ -38,13 +38,13 @@ func (a *AutoAdult) Execute(args []string) (err error) {
 	switch a.Positional.Setting {
 	case "true":
 		assets.UserClientSettings.AutoAdult = true
-		log.Infof("AutoAdult mode set to %strue%s\n", readline.YELLOW, readline.RESET)
+		log.Infof("AutoAdult mode set to %strue%s", readline.YELLOW, readline.RESET)
 	case "false":
 		assets.UserClientSettings.AutoAdult = false
-		log.Infof("AutoAdult mode set to %sfalse%s\n", readline.YELLOW, readline.RESET)
+		log.Infof("AutoAdult mode set to %sfalse%s", readline.YELLOW, readline.RESET)
 	default:
 		assets.UserClientSettings.AutoAdult = false
-		log.Warnf("Invalid argument (must be true/false): AutoAdult defaulting to %sfalse%s\n", readline.YELLOW, readline.RESET)
+		log.Warnf("Invalid argument (must be true/false): AutoAdult defaulting to %sfalse%s", readline.YELLOW, readline.RESET)
 	}
 	return
 }

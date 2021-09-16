@@ -172,14 +172,14 @@ func verboseVersions() (err error) {
 	clientVer := version.FullVersion()
 	serverVer, err := transport.RPC.GetVersion(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		return log.Errorf("Failed to check server version %s", err)
+		return log.Errorf("Failed to check server version: %s", err)
 	}
 
-	log.Infof("Client v%s - %s/%s\n", clientVer, runtime.GOOS, runtime.GOARCH)
+	log.Infof("Client v%s - %s/%s", clientVer, runtime.GOOS, runtime.GOARCH)
 	clientCompiledAt, _ := version.Compiled()
-	log.Infof("    Compiled at %s\n\n", clientCompiledAt)
+	log.Infof("    Compiled at %s\n", clientCompiledAt)
 
-	log.Infof("Server v%d.%d.%d - %s - %s/%s\n",
+	log.Infof("Server v%d.%d.%d - %s - %s/%s",
 		serverVer.Major, serverVer.Minor, serverVer.Patch, serverVer.Commit,
 		serverVer.OS, serverVer.Arch)
 	serverCompiledAt := time.Unix(serverVer.CompiledAt, 0)
@@ -275,7 +275,7 @@ func updateAvailable(client *http.Client, release *version.Release, saveTo strin
 	serverAsset := serverAssetForGOOS(release.Assets)
 	clientAsset := clientAssetForGOOS(release.Assets)
 
-	log.Infof("New version available %s\n", release.TagName)
+	log.Infof("New version available %s", release.TagName)
 	if serverAsset != nil {
 		fmt.Printf(" - Server: %s\n", serverUtil.ByteCountBinary(int64(serverAsset.Size)))
 	}
@@ -293,16 +293,18 @@ func updateAvailable(client *http.Client, release *version.Release, saveTo strin
 		fmt.Printf("Please wait ...")
 		err := downloadAsset(client, serverAsset, saveTo)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			err := log.Errorf("%s", err)
+			fmt.Printf(err.Error())
 			return
 		}
 		err = downloadAsset(client, clientAsset, saveTo)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			err := log.Errorf("%s", err)
+			fmt.Printf(err.Error())
 			return
 		}
 		fmt.Println()
-		log.Infof("Saved updates to: %s\n", saveTo)
+		log.Infof("Saved updates to: %s", saveTo)
 	}
 }
 

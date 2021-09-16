@@ -54,10 +54,10 @@ func (c *SaveConfig) Execute(args []string) (err error) {
 	}
 
 	if res.Response.Err != "" {
-		return log.Errorf("Error saving config: %s\n", res.Response.Err)
+		return log.Errorf("Error saving config: %s", res.Response.Err)
 	}
 
-	log.Infof("Saved console config\n")
+	log.Infof("Saved console config")
 
 	// Sliver settings ----------------------------------------------------
 	sliverSettings := assets.UserClientSettings
@@ -75,10 +75,10 @@ func (c *SaveConfig) Execute(args []string) (err error) {
 	}
 
 	if settingsRes.Response.Err != "" {
-		return log.Errorf("Error saving Sliver settings: %s\n", settingsRes.Response.Err)
+		return log.Errorf("Error saving Sliver settings: %s", settingsRes.Response.Err)
 	}
 
-	log.Infof("Saved Sliver-specific settings\n")
+	log.Infof("Saved Sliver-specific settings")
 
 	return
 }

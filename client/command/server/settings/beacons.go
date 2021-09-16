@@ -37,13 +37,13 @@ func (a *BeaconAutoResults) Execute(args []string) (err error) {
 	switch a.Positional.Setting {
 	case "true":
 		assets.UserClientSettings.BeaconAutoResults = true
-		log.Infof("BeaconAutoResults mode set to %strue%s\n", readline.YELLOW, readline.RESET)
+		log.Infof("BeaconAutoResults mode set to %strue%s", readline.YELLOW, readline.RESET)
 	case "false":
 		assets.UserClientSettings.BeaconAutoResults = false
-		log.Infof("BeaconAutoResults mode set to %sfalse%s\n", readline.YELLOW, readline.RESET)
+		log.Infof("BeaconAutoResults mode set to %sfalse%s", readline.YELLOW, readline.RESET)
 	default:
 		assets.UserClientSettings.BeaconAutoResults = true
-		log.Warnf("Invalid argument (must be true/false): BeaconAutoResults defaulting to %strue%s\n", readline.YELLOW, readline.RESET)
+		log.Warnf("Invalid argument (must be true/false): BeaconAutoResults defaulting to %strue%s", readline.YELLOW, readline.RESET)
 	}
 	return
 }
