@@ -50,14 +50,14 @@ func (c *Server) GetHistory(in context.Context, req *pb.HistoryRequest) (res *pb
 	if req.Session != nil {
 		hist.Sliver, hist.SliverHistLength, err = getSessionHistory(req.Session)
 		if err != nil {
-			hist.Response.Err = err.Error()
+			return nil, errors.New(err.Error())
 		}
 	}
 
 	if req.Beacon != nil {
 		hist.Sliver, hist.SliverHistLength, err = getBeaconHistory(req.Beacon)
 		if err != nil {
-			hist.Response.Err = err.Error()
+			return nil, errors.New(err.Error())
 		}
 	}
 
@@ -158,11 +158,11 @@ func (c *Server) AddToHistory(in context.Context, req *pb.AddCmdHistoryRequest) 
 			err = writeSessionHistory(req.Session, req.Line)
 			if err != nil {
 				res.Response.Err = err.Error()
-			} else if req.Beacon != nil {
-				err = writeBeaconHistory(req.Beacon, req.Line)
-				if err != nil {
-					res.Response.Err = err.Error()
-				}
+			}
+		} else if req.Beacon != nil {
+			err = writeBeaconHistory(req.Beacon, req.Line)
+			if err != nil {
+				res.Response.Err = err.Error()
 			}
 		} else {
 			err = writeUserHistory(name, req.Line)
@@ -177,6 +177,11 @@ func (c *Server) AddToHistory(in context.Context, req *pb.AddCmdHistoryRequest) 
 	}
 	if req.Session != nil {
 		res.Sliver, _, err = getSessionHistory(req.Session)
+		if err != nil {
+			res.Response.Err = err.Error()
+		}
+	} else if req.Beacon != nil {
+		res.Sliver, _, err = getBeaconHistory(req.Beacon)
 		if err != nil {
 			res.Response.Err = err.Error()
 		}
