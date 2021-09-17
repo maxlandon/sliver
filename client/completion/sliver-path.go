@@ -26,6 +26,7 @@ import (
 
 	"github.com/maxlandon/readline"
 
+	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
@@ -173,6 +174,11 @@ func CompleteRemotePathAndFiles(last string) (string, []*readline.CompletionGrou
 		TrimSlash:   true,
 	}
 
+	// Huge safeguard that might have to be moved away
+	if core.Console.CurrentMenu().Name == constants.ServerMenu {
+		return last, []*readline.CompletionGroup{completion}
+	}
+
 	// Per-OS path separator
 	if core.ActiveTarget.OS() == "windows" {
 		completion.PathSeparator = '\\'
@@ -223,55 +229,6 @@ func CompleteRemotePathAndFiles(last string) (string, []*readline.CompletionGrou
 		linePath = absPath + filepath.Dir(rest) // We voluntarily do not add a path separator
 		lastPath = filepath.Base(rest)
 	}
-
-	// 1) Get the absolute path. There are two cases:
-	//      - The path is "rounded" with a slash: no filter to keep.
-	//      - The path is not a slash: a filter to keep for later.
-	// We keep a boolean for remembering which case we found
-	// linePath := ""
-	// lastPath := ""
-	// switch core.ActiveSession.OS {
-	// case "windows":
-	//         if strings.HasSuffix(last, "\\") {
-	//                 linePath = last // Trim the non needed slash
-	//         } else if last == "" {
-	//                 linePath = "."
-	//         } else {
-	//                 splitPath := strings.Split(last, "\\")
-	//                 linePath = strings.Join(splitPath[:len(splitPath)-1], "\\") + "\\"
-	//                 lastPath = splitPath[len(splitPath)-1]
-	//         }
-	// default:
-	//         if strings.HasSuffix(last, "/") {
-	//                 // If the the line is just "/", it means we start from filesystem root
-	//                 if last == "/" {
-	//                         linePath = "/"
-	//                 } else if last == "~/" {
-	//                         // If we look for "~", we need to build the path manually
-	//                         linePath = filepath.Join("/home", core.ActiveSession.Username)
-	//
-	//                 } else if strings.HasPrefix(last, "~/") && last != "~/" {
-	//                         // If we used the "~" at the beginning, we still need to build the path
-	//                         homePath := filepath.Join("/home", core.ActiveSession.Username)
-	//                         linePath = filepath.Join(homePath, strings.TrimPrefix(last, "~/"))
-	//                 } else {
-	//                         // Trim the non needed slash
-	//                         linePath = strings.TrimSuffix(last, "/")
-	//                 }
-	//         } else if strings.HasPrefix(last, "~/") && last != "~/" {
-	//                 // If we used the "~" at the beginning, we still need to build the path
-	//                 homePath := filepath.Join("/home", core.ActiveSession.Username)
-	//                 linePath = filepath.Join(homePath, filepath.Dir(strings.TrimPrefix(last, "~/")))
-	//                 lastPath = filepath.Base(last)
-	//
-	//         } else if last == "" {
-	//                 linePath = "."
-	//         } else {
-	//                 // linePath = last
-	//                 linePath = filepath.Dir(last)
-	//                 lastPath = filepath.Base(last)
-	//         }
-	// }
 
 	// Get the session completions cache
 	id, _ := strconv.Atoi(core.ActiveTarget.ID())

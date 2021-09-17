@@ -72,6 +72,7 @@ func displayHosts(hosts []*clientpb.Host) {
 	table.Output()
 }
 
+// HostSessionNumbers - Format the number of sessions for a host
 func HostSessionNumbers(hostUUID string) string {
 	hostSessions := SessionsForHost(hostUUID)
 	if 0 == len(hostSessions) {
@@ -84,7 +85,7 @@ func HostSessionNumbers(hostUUID string) string {
 	return strings.Join(sessionNumbers, ", ")
 }
 
-// SessionsForHost - Find session for a given host by id
+// SessionsForHost - Find sessions for a given host by id
 func SessionsForHost(hostUUID string) []*clientpb.Session {
 	sessions, err := transport.RPC.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {

@@ -38,6 +38,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/server/hosts"
 	"github.com/bishopfox/sliver/client/command/server/jobs"
 	"github.com/bishopfox/sliver/client/command/server/log"
+	"github.com/bishopfox/sliver/client/command/server/loot"
 	"github.com/bishopfox/sliver/client/command/server/operators"
 	"github.com/bishopfox/sliver/client/command/server/profiles"
 	"github.com/bishopfox/sliver/client/command/server/sessions"
@@ -192,6 +193,22 @@ func BindCommands(cc *gonsole.Menu) {
 		func() gonsole.Commander { return &pivots.Pivots{} })
 	pivots.AddOptionCompletion("SessionID", completion.SessionIDs)
 
+	// Beacon Management ----------------------------------------------------------------------------
+	beac := cc.AddCommand(constants.BeaconsStr,
+		"Beacon management (all contexts)",
+		help.GetHelpFor(constants.BeaconsStr),
+		constants.SessionsGroup,
+		[]string{""},
+		func() gonsole.Commander { return &beacons.Beacons{} })
+
+	beac.SubcommandsOptional = true
+
+	beacRm := beac.AddCommand(constants.RmStr,
+		"Remove one or more implant beacons",
+		"", "", []string{""},
+		func() gonsole.Commander { return &beacons.BeaconsRm{} })
+	beacRm.AddArgumentCompletion("BeaconID", completion.BeaconIDs)
+
 	// Hosts & IOCs Management ----------------------------------------------------------------------
 	hst := cc.AddCommand(constants.HostsStr,
 		"Manage the database of hosts",
@@ -227,21 +244,69 @@ func BindCommands(cc *gonsole.Menu) {
 		func() gonsole.Commander { return &hosts.RemoveIOCs{} })
 	iocsRm.AddArgumentCompletion("IOC", completion.HostIOCs)
 
-	// Beacon Management ----------------------------------------------------------------------------
-	beac := cc.AddCommand(constants.BeaconsStr,
-		"Beacon management (all contexts)",
-		help.GetHelpFor(constants.BeaconsStr),
-		constants.SessionsGroup,
+	// Loot management -----------------------------------------------------------------------------------
+	lootCmd := cc.AddCommand(constants.LootStr,
+		"Manage the server's loot store",
+		help.GetHelpFor(constants.LootStr),
+		constants.DataGroup,
 		[]string{""},
-		func() gonsole.Commander { return &beacons.Beacons{} })
+		func() gonsole.Commander { return &loot.Loot{} })
 
-	beac.SubcommandsOptional = true
+	lootCmd.AddCommand(constants.ListStr,
+		// lootList := lootCmd.AddCommand(constants.ListStr,
+		"Display the server's loot store with various filters & displays (args &|| filters)",
+		help.GetHelpFor(constants.LootStr),
+		"management",
+		[]string{""},
+		func() gonsole.Commander { return &loot.List{} })
 
-	beacRm := beac.AddCommand(constants.RmStr,
-		"Remove one or more implant beacons",
-		"", "", []string{""},
-		func() gonsole.Commander { return &beacons.BeaconsRm{} })
-	beacRm.AddArgumentCompletion("BeaconID", completion.BeaconIDs)
+	lootRm := lootCmd.AddCommand(constants.RmStr,
+		"Remove one or more pieces of loot from the server's loot store",
+		help.GetHelpFor(constants.LootStr),
+		"management",
+		[]string{""},
+		func() gonsole.Commander { return &loot.Rm{} })
+	lootRm.AddArgumentCompletion("LootID", completion.LootIDs)
+
+	lootRename := lootCmd.AddCommand(constants.RenameStr,
+		"Rename a piece of existing loot",
+		help.GetHelpFor(constants.LootStr),
+		"management",
+		[]string{""},
+		func() gonsole.Commander { return &loot.Rename{} })
+	lootRename.AddArgumentCompletion("LootID", completion.LootIDs)
+
+	lootFetch := lootCmd.AddCommand(constants.LootFetchStr,
+		"Fetch a piece of loot from the server's loot store",
+		help.GetHelpFor(constants.LootFetchStr),
+		"management",
+		[]string{""},
+		func() gonsole.Commander { return &loot.Fetch{} })
+	lootFetch.AddArgumentCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
+	lootFetch.AddArgumentCompletion("LootID", completion.LootIDs)
+
+	lootLocal := lootCmd.AddCommand(constants.LootLocalStr,
+		"Add a local file to the server's loot store",
+		help.GetHelpFor(constants.LootFetchStr),
+		"management",
+		[]string{""},
+		func() gonsole.Commander { return &loot.Local{} })
+	lootLocal.AddArgumentCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
+
+	lootRemote := lootCmd.AddCommand(constants.LootRemoteStr,
+		"Add a remote file from the current session to the server's loot store",
+		help.GetHelpFor(constants.LootFetchStr),
+		"management",
+		[]string{"loot"}, // This command will be hidden from us when we don't interact with a session.
+		func() gonsole.Commander { return &loot.Remote{} })
+	lootRemote.AddArgumentCompletionDynamic("RemotePath", completion.CompleteRemotePathAndFiles)
+
+	lootCmd.AddCommand(constants.AddStr,
+		"Add credentials to the server's loot store",
+		help.GetHelpFor(constants.LootStr),
+		"credentials",
+		[]string{""},
+		func() gonsole.Commander { return &loot.AddCredentials{} })
 
 	// Stage / Stager Generation -------------------------------------------------------------------------
 	g := cc.AddCommand(constants.GenerateStr,

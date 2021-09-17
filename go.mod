@@ -33,7 +33,7 @@ require (
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/mattn/go-sqlite3 v1.14.5
-	github.com/maxlandon/gonsole v0.0.0-20210915231133-9593cafabff9
+	github.com/maxlandon/gonsole v0.0.0-20210916222104-ecc4940d1b4a
 	github.com/maxlandon/readline v0.1.0-beta.0.20210915230901-72c1f2edcc01
 	github.com/miekg/dns v1.1.35
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect

@@ -134,6 +134,7 @@ const (
 	ReloadStr = "reload"
 	LoadStr   = "load"
 	TablesStr = "tables"
+	ListStr   = "list"
 
 	LootStr       = "loot"
 	LootLocalStr  = "local"
@@ -262,6 +263,7 @@ const (
 	BuildsGroup       = "implants"
 	TransportsGroup   = "transports"
 	SessionsGroup     = "sessions"
+	DataGroup         = "data"
 	CommGroup         = "comm"
 	NetworkToolsGroup = "network tools"
 

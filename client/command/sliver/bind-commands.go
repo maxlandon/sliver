@@ -27,6 +27,7 @@ import (
 	"github.com/bishopfox/sliver/client/help"
 
 	// Command implementations
+
 	"github.com/bishopfox/sliver/client/command/sliver/generic/env"
 	"github.com/bishopfox/sliver/client/command/sliver/generic/execute"
 	"github.com/bishopfox/sliver/client/command/sliver/generic/extensions"

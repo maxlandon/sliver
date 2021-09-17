@@ -364,6 +364,12 @@ github.com/maxlandon/gonsole v0.0.0-20210915011932-d9db093fa4e5 h1:3akUYXqJQZoX9
 github.com/maxlandon/gonsole v0.0.0-20210915011932-d9db093fa4e5/go.mod h1:iVj2rIEVxE+UCcJmx2GzaoPSkdT94JnKhLX8MhLlVmk=
 github.com/maxlandon/gonsole v0.0.0-20210915231133-9593cafabff9 h1:kU+FE40/ufrNNWwmM8qQrmHP8sDwAi6Y+DgHGikRmVA=
 github.com/maxlandon/gonsole v0.0.0-20210915231133-9593cafabff9/go.mod h1:3rRfMkgdvCfoSU5O7uW18NOKBnCLTkBYVdyi/U79EV8=
+github.com/maxlandon/gonsole v0.0.0-20210916220501-ca83fd1f0c96 h1:L/ZqO7d1A8peRpSa9PqiKnRO3dFE81sYSvnwHqXglr4=
+github.com/maxlandon/gonsole v0.0.0-20210916220501-ca83fd1f0c96/go.mod h1:3rRfMkgdvCfoSU5O7uW18NOKBnCLTkBYVdyi/U79EV8=
+github.com/maxlandon/gonsole v0.0.0-20210916221449-95c09b30a702 h1:gPY+Bi6wJc/mUjRsd6HKGuy5rg/TXjvixhzM+CXuevs=
+github.com/maxlandon/gonsole v0.0.0-20210916221449-95c09b30a702/go.mod h1:3rRfMkgdvCfoSU5O7uW18NOKBnCLTkBYVdyi/U79EV8=
+github.com/maxlandon/gonsole v0.0.0-20210916222104-ecc4940d1b4a h1:5QND13lrUkZy3jrEQynGVaKUKhA9Epe73yxMjnpXhkA=
+github.com/maxlandon/gonsole v0.0.0-20210916222104-ecc4940d1b4a/go.mod h1:3rRfMkgdvCfoSU5O7uW18NOKBnCLTkBYVdyi/U79EV8=
 github.com/maxlandon/readline v0.1.0-beta.0.20210725170202-3c7ec2ce14c7 h1:Blhj04ppywrxZEGZjGVqQb80kHnRMhT16Ir2daldraw=
 github.com/maxlandon/readline v0.1.0-beta.0.20210725170202-3c7ec2ce14c7/go.mod h1:aFr9p9hYasNQHuFAGOowWYa0e25uXzAR8gJrBXEKkNY=
 github.com/maxlandon/readline v0.1.0-beta.0.20210915230901-72c1f2edcc01 h1:rj4f2REqqIFDTD6vk4NEWhsklR0DUcLtIHLmowwzSvs=
