@@ -1,4 +1,4 @@
-// +build !windows !linux !darwin
+//go:build !(!windows !linux !darwin)
 
 package limits
 
@@ -19,6 +19,8 @@ package limits
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
+/////+build !windows !linux !darwin
 
 func isDomainJoined() (bool, error) {
 	return false, nil
