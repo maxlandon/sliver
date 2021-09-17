@@ -41,7 +41,9 @@ import (
 	"github.com/bishopfox/sliver/client/command/server/loot"
 	"github.com/bishopfox/sliver/client/command/server/monitor"
 	"github.com/bishopfox/sliver/client/command/server/operators"
+	"github.com/bishopfox/sliver/client/command/server/prelude"
 	"github.com/bishopfox/sliver/client/command/server/profiles"
+	"github.com/bishopfox/sliver/client/command/server/reaction"
 	"github.com/bishopfox/sliver/client/command/server/sessions"
 	"github.com/bishopfox/sliver/client/command/server/update"
 	"github.com/bishopfox/sliver/client/command/sliver/generic/info"
@@ -122,6 +124,23 @@ func BindCommands(cc *gonsole.Menu) {
 		func() gonsole.Commander { return &log.Log{} })
 	log.AddArgumentCompletion("Level", completion.LogLevels)
 	log.AddArgumentCompletion("Components", completion.Loggers)
+
+	// Prelude Operator -----------------------------------------------------------------------------
+	prelud := cc.AddCommand(constants.PreludeOperatorStr,
+		"Prelude's Operator management (displays status by default)",
+		help.GetHelpFor(constants.MonitorStr),
+		constants.CoreServerGroup,
+		[]string{""},
+		func() gonsole.Commander { return &prelude.Operator{} })
+	prelud.SubcommandsOptional = true
+
+	prelConn := prelud.AddCommand(constants.ConnectStr,
+		"Connect to a Prelude's Operator instance",
+		help.GetHelpFor(constants.ConnectStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &prelude.Connect{} })
+	prelConn.AddArgumentCompletionDynamic("URL", completion.NewURLCompleterProxyUpdate().CompleteURL) // Option completions
 
 	// Jobs management --------------------------------------------------------------------------
 	j := cc.AddCommand(constants.JobsStr,
@@ -210,11 +229,53 @@ func BindCommands(cc *gonsole.Menu) {
 		func() gonsole.Commander { return &beacons.BeaconsRm{} })
 	beacRm.AddArgumentCompletion("BeaconID", completion.BeaconIDs)
 
+	// Reactions ------------------------------------------------------------------------------------
+
+	reacts := cc.AddCommand(constants.ReactionStr,
+		"Automatic event reactions management",
+		help.GetHelpFor(constants.ReactionStr),
+		constants.SessionsGroup,
+		[]string{""},
+		func() gonsole.Commander { return &reaction.Reaction{} })
+	reacts.AddOptionCompletion("Types", completion.ReactableEventTypes)
+	reacts.SubcommandsOptional = true
+
+	set := reacts.AddCommand(constants.SetStr,
+		"Set a reaction to an event",
+		help.GetHelpFor(constants.SetStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &reaction.Set{} })
+	set.AddArgumentCompletion("Event", completion.ReactableEventTypes)
+
+	unset := reacts.AddCommand(constants.UnsetStr,
+		"Unset one or more reactions to an event",
+		help.GetHelpFor(constants.UnsetStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &reaction.Unset{} })
+	unset.AddArgumentCompletion("ReactionID", completion.ReactionIDs)
+
+	reacts.AddCommand(constants.ReloadStr,
+		"Reload reactions from disk, replaces the current configuration",
+		help.GetHelpFor(constants.ReloadStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &reaction.Reload{} })
+
+	reacts.AddCommand(constants.SaveStr,
+		// save := reacts.AddCommand(constants.UnsetStr,
+		"Save current reactions to disk",
+		help.GetHelpFor(constants.SaveStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &reaction.Save{} })
+
 	// Hosts & IOCs Management ----------------------------------------------------------------------
 	hst := cc.AddCommand(constants.HostsStr,
 		"Manage the database of hosts",
 		help.GetHelpFor(constants.HostsStr),
-		constants.SessionsGroup,
+		constants.DataGroup,
 		[]string{""},
 		func() gonsole.Commander { return &hosts.Hosts{} })
 
@@ -231,7 +292,7 @@ func BindCommands(cc *gonsole.Menu) {
 	iocs := cc.AddCommand(constants.IOCStr,
 		"Manage the list of IOCs for hosts",
 		help.GetHelpFor(constants.IOCStr),
-		constants.SessionsGroup,
+		constants.ThreatMonGroup,
 		[]string{""},
 		func() gonsole.Commander { return &hosts.IOCs{} })
 
@@ -452,7 +513,7 @@ func BindCommands(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.StartStr),
 		"",
 		[]string{""},
-		func() gonsole.Commander { return &monitor.Start{} })
+		func() gonsole.Commander { return &monitor.Stop{} })
 
 	// Context-sensitive commands / alias -----------------------------------------------------------
 	switch cc.Name {
