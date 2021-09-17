@@ -266,6 +266,7 @@ const (
 	DataGroup         = "data"
 	CommGroup         = "comm"
 	NetworkToolsGroup = "network tools"
+	ThreatMonGroup    = "threat management"
 
 	// Session only
 	CoreSessionGroup = "core (session)"

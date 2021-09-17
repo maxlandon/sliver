@@ -42,6 +42,17 @@ func BindCommands(cc *gonsole.Menu) {
 	// ----------------------------------------------------------------------------------------------
 	case constants.ServerMenu:
 		// C2 listeners -----------------------------------------------------------------
+		stager := cc.AddCommand(constants.StageListenerStr,
+			"Start a staging listener (TCP/HTTP/HTTPS), bound to a Sliver profile",
+			help.GetHelpFor(constants.StageListenerStr),
+			constants.TransportsGroup,
+			[]string{""},
+			func() gonsole.Commander { return &listeners.StageListener{} })
+		stager.AddOptionCompletionDynamic("URL", completion.NewURLCompleterStager().CompleteURL)
+		stager.AddOptionCompletionDynamic("Certificate", core.Console.Completer.LocalPathAndFiles)
+		stager.AddOptionCompletionDynamic("PrivateKey", core.Console.Completer.LocalPathAndFiles)
+		stager.AddOptionCompletion("Profile", completion.ImplantProfiles)
+
 		mtls := cc.AddCommand(constants.MtlsStr,
 			"Start an mTLS listener on the server, or on a routed session",
 			help.GetHelpFor(constants.MtlsStr),
@@ -89,17 +100,6 @@ func BindCommands(cc *gonsole.Menu) {
 			[]string{""},
 			func() gonsole.Commander { return &listeners.HTTPListener{} })
 		http.AddOptionCompletion("LHost", completion.ServerInterfaceAddrs)
-
-		stager := cc.AddCommand(constants.StageListenerStr,
-			"Start a staging listener (TCP/HTTP/HTTPS), bound to a Sliver profile",
-			help.GetHelpFor(constants.StageListenerStr),
-			constants.TransportsGroup,
-			[]string{""},
-			func() gonsole.Commander { return &listeners.StageListener{} })
-		stager.AddOptionCompletionDynamic("URL", completion.NewURLCompleterStager().CompleteURL)
-		stager.AddOptionCompletionDynamic("Certificate", core.Console.Completer.LocalPathAndFiles)
-		stager.AddOptionCompletionDynamic("PrivateKey", core.Console.Completer.LocalPathAndFiles)
-		stager.AddOptionCompletion("Profile", completion.ImplantProfiles)
 
 		// Websites -----------------------------------------------------------------
 		ws := cc.AddCommand(constants.WebsitesStr,

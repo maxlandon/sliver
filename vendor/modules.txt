@@ -236,7 +236,7 @@ github.com/mattn/go-runewidth
 # github.com/mattn/go-sqlite3 v1.14.5
 ## explicit; go 1.10
 github.com/mattn/go-sqlite3
-# github.com/maxlandon/gonsole v0.0.0-20210916222104-ecc4940d1b4a
+# github.com/maxlandon/gonsole v0.0.0-20210917050320-64fcb2926091
 ## explicit; go 1.16
 github.com/maxlandon/gonsole
 # github.com/maxlandon/readline v0.1.0-beta.0.20210915230901-72c1f2edcc01

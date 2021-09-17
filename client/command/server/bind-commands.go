@@ -39,6 +39,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/server/jobs"
 	"github.com/bishopfox/sliver/client/command/server/log"
 	"github.com/bishopfox/sliver/client/command/server/loot"
+	"github.com/bishopfox/sliver/client/command/server/monitor"
 	"github.com/bishopfox/sliver/client/command/server/operators"
 	"github.com/bishopfox/sliver/client/command/server/profiles"
 	"github.com/bishopfox/sliver/client/command/server/sessions"
@@ -430,6 +431,28 @@ func BindCommands(cc *gonsole.Menu) {
 		constants.BuildsGroup,
 		[]string{""},
 		func() gonsole.Commander { return &canaries.Canaries{} })
+
+	// Threat Monitoring -----------------------------------------------------------------------------
+	mon := cc.AddCommand(constants.MonitorStr,
+		"Threat monitoring management",
+		help.GetHelpFor(constants.MonitorStr),
+		constants.ThreatMonGroup,
+		[]string{""},
+		func() gonsole.Commander { return &monitor.Monitor{} })
+
+	mon.AddCommand(constants.StartStr,
+		"Start monitoring threat intel for implants",
+		help.GetHelpFor(constants.StartStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &monitor.Start{} })
+
+	mon.AddCommand(constants.StopStr,
+		"Stop monitoring loops for threat intel",
+		help.GetHelpFor(constants.StartStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &monitor.Start{} })
 
 	// Context-sensitive commands / alias -----------------------------------------------------------
 	switch cc.Name {
