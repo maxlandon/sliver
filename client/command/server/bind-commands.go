@@ -264,7 +264,6 @@ func BindCommands(cc *gonsole.Menu) {
 		func() gonsole.Commander { return &reaction.Reload{} })
 
 	reacts.AddCommand(constants.SaveStr,
-		// save := reacts.AddCommand(constants.UnsetStr,
 		"Save current reactions to disk",
 		help.GetHelpFor(constants.SaveStr),
 		"",
