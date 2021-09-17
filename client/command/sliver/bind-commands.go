@@ -28,6 +28,7 @@ import (
 
 	// Command implementations
 
+	"github.com/bishopfox/sliver/client/command/sliver/generic/dllhijack"
 	"github.com/bishopfox/sliver/client/command/sliver/generic/env"
 	"github.com/bishopfox/sliver/client/command/sliver/generic/execute"
 	"github.com/bishopfox/sliver/client/command/sliver/generic/extensions"
@@ -365,6 +366,19 @@ func BindCommands(cc *gonsole.Menu) {
 		[]string{""},
 		func() gonsole.Commander { return &portfwd.PortfwdRm{} })
 	portfwdRm.AddArgumentCompletion("ID", completion.CompleteInBandForwarders)
+
+	// Persistence -------------------------------------------------------------------------
+	dllh := cc.AddCommand(constants.DLLHijackStr,
+		"Plant a malicious DLL (or implant DLL) into a reference and upload to target (completed)",
+		help.GetHelpFor(constants.DLLHijackStr),
+		constants.PersistenceGroup,
+		[]string{""},
+		func() gonsole.Commander { return &dllhijack.DllHijack{} })
+	dllh.AddArgumentCompletionDynamic("TargetPath", completion.CompleteRemotePath)
+	dllh.AddArgumentCompletionDynamic("RemotePath", completion.CompleteRemotePathAndFiles)
+	dllh.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
+	dllh.AddOptionCompletionDynamic("File", core.Console.Completer.LocalPathAndFiles)
+	dllh.AddOptionCompletion("Profile", completion.ImplantProfiles)
 
 	// Windows -----------------------------------------------------------------------------
 	windowsCmds.BindCommands(cc)

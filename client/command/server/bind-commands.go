@@ -486,14 +486,14 @@ func BindCommands(cc *gonsole.Menu) {
 		func() gonsole.Commander { return &profiles.ProfileGenerate{} })
 	pg.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPath)
 
+	// Threat Monitoring -----------------------------------------------------------------------------
 	cc.AddCommand(constants.CanariesStr,
 		"List previously generated DNS canaries",
 		help.GetHelpFor(constants.CanariesStr),
-		constants.BuildsGroup,
+		constants.ThreatMonGroup,
 		[]string{""},
 		func() gonsole.Commander { return &canaries.Canaries{} })
 
-	// Threat Monitoring -----------------------------------------------------------------------------
 	mon := cc.AddCommand(constants.MonitorStr,
 		"Threat monitoring management",
 		help.GetHelpFor(constants.MonitorStr),
