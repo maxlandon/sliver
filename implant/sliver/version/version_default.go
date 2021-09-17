@@ -1,3 +1,5 @@
+//go:build !linux
+
 package version
 
 // GetVersion returns the os version information

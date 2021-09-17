@@ -1,5 +1,5 @@
-//go:build linux
-// +build linux
+//%sgo:build linux
+//%s +build linux
 
 package hostuuid
 
