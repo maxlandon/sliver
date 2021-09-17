@@ -278,6 +278,16 @@ func BindCommands(cc *gonsole.Menu) {
 	sideload.AddOptionCompletionDynamic("RemotePath", completion.CompleteRemotePathAndFiles)
 	sideload.AddOptionCompletionDynamic("Save", core.Console.Completer.LocalPathAndFiles)
 
+	execSSH := cc.AddCommand(constants.SSHStr,
+		"SSH to a host reachable from session and execute a command", "",
+		constants.SSHStr,
+		[]string{""},
+		func() gonsole.Commander { return &execute.ExecuteShellcode{} })
+	execSSH.AddArgumentCompletionDynamic("UserHost", completion.UserAtHostSSH)
+	execSSH.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
+	execSSH.AddOptionCompletionDynamic("RemotePath", completion.CompleteRemotePathAndFiles)
+	// execSSH.AddOptionCompletionDynamic("Password", completion.Passwords)
+
 	// Extensions  -------------------------------------------------------------------------
 
 	loadExtension := cc.AddCommand(constants.ExtensionStr,
