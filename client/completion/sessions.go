@@ -51,3 +51,10 @@ func SessionIDs() (comps []*readline.CompletionGroup) {
 
 	return []*readline.CompletionGroup{comp}
 }
+
+// SessionAndBeaconIDs - Completes IDs for all Sessions and Beacons
+func SessionAndBeaconIDs() (comps []*readline.CompletionGroup) {
+	comps = append(comps, SessionIDs()...)
+	comps = append(comps, BeaconIDs()...)
+	return
+}

@@ -46,6 +46,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/server/reaction"
 	"github.com/bishopfox/sliver/client/command/server/sessions"
 	"github.com/bishopfox/sliver/client/command/server/update"
+	"github.com/bishopfox/sliver/client/command/server/use"
 	"github.com/bishopfox/sliver/client/command/sliver/generic/info"
 	"github.com/bishopfox/sliver/client/command/sliver/generic/portfwd"
 )
@@ -165,12 +166,12 @@ func BindCommands(cc *gonsole.Menu) {
 
 	// Session Management ----------------------------------------------------------------------------
 	interact := cc.AddCommand(constants.UseStr,
-		"Interact with an implant",
+		"Interact with a session/beacon",
 		help.GetHelpFor(constants.UseStr),
 		constants.SessionsGroup,
 		[]string{""},
-		func() gonsole.Commander { return &sessions.Interact{} })
-	interact.AddArgumentCompletion("SessionID", completion.SessionIDs)
+		func() gonsole.Commander { return &use.Use{} })
+	interact.AddArgumentCompletion("ID", completion.SessionAndBeaconIDs)
 
 	s := cc.AddCommand(constants.SessionsStr,
 		"Session management (all contexts)",
