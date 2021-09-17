@@ -105,6 +105,12 @@ var (
 
 var (
 	sliverCallbacks = map[string]func() string{
+		"{beacon}": func() string {
+			if core.ActiveTarget.IsBeacon() {
+				return "beacon"
+			}
+			return ""
+		},
 		"{session_name}": func() string {
 			return core.ActiveTarget.Name()
 		},

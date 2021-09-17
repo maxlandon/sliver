@@ -148,7 +148,7 @@ func loadDefaultConsoleConfig() (config *gonsole.Config) {
 
 	// Sliver context prompt
 	config.Prompts[constants.SliverMenu] = &gonsole.PromptConfig{
-		Left:            "{bddg} {fr}{session_name} {reset}{bold} {user}{dim}@{reset}{bold}{host}{reset}{dim} in{reset} {bold}{b}{wd}",
+		Left:            "{bddg}{fb}{beacon} {fr}{session_name} {reset}{bold} {user}{dim}@{reset}{bold}{host}{reset}{dim} in{reset} {bold}{b}{wd}",
 		Right:           "{dim}[{reset}{y}{bold}{platform}{reset}, {bold}{g}{address}{fw}{reset}{dim}]",
 		MultilinePrompt: " > ",
 		Multiline:       true,
