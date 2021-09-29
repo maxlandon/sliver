@@ -49,6 +49,8 @@ func Listen(profile *models.C2Profile, network comm.Net, session *core.Session) 
 		// Fetch a TLS configuration from the values in the profile
 		tlsConfig := cryptography.TLSConfigFromProfile(profile)
 
+		// Use the Comm system network to automatically dispatch dial/listen
+		// to the right interface (either the server's, or the active session)
 		hostport := fmt.Sprintf("%s:%d", profile.Hostname, profile.Port)
 		clear, err := network.Listen("tcp", hostport)
 		if err != nil {
@@ -57,7 +59,11 @@ func Listen(profile *models.C2Profile, network comm.Net, session *core.Session) 
 
 		// Upgrade to TLS, with certs loaded for mutual authentication
 		ln = tls.NewListener(clear, tlsConfig)
-		go acceptSliverConnections(ln)
+
+		// Pass the listener to a generic function that will accept,
+		// handle and wrap connections into a Session connection.
+		// Use this function for any handler using a net.Listener.
+		go HandleSessionConnections(ln)
 
 	case sliverpb.C2Channel_HTTPS:
 	case sliverpb.C2Channel_DNS:

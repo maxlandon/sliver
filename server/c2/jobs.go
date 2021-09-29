@@ -56,30 +56,30 @@ func init() {
 
 // StartMTLSListenerJob - Start an mTLS listener as a job
 func StartMTLSListenerJob(host string, listenPort uint16) (*core.Job, error) {
-	bind := fmt.Sprintf("%s:%d", host, listenPort)
-	ln, err := StartMutualTLSListener(host, listenPort)
-	if err != nil {
-		return nil, err // If we fail to bind don't setup the Job
-	}
-
-	job := &core.Job{
-		// ID:          core.NextJobID(),
-		// Name:        "mtls",
-		Description: fmt.Sprintf("mutual tls listener %s", bind),
-		// Protocol:    "tcp",
-		// Port:        listenPort,
-		// JobCtrl:     make(chan bool),
-	}
-
-	go func() {
-		<-job.JobCtrl
-		jobLog.Infof("Stopping mTLS listener (%d) ...", job.ID)
-		ln.Close() // Kills listener GoRoutines in StartMutualTLSListener() but NOT connections
-		core.Jobs.Remove(job)
-	}()
-	core.Jobs.Add(job)
-
-	return job, nil
+	// bind := fmt.Sprintf("%s:%d", host, listenPort)
+	// ln, err := StartMutualTLSListener(host, listenPort)
+	// if err != nil {
+	//         return nil, err // If we fail to bind don't setup the Job
+	// }
+	//
+	// job := &core.Job{
+	//         // ID:          core.NextJobID(),
+	//         // Name:        "mtls",
+	//         Description: fmt.Sprintf("mutual tls listener %s", bind),
+	//         // Protocol:    "tcp",
+	//         // Port:        listenPort,
+	//         // JobCtrl:     make(chan bool),
+	// }
+	//
+	// go func() {
+	//         <-job.JobCtrl
+	//         jobLog.Infof("Stopping mTLS listener (%d) ...", job.ID)
+	//         ln.Close() // Kills listener GoRoutines in StartMutualTLSListener() but NOT connections
+	//         core.Jobs.Remove(job)
+	// }()
+	// core.Jobs.Add(job)
+	//
+	return nil, nil
 }
 
 // StartWGListenerJob - Start a WireGuard listener as a job

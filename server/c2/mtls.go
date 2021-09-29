@@ -20,16 +20,13 @@ package c2
 
 import (
 	"bytes"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/binary"
-	"fmt"
+	"io"
 	"net"
 	"strings"
 
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/core"
 	serverHandlers "github.com/bishopfox/sliver/server/handlers"
 	"github.com/bishopfox/sliver/server/log"
@@ -47,28 +44,14 @@ var (
 	mtlsLog = log.NamedLogger("c2", consts.MtlsStr)
 )
 
-// StartMutualTLSListener - Start a mutual TLS listener
-func StartMutualTLSListener(bindIface string, port uint16) (net.Listener, error) {
-	mtlsLog.Infof("Starting raw TCP/mTLS listener on %s:%d", bindIface, port)
-	host := bindIface
-	if host == "" {
-		host = defaultServerCert
-	}
-	_, _, err := certs.GetCertificate(certs.MtlsServerCA, certs.ECCKey, host)
-	if err != nil {
-		certs.MtlsC2ServerGenerateECCCertificate(host)
-	}
-	tlsConfig := getServerTLSConfig(host)
-	ln, err := tls.Listen("tcp", fmt.Sprintf("%s:%d", bindIface, port), tlsConfig)
-	if err != nil {
-		mtlsLog.Error(err)
-		return nil, err
-	}
-	go acceptSliverConnections(ln)
-	return ln, nil
-}
-
-func acceptSliverConnections(ln net.Listener) {
+// HandleSessionConnections - Given a listener, accept and handle any connection and wrap it into
+// an implant connection, over which the session will be registered and used. This function is
+// standard for any net.Listener based C2 handlers, as they will yield a net.Conn object that can
+// be handled by this function and the subfunctions it makes uses of. Compatible with the Comm system.
+//
+// As well, this function is made so that it will automatically handle
+// deregistering transports that have been set on the session at runtime.
+func HandleSessionConnections(ln net.Listener) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -102,6 +85,9 @@ func handleSliverConnection(conn net.Conn) {
 	mtlsLog.Infof("Accepted incoming connection: %s", conn.RemoteAddr())
 	implantConn := core.NewImplantConnection(consts.MtlsStr, conn.RemoteAddr().String())
 
+	// In the cleanup function, we add the automatic cleaning/deletion
+	// of transports that have been set at runtime and that are currently
+	// saved into the database.
 	defer func() {
 		mtlsLog.Debugf("mtls connection closing")
 		conn.Close()
@@ -115,7 +101,7 @@ func handleSliverConnection(conn net.Conn) {
 		}()
 		handlers := serverHandlers.GetHandlers()
 		for {
-			envelope, err := socketReadEnvelope(conn)
+			envelope, err := streamReadEnvelope(conn)
 			if err != nil {
 				mtlsLog.Errorf("Socket read error %v", err)
 				return
@@ -142,7 +128,7 @@ Loop:
 	for {
 		select {
 		case envelope := <-implantConn.Send:
-			err := socketWriteEnvelope(conn, envelope)
+			err := streamWriteEnvelope(conn, envelope)
 			if err != nil {
 				mtlsLog.Errorf("Socket write failed %v", err)
 				break Loop
@@ -154,10 +140,10 @@ Loop:
 	mtlsLog.Debugf("Closing implant connection %s", implantConn.ID)
 }
 
-// socketWriteEnvelope - Writes a message to the TLS socket using length prefix framing
+// streamWriteEnvelope - Writes a message to the stream using length prefix framing
 // which is a fancy way of saying we write the length of the message then the message
 // e.g. [uint32 length|message] so the receiver can delimit messages properly
-func socketWriteEnvelope(connection net.Conn, envelope *sliverpb.Envelope) error {
+func streamWriteEnvelope(connection io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
 	data, err := proto.Marshal(envelope)
 	if err != nil {
 		mtlsLog.Errorf("Envelope marshaling error: %v", err)
@@ -170,9 +156,9 @@ func socketWriteEnvelope(connection net.Conn, envelope *sliverpb.Envelope) error
 	return nil
 }
 
-// socketReadEnvelope - Reads a message from the TLS connection using length prefix framing
+// streamReadEnvelope - Reads a message from the stream using length prefix framing
 // returns messageType, message, and error
-func socketReadEnvelope(connection net.Conn) (*sliverpb.Envelope, error) {
+func streamReadEnvelope(connection io.ReadWriteCloser) (*sliverpb.Envelope, error) {
 
 	// Read the first four bytes to determine data length
 	dataLengthBuf := make([]byte, 4) // Size of uint32
@@ -217,36 +203,4 @@ func socketReadEnvelope(connection net.Conn) (*sliverpb.Envelope, error) {
 		return nil, err
 	}
 	return envelope, nil
-}
-
-// getServerTLSConfig - Generate the TLS configuration, we do now allow the end user
-// to specify any TLS paramters, we choose sensible defaults instead
-func getServerTLSConfig(host string) *tls.Config {
-
-	mtlsCACert, _, err := certs.GetCertificateAuthority(certs.MtlsImplantCA)
-	if err != nil {
-		mtlsLog.Fatalf("Failed to find ca type (%s)", certs.MtlsImplantCA)
-	}
-	mtlsCACertPool := x509.NewCertPool()
-	mtlsCACertPool.AddCert(mtlsCACert)
-
-	certPEM, keyPEM, err := certs.GetECCCertificate(certs.MtlsServerCA, host)
-	if err != nil {
-		mtlsLog.Errorf("Failed to generate or fetch certificate %s", err)
-		return nil
-	}
-
-	cert, err := tls.X509KeyPair(certPEM, keyPEM)
-	if err != nil {
-		mtlsLog.Fatalf("Error loading server certificate: %v", err)
-	}
-
-	tlsConfig := &tls.Config{
-		RootCAs:      mtlsCACertPool,
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    mtlsCACertPool,
-		Certificates: []tls.Certificate{cert},
-		MinVersion:   tls.VersionTLS13, // Force TLS v1.3
-	}
-	return tlsConfig
 }
