@@ -33,7 +33,7 @@ import (
 )
 
 var (
-	//go:embed fs/extensions/*
+	//go:embed fs/extensions/* fs/art/*
 	assetsFs embed.FS
 )
 
@@ -42,6 +42,7 @@ const (
 	SliverClientDirName = ".sliver-client"
 	// SliverExtensionsDirName - Directory storing the client side extensions
 	SliverExtensionsDirName = "extensions"
+	SliverArtDirName        = ".art"
 	versionFileName         = "version"
 )
 
@@ -62,6 +63,19 @@ func GetRootAppDir() string {
 func GetExtensionsDir() string {
 	user, _ := user.Current()
 	dir := path.Join(user.HomeDir, SliverClientDirName, SliverExtensionsDirName)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0700)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return dir
+}
+
+// GetArtDir - Get the Sliver art directory: ~/.sliver-client/art
+func GetArtDir() string {
+	user, _ := user.Current()
+	dir := path.Join(user.HomeDir, SliverClientDirName, SliverArtDirName)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, 0700)
 		if err != nil {
@@ -145,4 +159,19 @@ func setupCoffLoaderExt(appDir string) error {
 		return err
 	}
 	return ioutil.WriteFile(path.Join(localWin64ExtDir, "COFFLoader.x64.dll"), loader64, 0744)
+}
+
+// SetupInstinct - Set up the instinct banner
+func SetupInstinct() error {
+	// Instinct
+	instinct, err := assetsFs.ReadFile("fs/art/sharon.jpg")
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(path.Join(GetArtDir(), "instinct.jpg"), instinct, 0700)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return nil
 }

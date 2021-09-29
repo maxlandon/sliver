@@ -110,7 +110,7 @@ func Start(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds, config *assets.Client
 	go eventLoop(rpc)
 
 	// Print banner and version information. (checks last updates)
-	printLogo(rpc)
+	printSliverBanner(rpc)
 
 	// Run the console. All errors are handled internally.
 	core.Console.Run()
@@ -213,7 +213,7 @@ func isDone(ctx context.Context) bool {
 	}
 }
 
-func printLogo(rpc rpcpb.SliverRPCClient) {
+func printVersionInfo(rpc rpcpb.SliverRPCClient) {
 	serverVer, err := rpc.GetVersion(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		panic(err.Error())
@@ -224,9 +224,6 @@ func printLogo(rpc rpcpb.SliverRPCClient) {
 	}
 	serverSemVer := fmt.Sprintf("%d.%d.%d", serverVer.Major, serverVer.Minor, serverVer.Patch)
 
-	insecureRand.Seed(time.Now().Unix())
-	logo := asciiLogos[insecureRand.Intn(len(asciiLogos))]
-	fmt.Println(logo)
 	fmt.Println("All hackers gain " + abilities[insecureRand.Intn(len(abilities))])
 	fmt.Printf(Info+"Server v%s - %s%s\n", serverSemVer, serverVer.Commit, dirty)
 	if version.GitCommit != serverVer.Commit {
@@ -237,6 +234,14 @@ func printLogo(rpc rpcpb.SliverRPCClient) {
 		fmt.Printf(Warning + "Warning: Client and server may be running incompatible versions.\n")
 	}
 	checkLastUpdate()
+
+}
+
+func printLogo(rpc rpcpb.SliverRPCClient) {
+
+	insecureRand.Seed(time.Now().Unix())
+	logo := asciiLogos[insecureRand.Intn(len(asciiLogos))]
+	fmt.Println(logo)
 }
 
 func checkLastUpdate() {
