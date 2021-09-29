@@ -34,11 +34,14 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/maxlandon/readline"
 )
 
@@ -62,9 +65,10 @@ const (
 // Configuration Parsing & Setup ----------------------------------------------------------------------------------
 //
 
-// ParseCompileFlags - Shared function that extracts the compile flags
-// from a StageOptions struct above, and returns a configuration.
+// ParseCompileFlags - Parse the entirety of flags necessary to compile an implant and all its C2 Transports
 func ParseCompileFlags(g StageOptions) (*clientpb.ImplantConfig, error) {
+	cfg := &clientpb.ImplantConfig{}
+
 	var name string
 	if g.CoreOptions.Name != "" {
 		name = strings.ToLower(g.CoreOptions.Name)
@@ -76,36 +80,18 @@ func ParseCompileFlags(g StageOptions) (*clientpb.ImplantConfig, error) {
 			}
 		}
 	}
+	cfg.Name = name
 
-	c2s := []*clientpb.ImplantC2{}
-
-	mtlsC2 := parseMTLSc2(g.TransportOptions.MTLS)
-	c2s = append(c2s, mtlsC2...)
-
-	wgC2 := parseWGc2(g.TransportOptions.WireGuard)
-	c2s = append(c2s, wgC2...)
-
-	httpC2 := parseHTTPc2(g.TransportOptions.HTTP)
-	c2s = append(c2s, httpC2...)
-
-	dnsC2 := parseDNSc2(g.TransportOptions.DNS)
-	c2s = append(c2s, dnsC2...)
-
-	namedPipeC2 := parseNamedPipec2(g.TransportOptions.NamedPipe)
-	c2s = append(c2s, namedPipeC2...)
-
-	tcpPivotC2 := parseTCPPivotc2(g.TransportOptions.TCPPivot)
-	c2s = append(c2s, tcpPivotC2...)
-
-	var symbolObfuscation bool
-	if g.CoreOptions.Debug {
-		symbolObfuscation = false
-	} else {
-		symbolObfuscation = !g.EvasionOptions.SkipSymbols
+	// Parse the flags strictly related to the build itself, not its transports
+	err := ParseImplantBuildFlags(g, cfg)
+	if err != nil {
+		return nil, err
 	}
 
-	if len(mtlsC2) == 0 && len(wgC2) == 0 && len(httpC2) == 0 && len(dnsC2) == 0 && len(namedPipeC2) == 0 && len(tcpPivotC2) == 0 {
-		return nil, fmt.Errorf("Must specify at least one of --mtls, --http, --dns, --named-pipe, or --tcp-pivot")
+	// Parse the complete C2 configuration
+	err = parseC2Transports(g, cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	var canaryDomains []string
@@ -117,103 +103,73 @@ func ParseCompileFlags(g StageOptions) (*clientpb.ImplantConfig, error) {
 			canaryDomains = append(canaryDomains, canaryDomain)
 		}
 	}
+	cfg.CanaryDomains = canaryDomains
 
-	reconnectInterval := g.TransportOptions.Reconnect
-	pollTimeout := g.TransportOptions.PollTimeout
-	maxConnectionErrors := g.TransportOptions.MaxErrors
+	return cfg, nil
+}
 
-	limitDomainJoined := g.SecurityOptions.LimitDomain
-	limitHostname := g.SecurityOptions.LimitHosname
-	limitUsername := g.SecurityOptions.LimitUsername
-	limitDatetime := g.SecurityOptions.LimitDatetime
-	limitFileExists := g.SecurityOptions.LimitFileExits
+// ParseImplantBuildFlags - Only parse the flags and options related to the implant build itself,
+// and do not take into account anything related to the C2 transports that it will embbed.
+func ParseImplantBuildFlags(g StageOptions, cfg *clientpb.ImplantConfig) (err error) {
 
-	isSharedLib := false
-	isService := false
-	isShellcode := false
+	cfg.Debug = g.CoreOptions.Debug
+	if g.CoreOptions.Debug {
+		cfg.ObfuscateSymbols = false
+	} else {
+		cfg.ObfuscateSymbols = !g.EvasionOptions.SkipSymbols
+	}
+	cfg.Evasion = g.EvasionOptions.Evasion
+
+	cfg.LimitDomainJoined = g.SecurityOptions.LimitDomain
+	cfg.LimitHostname = g.SecurityOptions.LimitHosname
+	cfg.LimitUsername = g.SecurityOptions.LimitUsername
+	cfg.LimitDatetime = g.SecurityOptions.LimitDatetime
+	cfg.LimitFileExists = g.SecurityOptions.LimitFileExits
+
+	cfg.IsSharedLib = false
+	cfg.IsService = false
+	cfg.IsShellcode = false
 
 	format := g.CoreOptions.Format
-	var configFormat clientpb.OutputFormat
 	switch format {
 	case "exe":
-		configFormat = clientpb.OutputFormat_EXECUTABLE
+		cfg.Format = clientpb.OutputFormat_EXECUTABLE
 	case "shared":
-		configFormat = clientpb.OutputFormat_SHARED_LIB
-		isSharedLib = true
+		cfg.Format = clientpb.OutputFormat_SHARED_LIB
+		cfg.IsSharedLib = true
 	case "shellcode":
-		configFormat = clientpb.OutputFormat_SHELLCODE
-		isShellcode = true
+		cfg.Format = clientpb.OutputFormat_SHELLCODE
+		cfg.IsShellcode = true
 	case "service":
-		configFormat = clientpb.OutputFormat_SERVICE
-		isService = true
+		cfg.Format = clientpb.OutputFormat_SERVICE
+		cfg.IsService = true
 	default:
 		// default to exe
-		configFormat = clientpb.OutputFormat_EXECUTABLE
+		cfg.Format = clientpb.OutputFormat_EXECUTABLE
 	}
 
 	platform := strings.ToLower(g.CoreOptions.Platform)
 
 	if len(strings.Split(platform, "/")) != 2 {
-		return nil, fmt.Errorf("--platform value must be os/arch value")
+		return fmt.Errorf("--platform value must be os/arch value")
 	}
 	targetOS := strings.Split(platform, "/")[0]
 	targetArch := strings.Split(platform, "/")[1]
 
 	targetOS, targetArch = getTargets(targetOS, targetArch)
 	if targetOS == "" || targetArch == "" {
-		return nil, fmt.Errorf("An error happened with platform/arch validation")
+		return fmt.Errorf("An error happened with platform/arch validation")
 	}
 
-	if len(namedPipeC2) > 0 && targetOS != "windows" {
-		return nil, fmt.Errorf("Named pipe pivoting can only be used in Windows")
-	}
+	cfg.GOOS = targetOS
+	cfg.GOARCH = targetArch
 
 	// Check to see if we can *probably* build the target binary
-	if !checkBuildTargetCompatibility(configFormat, targetOS, targetArch) {
-		return nil, errors.New("Cancelled compilation process due to user aborting")
+	if !checkBuildTargetCompatibility(cfg.Format, targetOS, targetArch) {
+		return errors.New("Cancelled compilation process due to user aborting")
 	}
 
-	var tunIP net.IP
-	if wg := g.TransportOptions.WireGuard; len(wg) > 0 {
-		uniqueWGIP, err := transport.RPC.GenerateUniqueIP(context.Background(), &commonpb.Empty{})
-		tunIP = net.ParseIP(uniqueWGIP.IP)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to generate unique ip for wg peer tun interface")
-		}
-		log.Infof("Generated unique ip for wg peer tun interface: %s", readline.Yellow(tunIP.String()))
-	}
-
-	config := &clientpb.ImplantConfig{
-		GOOS:             targetOS,
-		GOARCH:           targetArch,
-		Name:             name,
-		Debug:            g.CoreOptions.Debug,
-		Evasion:          g.EvasionOptions.Evasion,
-		ObfuscateSymbols: symbolObfuscation,
-		C2:               c2s,
-		CanaryDomains:    canaryDomains,
-
-		WGPeerTunIP:       tunIP.String(),
-		WGKeyExchangePort: uint32(g.TransportOptions.KeyExchange),
-		WGTcpCommsPort:    uint32(g.TransportOptions.TCPComms),
-
-		ReconnectInterval:   int64(reconnectInterval) * int64(time.Second),
-		PollTimeout:         int64(pollTimeout) * int64(time.Second),
-		MaxConnectionErrors: uint32(maxConnectionErrors),
-
-		LimitDomainJoined: limitDomainJoined,
-		LimitHostname:     limitHostname,
-		LimitUsername:     limitUsername,
-		LimitDatetime:     limitDatetime,
-		LimitFileExists:   limitFileExists,
-
-		Format:      configFormat,
-		IsSharedLib: isSharedLib,
-		IsService:   isService,
-		IsShellcode: isShellcode,
-	}
-
-	return config, nil
+	return
 }
 
 func getTargets(targetOS string, targetArch string) (string, string) {
@@ -252,6 +208,146 @@ func getTargets(targetOS string, targetArch string) (string, string) {
 
 	return targetOS, targetArch
 }
+
+func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) {
+
+	// Targets parsing in C2 Profiles ----------------------------------------------------------------
+	if len(g.TransportOptions.MTLS) > 0 {
+		for _, address := range g.TransportOptions.MTLS {
+			profile := c2.ParseProfile(
+				sliverpb.C2Channel_MTLS,      // A Channel using Mutual TLS
+				address,                      // Targeting the host:[port] argument of our command
+				sliverpb.C2Direction_Reverse, // A listener
+				c2.ProfileOptions{},          // This will automatically parse Profile options into the protobuf
+			)
+			cfg.C2S = append(cfg.C2S, profile)
+		}
+	}
+
+	if len(g.TransportOptions.WireGuard) > 0 {
+		for range g.TransportOptions.WireGuard {
+			// for _, address := range g.TransportOptions.WireGuard {
+
+			// Generate a new unique Tunnel IP per address for each string in WireGuard transports
+			var tunIP net.IP
+			if wg := g.TransportOptions.WireGuard; len(wg) > 0 {
+				uniqueWGIP, err := transport.RPC.GenerateUniqueIP(context.Background(), &commonpb.Empty{})
+				tunIP = net.ParseIP(uniqueWGIP.IP)
+				if err != nil {
+					return fmt.Errorf("Failed to generate unique ip for wg peer tun interface")
+				}
+				log.Infof("Generated unique IP for WireGuard peer tun interface: %s", readline.Yellow(tunIP.String()))
+			}
+
+			profile := c2.ParseProfile(
+				sliverpb.C2Channel_WG,
+				tunIP.String(),
+				sliverpb.C2Direction_Reverse,
+				c2.ProfileOptions{},
+			)
+
+			// Additional Wireguard options
+			if profile.Port == 0 { // Not specified sometimes, and no Wireguard options in this command to know it...
+				profile.Port = 53
+			}
+			profile.ControlPort = uint32(g.TransportOptions.TCPComms)
+			profile.KeyExchangePort = uint32(g.TransportOptions.KeyExchange)
+			cfg.C2S = append(cfg.C2S, profile)
+		}
+	}
+
+	if len(g.TransportOptions.DNS) > 0 {
+		for _, address := range g.TransportOptions.DNS {
+			profile := c2.ParseProfile(
+				sliverpb.C2Channel_DNS,
+				address,
+				sliverpb.C2Direction_Reverse,
+				c2.ProfileOptions{},
+			)
+			cfg.C2S = append(cfg.C2S, profile)
+		}
+	}
+
+	if len(g.TransportOptions.HTTP) > 0 {
+		for _, address := range g.TransportOptions.HTTP {
+			profile := c2.ParseProfile(
+				sliverpb.C2Channel_HTTP,
+				address,
+				sliverpb.C2Direction_Reverse,
+				c2.ProfileOptions{},
+			)
+			cfg.C2S = append(cfg.C2S, profile)
+		}
+
+	}
+
+	if len(g.TransportOptions.NamedPipe) > 0 {
+		for _, address := range g.TransportOptions.NamedPipe {
+			profile := c2.ParseProfile(
+				sliverpb.C2Channel_NamedPipe, // A Channel using Wireguard
+				address,                      // Targeting the host:[port] argument of our command
+				sliverpb.C2Direction_Reverse, // A listener
+				c2.ProfileOptions{},          // This will automatically parse Profile options into the protobuf
+			)
+			cfg.C2S = append(cfg.C2S, profile)
+		}
+	}
+
+	// Base Options -----------------------------------------------------------------------------------
+
+	// If connection settings have been specified, apply them to all profiles indiscriminatly.
+	for _, profile := range cfg.C2S {
+		profile.MaxConnectionErrors = int32(g.TransportOptions.MaxErrors)
+		profile.PollTimeout = int64(g.TransportOptions.PollTimeout)
+		profile.Interval = int64(g.TransportOptions.Reconnect)
+
+		// All profiles are fallback by default
+		profile.IsFallback = true
+		// And they might be forbidden to use SSH multiplexing
+		profile.CommDisabled = g.TransportOptions.DisableComm
+	}
+
+	// Malleable C2 Profiles ---------------------------------------------------------------------------
+
+	// If no C2 strings specified and C2 profiles IDs given, return
+	if len(cfg.C2S) == 0 && len(g.TransportOptions.C2Profiles) == 0 {
+		return fmt.Errorf(`Must specify at least: 
+                => one of --mtls, --http, --dns, --named-pipe, or --tcp-pivot 
+                => one or more C2 profiles with --malleables <malleableID>,<malleableID2>`)
+	}
+
+	// Else add the profiles
+	if len(g.TransportOptions.C2Profiles) > 0 {
+		profiles, err := transport.RPC.GetC2Profiles(context.Background(),
+			&clientpb.GetC2ProfilesReq{
+				Request: core.ActiveTarget.Request(),
+			})
+		if err != nil {
+			return fmt.Errorf("failed to fetch C2 profiles from server: %s", err)
+		}
+
+		// Each matching ID
+		for _, id := range g.TransportOptions.C2Profiles {
+			for _, prof := range profiles.Profiles {
+				if c2.GetShortID(prof.ID) == id {
+					cfg.C2S = append(cfg.C2S, prof)
+				}
+			}
+		}
+	}
+
+	// Compatibility verifications ---------------------------------------------------------------------
+	for _, c2 := range cfg.C2S {
+		if c2.C2 == sliverpb.C2Channel_NamedPipe {
+			if cfg.GOOS != "windows" {
+				return fmt.Errorf("Named pipe C2 transports can only be used in Windows")
+			}
+		}
+	}
+
+	return
+}
+
 func parseMTLSc2(args []string) []*clientpb.ImplantC2 {
 	c2s := []*clientpb.ImplantC2{}
 	if len(args) == 0 {

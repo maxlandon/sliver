@@ -209,7 +209,7 @@ func BindCommands(cc *gonsole.Menu) {
 	pivots := cc.AddCommand(constants.PivotsListStr,
 		"Pivots management command, prints them by default",
 		help.GetHelpFor(constants.PivotsListStr),
-		"",
+		constants.SessionsGroup,
 		[]string{""},
 		func() gonsole.Commander { return &pivots.Pivots{} })
 	pivots.AddOptionCompletion("SessionID", completion.SessionIDs)
@@ -390,6 +390,7 @@ func BindCommands(cc *gonsole.Menu) {
 	gb.AddOptionCompletion("HTTP", completion.ServerInterfaceAddrs)
 	gb.AddOptionCompletion("DNS", completion.ServerInterfaceAddrs)
 	gb.AddOptionCompletion("TCPPivot", completion.ActiveSessionIfaceAddrs)
+	gb.AddOptionCompletion("C2Profiles", completion.MalleableIDs)
 
 	st := g.AddCommand("stage",
 		"Configure and compile a Sliver (stage) implant",
@@ -403,6 +404,7 @@ func BindCommands(cc *gonsole.Menu) {
 	st.AddOptionCompletion("HTTP", completion.ServerInterfaceAddrs)
 	st.AddOptionCompletion("DNS", completion.ServerInterfaceAddrs)
 	st.AddOptionCompletion("TCPPivot", completion.ActiveSessionIfaceAddrs)
+	st.AddOptionCompletion("C2Profiles", completion.MalleableIDs)
 
 	sg := g.AddCommand(constants.StagerStr,
 		"Generate a stager shellcode payload using MSFVenom, (to file: --save, to stdout: --format",
