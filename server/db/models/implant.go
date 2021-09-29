@@ -21,9 +21,10 @@ package models
 import (
 	"time"
 
-	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/gofrs/uuid"
 	"gorm.io/gorm"
+
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // ImplantBuild - Represents an implant
@@ -43,6 +44,9 @@ type ImplantBuild struct {
 	Burned bool
 
 	ImplantConfig ImplantConfig
+
+	// C2Profiles used for this implant, anonymous or not
+	Transports []*Transport
 }
 
 // BeforeCreate - GORM hook
@@ -69,38 +73,36 @@ type ImplantConfig struct {
 	GOOS   string
 	GOARCH string
 
-	IsBeacon       bool
-	BeaconInterval int64
-	BeaconJitter   int64
+	IsBeacon       bool  //
+	BeaconInterval int64 //
+	BeaconJitter   int64 //
+
+	// ECC
+	ECCPublicKey          string
+	ECCPublicKeyDigest    string
+	ECCPrivateKey         string
+	ECCPublicKeySignature string
+	ECCServerPublicKey    string
 
 	// Standard
-	CACert              string
-	Cert                string
-	Key                 string
+	CACert              string //
+	Cert                string //
+	Key                 string //
 	Debug               bool
 	Evasion             bool
 	ObfuscateSymbols    bool
-	ReconnectInterval   int64
-	PollTimeout         int64
-	MaxConnectionErrors uint32
+	ReconnectInterval   int64  //
+	PollTimeout         int64  //
+	MaxConnectionErrors uint32 //
 	ConnectionStrategy  string
 
-	WGImplantPrivKey  string
-	WGServerPubKey    string
-	WGPeerTunIP       string
-	WGKeyExchangePort uint32
-	WGTcpCommsPort    uint32
+	WGImplantPrivKey  string //
+	WGServerPubKey    string //
+	WGPeerTunIP       string //
+	WGKeyExchangePort uint32 //
+	WGTcpCommsPort    uint32 //
 
-	C2 []ImplantC2
-
-	MTLSc2Enabled bool
-	WGc2Enabled   bool
-	HTTPc2Enabled bool
-	DNSc2Enabled  bool
-
-	CanaryDomains     []CanaryDomain
-	NamePipec2Enabled bool
-	TCPPivotc2Enabled bool
+	CanaryDomains []CanaryDomain
 
 	// Limits
 	LimitDomainJoined bool
@@ -118,6 +120,25 @@ type ImplantConfig struct {
 	IsShellcode bool
 
 	FileName string
+
+	C2 []ImplantC2 //
+
+	MTLSc2Enabled     bool
+	WGc2Enabled       bool
+	HTTPc2Enabled     bool
+	DNSc2Enabled      bool
+	NamePipec2Enabled bool
+	TCPPivotc2Enabled bool
+
+	// C2 profiles
+	Transports []*Transport `gorm:"-"`
+	RuntimeC2s string
+
+	// Comm system
+	CommEnabled           bool // Explicitely forbid SSH multiplexing, overrides any C2-specific settings.
+	CommServerCert        string
+	CommServerKey         string
+	CommServerFingerprint string
 }
 
 // BeforeCreate - GORM hook
@@ -169,6 +190,7 @@ func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 		WGPeerTunIP:       ic.WGPeerTunIP,
 		WGKeyExchangePort: ic.WGKeyExchangePort,
 		WGTcpCommsPort:    ic.WGTcpCommsPort,
+		CommDisabled:      !ic.CommEnabled,
 
 		FileName: ic.FileName,
 	}
@@ -184,6 +206,14 @@ func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 	for _, c2 := range ic.C2 {
 		config.C2 = append(config.C2, c2.ToProtobuf())
 	}
+
+	// Copy C2 profiles
+	// config.C2S = []*sliverpb.C2Profile{}
+	// for _, c2 := range ic.C2s {
+	//         config.C2S = append(config.C2S, c2.ToProtobuf())
+	// }
+
+	// Runtime C2s,
 	return config
 }
 

@@ -24,15 +24,30 @@ package db
 */
 
 import (
+	"encoding/hex"
+	"fmt"
+	"time"
+
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/gofrs/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var (
 	// ErrRecordNotFound - Record not found error
 	ErrRecordNotFound = gorm.ErrRecordNotFound
 )
+
+// GetShortID - Get a shorter 8 bits ID that is better to work with in commands and completions
+func GetShortID(ID string) (short string) {
+	if len(ID) < 8 {
+		short = ID
+	} else {
+		short = ID[:8]
+	}
+	return
+}
 
 // ImplantConfigByID - Fetch implant build by name
 func ImplantConfigByID(id string) (*models.ImplantConfig, error) {
@@ -46,15 +61,82 @@ func ImplantConfigByID(id string) (*models.ImplantConfig, error) {
 	return &config, err
 }
 
+// ImplantConfigByECCPublicKeyDigest - Fetch implant build by it's ecc public key
+func ImplantConfigByECCPublicKeyDigest(publicKeyDigest [32]byte) (*models.ImplantConfig, error) {
+	config := models.ImplantConfig{}
+	err := Session().Where(&models.ImplantConfig{
+		ECCPublicKeyDigest: hex.EncodeToString(publicKeyDigest[:]),
+	}).First(&config).Error
+	if err != nil {
+		return nil, err
+	}
+	return &config, err
+}
+
+// JobsBySession - Return all the persistent jobs that are saved for a given session NAME & host UUID
+// Does not check name for now, as we don't have sessions in DB.
+func JobsBySession(sessionName, sessionUserName, hostUuid string) (jobs []*models.Job, err error) {
+
+	err = Session().Where(&models.Job{
+		HostID:          uuid.FromStringOrNil(hostUuid),
+		SessionName:     sessionName,
+		SessionUsername: sessionUserName,
+	}).
+		Preload("Profile").
+		Find(&jobs).Error
+	if err != nil {
+		return jobs, err
+	}
+	for _, job := range jobs {
+		err = loadC2ProfileForJob(job)
+		if err != nil {
+			return jobs, err
+		}
+	}
+	return
+}
+
+// JobByID - Retrieve a Job by its UUID. These are jobs that
+// are running on a session and marked persistent.
+func JobByID(jobID string) (*models.Job, error) {
+	job := &models.Job{}
+	err := Session().Where(&models.Job{}).
+		Preload("Profile").
+		Find(&job).Error
+	if err != nil {
+		return nil, err
+	}
+	err = loadC2ProfileForJob(job)
+	if err != nil {
+		return job, err
+	}
+	return job, nil
+}
+
+// SessionJobSave - Save a persistent job running on a session
+func SessionJobSave(job *models.Job) error {
+	dbSession := Session()
+	result := dbSession.Clauses(clause.OnConflict{
+		UpdateAll: true,
+	}).Create(&job)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
 // ImplantBuilds - Return all implant builds
 func ImplantBuilds() ([]*models.ImplantBuild, error) {
 	builds := []*models.ImplantBuild{}
-	err := Session().Where(&models.ImplantBuild{}).Preload("ImplantConfig").Find(&builds).Error
+	err := Session().Where(&models.ImplantBuild{}).
+		Preload("ImplantConfig").
+		Preload("Transports").
+		Find(&builds).Error
 	if err != nil {
 		return nil, err
 	}
 	for _, build := range builds {
-		err = loadC2s(&build.ImplantConfig)
+		err = loadTransportsForBuild(build)
 		if err != nil {
 			return nil, err
 		}
@@ -67,11 +149,13 @@ func ImplantBuildByName(name string) (*models.ImplantBuild, error) {
 	build := models.ImplantBuild{}
 	err := Session().Where(&models.ImplantBuild{
 		Name: name,
-	}).Preload("ImplantConfig").First(&build).Error
+	}).Preload("ImplantConfig").
+		Preload("Transports").
+		First(&build).Error
 	if err != nil {
 		return nil, err
 	}
-	err = loadC2s(&build.ImplantConfig)
+	err = loadTransportsForBuild(&build)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +224,119 @@ func loadC2s(config *models.ImplantConfig) error {
 	}
 	config.C2 = c2s
 	return nil
+}
+
+// loadTransportsForBuild - Load the C2Profiles that have been compiled into a build.
+func loadTransportsForBuild(build *models.ImplantBuild) error {
+	transports := []*models.Transport{}
+	err := Session().Where(&models.Transport{
+		ImplantBuildID: build.ID,
+	}).Find(&transports).Error
+	if err != nil {
+		return err
+	}
+	build.Transports = transports
+	return nil
+}
+
+// loadC2ProfilesForJob - Load the C2 Profile used to spawn a job an a session
+func loadC2ProfileForJob(job *models.Job) error {
+	c2 := &models.C2Profile{}
+	err := Session().Where(&models.C2Profile{
+		JobID: job.ID,
+	}).Find(&c2).Error
+	if err != nil {
+		return err
+	}
+	job.Profile = c2
+	return nil
+}
+
+// loadC2ProfileForTransport - Load the C2 Profile used to run a transport on a Session
+func loadC2ProfileForTransport(transport *models.Transport) error {
+	c2 := &models.C2Profile{}
+	err := Session().Where(&models.C2Profile{
+		ID: transport.ProfileID,
+	}).Find(&c2).Error
+	if err != nil {
+		return err
+	}
+	transport.Profile = c2
+	return nil
+}
+
+// C2ProfileByHostPortNameSession - Fetch a Malleable C2 profile by host, port and name, generally for confirmation purposes
+func C2ProfileByHostPortNameSession(host string, port uint32, name, sessionID string) (profile *models.C2Profile, err error) {
+	err = Session().Where(&models.C2Profile{
+		ContextSessionID: uuid.FromStringOrNil(sessionID),
+		Hostname:         host,
+		Port:             port,
+		Name:             name,
+		Persistent:       false, // always return non persistent profiles, because those are only meant for listeners
+	}).First(&profile).Error
+	return
+}
+
+// C2ProfileByID - Fetch a Malleable C2 profile by ID
+func C2ProfileByID(ID string) (c2 *models.C2Profile, err error) {
+	c2 = &models.C2Profile{}
+	err = Session().Where(&models.C2Profile{
+		ID: uuid.FromStringOrNil(ID),
+	}).Find(&c2).Error
+	return c2, nil
+}
+
+// C2ProfilesByContextSessionID - Get all C2 Profiles that have been created within a given session context.
+func C2ProfilesByContextSessionID(sessionID string) (profiles []*models.C2Profile, err error) {
+	err = Session().Where(&models.C2Profile{
+		ContextSessionID: uuid.FromStringOrNil(sessionID),
+		Persistent:       false, // always return non persistent profiles, because those are only meant for listeners
+	}).Find(&profiles).Error
+	return
+}
+
+// C2ProfileByShortID - Fetch a Malleable C2 profile by a short ID used by commands/completions
+func C2ProfileByShortID(ID string) (c2 *models.C2Profile, err error) {
+
+	profiles := []*models.C2Profile{}
+	err = Session().Find(&profiles).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, profile := range profiles {
+		if GetShortID(profile.ID.String()) == ID {
+			return profile, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Could not find Profile with short ID %s", ID)
+}
+
+// TransportByID - Get a session transport by its ID
+func TransportByID(ID string) (transport *models.Transport, err error) {
+	err = Session().Where(&models.Transport{
+		ID: uuid.FromStringOrNil(ID),
+	}).Find(&transport).Error
+
+	err = loadC2ProfileForTransport(transport)
+	return
+}
+
+// TransportsBySessionID - Loads all the transports currently available to (loaded on) an implant.
+// These will be either those compiled in, or a partially/fully different set if they have been changed at runtime.
+func TransportsBySessionID(ID string) (transports []*models.Transport, err error) {
+	err = Session().Where(&models.Transport{
+		SessionID: uuid.FromStringOrNil(ID),
+	}).Find(&transports).Error
+
+	for _, transport := range transports {
+		err = loadC2ProfileForTransport(transport)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return
 }
 
 // ImplantProfileNames - Fetch a list of all build names
@@ -293,6 +490,17 @@ func PendingBeaconTasksByBeaconID(beaconID string) ([]*models.BeaconTask, error)
 	return tasks, err
 }
 
+// UpdateBeaconCheckinByID - Update the beacon's last / next checkin
+func UpdateBeaconCheckinByID(beaconID string, next int64) error {
+	err := Session().Where(&models.Beacon{
+		ID: uuid.FromStringOrNil(beaconID),
+	}).Updates(models.Beacon{
+		LastCheckin: time.Now(),
+		NextCheckin: next,
+	}).Error
+	return err
+}
+
 // BeaconTasksByEnvelopeID - Select a (sent) BeaconTask by its envelope ID
 func BeaconTaskByEnvelopeID(beaconID string, envelopeID int64) (*models.BeaconTask, error) {
 	task := &models.BeaconTask{}
@@ -334,4 +542,11 @@ func OperatorByToken(value string) (*models.Operator, error) {
 		Token: value,
 	}).First(operator).Error
 	return operator, err
+}
+
+// OperatorAll - Select all operators from the database
+func OperatorAll() ([]*models.Operator, error) {
+	operators := []*models.Operator{}
+	err := Session().Distinct("Name").Find(&operators).Error
+	return operators, err
 }

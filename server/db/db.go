@@ -2,6 +2,7 @@ package db
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 /*
@@ -29,5 +30,6 @@ var Client = newDBClient()
 func Session() *gorm.DB {
 	return Client.Session(&gorm.Session{
 		FullSaveAssociations: true,
-	})
+	}).
+		Preload(clause.Associations)
 }
