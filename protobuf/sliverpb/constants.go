@@ -1,6 +1,7 @@
 package sliverpb
 
 import (
+	"github.com/bishopfox/sliver/protobuf/commpb"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -265,6 +266,47 @@ const (
 
 	// MsgBeaconTasks - Send/recv batches of beacon tasks
 	MsgBeaconTasks
+
+	// Transports --------------------------------------------------------------------
+	// MsgTransportsReq - Get available transports for implant
+	MsgTransportsReq
+	// MsgTransports - Response
+	MsgTransports
+
+	// MsgAddTransportReq - Add a new transport
+	MsgAddTransportReq
+	// MsgAddTransport - Response
+	MsgAddTransport
+
+	// MsgDeleteTransportReq - Remove a transport
+	MsgDeleteTransportReq
+	// MsgDeleteTransport - Response
+	MsgDeleteTransport
+
+	// MsgSwitchTransportReq - Switch the current active transport
+	MsgSwitchTransportReq
+	// MsgSwitchTransport - Response
+	MsgSwitchTransport
+
+	// MsgHandlerStartReq - Request to start a handler on an implant.
+	MsgHandlerStartReq
+	// MsgHandlerStart - Response
+	MsgHandlerStart
+	// MsgHandlerCloseReq - Request to close a handler on an implant.
+	MsgHandlerCloseReq
+	// MsgHandlerClose - Response
+	MsgHandlerClose
+
+	// MsgCommTunnelOpenReq - Open a multiplexing tunnel through the session RPC.
+	MsgCommTunnelOpenReq
+	// MsgCommTunnelOpen - Response
+	MsgCommTunnelOpen
+	// MsgCommTunnelData - Data passed in the mux tunnel
+	MsgCommTunnelData
+	// MsgCommTunnelCloseReq - Close the mux tunnel
+	MsgCommTunnelCloseReq
+	// MsgCommTunnelClose - Response
+	MsgCommTunnelClose
 )
 
 // Constants to replace enums
@@ -506,6 +548,43 @@ func MsgNumber(request proto.Message) uint32 {
 
 	case *BeaconTasks:
 		return MsgBeaconTasks
+
+	case *TransportsReq:
+		return MsgTransportsReq
+	case *Transports:
+		return MsgTransports
+	case *TransportAddReq:
+		return MsgAddTransportReq
+	case *TransportAdd:
+		return MsgAddTransport
+	case *TransportDeleteReq:
+		return MsgDeleteTransportReq
+	case *TransportDelete:
+		return MsgDeleteTransport
+	case *TransportSwitchReq:
+		return MsgSwitchTransportReq
+	case *TransportSwitch:
+		return MsgSwitchTransport
+
+	case *commpb.HandlerStartReq:
+		return MsgHandlerStartReq
+	case *commpb.HandlerStart:
+		return MsgHandlerStart
+	case *commpb.HandlerCloseReq:
+		return MsgHandlerCloseReq
+	case *commpb.HandlerClose:
+		return MsgHandlerClose
+
+	case *commpb.TunnelOpenReq:
+		return MsgCommTunnelOpenReq
+	case *commpb.TunnelOpen:
+		return MsgCommTunnelOpen
+	case *commpb.TunnelData:
+		return MsgCommTunnelData
+	case *commpb.TunnelCloseReq:
+		return MsgCommTunnelCloseReq
+	case *commpb.TunnelClose:
+		return MsgCommTunnelClose
 	}
 
 	return uint32(0)

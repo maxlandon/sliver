@@ -49,6 +49,19 @@ type SliverRPCClient interface {
 	// *** Jobs ***
 	GetJobs(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Jobs, error)
 	KillJob(ctx context.Context, in *clientpb.KillJobReq, opts ...grpc.CallOption) (*clientpb.KillJob, error)
+	// *** Profiles ****
+	CreateC2Profile(ctx context.Context, in *clientpb.CreateC2ProfileReq, opts ...grpc.CallOption) (*clientpb.CreateC2Profile, error)
+	DeleteC2Profile(ctx context.Context, in *clientpb.DeleteC2ProfileReq, opts ...grpc.CallOption) (*clientpb.DeleteC2Profile, error)
+	UpdateC2Profile(ctx context.Context, in *clientpb.UpdateC2ProfileReq, opts ...grpc.CallOption) (*clientpb.UpdateC2Profile, error)
+	GetC2Profiles(ctx context.Context, in *clientpb.GetC2ProfilesReq, opts ...grpc.CallOption) (*clientpb.GetC2Profiles, error)
+	// *** C2 Handlers ***
+	StartC2Handler(ctx context.Context, in *clientpb.HandlerStartReq, opts ...grpc.CallOption) (*clientpb.HandlerStart, error)
+	CloseC2Handler(ctx context.Context, in *clientpb.HandlerCloseReq, opts ...grpc.CallOption) (*clientpb.HandlerClose, error)
+	// *** Transports ****
+	AddTransport(ctx context.Context, in *clientpb.AddTransportReq, opts ...grpc.CallOption) (*clientpb.AddTransport, error)
+	DeleteTransport(ctx context.Context, in *clientpb.DeleteTransportReq, opts ...grpc.CallOption) (*clientpb.DeleteTransport, error)
+	SwitchTransport(ctx context.Context, in *clientpb.SwitchTransportReq, opts ...grpc.CallOption) (*clientpb.SwitchTransport, error)
+	GetTransports(ctx context.Context, in *clientpb.GetTransportsReq, opts ...grpc.CallOption) (*clientpb.GetTransports, error)
 	// *** Listeners ***
 	StartMTLSListener(ctx context.Context, in *clientpb.MTLSListenerReq, opts ...grpc.CallOption) (*clientpb.MTLSListener, error)
 	StartWGListener(ctx context.Context, in *clientpb.WGListenerReq, opts ...grpc.CallOption) (*clientpb.WGListener, error)
@@ -335,6 +348,96 @@ func (c *sliverRPCClient) GetJobs(ctx context.Context, in *commonpb.Empty, opts 
 func (c *sliverRPCClient) KillJob(ctx context.Context, in *clientpb.KillJobReq, opts ...grpc.CallOption) (*clientpb.KillJob, error) {
 	out := new(clientpb.KillJob)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/KillJob", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) CreateC2Profile(ctx context.Context, in *clientpb.CreateC2ProfileReq, opts ...grpc.CallOption) (*clientpb.CreateC2Profile, error) {
+	out := new(clientpb.CreateC2Profile)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/CreateC2Profile", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) DeleteC2Profile(ctx context.Context, in *clientpb.DeleteC2ProfileReq, opts ...grpc.CallOption) (*clientpb.DeleteC2Profile, error) {
+	out := new(clientpb.DeleteC2Profile)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/DeleteC2Profile", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) UpdateC2Profile(ctx context.Context, in *clientpb.UpdateC2ProfileReq, opts ...grpc.CallOption) (*clientpb.UpdateC2Profile, error) {
+	out := new(clientpb.UpdateC2Profile)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/UpdateC2Profile", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) GetC2Profiles(ctx context.Context, in *clientpb.GetC2ProfilesReq, opts ...grpc.CallOption) (*clientpb.GetC2Profiles, error) {
+	out := new(clientpb.GetC2Profiles)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetC2Profiles", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) StartC2Handler(ctx context.Context, in *clientpb.HandlerStartReq, opts ...grpc.CallOption) (*clientpb.HandlerStart, error) {
+	out := new(clientpb.HandlerStart)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartC2Handler", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) CloseC2Handler(ctx context.Context, in *clientpb.HandlerCloseReq, opts ...grpc.CallOption) (*clientpb.HandlerClose, error) {
+	out := new(clientpb.HandlerClose)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/CloseC2Handler", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) AddTransport(ctx context.Context, in *clientpb.AddTransportReq, opts ...grpc.CallOption) (*clientpb.AddTransport, error) {
+	out := new(clientpb.AddTransport)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/AddTransport", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) DeleteTransport(ctx context.Context, in *clientpb.DeleteTransportReq, opts ...grpc.CallOption) (*clientpb.DeleteTransport, error) {
+	out := new(clientpb.DeleteTransport)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/DeleteTransport", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) SwitchTransport(ctx context.Context, in *clientpb.SwitchTransportReq, opts ...grpc.CallOption) (*clientpb.SwitchTransport, error) {
+	out := new(clientpb.SwitchTransport)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/SwitchTransport", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) GetTransports(ctx context.Context, in *clientpb.GetTransportsReq, opts ...grpc.CallOption) (*clientpb.GetTransports, error) {
+	out := new(clientpb.GetTransports)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetTransports", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1300,6 +1403,19 @@ type SliverRPCServer interface {
 	// *** Jobs ***
 	GetJobs(context.Context, *commonpb.Empty) (*clientpb.Jobs, error)
 	KillJob(context.Context, *clientpb.KillJobReq) (*clientpb.KillJob, error)
+	// *** Profiles ****
+	CreateC2Profile(context.Context, *clientpb.CreateC2ProfileReq) (*clientpb.CreateC2Profile, error)
+	DeleteC2Profile(context.Context, *clientpb.DeleteC2ProfileReq) (*clientpb.DeleteC2Profile, error)
+	UpdateC2Profile(context.Context, *clientpb.UpdateC2ProfileReq) (*clientpb.UpdateC2Profile, error)
+	GetC2Profiles(context.Context, *clientpb.GetC2ProfilesReq) (*clientpb.GetC2Profiles, error)
+	// *** C2 Handlers ***
+	StartC2Handler(context.Context, *clientpb.HandlerStartReq) (*clientpb.HandlerStart, error)
+	CloseC2Handler(context.Context, *clientpb.HandlerCloseReq) (*clientpb.HandlerClose, error)
+	// *** Transports ****
+	AddTransport(context.Context, *clientpb.AddTransportReq) (*clientpb.AddTransport, error)
+	DeleteTransport(context.Context, *clientpb.DeleteTransportReq) (*clientpb.DeleteTransport, error)
+	SwitchTransport(context.Context, *clientpb.SwitchTransportReq) (*clientpb.SwitchTransport, error)
+	GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error)
 	// *** Listeners ***
 	StartMTLSListener(context.Context, *clientpb.MTLSListenerReq) (*clientpb.MTLSListener, error)
 	StartWGListener(context.Context, *clientpb.WGListenerReq) (*clientpb.WGListener, error)
@@ -1474,6 +1590,36 @@ func (UnimplementedSliverRPCServer) GetJobs(context.Context, *commonpb.Empty) (*
 }
 func (UnimplementedSliverRPCServer) KillJob(context.Context, *clientpb.KillJobReq) (*clientpb.KillJob, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method KillJob not implemented")
+}
+func (UnimplementedSliverRPCServer) CreateC2Profile(context.Context, *clientpb.CreateC2ProfileReq) (*clientpb.CreateC2Profile, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateC2Profile not implemented")
+}
+func (UnimplementedSliverRPCServer) DeleteC2Profile(context.Context, *clientpb.DeleteC2ProfileReq) (*clientpb.DeleteC2Profile, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteC2Profile not implemented")
+}
+func (UnimplementedSliverRPCServer) UpdateC2Profile(context.Context, *clientpb.UpdateC2ProfileReq) (*clientpb.UpdateC2Profile, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateC2Profile not implemented")
+}
+func (UnimplementedSliverRPCServer) GetC2Profiles(context.Context, *clientpb.GetC2ProfilesReq) (*clientpb.GetC2Profiles, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetC2Profiles not implemented")
+}
+func (UnimplementedSliverRPCServer) StartC2Handler(context.Context, *clientpb.HandlerStartReq) (*clientpb.HandlerStart, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartC2Handler not implemented")
+}
+func (UnimplementedSliverRPCServer) CloseC2Handler(context.Context, *clientpb.HandlerCloseReq) (*clientpb.HandlerClose, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CloseC2Handler not implemented")
+}
+func (UnimplementedSliverRPCServer) AddTransport(context.Context, *clientpb.AddTransportReq) (*clientpb.AddTransport, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddTransport not implemented")
+}
+func (UnimplementedSliverRPCServer) DeleteTransport(context.Context, *clientpb.DeleteTransportReq) (*clientpb.DeleteTransport, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTransport not implemented")
+}
+func (UnimplementedSliverRPCServer) SwitchTransport(context.Context, *clientpb.SwitchTransportReq) (*clientpb.SwitchTransport, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SwitchTransport not implemented")
+}
+func (UnimplementedSliverRPCServer) GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTransports not implemented")
 }
 func (UnimplementedSliverRPCServer) StartMTLSListener(context.Context, *clientpb.MTLSListenerReq) (*clientpb.MTLSListener, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartMTLSListener not implemented")
@@ -2120,6 +2266,186 @@ func _SliverRPC_KillJob_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).KillJob(ctx, req.(*clientpb.KillJobReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_CreateC2Profile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.CreateC2ProfileReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).CreateC2Profile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/CreateC2Profile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).CreateC2Profile(ctx, req.(*clientpb.CreateC2ProfileReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_DeleteC2Profile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.DeleteC2ProfileReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).DeleteC2Profile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/DeleteC2Profile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).DeleteC2Profile(ctx, req.(*clientpb.DeleteC2ProfileReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_UpdateC2Profile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.UpdateC2ProfileReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).UpdateC2Profile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/UpdateC2Profile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).UpdateC2Profile(ctx, req.(*clientpb.UpdateC2ProfileReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_GetC2Profiles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.GetC2ProfilesReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).GetC2Profiles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/GetC2Profiles",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).GetC2Profiles(ctx, req.(*clientpb.GetC2ProfilesReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_StartC2Handler_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.HandlerStartReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).StartC2Handler(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/StartC2Handler",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).StartC2Handler(ctx, req.(*clientpb.HandlerStartReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_CloseC2Handler_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.HandlerCloseReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).CloseC2Handler(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/CloseC2Handler",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).CloseC2Handler(ctx, req.(*clientpb.HandlerCloseReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_AddTransport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.AddTransportReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).AddTransport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/AddTransport",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).AddTransport(ctx, req.(*clientpb.AddTransportReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_DeleteTransport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.DeleteTransportReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).DeleteTransport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/DeleteTransport",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).DeleteTransport(ctx, req.(*clientpb.DeleteTransportReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_SwitchTransport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.SwitchTransportReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).SwitchTransport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/SwitchTransport",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).SwitchTransport(ctx, req.(*clientpb.SwitchTransportReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_GetTransports_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.GetTransportsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).GetTransports(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/GetTransports",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).GetTransports(ctx, req.(*clientpb.GetTransportsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3981,6 +4307,46 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "KillJob",
 			Handler:    _SliverRPC_KillJob_Handler,
+		},
+		{
+			MethodName: "CreateC2Profile",
+			Handler:    _SliverRPC_CreateC2Profile_Handler,
+		},
+		{
+			MethodName: "DeleteC2Profile",
+			Handler:    _SliverRPC_DeleteC2Profile_Handler,
+		},
+		{
+			MethodName: "UpdateC2Profile",
+			Handler:    _SliverRPC_UpdateC2Profile_Handler,
+		},
+		{
+			MethodName: "GetC2Profiles",
+			Handler:    _SliverRPC_GetC2Profiles_Handler,
+		},
+		{
+			MethodName: "StartC2Handler",
+			Handler:    _SliverRPC_StartC2Handler_Handler,
+		},
+		{
+			MethodName: "CloseC2Handler",
+			Handler:    _SliverRPC_CloseC2Handler_Handler,
+		},
+		{
+			MethodName: "AddTransport",
+			Handler:    _SliverRPC_AddTransport_Handler,
+		},
+		{
+			MethodName: "DeleteTransport",
+			Handler:    _SliverRPC_DeleteTransport_Handler,
+		},
+		{
+			MethodName: "SwitchTransport",
+			Handler:    _SliverRPC_SwitchTransport_Handler,
+		},
+		{
+			MethodName: "GetTransports",
+			Handler:    _SliverRPC_GetTransports_Handler,
 		},
 		{
 			MethodName: "StartMTLSListener",

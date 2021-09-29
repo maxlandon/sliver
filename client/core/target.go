@@ -88,13 +88,35 @@ type activeTarget struct {
 
 // Common -----------------------------------------------
 func (t *activeTarget) ID() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return strconv.Itoa(int(t.session.ID))
 	}
 	return t.beacon.ID
 }
 
+func (t *activeTarget) ShortID() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
+	if t.session != nil {
+		return strconv.Itoa(int(t.session.ID))
+	}
+	var shortID string
+	if len(t.beacon.ID) < 8 {
+		shortID = shortID[:len(t.beacon.ID)]
+	} else {
+		shortID = t.beacon.ID[:8]
+	}
+	return shortID
+}
+
 func (t *activeTarget) Name() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.Name
 	}
@@ -102,6 +124,9 @@ func (t *activeTarget) Name() string {
 }
 
 func (t *activeTarget) Hostname() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.Hostname
 	}
@@ -109,6 +134,9 @@ func (t *activeTarget) Hostname() string {
 }
 
 func (t *activeTarget) UUID() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.UUID
 	}
@@ -116,6 +144,9 @@ func (t *activeTarget) UUID() string {
 }
 
 func (t *activeTarget) Username() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.Username
 	}
@@ -123,6 +154,9 @@ func (t *activeTarget) Username() string {
 }
 
 func (t *activeTarget) UID() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.UID
 	}
@@ -130,6 +164,9 @@ func (t *activeTarget) UID() string {
 }
 
 func (t *activeTarget) GID() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.GID
 	}
@@ -137,6 +174,9 @@ func (t *activeTarget) GID() string {
 }
 
 func (t *activeTarget) PID() int32 {
+	if t.session == nil && t.beacon == nil {
+		return 0
+	}
 	if t.session != nil {
 		return t.session.PID
 	}
@@ -144,6 +184,9 @@ func (t *activeTarget) PID() int32 {
 }
 
 func (t *activeTarget) OS() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.OS
 	}
@@ -151,6 +194,9 @@ func (t *activeTarget) OS() string {
 }
 
 func (t *activeTarget) Arch() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.Arch
 	}
@@ -158,6 +204,9 @@ func (t *activeTarget) Arch() string {
 }
 
 func (t *activeTarget) Transport() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.Transport
 	}
@@ -165,6 +214,9 @@ func (t *activeTarget) Transport() string {
 }
 
 func (t *activeTarget) RemoteAddress() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.RemoteAddress
 	}
@@ -172,6 +224,9 @@ func (t *activeTarget) RemoteAddress() string {
 }
 
 func (t *activeTarget) Filename() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.Filename
 	}
@@ -179,6 +234,9 @@ func (t *activeTarget) Filename() string {
 }
 
 func (t *activeTarget) LastCheckin() int64 {
+	if t.session == nil && t.beacon == nil {
+		return 0
+	}
 	if t.session != nil {
 		return t.session.LastCheckin
 	}
@@ -186,6 +244,9 @@ func (t *activeTarget) LastCheckin() int64 {
 }
 
 func (t *activeTarget) ActiveC2() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.ActiveC2
 	}
@@ -193,6 +254,9 @@ func (t *activeTarget) ActiveC2() string {
 }
 
 func (t *activeTarget) Version() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.Version
 	}
@@ -200,6 +264,9 @@ func (t *activeTarget) Version() string {
 }
 
 func (t *activeTarget) Evasion() bool {
+	if t.session == nil && t.beacon == nil {
+		return false
+	}
 	if t.session != nil {
 		return t.session.Evasion
 	}
@@ -207,6 +274,9 @@ func (t *activeTarget) Evasion() bool {
 }
 
 func (t *activeTarget) IsDead() bool {
+	if t.session == nil && t.beacon == nil {
+		return true
+	}
 	if t.session != nil {
 		return t.session.IsDead
 	}
@@ -214,6 +284,9 @@ func (t *activeTarget) IsDead() bool {
 }
 
 func (t *activeTarget) ProxyURL() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.ProxyURL
 	}
@@ -221,6 +294,9 @@ func (t *activeTarget) ProxyURL() string {
 }
 
 func (t *activeTarget) Burned() bool {
+	if t.session == nil && t.beacon == nil {
+		return false
+	}
 	if t.session != nil {
 		return t.session.Burned
 	}
@@ -228,6 +304,9 @@ func (t *activeTarget) Burned() bool {
 }
 
 func (t *activeTarget) WorkingDirectory() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
 	if t.session != nil {
 		return t.session.WorkingDirectory
 	}
@@ -250,6 +329,10 @@ func (t *activeTarget) IsBeacon() bool {
 }
 
 // Underlying -----------------------------------------------
+func (t *activeTarget) Targets() (sess *clientpb.Session, beacon *clientpb.Beacon) {
+	return t.session, t.beacon
+}
+
 func (t *activeTarget) Session() *clientpb.Session {
 	return t.session
 }

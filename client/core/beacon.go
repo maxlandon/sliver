@@ -20,13 +20,13 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/maxlandon/readline"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -47,12 +47,15 @@ type beaconCallbacks struct {
 
 // TriggerBeaconTaskCallback - Triggers the callback for a beacon task
 func TriggerBeaconTaskCallback(data []byte) {
+
 	task := &clientpb.BeaconTask{}
 	err := proto.Unmarshal(data, task)
 	if err != nil {
-		log.Errorf("\rCould not unmarshal beacon task: %s", err)
+		log.ErrorfAsync("Could not unmarshal beacon task: %s", err)
 		return
 	}
+
+	log.InfofAsync("Task completed: %s %s[%s]%s", task.ID, readline.DIM, ShortID(task.BeaconID))
 
 	// If the callback is not in our map then we don't do anything, the beacon task
 	// was either issued by another operator in multiplayer mode or the client process
@@ -66,20 +69,30 @@ func TriggerBeaconTaskCallback(data []byte) {
 			task, err = transport.RPC.GetBeaconTaskContent(context.Background(), &clientpb.BeaconTask{
 				ID: task.ID,
 			})
-			// con.Printf(Clearln + "\r")
 			if err == nil {
 				callback(task)
 			} else {
-				log.Errorf("Could not get beacon task content: %s", err)
+				log.ErrorfAsync("Could not get beacon task content: %s", err)
 			}
-			fmt.Println()
 		}
 		delete(beacons.TaskCallbacks, task.ID)
 	}
 }
 
 func AddBeaconCallback(taskID string, callback BeaconTaskCallback) {
+	log.Infof("Tasked beacon (%s)", taskID)
 	beacons.TaskCallbacksMutex.Lock()
 	defer beacons.TaskCallbacksMutex.Unlock()
 	beacons.TaskCallbacks[taskID] = callback
+}
+
+// ShortID - Get a short ID for long beacon UUIDs
+func ShortID(id string) string {
+	var shortID string
+	if len(id) < 8 {
+		shortID = id
+	} else {
+		shortID = id[:8]
+	}
+	return shortID
 }

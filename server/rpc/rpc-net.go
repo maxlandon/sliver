@@ -1,12 +1,5 @@
 package rpc
 
-import (
-	"context"
-
-	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
-)
-
 /*
 	Sliver Implant Framework
 	Copyright (C) 2019  Bishop Fox
@@ -24,6 +17,13 @@ import (
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
+import (
+	"context"
+
+	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
+)
 
 // Ifconfig - Get remote interface configurations
 func (rpc *Server) Ifconfig(ctx context.Context, req *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error) {

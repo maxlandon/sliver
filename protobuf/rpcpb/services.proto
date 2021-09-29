@@ -46,6 +46,22 @@ service SliverRPC {
     rpc GetJobs(commonpb.Empty) returns (clientpb.Jobs);
     rpc KillJob(clientpb.KillJobReq) returns (clientpb.KillJob);
 
+    // *** Profiles ****
+    rpc CreateC2Profile(clientpb.CreateC2ProfileReq) returns (clientpb.CreateC2Profile);
+    rpc DeleteC2Profile(clientpb.DeleteC2ProfileReq) returns (clientpb.DeleteC2Profile);
+    rpc UpdateC2Profile(clientpb.UpdateC2ProfileReq) returns (clientpb.UpdateC2Profile);
+    rpc GetC2Profiles(clientpb.GetC2ProfilesReq) returns (clientpb.GetC2Profiles);
+
+    // *** C2 Handlers ***
+    rpc StartC2Handler(clientpb.HandlerStartReq) returns (clientpb.HandlerStart);
+    rpc CloseC2Handler(clientpb.HandlerCloseReq) returns (clientpb.HandlerClose);
+
+    // *** Transports ****
+    rpc AddTransport(clientpb.AddTransportReq) returns (clientpb.AddTransport);
+    rpc DeleteTransport(clientpb.DeleteTransportReq) returns (clientpb.DeleteTransport);
+    rpc SwitchTransport(clientpb.SwitchTransportReq) returns (clientpb.SwitchTransport);
+    rpc GetTransports(clientpb.GetTransportsReq) returns (clientpb.GetTransports);
+
     // *** Listeners ***
     rpc StartMTLSListener(clientpb.MTLSListenerReq) returns (clientpb.MTLSListener);
     rpc StartWGListener(clientpb.WGListenerReq) returns (clientpb.WGListener);

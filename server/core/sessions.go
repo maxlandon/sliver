@@ -65,6 +65,7 @@ type Session struct {
 	Filename          string
 	Connection        *ImplantConnection
 	ActiveC2          string
+	RemoteAddress     string
 	ReconnectInterval int64
 	ProxyURL          string
 	PollTimeout       int64
@@ -72,6 +73,7 @@ type Session struct {
 	Extensions        []string
 	ConfigID          string
 	WorkingDirectory  string
+	TransportID       string
 }
 
 func (s *Session) LastCheckin() time.Time {
@@ -122,6 +124,7 @@ func (s *Session) ToProtobuf() *clientpb.Session {
 		PollTimeout:       s.PollTimeout,
 		Burned:            s.Burned,
 		// ConfigID:          s.ConfigID,
+		TransportID: s.TransportID,
 	}
 }
 

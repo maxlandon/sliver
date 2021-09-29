@@ -98,10 +98,10 @@ func Warnf(format string, args ...interface{}) (n int, err error) {
 	return fmt.Printf(warn+format+"\n", args...)
 }
 
-// Errorf - Notify an error message without returning the error itself.
-// func Errorf(format string, args ...interface{}) (n int, err error) {
-//         return fmt.Printf(errror+format, args...)
-// }
+// PrintErrorf - Notify an error message without returning the error itself.
+func PrintErrorf(format string, args ...interface{}) (n int, err error) {
+	return fmt.Printf(errror+format+"\n", args...)
+}
 
 // Successf - Notify sucess message.
 func Successf(format string, args ...interface{}) (n int, err error) {
@@ -111,6 +111,38 @@ func Successf(format string, args ...interface{}) (n int, err error) {
 // SpinUntil - Start a spinner with an embedded message.
 func SpinUntil(message string, ctrl chan bool) {
 	go spin.Until(os.Stdout, info+message, ctrl)
+}
+
+// Beacon Async Tasks ------------------------------------------------------
+
+// PrintfAsync - Print a generic message
+func PrintfAsync(format string, args ...interface{}) (n int, err error) {
+	return fmt.Printf(format, args...)
+}
+
+// DebugfAsync - Notify a debug message.
+func DebugfAsync(format string, args ...interface{}) (n int, err error) {
+	return fmt.Printf(debug+format, args...)
+}
+
+// InfofAsync - Notify an info message.
+func InfofAsync(format string, args ...interface{}) (n int, err error) {
+	return fmt.Printf(info+format+"\n", args...)
+}
+
+// WarnfAsync - Notify a warning message.
+func WarnfAsync(format string, args ...interface{}) (n int, err error) {
+	return fmt.Printf(warn+format+"\n", args...)
+}
+
+// ErrorfAsync - Notify an error message without returning the error itself.
+func ErrorfAsync(format string, args ...interface{}) (n int, err error) {
+	return fmt.Printf(errror+format+"\n", args...)
+}
+
+// SuccessfAsync - Notify sucess message.
+func SuccessfAsync(format string, args ...interface{}) (n int, err error) {
+	return fmt.Printf(success+format, args...)
 }
 
 // Additional Message Types ------------------------------------------------

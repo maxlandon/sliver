@@ -25,18 +25,22 @@ import (
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"google.golang.org/protobuf/proto"
 )
 
 // GetEnv - Get the session's environment variables
 type GetEnv struct {
 	Positional struct {
-		Vars []string `description:"environment variable name"`
+		Vars []string `description:"(optional) list of environment variable names"`
 	} `positional-args:"yes"`
 }
 
 // Execute - Get the session's environment variables
 func (e *GetEnv) Execute(args []string) (err error) {
+
+	_, beacon := core.ActiveTarget.Targets()
 
 	// Get all variables if no arguments given
 	if len(e.Positional.Vars) == 0 {
@@ -44,20 +48,52 @@ func (e *GetEnv) Execute(args []string) (err error) {
 	}
 
 	for _, name := range e.Positional.Vars {
+
+		// Request
 		envInfo, err := transport.RPC.GetEnv(context.Background(), &sliverpb.EnvReq{
 			Name:    name,
 			Request: core.ActiveTarget.Request(),
 		})
-
 		if err != nil {
-			err := log.Errorf("Error: %v", err)
-			fmt.Printf(err.Error())
+			fmt.Printf(log.Error(err).Error())
 			continue
 		}
 
-		for _, envVar := range envInfo.Variables {
-			log.Infof(" %s=%s\n", envVar.Key, envVar.Value)
+		// Beacon
+		if beacon != nil {
+			e.executeAsync(envInfo)
+			continue
 		}
+
+		// Session
+		err = e.executeSync(envInfo)
+		if err != nil {
+			fmt.Printf(log.Error(err).Error())
+			continue
+		}
+	}
+	return
+}
+
+func (e *GetEnv) executeAsync(envInfo *sliverpb.EnvInfo) (err error) {
+	if envInfo.Response != nil && envInfo.Response.Async {
+		core.AddBeaconCallback(envInfo.Response.TaskID, func(task *clientpb.BeaconTask) {
+			err := proto.Unmarshal(task.Response, envInfo)
+			if err != nil {
+				log.ErrorfAsync("Failed to decode response: %s", err)
+				return
+			}
+			for _, envVar := range envInfo.Variables {
+				log.InfofAsync(" %s=%s\n", envVar.Key, envVar.Value)
+			}
+		})
+	}
+	return nil // Always return nil from just a task assignment
+}
+
+func (e *GetEnv) executeSync(envInfo *sliverpb.EnvInfo) (err error) {
+	for _, envVar := range envInfo.Variables {
+		log.Infof(" %s=%s\n", envVar.Key, envVar.Value)
 	}
 	return
 }

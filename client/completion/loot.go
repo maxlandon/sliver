@@ -52,7 +52,7 @@ func LootIDs() (comps []*readline.CompletionGroup) {
 			if len(shortID) < 8 {
 				shortID = shortID[:len(loot.LootID)]
 			} else {
-				shortID = shortID[:8]
+				shortID = loot.LootID[:8]
 			}
 			filesComp.Suggestions = append(filesComp.Suggestions, shortID)
 

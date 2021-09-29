@@ -49,13 +49,15 @@ message Register {
   string Arch = 8;
   int32 Pid = 9;
   string Filename = 10;
-  string ActiveC2 = 11;
+  string ActiveC2 = 11; //
   string Version = 12;
-  int64 ReconnectInterval = 13;
-  string ProxyURL = 14;
-  int64 PollTimeout = 15;
+  int64 ReconnectInterval = 13;//
+  string ProxyURL = 14;//
+  int64 PollTimeout = 15;//
   string ConfigID = 16;
   string WorkingDirectory = 17;
+        
+  string TransportID = 18;
 }
 
 message BeaconRegister {
@@ -64,6 +66,159 @@ message BeaconRegister {
   int64 Jitter = 3;
   Register Register = 4;
   int64 NextCheckin = 5;
+}
+
+// C2 Profiles -------------------------------------------------
+
+message C2Profile {
+  // Base
+  string ID = 1;
+  string Name = 2;
+  C2Type Type = 3;
+  C2Channel C2 = 4;
+  C2Direction Direction = 5;
+  string Hostname = 6;
+  uint32 Port = 7;
+  string Path = 8;
+  repeated string Domains = 9;
+
+  // Beaconing
+  int64 Interval = 20;
+  int64 Jitter = 21;
+
+  // Technicals
+  int64 PollTimeout = 10;
+  int32 MaxConnectionErrors = 11;
+  bool IsFallback = 13; // When previous C2 failed, this transport is used if next
+  bool Active = 14;
+  string ConnectionStrategy = 15;
+  uint32 ControlPort = 16;
+  uint32 KeyExchangePort = 17 ;
+  bool CommDisabled = 18;
+  bool Persistent = 19;
+
+  // HTTP-related
+  string ProxyURL = 30;
+  C2ProfileHTTP HTTP = 31;
+ 
+  // Identity & Security
+  Credentials Credentials = 40;
+
+  string ContextSessionID = 50;
+}
+
+enum C2Type {
+  Session = 0;
+  Beacon = 1;
+  // Could be lower-level, like plain ReadWriteCloser ?
+}
+
+enum C2Channel {
+  MTLS = 0;
+  HTTP = 1;
+  HTTPS = 2;
+  DNS = 3;
+  WG = 4;
+  NamedPipe = 5;
+}
+
+enum C2Direction {
+  Bind = 0;
+  Reverse = 1;
+}
+
+// Any security details, such as encryption keys and auth.
+message Credentials {
+  // Core
+  bytes CACertPEM = 1;
+  bytes CertPEM = 2;
+  bytes KeyPEM = 3;
+  bytes ServerFingerprint = 4;
+  // Advanced
+  bytes ControlServerCert = 10;
+  bytes ControlClientKey = 11;
+  bytes TOTPServerSecret = 12;
+}
+
+// C2ProfileHTTP - HTTP-specific C2 profile
+message C2ProfileHTTP {
+  string ID = 1;
+  string UserAgent = 2;
+  repeated string URLParameters = 3;
+  repeated string Headers = 4;
+
+  int32 MaxFiles = 5;
+  int32 MinFiles = 6;
+  int32 MaxPaths = 7;
+  int32 MinPaths = 8;
+
+  // Stager File Extension
+  string StagerFileExt = 9;
+
+	// Key Exchange (default .txt) files and paths
+  string KeyExchangeFileExt = 10;
+  repeated string KeyExchangeFiles = 11; 
+  repeated string KeyExchangePaths = 13; 
+
+	// Poll files and paths
+  string PollFileExt = 15;
+  repeated string PollFiles = 16;
+  repeated string PollPaths = 17;
+
+	// Session files and paths
+  string StartSessionFileExt = 18;
+  string SessionFileExt = 20;
+  repeated string SessionFiles = 21;    
+  repeated string SessionPaths = 22; 
+
+	// Close session files and paths
+  string CloseFileExt = 23;
+  repeated string CloseFiles = 24;
+  repeated string ClosePaths = 25;
+}
+
+// Transports ---------------------------------------------------------------------------
+
+message TransportsReq {
+  commonpb.Request Request = 9;
+}
+
+message Transports {
+  repeated C2Profile Available = 1;
+  commonpb.Response Response = 9;
+}
+
+message TransportAddReq {
+  C2Profile Profile = 1;
+  int32 Priority = 2;
+  bool Switch = 3;
+  commonpb.Request Request = 9;
+}
+
+message TransportAdd {
+  bool Success = 1;
+  commonpb.Response Response = 9;
+}
+
+message TransportDeleteReq {
+  string ID = 1;
+  string URL = 2;
+  commonpb.Request Request = 9;
+}
+
+message TransportDelete {
+  bool Success = 1;
+  commonpb.Response Response = 9;
+}
+
+message TransportSwitchReq {
+  string ID = 1;
+  commonpb.Request Request = 9;
+}
+
+message TransportSwitch {
+  bool Success = 1;
+  commonpb.Response Response = 9;
 }
 
 // Ping - Not ICMP, just sends a rount trip message to an implant to

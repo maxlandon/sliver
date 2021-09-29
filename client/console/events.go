@@ -28,6 +28,7 @@ import (
 	"github.com/desertbit/go-shlex"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/completion"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
@@ -74,7 +75,7 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 			// Jobs --------------------------------------------------------------------------------------
 		case consts.JobStoppedEvent:
 			job := event.Job
-			line := fmt.Sprintf(Info+"Job #%d stopped (%s/%s)\n", job.ID, job.Protocol, job.Name)
+			line := fmt.Sprintf(Info+"Job #%s stopped (%s %s)\n", c2.GetShortID(job.ID), job.Profile.C2.String(), job.Profile.Hostname)
 			console.RefreshPromptLog(line)
 
 			// OPSEC -------------------------------------------------------------------------------------

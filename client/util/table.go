@@ -24,6 +24,7 @@ import (
 	"os"
 	"sort"
 
+	"github.com/acarl005/stripansi"
 	"github.com/evilsocket/islazy/tui"
 	"github.com/maxlandon/readline"
 	"github.com/olekukonko/tablewriter"
@@ -214,10 +215,13 @@ func (t *Table) AppendRow(items []string) error {
 
 // Output - Render the table, and its title if non-nil
 func (t *Table) Output() {
-	if t.title != "" {
+	if len(stripansi.Strip(t.title)) > 0 {
 		fmt.Println(" " + t.title)
-		// fmt.Println(" " + t.title + "\n")
 	}
+	// if t.title != "" {
+	//         fmt.Println(" " + t.title)
+	//         // fmt.Println(" " + t.title + "\n")
+	// }
 	t.Table.Render()
 }
 
