@@ -6,15 +6,15 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/certs"
-	"github.com/bishopfox/sliver/server/generate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // GenerateWGClientConfig - Generate a client config for a WG interface
 func (rpc *Server) GenerateWGClientConfig(ctx context.Context, _ *commonpb.Empty) (*clientpb.WGClientConfig, error) {
-	clientIP, err := generate.GenerateUniqueIP()
+	clientIP, err := c2.GenerateUniqueIP()
 	if err != nil {
 		rpcLog.Errorf("Could not generate WG unique IP: %v", err)
 		return nil, status.Error(codes.Internal, err.Error())

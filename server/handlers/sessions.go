@@ -24,30 +24,35 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/url"
 
-	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/bishopfox/sliver/server/core"
-	"github.com/bishopfox/sliver/server/log"
-
+	gofrsUuid "github.com/gofrs/uuid"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/google/uuid"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/commpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/comm"
+	"github.com/bishopfox/sliver/server/core"
+	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/log"
 )
 
 var (
 	sessionHandlerLog = log.NamedLogger("handlers", "sessions")
 )
 
-func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) {
+func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
 	if implantConn == nil {
-		return
+		return nil
 	}
 	register := &sliverpb.Register{}
 	err := proto.Unmarshal(data, register)
 	if err != nil {
 		sessionHandlerLog.Errorf("Error decoding session registration message: %s", err)
-		return
+		return nil
 	}
 
 	session := core.NewSession(implantConn)
@@ -74,11 +79,26 @@ func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) {
 	session.ProxyURL = register.ProxyURL
 	session.ConfigID = register.ConfigID
 	session.WorkingDirectory = register.WorkingDirectory
+
 	core.Sessions.Add(session)
 	implantConn.Cleanup = func() {
 		core.Sessions.Remove(session.ID)
 	}
 	go auditLogSession(session, register)
+
+	// Finally, set up the Comm subsystem if the transport requires it.
+	err = SetSessionCommSubsystem(register.TransportID, session)
+	if err != nil {
+		sessionHandlerLog.Errorf(err.Error())
+	}
+
+	// Start any persistent jobs that might exist for this precise session
+	err = core.StartPersistentSessionJobs(session)
+	if err != nil {
+		sessionHandlerLog.Errorf("failed to start persistent jobs: %s", err)
+	}
+
+	return nil
 }
 
 type auditLogNewSessionMsg struct {
@@ -98,9 +118,50 @@ func auditLogSession(session *core.Session, register *sliverpb.Register) {
 	}
 }
 
+// SetSessionCommSubsystem - Based on the transport C2 profile and the build information,
+// set up the SSH-based Comm subsystem. This rests on a single Tunnel used on top of the Connection.
+func SetSessionCommSubsystem(transportID string, session *core.Session) (err error) {
+
+	// Add protocol, network and route-adjusted address fields
+	uri, _ := url.Parse(session.ActiveC2)
+	session.RemoteAddress = uri.Host + uri.Path // Set the non-resolved routed address first
+	session.RemoteAddress = comm.SetCommString(session)
+
+	// Get the current transport used by the Session
+	build, err := db.ImplantBuildByName(session.Name)
+	transport, err := db.TransportByID(transportID)
+	if transport == nil {
+		return fmt.Errorf("Could not find transport with ID %s", transportID)
+	}
+	session.TransportID = transport.ID.String()
+
+	// Save the transport as running
+	transport.Running = true
+	transport.SessionID = gofrsUuid.FromStringOrNil(session.UUID)
+	err = db.Session().Save(&transport).Error
+	if err != nil {
+		return fmt.Errorf("Failed to update Transport: %s", err)
+	}
+
+	// If this transport specifically asks not to be Comm wired, or if the
+	// implant build forbids it anyway, just return, we have nothing to set up.
+	if transport.Profile.CommDisabled || !build.ImplantConfig.CommEnabled {
+		return
+	}
+
+	// Instantiate and start the Comms, which will build a Tunnel over the Session RPC.
+	err = comm.InitSession(session)
+	if err != nil {
+		sessionHandlerLog.Errorf("Comm init failed: %v", err)
+		return
+	}
+
+	return
+}
+
 // The handler mutex prevents a send on a closed channel, without it
 // two handlers calls may race when a tunnel is quickly created and closed.
-func tunnelDataHandler(implantConn *core.ImplantConnection, data []byte) {
+func tunnelDataHandler(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
 	session := core.SessionFromImplantConnection(implantConn)
 	tunnelHandlerMutex.Lock()
 	defer tunnelHandlerMutex.Unlock()
@@ -116,9 +177,10 @@ func tunnelDataHandler(implantConn *core.ImplantConnection, data []byte) {
 	} else {
 		sessionHandlerLog.Warnf("Data sent on nil tunnel %d", tunnelData.TunnelID)
 	}
+	return nil
 }
 
-func tunnelCloseHandler(implantConn *core.ImplantConnection, data []byte) {
+func tunnelCloseHandler(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
 	session := core.SessionFromImplantConnection(implantConn)
 	tunnelHandlerMutex.Lock()
 	defer tunnelHandlerMutex.Unlock()
@@ -126,7 +188,7 @@ func tunnelCloseHandler(implantConn *core.ImplantConnection, data []byte) {
 	tunnelData := &sliverpb.TunnelData{}
 	proto.Unmarshal(data, tunnelData)
 	if !tunnelData.Closed {
-		return
+		return nil
 	}
 	tunnel := core.Tunnels.Get(tunnelData.TunnelID)
 	if tunnel != nil {
@@ -139,9 +201,31 @@ func tunnelCloseHandler(implantConn *core.ImplantConnection, data []byte) {
 	} else {
 		sessionHandlerLog.Warnf("Close sent on nil tunnel %d", tunnelData.TunnelID)
 	}
+	return nil
 }
 
-func pingHandler(implantConn *core.ImplantConnection, data []byte) {
+func pingHandler(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
 	session := core.SessionFromImplantConnection(implantConn)
 	sessionHandlerLog.Debugf("ping from session %d", session.ID)
+	return nil
+}
+
+// commTunnelDataHandler - Handle Comm tunnel data coming from the server.
+func commTunnelDataHandler(conn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
+	session := core.SessionFromImplantConnection(conn)
+	tunnelData := &commpb.TunnelData{}
+	proto.Unmarshal(data, tunnelData)
+	tunnel := comm.Tunnels.Tunnel(tunnelData.TunnelID)
+	if tunnel != nil {
+		sessionHandlerLog.Infof("Found tunnel")
+		if session.ID == tunnel.Sess.ID {
+			sessionHandlerLog.Infof("Found tunnel for session")
+			tunnel.FromImplant <- tunnelData
+		} else {
+			sessionHandlerLog.Warnf("Warning: Session %d attempted to send data on tunnel it did not own", session.ID)
+		}
+	} else {
+		sessionHandlerLog.Warnf("Data sent on nil tunnel %d", tunnelData.TunnelID)
+	}
+	return nil
 }

@@ -25,6 +25,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"strings"
 
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -48,15 +49,14 @@ var (
 
 // StartMutualTLSListener - Start a mutual TLS listener
 func StartMutualTLSListener(bindIface string, port uint16) (net.Listener, error) {
-	StartPivotListener()
 	mtlsLog.Infof("Starting raw TCP/mTLS listener on %s:%d", bindIface, port)
 	host := bindIface
 	if host == "" {
 		host = defaultServerCert
 	}
-	_, _, err := certs.GetCertificate(certs.C2ServerCA, certs.ECCKey, host)
+	_, _, err := certs.GetCertificate(certs.MtlsServerCA, certs.ECCKey, host)
 	if err != nil {
-		certs.C2ServerGenerateECCCertificate(host)
+		certs.MtlsC2ServerGenerateECCCertificate(host)
 	}
 	tlsConfig := getServerTLSConfig(host)
 	ln, err := tls.Listen("tcp", fmt.Sprintf("%s:%d", bindIface, port), tlsConfig)
@@ -72,12 +72,28 @@ func acceptSliverConnections(ln net.Listener) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
+			mtlsLog.Errorf("Accept failed: %v", err)
 			if errType, ok := err.(*net.OpError); ok && errType.Op == "accept" {
 				break
 			}
-			mtlsLog.Errorf("Accept failed: %v", err)
+			// Added to handle closed listeners from the Comm system.
+			if err == net.ErrClosed {
+				break
+			}
+			// Also added for closed listeners from the Comm system
+			if errType, ok := err.(*net.OpError); ok && strings.Contains(errType.Error(), "closed listener") {
+				break
+			}
 			continue
 		}
+
+		// For some reason when closing the listener
+		// from the Comm system returns a nil connection...
+		if conn == nil {
+			mtlsLog.Errorf("Accepted a nil conn: %v", err)
+			break
+		}
+
 		go handleSliverConnection(conn)
 	}
 }
@@ -112,7 +128,12 @@ func handleSliverConnection(conn net.Conn) {
 				}
 				implantConn.RespMutex.RUnlock()
 			} else if handler, ok := handlers[envelope.Type]; ok {
-				go handler(implantConn, envelope.Data)
+				go func() {
+					respEnvelope := handler(implantConn, envelope.Data)
+					if respEnvelope != nil {
+						implantConn.Send <- respEnvelope
+					}
+				}()
 			}
 		}
 	}()
@@ -202,14 +223,14 @@ func socketReadEnvelope(connection net.Conn) (*sliverpb.Envelope, error) {
 // to specify any TLS paramters, we choose sensible defaults instead
 func getServerTLSConfig(host string) *tls.Config {
 
-	sliverCACert, _, err := certs.GetCertificateAuthority(certs.ImplantCA)
+	mtlsCACert, _, err := certs.GetCertificateAuthority(certs.MtlsImplantCA)
 	if err != nil {
-		mtlsLog.Fatalf("Failed to find ca type (%s)", certs.ImplantCA)
+		mtlsLog.Fatalf("Failed to find ca type (%s)", certs.MtlsImplantCA)
 	}
-	sliverCACertPool := x509.NewCertPool()
-	sliverCACertPool.AddCert(sliverCACert)
+	mtlsCACertPool := x509.NewCertPool()
+	mtlsCACertPool.AddCert(mtlsCACert)
 
-	certPEM, keyPEM, err := certs.GetCertificate(certs.C2ServerCA, certs.ECCKey, host)
+	certPEM, keyPEM, err := certs.GetECCCertificate(certs.MtlsServerCA, host)
 	if err != nil {
 		mtlsLog.Errorf("Failed to generate or fetch certificate %s", err)
 		return nil
@@ -221,12 +242,11 @@ func getServerTLSConfig(host string) *tls.Config {
 	}
 
 	tlsConfig := &tls.Config{
-		RootCAs:      sliverCACertPool,
+		RootCAs:      mtlsCACertPool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    sliverCACertPool,
+		ClientCAs:    mtlsCACertPool,
 		Certificates: []tls.Certificate{cert},
 		MinVersion:   tls.VersionTLS13, // Force TLS v1.3
 	}
-	tlsConfig.BuildNameToCertificate()
 	return tlsConfig
 }

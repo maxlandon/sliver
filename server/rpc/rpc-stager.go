@@ -33,11 +33,11 @@ func (rpc *Server) StartTCPStagerListener(ctx context.Context, req *clientpb.Sta
 	if !checkInterface(req.GetHost()) {
 		host = "0.0.0.0"
 	}
-	job, err := c2.StartTCPStagerListenerJob(host, uint16(req.GetPort()), req.GetData())
+	_, err := c2.StartTCPStagerListenerJob(host, uint16(req.GetPort()), req.GetData())
 	if err != nil {
 		return nil, err
 	}
-	return &clientpb.StagerListener{JobID: uint32(job.ID)}, nil
+	return &clientpb.StagerListener{JobID: 0}, nil
 }
 
 // StartHTTPStagerListener starts a HTTP(S) stager listener
@@ -65,7 +65,7 @@ func (rpc *Server) StartHTTPStagerListener(ctx context.Context, req *clientpb.St
 	if job == nil {
 		return nil, fmt.Errorf("job is nil")
 	}
-	return &clientpb.StagerListener{JobID: uint32(job.ID)}, err
+	return &clientpb.StagerListener{JobID: 0}, err
 }
 
 // checkInterface verifies if an IP address

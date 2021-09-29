@@ -21,7 +21,6 @@ package command
 import (
 	"github.com/maxlandon/gonsole"
 
-	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/command/server"
 	"github.com/bishopfox/sliver/client/command/sliver"
 	"github.com/bishopfox/sliver/client/completion"
@@ -81,7 +80,7 @@ func BindCommands() {
 
 		// Transports: some of them can be used only in a given menu,
 		// depending on what pivoting capabilities the implant has.
-		c2.BindCommands(menu)
+		bindCommandsC2(menu)
 	}
 
 	// We then register Sliver session commands to their own menu.

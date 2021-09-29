@@ -1,4 +1,4 @@
-package listeners
+package wg
 
 /*
 	Sliver Implant Framework
@@ -18,31 +18,42 @@ package listeners
 import (
 	"context"
 
+	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
-// WireGuardListener - Start a WireGuard VPN listener
-type WireGuardListener struct {
+// Listen - Start a WireGuard VPN listener
+type Listen struct {
+	Args struct {
+		LocalAddr string `description:"interface to bind WG listener to"`
+	} `positional-args:"yes"`
+
+	// Base
+	c2.ListenerOptions
+	c2.SecurityOptions
+
+	// WireGuard specific
 	Options struct {
-		LHost      string `long:"lhost" short:"L" description:"interface address to bind WG listener to" default:""`
-		LPort      uint32 `long:"lport" short:"l" description:"UDP listen port" default:"53"`
-		NPort      uint32 `long:"nport" short:"n" description:"Virtual tun interface listen port" default:"8888"`
-		KeyPort    uint32 `long:"key-port" short:"x" description:"Virtual tun interface key exchange port" default:"1337"`
-		Persistent bool   `long:"persistent" short:"p" description:"make listener persistent across server restarts"`
+		// LHost   string `long:"lhost" short:"L" description:"interface address to bind WG listener to" default:""`
+		LPort        uint32 `long:"lport" short:"L" description:"UDP listen port" default:"53"`
+		NPort        uint32 `long:"nport" short:"N" description:"Virtual tun interface listen port" default:"8888"`
+		KeyPort      uint32 `long:"key-port" short:"x" description:"Virtual tun interface key exchange port" default:"1337"`
+		WGServerCert string `long:"wg-cert" short:"C" description:"use a precise (Wireguard) server certificate from credential store"`
+		WGPrivateKey string `long:"wg-key" short:"K" description:"use a precise (WireGuard) private key from credential server"`
 	} `group:"WireGuard listener options"`
 }
 
 // Execute - Start a WireGuard VPN listener
-func (w *WireGuardListener) Execute(args []string) (err error) {
+func (w *Listen) Execute(args []string) (err error) {
 
 	log.Infof("Starting Wireguard listener ...")
 	wg, err := transport.RPC.StartWGListener(context.Background(), &clientpb.WGListenerReq{
 		Port:       w.Options.LPort,
 		NPort:      w.Options.NPort,
 		KeyPort:    w.Options.KeyPort,
-		Persistent: w.Options.Persistent,
+		Persistent: w.ListenerOptions.Core.Persistent,
 	})
 	if err != nil {
 		return log.Error(err)

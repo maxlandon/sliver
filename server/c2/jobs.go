@@ -22,17 +22,23 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/certs"
+	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/configs"
 	"github.com/bishopfox/sliver/server/core"
+	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
 	"golang.zx2c4.com/wireguard/device"
 )
@@ -40,6 +46,13 @@ import (
 var (
 	jobLog = log.NamedLogger("c2", "jobs")
 )
+
+func init() {
+	// VERY IMPORTANT: to avoid circular imports we map the function
+	// in this package to the core package, so that the handlers package
+	// can start persistent jobs upon a session registration process.
+	core.StartPersistentSessionJobs = StartPersistentSessionJobs
+}
 
 // StartMTLSListenerJob - Start an mTLS listener as a job
 func StartMTLSListenerJob(host string, listenPort uint16) (*core.Job, error) {
@@ -50,12 +63,12 @@ func StartMTLSListenerJob(host string, listenPort uint16) (*core.Job, error) {
 	}
 
 	job := &core.Job{
-		ID:          core.NextJobID(),
-		Name:        "mtls",
+		// ID:          core.NextJobID(),
+		// Name:        "mtls",
 		Description: fmt.Sprintf("mutual tls listener %s", bind),
-		Protocol:    "tcp",
-		Port:        listenPort,
-		JobCtrl:     make(chan bool),
+		// Protocol:    "tcp",
+		// Port:        listenPort,
+		// JobCtrl:     make(chan bool),
 	}
 
 	go func() {
@@ -77,12 +90,12 @@ func StartWGListenerJob(listenPort uint16, nListenPort uint16, keyExchangeListen
 	}
 
 	job := &core.Job{
-		ID:          core.NextJobID(),
+		// ID:          core.NextJobID(),
 		Name:        "wg",
 		Description: fmt.Sprintf("wg listener port: %d", listenPort),
-		Protocol:    "udp",
-		Port:        listenPort,
-		JobCtrl:     make(chan bool),
+		// Protocol:    "udp",
+		// Port:        listenPort,
+		JobCtrl: make(chan bool),
 	}
 
 	ticker := time.NewTicker(5 * time.Second)
@@ -150,13 +163,13 @@ func StartDNSListenerJob(bindIface string, lport uint16, domains []string, canar
 	server := StartDNSListener(bindIface, lport, domains, canaries)
 	description := fmt.Sprintf("%s (canaries %v)", strings.Join(domains, " "), canaries)
 	job := &core.Job{
-		ID:          core.NextJobID(),
+		// ID:          core.NextJobID(),
 		Name:        "dns",
 		Description: description,
-		Protocol:    "udp",
-		Port:        lport,
-		JobCtrl:     make(chan bool),
-		Domains:     domains,
+		// Protocol:    "udp",
+		// Port:        lport,
+		JobCtrl: make(chan bool),
+		// Domains:     domains,
 	}
 
 	go func() {
@@ -200,13 +213,13 @@ func StartHTTPListenerJob(conf *HTTPServerConfig) (*core.Job, error) {
 	}
 
 	job := &core.Job{
-		ID:          core.NextJobID(),
+		// ID:          core.NextJobID(),
 		Name:        name,
 		Description: fmt.Sprintf("%s for domain %s", name, conf.Domain),
-		Protocol:    "tcp",
-		Port:        uint16(conf.LPort),
-		JobCtrl:     make(chan bool),
-		Domains:     []string{conf.Domain},
+		// Protocol:    "tcp",
+		// Port:        uint16(conf.LPort),
+		JobCtrl: make(chan bool),
+		// Domains:     []string{conf.Domain},
 	}
 	core.Jobs.Add(job)
 
@@ -255,12 +268,12 @@ func StartTCPStagerListenerJob(host string, port uint16, shellcode []byte) (*cor
 	}
 
 	job := &core.Job{
-		ID:          core.NextJobID(),
+		// ID:          core.NextJobID(),
 		Name:        "TCP",
 		Description: "Raw TCP listener (stager only)",
-		Protocol:    "tcp",
-		Port:        port,
-		JobCtrl:     make(chan bool),
+		// Protocol:    "tcp",
+		// Port:        port,
+		JobCtrl: make(chan bool),
 	}
 
 	go func() {
@@ -293,12 +306,12 @@ func StartHTTPStagerListenerJob(conf *HTTPServerConfig, data []byte) (*core.Job,
 	}
 	server.SliverStage = data
 	job := &core.Job{
-		ID:          core.NextJobID(),
+		// ID:          core.NextJobID(),
 		Name:        name,
 		Description: fmt.Sprintf("Stager handler %s for domain %s", name, conf.Domain),
-		Protocol:    "tcp",
-		Port:        uint16(conf.LPort),
-		JobCtrl:     make(chan bool),
+		// Protocol:    "tcp",
+		// Port:        uint16(conf.LPort),
+		JobCtrl: make(chan bool),
 	}
 	core.Jobs.Add(job)
 
@@ -339,54 +352,137 @@ func StartHTTPStagerListenerJob(conf *HTTPServerConfig, data []byte) (*core.Job,
 	return job, nil
 }
 
-// StartPersistentJobs - Start persistent jobs
-func StartPersistentJobs(cfg *configs.ServerConfig) error {
+// StartPersistentSessionJobs - Start jobs that were set for a given session (UUID+name)
+func StartPersistentSessionJobs(session *core.Session) (err error) {
+
+	// Get the jobs only for the very session we want, because
+	// several builds might run on the same host.
+	jobs, err := db.JobsBySession(session.Name, session.Username, session.UUID)
+	if err != nil {
+		return err
+	}
+
+	// Sort jobs by their order, not their IDs
+	var keys []int
+	for _, job := range jobs {
+		keys = append(keys, job.Order)
+	}
+	sort.Ints(keys)
+
+	var ordered []*models.Job
+	for _, k := range keys {
+		for _, job := range jobs {
+			if job.Order == k {
+				ordered = append(ordered, job)
+			}
+		}
+	}
+
+	// Start each job in the correct order
+	for _, job := range ordered {
+
+		// Get the current transport for this session: some of them, like beacons
+		// or those that are expressely comm disabled, can run persistent jobs
+		transport, err := db.C2ProfileByID(session.TransportID)
+		if err != nil {
+			return err
+		}
+		// We get the comm.Net interface for the session: if nil,
+		// pass 0 and return the server interfaces functions
+		var net comm.Net
+		if transport.CommDisabled {
+			return errors.New("Current transport is Comm-disabled")
+		} else if transport.Type == sliverpb.C2Type_Beacon {
+			return errors.New("Current C2 is a beacon, does not support persistent jobs for now")
+		} else {
+			net, err = comm.ActiveNetwork(session.ID)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Init profile security details: load certificates and keys if any, or default.
+		// As well, if there are nothing in it, it will just load the default
+		err = SetupHandlerSecurity(job.Profile, job.Profile.Hostname)
+		if err != nil {
+			return err
+		}
+
+		// Dispatch the profile to either the root Dialer functions or Listener ones.
+		// The actual implementation of the C2 handlers are in there, or possibly in
+		// functions still down the way.
+		switch job.Profile.Direction {
+
+		// Dialers
+		case sliverpb.C2Direction_Bind:
+			err = Dial(job.Profile, net, session)
+			if err != nil {
+				return err
+			}
+
+		// Listeners
+		case sliverpb.C2Direction_Reverse:
+			// This is supposed to return us a
+			// job but we don't need to save it again
+			_, err := Listen(job.Profile, net, session)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return
+}
+
+// StartPersistentServerJobs - Start persistent jobs that will run on the server's interfaces.
+func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 	if cfg.Jobs == nil {
 		return nil
 	}
 
-	for _, j := range cfg.Jobs.MTLS {
-		job, err := StartMTLSListenerJob(j.Host, j.Port)
+	for _, job := range cfg.Jobs {
+		// Any low level management stuff before anything.
+		profile := models.C2ProfileFromProtobuf(job.Profile)
+
+		// We get the comm.Net interface for the session: if nil,
+		// pass 0 and return the server interfaces functions
+		net, err := comm.ActiveNetwork(0)
 		if err != nil {
 			return err
 		}
-		job.PersistentID = j.JobID
-	}
 
-	for _, j := range cfg.Jobs.WG {
-		job, err := StartWGListenerJob(j.Port, j.NPort, j.KeyPort)
+		// Init profile security details: load certificates and keys if any, or default.
+		// NOTE: No hostname is passed as argument, as this is a just a listener started,
+		// and that if any Cert/Key data is in the profile, this call below will not touch anything.
+		//
+		// As well, if there are nothing in it, it will just load the default
+		err = SetupHandlerSecurity(profile, profile.Hostname)
 		if err != nil {
 			return err
 		}
-		job.PersistentID = j.JobID
-	}
 
-	for _, j := range cfg.Jobs.DNS {
-		job, err := StartDNSListenerJob(j.Host, j.Port, j.Domains, j.Canaries)
-		if err != nil {
-			return err
-		}
-		job.PersistentID = j.JobID
-	}
+		// Dispatch the profile to either the root Dialer functions or Listener ones.
+		// The actual implementation of the C2 handlers are in there, or possibly in
+		// functions still down the way.
+		switch profile.Direction {
 
-	for _, j := range cfg.Jobs.HTTP {
-		cfg := &HTTPServerConfig{
-			Addr:    fmt.Sprintf("%s:%d", j.Host, j.Port),
-			LPort:   j.Port,
-			Secure:  j.Secure,
-			Domain:  j.Domain,
-			Website: j.Website,
-			Cert:    j.Cert,
-			Key:     j.Key,
-			ACME:    j.ACME,
-		}
-		job, err := StartHTTPListenerJob(cfg)
-		if err != nil {
-			return err
-		}
-		job.PersistentID = j.JobID
-	}
+		// Dialers
+		case sliverpb.C2Direction_Bind:
+			err = Dial(profile, net, nil)
+			if err != nil {
+				return err
+			}
 
+		// Listeners
+		case sliverpb.C2Direction_Reverse:
+			// This is supposed to return us a
+			// job but we don't need to save it again
+			_, err := Listen(profile, net, nil)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 

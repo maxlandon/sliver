@@ -28,10 +28,11 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/core"
-	"github.com/bishopfox/sliver/server/generate"
+	"github.com/bishopfox/sliver/server/db"
 	serverHandlers "github.com/bishopfox/sliver/server/handlers"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/server/netstack"
+	"github.com/sirupsen/logrus"
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 	"google.golang.org/protobuf/proto"
@@ -40,6 +41,13 @@ import (
 var (
 	wgLog = log.NamedLogger("c2", "wg")
 	tunIP = "100.64.0.1" // Don't let user configure this for now
+)
+
+var (
+	wgipsLog = log.RootLogger.WithFields(logrus.Fields{
+		"pkg":    "generate",
+		"stream": "wgips",
+	})
 )
 
 // StartWGListener - First creates an inet.af network stack.
@@ -147,7 +155,7 @@ func handleKeyExchangeConnection(conn net.Conn) {
 	wgLog.Infof("Handling connection to key exchange listener")
 
 	defer conn.Close()
-	ip, err := generate.GenerateUniqueIP()
+	ip, err := GenerateUniqueIP()
 	if err != nil {
 		wgLog.Errorf("Failed to generate unique IP: %s", err)
 	}
@@ -165,20 +173,6 @@ func handleKeyExchangeConnection(conn net.Conn) {
 		message := implantPrivKey + "|" + serverPubKey + "|" + string(ip)
 		wgLog.Debugf("Sending new wg keys and IP: %s", message)
 		conn.Write([]byte(message))
-	}
-}
-
-func acceptWGSliverConnections(ln net.Listener) {
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			if errType, ok := err.(*net.OpError); ok && errType.Op == "accept" {
-				break
-			}
-			wgLog.Errorf("Accept failed: %v", err)
-			continue
-		}
-		go handleWGSliverConnection(conn)
 	}
 }
 
@@ -296,4 +290,91 @@ func socketWGReadEnvelope(connection net.Conn) (*sliverpb.Envelope, error) {
 		return nil, err
 	}
 	return envelope, nil
+}
+
+// GenerateUniqueIP generates and returns an available IP which can then
+// be assigned to a Wireguard interface
+func GenerateUniqueIP() (net.IP, error) {
+	dbWireguardIPs, err := db.WGPeerIPs()
+	if err != nil {
+		// wgipsLog.Errorf("Failed to retrieve list of WG Peers IPs with error: %s", err)
+		return nil, err
+	}
+
+	// Use the 100.64.0.1/16 range for TUN ips.
+	// This range chosen due to Tailscale also using it (Cut down to /16 instead of /10)
+	// https://tailscale.com/kb/1015/100.x-addresses
+	addressPool, err := hosts("100.64.0.1/16")
+	if err != nil {
+		// wgipsLog.Errorf("Failed to generate host address pool for WG Peers IPs %s", err)
+		return nil, err
+	}
+
+	for _, address := range addressPool {
+		for _, ip := range dbWireguardIPs {
+			if ip == address {
+				addressPool = remove(addressPool, []string{ip})
+				break
+			}
+		}
+	}
+
+	return net.ParseIP(addressPool[0]), nil
+}
+
+// Reserve use of 100.64.0.{0|1} addresses
+var reservedAddresses = []string{"100.64.0.0", "100.64.0.1"}
+
+func hosts(cidr string) ([]string, error) {
+	ip, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil, err
+	}
+
+	var ips []string
+	for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); incrementIP(ip) {
+		ips = append(ips, ip.String())
+	}
+
+	ips = remove(ips, reservedAddresses)
+	return ips, nil
+}
+
+func incrementIP(ip net.IP) {
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
+}
+
+func remove(stringSlice []string, remove []string) []string {
+	var result []string
+	for _, v := range stringSlice {
+		shouldAppend := true
+		for _, value := range remove {
+			if v == value {
+				shouldAppend = false
+			}
+		}
+		if shouldAppend {
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
+func acceptWGSliverConnections(ln net.Listener) {
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			if errType, ok := err.(*net.OpError); ok && errType.Op == "accept" {
+				break
+			}
+			wgLog.Errorf("Accept failed: %v", err)
+			continue
+		}
+		go handleWGSliverConnection(conn)
+	}
 }
