@@ -31,12 +31,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gorm.io/gorm/clause"
+
 	"github.com/bishopfox/sliver/server/assets"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/server/watchtower"
-	"gorm.io/gorm/clause"
 )
 
 var (
@@ -56,6 +57,30 @@ func getBuildsDir() (string, error) {
 		}
 	}
 	return buildsDir, nil
+}
+
+// C2ProfileSave - Save a C2 Profile to the database
+func C2ProfileSave(profile *models.C2Profile) error {
+	dbSession := db.Session()
+	result := dbSession.Clauses(clause.OnConflict{
+		UpdateAll: true,
+	}).Create(&profile)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+// C2ProfileCreateOrUpdate - Create or update a C2 Profile to the database
+func C2ProfileCreateOrUpdate(profile *models.C2Profile) error {
+	dbSession := db.Session()
+	result := dbSession.Clauses(clause.OnConflict{
+		UpdateAll: true,
+	}).FirstOrCreate(&profile)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }
 
 // ImplantConfigSave - Save only the config to the database
@@ -87,6 +112,7 @@ func ImplantBuildSave(name string, config *models.ImplantConfig, fPath string) e
 	if err != nil {
 		return err
 	}
+
 	dbSession := db.Session()
 	implantBuild := &models.ImplantBuild{
 		Name:          name,
@@ -94,12 +120,23 @@ func ImplantBuildSave(name string, config *models.ImplantConfig, fPath string) e
 		MD5:           md5Hash,
 		SHA1:          sha1Hash,
 		SHA256:        sha256Hash,
+		// Transports:    config.Transports,
 	}
 	watchtower.AddImplantToWatchlist(implantBuild)
 	result := dbSession.Create(&implantBuild)
 	if result.Error != nil {
 		return result.Error
 	}
+
+	// Save all transports
+	for _, transport := range config.Transports {
+		fmt.Println(transport.Profile.ID.String())
+		err = db.Session().Create(transport).Error
+		if err != nil {
+			storageLog.Errorf("Failed to save Transport to DB: %s", err)
+		}
+	}
+
 	storageLog.Infof("%s -> %s", implantBuild.ID, implantBuild.Name)
 	return ioutil.WriteFile(path.Join(buildsDir, implantBuild.ID.String()), data, 0600)
 }

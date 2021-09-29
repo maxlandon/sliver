@@ -50,13 +50,6 @@ func canarySubDomain() string {
 	return string(subdomain)
 }
 
-// UpdateCanary - Update an existing canary
-func UpdateCanary(canary *models.DNSCanary) error {
-	dbSession := db.Session()
-	result := dbSession.Save(&canary)
-	return result.Error
-}
-
 // CanaryGenerator - Holds data related to canary generation
 type CanaryGenerator struct {
 	ImplantName   string

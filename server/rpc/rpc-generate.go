@@ -29,6 +29,7 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/generate"
@@ -44,12 +45,6 @@ func (rpc *Server) Generate(ctx context.Context, req *clientpb.GenerateReq) (*cl
 	var fPath string
 	var err error
 	name, config := generate.ImplantConfigFromProtobuf(req.Config)
-	if name == "" {
-		name, err = generate.GetCodename()
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	if config == nil {
 		return nil, errors.New("Invalid implant config")
@@ -145,7 +140,7 @@ func (rpc *Server) Canaries(ctx context.Context, _ *commonpb.Empty) (*clientpb.C
 
 // GenerateUniqueIP - Wrapper around generate.GenerateUniqueIP
 func (rpc *Server) GenerateUniqueIP(ctx context.Context, _ *commonpb.Empty) (*clientpb.UniqueWGIP, error) {
-	uniqueIP, err := generate.GenerateUniqueIP()
+	uniqueIP, err := c2.GenerateUniqueIP()
 
 	if err != nil {
 		rpcLog.Infof("Failed to generate unique wg peer ip: %s\n", err)
