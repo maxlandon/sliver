@@ -52,7 +52,7 @@ var daemonCmd = &cobra.Command{
 		certs.SetupWGKeys()
 
 		serverConfig := configs.GetServerConfig()
-		c2.StartPersistentJobs(serverConfig)
+		c2.StartPersistentServerJobs(serverConfig)
 
 		daemon.Start(lhost, uint16(lport))
 	},

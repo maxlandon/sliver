@@ -127,7 +127,8 @@ var rootCmd = &cobra.Command{
 		certs.SetupWGKeys()
 
 		serverConfig := configs.GetServerConfig()
-		c2.StartPersistentJobs(serverConfig)
+		c2.StartPersistentServerJobs(serverConfig)
+		// c2.StartPersistentJobs(serverConfig)
 		if serverConfig.DaemonMode {
 			daemon.Start(daemon.BlankHost, daemon.BlankPort)
 		} else {

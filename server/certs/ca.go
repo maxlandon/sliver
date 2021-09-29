@@ -36,10 +36,11 @@ import (
 
 // SetupCAs - Creates directories for certs
 func SetupCAs() {
-	GenerateCertificateAuthority(C2ServerCA, "")
-	GenerateCertificateAuthority(ImplantCA, "")
+	GenerateCertificateAuthority(MtlsImplantCA, "")
+	GenerateCertificateAuthority(MtlsServerCA, "")
 	GenerateCertificateAuthority(OperatorCA, "operators")
 	GenerateCertificateAuthority(HTTPSCA, "")
+	GenerateCertificateAuthority(CommCA, "")
 }
 
 func getCertDir() string {
@@ -124,7 +125,7 @@ func GetCertificateAuthorityPEM(caType string) ([]byte, []byte, error) {
 
 // SaveCertificateAuthority - Save the certificate and the key to the filesystem
 // doesn't return an error because errors are fatal. If we can't generate CAs,
-// then we can't secure comms and we should die a horrible death.
+// then we can't secure communication and we should die a horrible death.
 func SaveCertificateAuthority(caType string, cert []byte, key []byte) {
 
 	storageDir := getCertDir()
