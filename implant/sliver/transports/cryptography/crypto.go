@@ -52,6 +52,8 @@ const (
 
 var (
 	CACertPEM = `{{.Config.CACert}}`
+
+	OTPSecret string // Set at runtime by the transport
 )
 
 // AESKey - 128 bit key
@@ -148,7 +150,8 @@ func GetOTPCode() string {
 		Period:    uint(30),
 		Skew:      uint(1),
 	}
-	code, _ := totp.GenerateCodeCustom("{{ .OTPSecret }}", now, opts)
+	code, _ := totp.GenerateCodeCustom(OTPSecret, now, opts)
+	// code, _ := totp.GenerateCodeCustom(" .OTPSecret ", now, opts)
 	// {{if .Config.Debug}}
 	log.Printf("TOTP Code: %s", code)
 	// {{end}}

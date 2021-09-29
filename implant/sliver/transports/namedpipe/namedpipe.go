@@ -53,7 +53,7 @@ func NamedPipeConnect(uri *url.URL) (net.Conn, error) {
 	return winio.DialPipe(address, nil)
 }
 
-func WriteEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
+func writeEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
 	data, err := proto.Marshal(envelope)
 	if err != nil {
 		// {{if .Config.Debug}}
@@ -91,7 +91,7 @@ func WriteEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
 	return nil
 }
 
-func ReadEnvelope(conn *net.Conn) (*sliverpb.Envelope, error) {
+func readEnvelope(conn *net.Conn) (*sliverpb.Envelope, error) {
 	dataLengthBuf := make([]byte, 4)
 	_, err := (*conn).Read(dataLengthBuf)
 	if err != nil {
