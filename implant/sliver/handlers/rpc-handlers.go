@@ -28,6 +28,8 @@ import (
 	"log"
 	// {{end}}
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/implant/sliver/netstat"
 	"github.com/bishopfox/sliver/implant/sliver/procdump"
 	"github.com/bishopfox/sliver/implant/sliver/ps"
@@ -36,8 +38,6 @@ import (
 	"github.com/bishopfox/sliver/implant/sliver/taskrunner"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
-	"google.golang.org/protobuf/proto"
 )
 
 // ------------------------------------------------------------------------------------------

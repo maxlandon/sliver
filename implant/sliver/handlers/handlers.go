@@ -54,14 +54,16 @@ type RPCResponse func([]byte, error)
 // RPCHandler - Request handler
 type RPCHandler func([]byte, RPCResponse)
 
-// SpecialHandler - Handlers that need to interact directly with the transport
-type SpecialHandler func([]byte, *transports.Connection) error
+// TransportHandler - Handlers that need to interact directly with the transport
+type TransportHandler func([]byte, C2) error
+
+// type SpecialHandler func([]byte, *transports.Connection) error
 
 // TunnelHandler - Tunnel related functionality for duplex connections
-type TunnelHandler func(*sliverpb.Envelope, *transports.Connection)
+type TunnelHandler func(*sliverpb.Envelope, Connection)
 
 // PivotHandler - Handler related to pivoting
-type PivotHandler func(*sliverpb.Envelope, *transports.Connection)
+type PivotHandler func(*sliverpb.Envelope, Connection)
 
 // -----------------------------------------------------
 // -----------------------------------------------------

