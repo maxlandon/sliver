@@ -26,12 +26,12 @@ import (
 	"github.com/maxlandon/gonsole"
 	"google.golang.org/grpc"
 
-	clientAssets "github.com/bishopfox/sliver/client/assets"
 	clientconsole "github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/help"
 	clienttransport "github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
+	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/transport"
 )
 
@@ -83,7 +83,10 @@ func Start() {
 	}
 	defer conn.Close()
 	localRPC := rpcpb.NewSliverRPCClient(conn)
-	clientconsole.Start(localRPC, serverOnlyCmds, &clientAssets.ClientConfig{})
+
+	// Set up the client Comm subsystem configuration, which needs a fingerprint
+	config := comm.LoadServerLocalCommConfig()
+	clientconsole.Start(localRPC, serverOnlyCmds, config)
 }
 
 // serverOnlyCmds - We bind commands only available to the server admin to the console command parser.

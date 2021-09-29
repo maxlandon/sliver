@@ -29,6 +29,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/assets"
 	"github.com/bishopfox/sliver/server/log"
 )
@@ -160,6 +161,37 @@ type HTTPC2ImplantConfig struct {
 	CloseFileExt string   `json:"close_file_ext"`
 	CloseFiles   []string `json:"close_files"`
 	ClosePaths   []string `json:"close_paths"`
+}
+
+// ToProtobuf - Get a protobuf version  of this HTTP profile,
+// so that we can compile it more easily, or send it on the wire
+func (h *HTTPC2ImplantConfig) ToProtobuf() *sliverpb.C2ProfileHTTP {
+	p := &sliverpb.C2ProfileHTTP{
+		// Core
+		UserAgent:     h.UserAgent,
+		URLParameters: h.URLParameters,
+		Headers:       h.Headers,
+		MaxFiles:      int32(h.MaxFiles),
+		MinFiles:      int32(h.MinFiles),
+		MaxPaths:      int32(h.MaxPaths),
+		MinPaths:      int32(h.MinPaths),
+		// Stager File Extension
+		StagerFileExt: h.StagerFileExt,
+		// Key Exchange (default .txt) files and paths
+		KeyExchangeFileExt: h.KeyExchangeFileExt,
+		KeyExchangeFiles:   h.KeyExchangeFiles,
+		KeyExchangePaths:   h.KeyExchangePaths,
+		// Poll files and paths
+		StartSessionFileExt: h.StartSessionFileExt,
+		SessionFileExt:      h.SessionFileExt,
+		SessionFiles:        h.SessionFiles,
+		SessionPaths:        h.SessionPaths,
+		// Close session files and paths
+		CloseFileExt: h.CloseFileExt,
+		CloseFiles:   h.CloseFiles,
+		ClosePaths:   h.ClosePaths,
+	}
+	return p
 }
 
 func (h *HTTPC2ImplantConfig) RandomKeyExchangeFiles() []string {

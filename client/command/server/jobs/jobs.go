@@ -27,6 +27,7 @@ import (
 
 	"github.com/maxlandon/readline"
 
+	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
@@ -45,7 +46,7 @@ func (j *Jobs) Execute(args []string) (err error) {
 		return log.Errorf("%s", err)
 	}
 	// Convert to a map
-	activeJobs := map[uint32]*clientpb.Job{}
+	activeJobs := map[string]*clientpb.Job{}
 	for _, job := range jobs.Active {
 		activeJobs[job.ID] = job
 	}
@@ -60,14 +61,14 @@ func (j *Jobs) Execute(args []string) (err error) {
 // JobsKill - Kill a job given an ID
 type JobsKill struct {
 	Positional struct {
-		JobID []uint32 `description:"active job ID" required:"1"`
+		JobID []string `description:"active job ID" required:"1"`
 	} `positional-args:"yes" required:"true"`
 }
 
 // Execute - Kill a job given an ID
 func (j *JobsKill) Execute(args []string) (err error) {
 	for _, jobID := range j.Positional.JobID {
-		log.Infof("Killing job #%d ... ", jobID)
+		log.Infof("Killing job #%s ... ", jobID)
 		_, err := transport.RPC.KillJob(context.Background(), &clientpb.KillJobReq{
 			ID: jobID,
 		})
@@ -99,82 +100,76 @@ func (j *JobsKillAll) Execute(args []string) (err error) {
 	return
 }
 
-func killJob(jobID uint32) (err error) {
-	log.Infof("Killing job #%d ...", jobID)
+func killJob(jobID string) (err error) {
+	log.Infof("Killing job #%s ...", jobID)
 	jobKill, err := transport.RPC.KillJob(context.Background(), &clientpb.KillJobReq{
 		ID: jobID,
 	})
 	if err != nil {
 		return log.RPCErrorf("%s", err)
 	}
-	log.Infof("Successfully killed job #%d", jobKill.ID)
+	log.Infof("Successfully killed job #%s", jobKill.ID)
 	return
 }
 
-func printJobs(jobs map[uint32]*clientpb.Job) {
+func printJobs(jobs map[string]*clientpb.Job) {
 
 	// Filter jobs based on their types.
-	var listeners = map[uint32]*clientpb.Job{} // C2 Handlers
-	var servers = map[uint32]*clientpb.Job{}   // gRPC servers
-	var others = map[uint32]*clientpb.Job{}    // Others
+	var listeners = map[string]*clientpb.Job{} // C2 Handlers
+	var servers = map[string]*clientpb.Job{}   // gRPC servers
+	var others = map[string]*clientpb.Job{}    // Others
 	var next bool                              // Controls new lines
 
 	// Sort keys
-	var keys []int
+	var keys []string
 	for _, job := range jobs {
-		keys = append(keys, int(job.ID))
+		keys = append(keys, job.ID)
 	}
-	sort.Ints(keys)
+	sort.Strings(keys)
 
 	for _, k := range keys {
-		job := jobs[uint32(k)]
+		job := jobs[k]
 		if job.Name == "grpc" {
 			servers[job.ID] = job
 			continue
 		}
 
 		listeners[job.ID] = job
-
-		// if strings.Contains(job.Name, "server") || strings.Contains(job.Name, "via") {
-		//         handlers[job.ID] = job
-		//         continue
-		// }
-		//
-		// others[job.ID] = job
 	}
 
 	// Print handler jobs
 	if len(listeners) > 0 {
 		// Sort keys
-		var keys []int
+		var keys []string
 		for _, job := range listeners {
-			keys = append(keys, int(job.ID))
+			keys = append(keys, job.ID)
 		}
-		sort.Ints(keys)
+		sort.Strings(keys)
 
 		table := util.NewTable(readline.Bold(readline.Yellow("Listeners")))
-		headers := []string{"ID", "Protocol", "Domain(s)", "Port", "Description"}
-		headLen := []int{2, 10, 0, 5, 0}
+		headers := []string{"ID", "UUID", "Protocol", "Domain(s)", "Port", "Description"}
+		headLen := []int{2, 0, 10, 0, 5, 0}
 		table.SetColumns(headers, headLen)
 
 		for _, k := range keys {
-			job := listeners[uint32(k)]
+			job := listeners[k]
 
 			// Some host address might be scattered
 			// between names and domain values.
 			var domains string
-			if len(job.Domains) != 0 {
-				strings.Join(job.Domains, ",")
+			if len(job.Profile.Domains) != 0 {
+				strings.Join(job.Profile.Domains, ",")
 			} else {
 				domains = job.Name
 			}
 
 			// Append elements
 			table.AppendRow([]string{
-				strconv.Itoa(int(job.ID)),
-				job.Protocol,
+				strconv.Itoa(int(job.Order)),
+				c2.GetShortID(job.ID),
+				job.Profile.C2.String(),
 				domains,
-				strconv.Itoa(int(job.Port)),
+				strconv.Itoa(int(job.Profile.Port)),
 				job.Description,
 			})
 		}
@@ -191,11 +186,11 @@ func printJobs(jobs map[uint32]*clientpb.Job) {
 		}
 
 		// Sort keys
-		var keys []int
+		var keys []string
 		for _, job := range servers {
-			keys = append(keys, int(job.ID))
+			keys = append(keys, job.ID)
 		}
-		sort.Ints(keys)
+		sort.Strings(keys)
 
 		table := util.NewTable(readline.Bold(readline.Yellow("gRPC servers")))
 		headers := []string{"ID", "Domain", "Port"}
@@ -203,22 +198,22 @@ func printJobs(jobs map[uint32]*clientpb.Job) {
 		table.SetColumns(headers, headLen)
 
 		for _, k := range keys {
-			job := servers[uint32(k)]
+			job := servers[string(k)]
 
 			// Some host address might be scattered
 			// between names and domain values.
 			var domains string
-			if len(job.Domains) != 0 {
-				strings.Join(job.Domains, ",")
+			if len(job.Profile.Domains) != 0 {
+				strings.Join(job.Profile.Domains, ",")
 			} else {
 				domains = job.Name
 			}
 
 			// Append elements
 			table.AppendRow([]string{
-				strconv.Itoa(int(job.ID)),
+				c2.GetShortID(job.ID),
 				domains,
-				strconv.Itoa(int(job.Port)),
+				strconv.Itoa(int(job.Profile.Port)),
 			})
 		}
 
@@ -234,11 +229,11 @@ func printJobs(jobs map[uint32]*clientpb.Job) {
 		}
 
 		// Sort keys
-		var keys []int
+		var keys []string
 		for _, job := range others {
-			keys = append(keys, int(job.ID))
+			keys = append(keys, c2.GetShortID(job.ID))
 		}
-		sort.Ints(keys)
+		sort.Strings(keys)
 
 		table := util.NewTable(readline.Bold(readline.Yellow("Others")))
 		headers := []string{"ID", "Name", "Description"}
@@ -246,11 +241,11 @@ func printJobs(jobs map[uint32]*clientpb.Job) {
 		table.SetColumns(headers, headLen)
 
 		for _, k := range keys {
-			job := others[uint32(k)]
+			job := others[k]
 
 			// Append elements
 			table.AppendRow([]string{
-				strconv.Itoa(int(job.ID)),
+				job.ID,
 				job.Name,
 				job.Description,
 			})

@@ -21,10 +21,10 @@ package completion
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/maxlandon/readline"
 
+	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
@@ -42,7 +42,7 @@ func JobIDs() (comps []*readline.CompletionGroup) {
 		return
 	}
 	for _, job := range jobs.Active {
-		jobID := strconv.Itoa(int(job.ID))
+		jobID := c2.GetShortID(job.ID)
 		comp.Suggestions = append(comp.Suggestions, jobID)
 		comp.Descriptions[jobID] = readline.DIM + job.Name + fmt.Sprintf(" (%s)", job.Description) + readline.RESET
 	}

@@ -32,12 +32,14 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/constants"
 	clientLog "github.com/bishopfox/sliver/client/log"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/server/transport"
+	"github.com/gofrs/uuid"
 )
 
 var (
@@ -225,19 +227,19 @@ func NewOperatorConfig(operatorName, lhost string, lport uint16) ([]byte, error)
 }
 
 // Start the console client listener
-func jobStartClientListener(host string, port uint16) (int, error) {
+func jobStartClientListener(host string, port uint16) (string, error) {
 	_, ln, err := transport.StartClientListener(host, port)
 	if err != nil {
-		return -1, err // If we fail to bind don't setup the Job
+		return "", err // If we fail to bind don't setup the Job
 	}
 
+	id, _ := uuid.NewV4()
 	job := &core.Job{
-		ID:          core.NextJobID(),
+		ID:          id,
 		Name:        "grpc",
 		Description: "client listener",
-		Protocol:    "tcp",
-		Port:        port,
 		JobCtrl:     make(chan bool),
+		Profile:     &sliverpb.C2Profile{Port: uint32(port)},
 	}
 
 	go func() {
@@ -254,5 +256,5 @@ func jobStartClientListener(host string, port uint16) (int, error) {
 	}()
 
 	core.Jobs.Add(job)
-	return job.ID, nil
+	return job.ID.String(), nil
 }
