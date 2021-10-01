@@ -221,6 +221,13 @@ message TransportSwitch {
   commonpb.Response Response = 9;
 }
 
+message RegisterTransportSwitch {
+  string OldTransportID = 1;
+  string TransportID = 2;
+  string RemoteAddress = 3;
+  commonpb.Response Response = 9;
+}
+
 // Ping - Not ICMP, just sends a rount trip message to an implant to
 //        see if it's still responding.
 message Ping {

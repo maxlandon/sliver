@@ -23,13 +23,14 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
-	"github.com/gofrs/uuid"
 )
 
 // AddTransport - Add a new transport to an implant session
@@ -53,10 +54,13 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 	transport := &models.Transport{
 		ID:        tid,
 		SessionID: uuid.FromStringOrNil(session.UUID),
-		Priority:  int(req.Priority),
+		Priority:  int(req.Priority), // By default assign the requested priority
 		ProfileID: profile.ID,
 		Profile:   profile,
 	}
+
+	// Update the priority based on the currently loaded transports
+	transport.Priority = setTransportPriority(transport, session)
 
 	// The ID is also passed to the profile to be sent. Not overwritten in DB
 	// This will retrieve the transport (and the profile) upon registration
@@ -65,7 +69,7 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 
 	// Make the request and the response
 	sliverReq := &sliverpb.TransportAddReq{
-		Priority: req.Priority,
+		Priority: int32(transport.Priority), // Set the computed/adjusted priority
 		Switch:   req.Switch,
 		Profile:  profile.ToProtobuf(),
 		Request:  req.Request,
@@ -88,6 +92,34 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 	}
 
 	return &clientpb.AddTransport{Response: &commonpb.Response{}}, nil
+}
+
+// setTransportPriority - Reconciles the user-requested priority with the transports currently loaded by the session.
+func setTransportPriority(transport *models.Transport, session *core.Session) (order int) {
+
+	// Get the transports for the session.
+	transports, err := db.TransportsBySessionID(session.UUID)
+	if err != nil {
+		return 0
+	}
+
+	// If the prescribed order is higher than the number of transports, just make it len+1
+	if len(transports) > transport.Priority || transport.Priority == 0 {
+		return len(transports) + 1
+	}
+
+	// If the prescribed order is less, adapt all transports with new order
+	for _, t := range transports {
+		if t.Priority >= transport.Priority {
+			t.Priority = t.Priority + 1
+			err = db.Session().Save(t).Error
+			if err != nil {
+				rpcLog.Errorf("failed to update transport (%s) priority: %d", t.ID.String(), t.Priority)
+			}
+		}
+	}
+
+	return transport.Priority
 }
 
 // DeleteTransport - Delete a transport loaded and available from the implant session
@@ -127,7 +159,7 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTran
 
 	// Get the profile matching the requested transport ID
 	// Return if not found.
-	transport, err := db.TransportByID(req.ID)
+	transport, err := db.TransportByShortID(req.ID)
 	if err != nil || transport == nil {
 		// Try with long ID, just in case
 		transport, err = db.TransportByID(req.ID)
@@ -136,6 +168,17 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTran
 		}
 	}
 
+	// If transport is found, notify the system that this session
+	// is about to switch transports, so no need to delete the session
+	// altogether, just keep it so that we can update it when the new
+	// transport is established.
+	session := core.Sessions.Get(req.Request.SessionID)
+	err = core.RegisterTransportSwitch(session)
+	if err != nil {
+		return nil, err
+	}
+
+	// Forge the request to the implant
 	sliverReq := &sliverpb.TransportSwitchReq{
 		ID:      transport.ID.String(),
 		Request: req.Request,
@@ -145,9 +188,11 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTran
 	// Send the request to the implant
 	err = rpc.GenericHandler(sliverReq, sliverRes)
 	if err != nil {
+		// Add cancelConfirmSwitch()
 		return nil, fmt.Errorf("Session returned an error: %s", err)
 	}
 	if !sliverRes.Success {
+		// Add cancelConfirmSwitch()
 		return nil, errors.New("Session returned no success, but no error")
 	}
 

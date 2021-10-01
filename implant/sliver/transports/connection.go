@@ -20,14 +20,14 @@ package transports
 
 import (
 	// {{if .Config.Debug}}
-
 	"log"
-
 	// {{end}}
+
 	"bytes"
 	"encoding/binary"
 	"io"
 	insecureRand "math/rand"
+	"net"
 	"sync"
 	"time"
 
@@ -75,7 +75,7 @@ func (c *Connection) Cleanup() {
 	c.once.Do(func() {
 		// This might help components to notice its time
 		// to stop using us, a little ahead of time just in case.
-		c.Done <- true
+		// c.Done <- true
 
 		// Close the envelopes channels
 		// Don't always close Send, because some protocols
@@ -180,6 +180,9 @@ func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func()) (*Conn
 			if err == io.EOF {
 				break
 			}
+			if err == net.ErrClosed {
+				break
+			}
 			if err == nil {
 				recv <- envelope
 			}
@@ -232,7 +235,7 @@ func streamReadEnvelope(stream io.ReadWriteCloser) (*pb.Envelope, error) {
 		// {{if .Config.Debug}}
 		log.Printf("Socket error (read msg-length): %v\n", err)
 		// {{end}}
-		return nil, err
+		return nil, net.ErrClosed // TODO:change this with an analysis of the error
 	}
 	dataLength := int(binary.LittleEndian.Uint32(dataLengthBuf))
 

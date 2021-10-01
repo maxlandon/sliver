@@ -36,8 +36,9 @@ var (
 
 	// Sessions - Manages implant connections
 	Sessions = &sessions{
-		sessions: map[uint32]*Session{},
-		mutex:    &sync.RWMutex{},
+		sessions:  map[uint32]*Session{},
+		switching: map[uint32]*Session{},
+		mutex:     &sync.RWMutex{},
 	}
 	rollingSessionID = uint32(0)
 
@@ -51,29 +52,32 @@ var (
 
 // Session - Represents a connection to an implant
 type Session struct {
-	ID                uint32
-	Name              string
-	Hostname          string
-	Username          string
-	UUID              string
-	UID               string
-	GID               string
-	Os                string
-	Version           string
-	Arch              string
-	PID               int32
-	Filename          string
+	// Base
+	ID               uint32
+	Name             string
+	Hostname         string
+	Username         string
+	UUID             string
+	UID              string
+	GID              string
+	Os               string
+	Version          string
+	Arch             string
+	PID              int32
+	Filename         string
+	Burned           bool
+	Extensions       []string
+	ConfigID         string
+	WorkingDirectory string
+
+	// Transports
 	Connection        *ImplantConnection
+	TransportID       string
 	ActiveC2          string
 	RemoteAddress     string
 	ReconnectInterval int64
 	ProxyURL          string
 	PollTimeout       int64
-	Burned            bool
-	Extensions        []string
-	ConfigID          string
-	WorkingDirectory  string
-	TransportID       string
 }
 
 func (s *Session) LastCheckin() time.Time {
@@ -167,8 +171,9 @@ func (s *Session) UpdateWorkingDirectory(path string) {
 
 // sessions - Manages the slivers, provides atomic access
 type sessions struct {
-	mutex    *sync.RWMutex
-	sessions map[uint32]*Session
+	mutex     *sync.RWMutex
+	sessions  map[uint32]*Session
+	switching map[uint32]*Session
 }
 
 // All - Return a list of all sessions
@@ -201,8 +206,18 @@ func (s *sessions) Add(session *Session) *Session {
 	return session
 }
 
-// Remove - Remove a sliver from the hive (atomically)
+// Remove - Remove a sliver from the hive (atomically), or just update
+// it if the session was just updating its transport mechanism.
 func (s *sessions) Remove(sessionID uint32) {
+
+	// If session is marked switching its transport, just return
+	// without deregistering it. The server will soon receive a new
+	// connection and will update its transport status details.
+	if _, found := s.switching[sessionID]; found {
+		return
+	}
+
+	// Else remove the session
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	session := s.sessions[sessionID]

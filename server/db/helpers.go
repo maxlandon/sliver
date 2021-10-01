@@ -323,6 +323,24 @@ func TransportByID(ID string) (transport *models.Transport, err error) {
 	return
 }
 
+// TransportByShortID - Fetch a session transport by a short ID used by commands/completions
+func TransportByShortID(ID string) (transport *models.Transport, err error) {
+
+	transports := []*models.Transport{}
+	err = Session().Find(&transports).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, transport := range transports {
+		if GetShortID(transport.ID.String()) == ID {
+			return transport, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Could not find Transport with short ID %s", ID)
+}
+
 // TransportsBySessionID - Loads all the transports currently available to (loaded on) an implant.
 // These will be either those compiled in, or a partially/fully different set if they have been changed at runtime.
 func TransportsBySessionID(ID string) (transports []*models.Transport, err error) {

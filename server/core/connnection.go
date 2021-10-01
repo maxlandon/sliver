@@ -19,11 +19,13 @@ package core
 */
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/gofrs/uuid"
+
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 type ImplantConnection struct {
@@ -56,4 +58,45 @@ func NewImplantConnection(transport string, remoteAddress string) *ImplantConnec
 func generateImplantConnectionID() string {
 	id, _ := uuid.NewV4()
 	return id.String()
+}
+
+// RegisterTransportSwitch - A session wants to switch its current transport, mark it
+// accordingly so that the session is not deregistered upon connection closing.
+func RegisterTransportSwitch(sess *Session) (err error) {
+
+	// If the session is already marked switching (which should
+	// not happen), notify the caller it's not possible to do it now.
+	if _, found := Sessions.switching[sess.ID]; found {
+		return fmt.Errorf("Session %d (%s) is already currently switching its transport", sess.ID, sess.UUID)
+	}
+
+	// Else add it to the map.
+	Sessions.mutex.RLock()
+	defer Sessions.mutex.RUnlock()
+	Sessions.switching[sess.ID] = sess
+
+	return
+}
+
+// ConfirmTransportSwitched - Once the transport has been successfully changed, notify
+// the server that we're done with the process and that we can unmark the session.
+func ConfirmTransportSwitched(sess *Session) {
+	Sessions.mutex.Lock()
+	defer Sessions.mutex.Unlock()
+	session := Sessions.switching[sess.ID]
+	if session != nil {
+		delete(Sessions.switching, sess.ID)
+	}
+}
+
+// GetSessionSwitching - When sending the registration message following the transport
+// switch, the session has provided the ID of its old transport, which should be unique
+// among all sessions. Find it and return it for update.
+func GetSessionSwitching(oldTransportID string) (sess *Session) {
+	for _, s := range Sessions.switching {
+		if s.TransportID == oldTransportID {
+			return s
+		}
+	}
+	return
 }

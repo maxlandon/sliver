@@ -39,6 +39,9 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/gorilla/mux"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/configs"
@@ -49,9 +52,6 @@ import (
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/server/website"
 	"github.com/bishopfox/sliver/util/encoders"
-
-	"github.com/gorilla/mux"
-	"google.golang.org/protobuf/proto"
 )
 
 var (

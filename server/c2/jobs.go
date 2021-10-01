@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"sort"
@@ -40,6 +41,7 @@ import (
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
+	"github.com/gofrs/uuid"
 	"golang.zx2c4.com/wireguard/device"
 )
 
@@ -350,6 +352,57 @@ func StartHTTPStagerListenerJob(conf *HTTPServerConfig, data []byte) (*core.Job,
 	}()
 
 	return job, nil
+}
+
+// NewHandlerJob - An easy function allowing a C2 developper to directly add its handler
+// to the list of jobs. He can pass either a net.Listener or a net.Conn, which will be
+// closed when the job is killed. This also manages jobs running on sessions, even persistent ones.
+func NewHandlerJob(profile *models.C2Profile, conn io.Closer, session *core.Session) (job *core.Job) {
+
+	// Base elements applying for all jobs, no matter where they run
+	var host string
+	if profile.Port > 0 {
+		host = fmt.Sprintf("%s:%d%s", profile.Hostname, profile.Port, profile.Path)
+	} else {
+		host = fmt.Sprintf("%s%s", profile.Hostname, profile.Path)
+	}
+
+	id, _ := uuid.NewV4()
+	description := fmt.Sprintf(profile.Channel.String(), profile.Channel.Type, host, id)
+
+	// Base job with these info.
+	job = &core.Job{
+		ID:          id,
+		Name:        profile.Channel.String(),
+		Description: comm.SetHandlerCommString(host, session),
+		JobCtrl:     make(chan bool),
+		Profile:     profile.ToProtobuf(),
+	}
+
+	// If the job is running on a session, we assign the specifics
+	if session != nil {
+		job.SessionID = session.UUID
+		job.SessionName = session.Name
+		job.SessionUsername = session.Username
+	}
+
+	// The order is computed based on where the job is running.
+	job.Order = core.Jobs.NextSessionJobCount(session)
+
+	// Set the control channel for users to kill the job,
+	// and the various cleaning functions for listeners and conns.
+	go func(description string) {
+		<-job.JobCtrl
+		if conn != nil {
+			conn.Close()
+		}
+		core.Jobs.Remove(job)
+	}(description)
+
+	// Finally add the job so everyone notices it.
+	core.Jobs.Add(job)
+
+	return
 }
 
 // StartPersistentSessionJobs - Start jobs that were set for a given session (UUID+name)

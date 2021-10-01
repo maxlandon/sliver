@@ -158,6 +158,7 @@ func getSessionDescriptions(sessions []*sliverpb.C2Profile) (descriptions map[st
 		}
 		protocolDirPath := fmt.Sprintf("%-9s %s ", c2.C2, direction) + c2cmds.FullTargetPath(c2)
 
+		// Right hand side
 		name := fmt.Sprintf("%15s", "["+c2.Name+"] ")
 		connSettings := fmt.Sprintf("%-8s / %5s", time.Duration(c2.Interval), time.Duration(c2.PollTimeout))
 		sessionInfo := fmt.Sprintf("(S) %8s", connSettings)
@@ -188,6 +189,7 @@ func getBeaconDescriptions(beacons []*sliverpb.C2Profile) (descriptions map[stri
 		}
 		protocolDirPath := fmt.Sprintf("%-9s %s ", c2.C2, direction) + c2cmds.FullTargetPath(c2)
 
+		// Right hand side
 		name := fmt.Sprintf("%15s", "["+c2.Name+"] ")
 		connSettings := fmt.Sprintf("%-8s / %5s", time.Duration(c2.Interval), time.Duration(c2.Jitter))
 		sessionInfo := fmt.Sprintf("(B) %8s", connSettings)

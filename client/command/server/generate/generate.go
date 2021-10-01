@@ -34,6 +34,8 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/maxlandon/readline"
+
 	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
@@ -42,7 +44,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/maxlandon/readline"
 )
 
 var (
@@ -326,11 +327,16 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 			return fmt.Errorf("failed to fetch C2 profiles from server: %s", err)
 		}
 
-		// Each matching ID
-		for _, id := range g.TransportOptions.C2Profiles {
-			for _, prof := range profiles.Profiles {
-				if c2.GetShortID(prof.ID) == id {
-					cfg.C2S = append(cfg.C2S, prof)
+		// Each matching ID.
+		for _, raw := range g.TransportOptions.C2Profiles {
+			// Bug in split forces us to redo it here
+			var splitted = strings.Split(raw, ",")
+			for _, id := range splitted {
+				for _, prof := range profiles.Profiles {
+					if c2.GetShortID(prof.ID) == id {
+						fmt.Println(prof.ID)
+						cfg.C2S = append(cfg.C2S, prof)
+					}
 				}
 			}
 		}

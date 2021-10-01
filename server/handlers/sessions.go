@@ -123,7 +123,7 @@ func auditLogSession(session *core.Session, register *sliverpb.Register) {
 func SetSessionCommSubsystem(transportID string, session *core.Session) (err error) {
 
 	// Add protocol, network and route-adjusted address fields
-	uri, _ := url.Parse(session.ActiveC2)
+	uri, _ := url.Parse(session.ActiveC2)       // TODO: change this, might be wrong with pivot sessions
 	session.RemoteAddress = uri.Host + uri.Path // Set the non-resolved routed address first
 	session.RemoteAddress = comm.SetCommString(session)
 
@@ -227,5 +227,63 @@ func commTunnelDataHandler(conn *core.ImplantConnection, data []byte) *sliverpb.
 	} else {
 		sessionHandlerLog.Warnf("Data sent on nil tunnel %d", tunnelData.TunnelID)
 	}
+	return nil
+}
+
+// registerTransportSwitch - The implant has established a new connection to the server and sent
+// a registration notifying this new transport. Updates the session transport details.
+func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
+	if implantConn == nil {
+		return nil
+	}
+	register := &sliverpb.RegisterTransportSwitch{}
+	err := proto.Unmarshal(data, register)
+	if err != nil {
+		sessionHandlerLog.Errorf("Error decoding session registration message: %s", err)
+		return nil
+	}
+
+	// Instead of creating a new session around the implant connection,
+	// find the session matching the details sent in the request.
+	session := core.GetSessionSwitching(register.OldTransportID)
+	if session != nil {
+		return nil
+	}
+
+	// Get this new transport and implant build
+	build, err := db.ImplantBuildByName(session.Name)
+	transport, err := db.TransportByID(register.TransportID)
+	if transport == nil || err != nil {
+		sessionHandlerLog.Errorf("(Transport switch) Failed to find transport %s", register.TransportID)
+		return nil
+	}
+
+	// Update the transport status details for the session
+	session.TransportID = transport.ID.String()
+	transport.Running = true
+	transport.SessionID = gofrsUuid.FromStringOrNil(session.UUID)
+	err = db.Session().Save(&transport).Error
+	if err != nil {
+		sessionHandlerLog.Errorf("Failed to update Transport: %s", err)
+		return nil
+	}
+
+	// Update the session itself, and confirm we successfully switched the transport
+	core.Sessions.UpdateSession(session)
+	core.ConfirmTransportSwitched(session)
+
+	// If this transport specifically asks not to be Comm wired, or if the
+	// implant build forbids it anyway, just return, we have nothing to restart.
+	if transport.Profile.CommDisabled || !build.ImplantConfig.CommEnabled {
+		return nil
+	}
+
+	// Restart the Comms if required. TODO: restart active portforwarders/proxies
+	err = comm.InitSession(session)
+	if err != nil {
+		sessionHandlerLog.Errorf("Comm init failed: %v", err)
+		return nil
+	}
+
 	return nil
 }

@@ -173,7 +173,6 @@ func transportSwitchHandler(envelope *sliverpb.Envelope, connection Connection) 
 		log.Printf("Transport switch error: %s", err.Error())
 		// {{end}}
 	}
-
 }
 
 // Comm Handlers ----------------------------------------------------------------------------------------

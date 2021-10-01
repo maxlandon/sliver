@@ -18,6 +18,15 @@ package transports
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import (
+	"context"
+
+	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/log"
+	"github.com/bishopfox/sliver/client/transport"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
+)
+
 // Switch - Switch transports for the current session or context one
 type Switch struct {
 	Args struct {
@@ -27,5 +36,16 @@ type Switch struct {
 
 // Execute - Switch transports for the current session or context one
 func (s *Switch) Execute(args []string) (err error) {
+
+	_, err = transport.RPC.SwitchTransport(context.Background(), &clientpb.SwitchTransportReq{
+		ID:      s.Args.TransportID,
+		Request: core.ActiveTarget.Request(),
+	})
+	if err != nil {
+		return log.Errorf("Failed to switch transport: %s", err)
+	}
+	log.Infof("Switching session transport... (%s)", s.Args.TransportID)
+	log.Infof("The session should update itself soon.")
+
 	return
 }

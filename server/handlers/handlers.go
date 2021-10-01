@@ -45,6 +45,9 @@ var (
 
 		// Comm Subsystem
 		sliverpb.MsgCommTunnelData: commTunnelDataHandler,
+
+		// Transports
+		sliverpb.MsgRegisterTransportSwitch: registerTransportSwitchHandler,
 	}
 
 	tunnelHandlerMutex = &sync.Mutex{}

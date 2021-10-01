@@ -56,8 +56,8 @@ type StageOptions struct {
 		PollTimeout int      `long:"poll-timeout" short:"P" description:"attempt to poll every n second(s)" default:"360"`
 		MaxErrors   int      `long:"max-errors" short:"k" description:"max number of transport errors" default:"1000"`
 		DisableComm bool     `long:"no-comm" description:"disable the use of Sessions SSH multiplexing on this channel"`
-		C2Profiles  []string `long:"malleables" short:"C" description:"comma-separated list of Malleable C2 profiles to use"`
-		RuntimeC2s  []string `long:"runtime-c2s" description:"compile one, more or all of the available C2 stacks in the implant for runtime use"`
+		C2Profiles  []string `long:"malleables" short:"C" description:"comma-separated list of Malleable C2 profiles to use" env-delim:","`
+		RuntimeC2s  []string `long:"runtime-c2s" description:"compile one, more or all of the available C2 stacks in the implant for runtime use" env-delim:","`
 	} `group:"transport options"`
 
 	// SecurityOptions - All security-oriented options like restrictions.

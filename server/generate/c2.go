@@ -38,8 +38,11 @@ import (
 // C2ProfileFromConfig - Copy a C2 profile into a model, optionally validate somethings.
 func C2ProfileFromConfig(p *sliverpb.C2Profile, certificateHostname string) (*models.C2Profile, error) {
 
+	id, _ := uuid.NewV4()
+
 	profile := &models.C2Profile{
 		// Core
+		ID:        id,
 		Name:      p.Name,
 		Hostname:  p.Hostname,
 		Port:      p.Port,
@@ -62,7 +65,7 @@ func C2ProfileFromConfig(p *sliverpb.C2Profile, certificateHostname string) (*mo
 		CACertPEM:         p.Credentials.CACertPEM,
 		CertPEM:           p.Credentials.CertPEM,
 		KeyPEM:            p.Credentials.KeyPEM,
-		ServerFingerprint: p.Credentials.ServerFingerprint,
+		ServerFingerprint: p.Credentials.ServerFingerprint, // REMOVE
 	}
 
 	// If this profile has no ID and no name, this means it is a buffer profile

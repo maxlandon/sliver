@@ -25,12 +25,13 @@ import (
 	"net"
 	"strings"
 
+	"google.golang.org/protobuf/proto"
+
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	serverHandlers "github.com/bishopfox/sliver/server/handlers"
 	"github.com/bishopfox/sliver/server/log"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -81,6 +82,11 @@ func HandleSessionConnections(ln net.Listener) {
 	}
 }
 
+// handleSliverConnection - Unexported implementation of HandleSessionConnections, which wraps
+// a net.Conn (could be an io.ReadWriteCloser as well), into a Session connection object, which
+// will support the Sliver RPC communication model.
+// This function is also in charge of setting up various cleanup tasks, such
+// as session transports reset and deletion from DB upon connection closing.
 func handleSliverConnection(conn net.Conn) {
 	mtlsLog.Infof("Accepted incoming connection: %s", conn.RemoteAddr())
 	implantConn := core.NewImplantConnection(consts.MtlsStr, conn.RemoteAddr().String())

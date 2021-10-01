@@ -287,6 +287,8 @@ const (
 	MsgSwitchTransportReq
 	// MsgSwitchTransport - Response
 	MsgSwitchTransport
+	// MsgRegisterTransportSwitch - The implant just changed its transport and sends an update registration
+	MsgRegisterTransportSwitch
 
 	// MsgHandlerStartReq - Request to start a handler on an implant.
 	MsgHandlerStartReq
@@ -565,6 +567,8 @@ func MsgNumber(request proto.Message) uint32 {
 		return MsgSwitchTransportReq
 	case *TransportSwitch:
 		return MsgSwitchTransport
+	case *RegisterTransportSwitch:
+		return MsgRegisterTransportSwitch
 
 	case *commpb.HandlerStartReq:
 		return MsgHandlerStartReq
