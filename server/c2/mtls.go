@@ -21,6 +21,7 @@ package c2
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
 	"strings"
@@ -30,6 +31,8 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
+	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/db/models"
 	serverHandlers "github.com/bishopfox/sliver/server/handlers"
 	"github.com/bishopfox/sliver/server/log"
 )
@@ -95,9 +98,9 @@ func handleSliverConnection(conn net.Conn) {
 	// of transports that have been set at runtime and that are currently
 	// saved into the database.
 	defer func() {
-		mtlsLog.Debugf("mtls connection closing")
-		conn.Close()
-		implantConn.Cleanup()
+		mtlsLog.Debugf("mtls connection closing") // TODO: Remove
+		conn.Close()                              // Close the physical/logical connection
+		implantConn.Cleanup()                     // Close the RPC layer
 	}()
 
 	done := make(chan bool)
@@ -209,4 +212,45 @@ func streamReadEnvelope(connection io.ReadWriteCloser) (*sliverpb.Envelope, erro
 		return nil, err
 	}
 	return envelope, nil
+}
+
+// CleanupSessionTransports - Once a session has been killed (and not merely disconnected)
+// delete all the transports that have been set at runtime, so that they don't pile up at
+// each new session reconnection/restart.
+func CleanupSessionTransports(sess *core.Session) (err error) {
+
+	// Get the transports (runtime and build) for the session
+	transports, err := db.TransportsBySession(sess.UUID, sess.Name)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve session transports: %s", err)
+	}
+	build, err := db.ImplantBuildByName(sess.Name)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve session implant build: %s", err)
+	}
+
+	// Diff both lists of transports
+	var toDelete = []*models.Transport{}
+	for _, transport := range transports {
+		found := false
+		for _, buildTransport := range build.Transports {
+			if buildTransport.ID == transport.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			toDelete = append(toDelete, transport)
+		}
+	}
+
+	// And delete those that have been set at runtime
+	for _, transport := range toDelete {
+		err = db.Session().Delete(transport).Error
+		if err != nil {
+			mtlsLog.Errorf("Failed to delete transport from DB: %s", err)
+		}
+	}
+
+	return
 }

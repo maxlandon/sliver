@@ -130,7 +130,7 @@ func ImplantBuildSave(name string, config *models.ImplantConfig, fPath string) e
 
 	// Save all transports
 	for _, transport := range config.Transports {
-		fmt.Println(transport.Profile.ID.String())
+		transport.ImplantBuildID = implantBuild.ID
 		err = db.Session().Create(transport).Error
 		if err != nil {
 			storageLog.Errorf("Failed to save Transport to DB: %s", err)

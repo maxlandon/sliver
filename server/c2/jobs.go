@@ -54,6 +54,11 @@ func init() {
 	// in this package to the core package, so that the handlers package
 	// can start persistent jobs upon a session registration process.
 	core.StartPersistentSessionJobs = StartPersistentSessionJobs
+
+	// For the same reason of avoiding circular imports, we assign
+	// a function that automatically cleans up the transports set at
+	// runtime for a session. Called when the session is killed or dies (only).
+	core.CleanupSessionTransports = CleanupSessionTransports
 }
 
 // StartMTLSListenerJob - Start an mTLS listener as a job

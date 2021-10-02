@@ -24,7 +24,6 @@ import (
 	// {{end}}
 
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -161,17 +160,7 @@ func (t *c2s) Get(ID string) (c2 *C2) {
 // Switch - Dynamically switch the active transport, if multiple are available.
 func (t *c2s) Switch(ID string) (err error) {
 
-	var next *C2
-	var found = false
-	for _, transport := range t.Available {
-		if transport.ID == ID {
-			next = transport
-			found = true
-		}
-	}
-	if !found {
-		return fmt.Errorf("No transport available for ID %d", ID)
-	}
+	var next = Transports.Get(ID)
 
 	// {{if .Config.CommEnabled}}
 

@@ -128,7 +128,6 @@ func SetSessionCommSubsystem(transportID string, session *core.Session) (err err
 	session.RemoteAddress = comm.SetCommString(session)
 
 	// Get the current transport used by the Session
-	build, err := db.ImplantBuildByName(session.Name)
 	transport, err := db.TransportByID(transportID)
 	if transport == nil {
 		return fmt.Errorf("Could not find transport with ID %s", transportID)
@@ -145,6 +144,10 @@ func SetSessionCommSubsystem(transportID string, session *core.Session) (err err
 
 	// If this transport specifically asks not to be Comm wired, or if the
 	// implant build forbids it anyway, just return, we have nothing to set up.
+	build, err := db.ImplantBuildByName(session.Name)
+	if build == nil || err != nil {
+		return fmt.Errorf("Could not find implant build: %s", err)
+	}
 	if transport.Profile.CommDisabled || !build.ImplantConfig.CommEnabled {
 		return
 	}
@@ -246,7 +249,8 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 	// Instead of creating a new session around the implant connection,
 	// find the session matching the details sent in the request.
 	session := core.GetSessionSwitching(register.OldTransportID)
-	if session != nil {
+	if session == nil {
+		sessionHandlerLog.Errorf("(Transport switch) Failed to find session for transport %s", register.OldTransportID)
 		return nil
 	}
 
@@ -258,7 +262,7 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 		return nil
 	}
 
-	// Update the transport status details for the session
+	// Update the transport and connection details for the session
 	session.TransportID = transport.ID.String()
 	transport.Running = true
 	transport.SessionID = gofrsUuid.FromStringOrNil(session.UUID)
@@ -268,7 +272,20 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 		return nil
 	}
 
+	// Update the old transport
+	oldTransport, err := db.TransportByID(register.OldTransportID)
+	if err != nil {
+		sessionHandlerLog.Errorf("(Transport switch) Failed to find old transport %s", register.OldTransportID)
+	}
+	oldTransport.Running = false
+	err = db.Session().Save(&oldTransport).Error
+	if err != nil {
+		sessionHandlerLog.Errorf("Failed to update Transport status: %s", err)
+		return nil
+	}
+
 	// Update the session itself, and confirm we successfully switched the transport
+	session.Connection = implantConn // If we don't update this, will deadlock on next request
 	core.Sessions.UpdateSession(session)
 	core.ConfirmTransportSwitched(session)
 

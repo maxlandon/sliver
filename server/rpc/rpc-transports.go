@@ -22,12 +22,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/gofrs/uuid"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
@@ -47,6 +49,22 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 		if err != nil || profile == nil {
 			return nil, err
 		}
+	}
+
+	// Check if this transport is compatible with compiled C2 stacks on the implant
+	isEnabled, err := isSessionTransportEnabled(session, profile)
+	if err != nil {
+		return nil, err
+	}
+	if !isEnabled {
+		return nil, fmt.Errorf("Requested protocol (%s) is not compiled into the session implant build",
+			profile.Channel.String())
+	}
+
+	// Setup the Transport Profile security details
+	err = c2.SetupProfileSecurity(profile, profile.Hostname)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to initialize transport security details: %s", err)
 	}
 
 	// Make a transport object to be stored in the database
@@ -94,18 +112,43 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 	return &clientpb.AddTransport{Response: &commonpb.Response{}}, nil
 }
 
+// isSessionTransportEnabled - Check that the requested C2 protocol is compiled in the targeted implant session.
+func isSessionTransportEnabled(sess *core.Session, profile *models.C2Profile) (enabled bool, err error) {
+
+	build, err := db.ImplantBuildByName(sess.Name)
+	if err != nil {
+		return false, fmt.Errorf("Failed to retrieve session implant build: %s", err)
+	}
+	config, err := db.ImplantConfigByID(build.ImplantConfig.ID.String())
+	if err != nil {
+		return false, fmt.Errorf("Failed to retrieve implant config for build: %s", err)
+	}
+
+	if config.RuntimeC2s == "all" {
+		return true, nil
+	}
+	var compiledC2s = strings.Split(config.RuntimeC2s, ",")
+	for _, c2 := range compiledC2s {
+		if c2 == strings.ToLower(profile.Channel.String()) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // setTransportPriority - Reconciles the user-requested priority with the transports currently loaded by the session.
 func setTransportPriority(transport *models.Transport, session *core.Session) (order int) {
 
 	// Get the transports for the session.
-	transports, err := db.TransportsBySessionID(session.UUID)
+	transports, err := db.TransportsBySession(session.UUID, session.Name)
 	if err != nil {
 		return 0
 	}
 
 	// If the prescribed order is higher than the number of transports, just make it len+1
 	if len(transports) > transport.Priority || transport.Priority == 0 {
-		return len(transports) + 1
+		return len(transports)
 	}
 
 	// If the prescribed order is less, adapt all transports with new order
@@ -149,6 +192,12 @@ func (rpc *Server) DeleteTransport(ctx context.Context, req *clientpb.DeleteTran
 	}
 	if !sliverRes.Success {
 		return nil, errors.New("Session returned no success, but no error")
+	}
+
+	// Delete the transport from the database
+	err = db.Session().Delete(transport).Error
+	if err != nil {
+		return nil, fmt.Errorf("Implant deleted the transport, but failed to delete from DB: %s", err)
 	}
 
 	return &clientpb.DeleteTransport{Response: &commonpb.Response{}}, nil
@@ -203,7 +252,7 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTran
 func (rpc *Server) GetTransports(ctx context.Context, req *clientpb.GetTransportsReq) (res *clientpb.GetTransports, err error) {
 	session := core.Sessions.Get(req.Request.SessionID)
 
-	transports, err := db.TransportsBySessionID(session.UUID)
+	transports, err := db.TransportsBySession(session.UUID, session.Name)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get transports: %s", err)
 	}

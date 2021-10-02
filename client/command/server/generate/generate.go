@@ -334,7 +334,6 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 			for _, id := range splitted {
 				for _, prof := range profiles.Profiles {
 					if c2.GetShortID(prof.ID) == id {
-						fmt.Println(prof.ID)
 						cfg.C2S = append(cfg.C2S, prof)
 					}
 				}

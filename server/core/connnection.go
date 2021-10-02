@@ -28,6 +28,17 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
+var (
+	// CleanupSessionTransports - When a session is killed or dies,
+	// we automatically clean up (delete from DB) the transports that
+	// have been set at runtime. This function is passed from the C2
+	// package when the server is started.
+	CleanupSessionTransports func(session *Session) error
+)
+
+// ImplantConnection - Implementation of a logical connection system around
+// a C2 channel (whether net.Conn based or not). This object is neither a
+// pure net.Conn implementation neither an idiomatic RPC system, but halfway both.
 type ImplantConnection struct {
 	ID            string
 	Send          chan *sliverpb.Envelope
@@ -39,10 +50,12 @@ type ImplantConnection struct {
 	Cleanup       func()
 }
 
+// UpdateLastMessage - Update the time at which the session sent its last message.
 func (c *ImplantConnection) UpdateLastMessage() {
 	c.LastMessage = time.Now()
 }
 
+// NewImplantConnection - A physical connection needs to be wrapped into a Session connection.
 func NewImplantConnection(transport string, remoteAddress string) *ImplantConnection {
 	return &ImplantConnection{
 		ID:            generateImplantConnectionID(),

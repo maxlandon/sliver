@@ -98,8 +98,8 @@ func TransportsIDs() (comps []*readline.CompletionGroup) {
 			pad := getPromptPad(sWidth-20, len(protocolDirPath), len(rightHand))
 			description := readline.DIM + protocolDirPath + pad + rightHand + readline.RESET
 
-			completion.Suggestions = append(completion.Suggestions, c2cmds.GetShortID(c2.ID))
-			completion.Descriptions[c2cmds.GetShortID(c2.ID)] = description
+			completion.Suggestions = append(completion.Suggestions, c2cmds.GetShortID(t.ID))
+			completion.Descriptions[c2cmds.GetShortID(t.ID)] = description
 		}
 	}
 

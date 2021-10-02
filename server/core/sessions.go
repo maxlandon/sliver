@@ -217,11 +217,18 @@ func (s *sessions) Remove(sessionID uint32) {
 		return
 	}
 
-	// Else remove the session
+	// Else remove the session:
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	session := s.sessions[sessionID]
 	if session != nil {
+		// Delete the transports set at runtime
+		err := CleanupSessionTransports(session)
+		if err != nil {
+			sessionsLog.Errorf("Failed to cleanup session transports: %s", err)
+		}
+
+		// And notify the clients
 		delete(s.sessions, sessionID)
 		EventBroker.Publish(Event{
 			EventType: consts.SessionClosedEvent,
@@ -230,6 +237,7 @@ func (s *sessions) Remove(sessionID uint32) {
 	}
 }
 
+// NewSession - Create a session on top on a logical implant connection.
 func NewSession(implantConn *ImplantConnection) *Session {
 	implantConn.UpdateLastMessage()
 	return &Session{
@@ -238,6 +246,7 @@ func NewSession(implantConn *ImplantConnection) *Session {
 	}
 }
 
+// SessionFromImplantConnection - Find the logical implant connection used by a session.
 func SessionFromImplantConnection(conn *ImplantConnection) *Session {
 	Sessions.mutex.RLock()
 	defer Sessions.mutex.RUnlock()

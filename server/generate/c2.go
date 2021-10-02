@@ -166,6 +166,7 @@ func setRuntimeTransports(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantC
 
 	// Determine which C2 stacks must be compiled, including those to be only available at runtime.
 	var compiledC2s []string
+	var runtimeC2s []string
 	// Either include them all
 	if cfg.RuntimeC2s == "all" {
 		cfg.MTLSc2Enabled = true
@@ -182,19 +183,30 @@ func setRuntimeTransports(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantC
 	}
 
 	mtls := append([]string{sliverpb.C2Channel_MTLS.String()}, compiledC2s...)
-	cfg.MTLSc2Enabled = c2Enabled(mtls, cfg.Transports)
+	if cfg.MTLSc2Enabled = c2Enabled(mtls, cfg.Transports); cfg.MTLSc2Enabled {
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_MTLS.String()))
+	}
 
 	wg := append([]string{sliverpb.C2Channel_WG.String()}, compiledC2s...)
-	cfg.WGc2Enabled = c2Enabled(wg, cfg.Transports)
+	if cfg.WGc2Enabled = c2Enabled(wg, cfg.Transports); cfg.WGc2Enabled {
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_WG.String()))
+	}
 
 	http := append([]string{sliverpb.C2Channel_HTTP.String(), sliverpb.C2Channel_HTTPS.String()}, compiledC2s...)
-	cfg.HTTPc2Enabled = c2Enabled(http, cfg.Transports)
+	if cfg.HTTPc2Enabled = c2Enabled(http, cfg.Transports); cfg.HTTPc2Enabled {
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_HTTP.String()))
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_HTTPS.String()))
+	}
 
 	dns := append([]string{sliverpb.C2Channel_DNS.String()}, compiledC2s...)
-	cfg.DNSc2Enabled = c2Enabled(dns, cfg.Transports)
+	if cfg.DNSc2Enabled = c2Enabled(dns, cfg.Transports); cfg.DNSc2Enabled {
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_DNS.String()))
+	}
 
 	namedpipe := append([]string{sliverpb.C2Channel_NamedPipe.String()}, compiledC2s...)
-	cfg.NamePipec2Enabled = c2Enabled(namedpipe, cfg.Transports)
+	if cfg.NamePipec2Enabled = c2Enabled(namedpipe, cfg.Transports); cfg.NamePipec2Enabled {
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_NamedPipe.String()))
+	}
 
 	// cfg.TCPPivotc2Enabled = isC2EnabledTest([]string{sliverpb.C2Channel_T}, cfg.C2)
 	cfg.TCPPivotc2Enabled = true
@@ -203,6 +215,9 @@ func setRuntimeTransports(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantC
 	cfg.CommEnabled = isCommEnabled(pbConfig, cfg.Transports)
 
 	cfg.IsBeacon = isBeaconEnabled(pbConfig, cfg.Transports)
+
+	// Save the list of compiled C2 stacks in the config
+	cfg.RuntimeC2s = strings.Join(runtimeC2s, ",")
 }
 
 func c2Enabled(schemes []string, transports []*models.Transport) bool {
