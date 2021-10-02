@@ -152,6 +152,7 @@ func (t *activeTarget) Request() (req *commonpb.Request) {
 		req.Async = false
 		id, _ := strconv.Atoi(t.ID())
 		req.SessionID = uint32(id)
+		req.SessionUUID = t.UUID()
 	}
 	if t.IsBeacon() {
 		req.Async = true

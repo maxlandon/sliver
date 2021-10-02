@@ -62,7 +62,7 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 	}
 	beacon.Name = beaconReg.Register.Name
 	beacon.Hostname = beaconReg.Register.Hostname
-	beacon.UUID = uuid.FromStringOrNil(beaconReg.Register.Uuid)
+	beacon.UUID = uuid.FromStringOrNil(beaconReg.Register.HostUUID)
 	beacon.Username = beaconReg.Register.Username
 	beacon.UID = beaconReg.Register.Uid
 	beacon.GID = beaconReg.Register.Gid

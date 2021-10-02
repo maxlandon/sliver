@@ -87,7 +87,7 @@ func getSessionHistory(sess *pb.Session) (lines []string, length int32, err erro
 
 	// The same history is shared by all sessions who have the same target user,
 	// and the same UUID. (mostly machine identifiers, except for Windows where there's more)
-	histFile := fmt.Sprintf("%s_%s.history", sess.Username, sess.UUID)
+	histFile := fmt.Sprintf("%s_%s.history", sess.Username, sess.HostUUID)
 
 	// Make the whole
 	filename := filepath.Join(sliverPath, histFile)
@@ -217,7 +217,7 @@ func writeSessionHistory(sess *pb.Session, line string) (err error) {
 
 	// The same history is shared by all sessions who have the same target user,
 	// and the same UUID. (mostly machine identifiers, except for Windows where there's more)
-	histFile := fmt.Sprintf("%s_%s.history", sess.Username, sess.UUID)
+	histFile := fmt.Sprintf("%s_%s.history", sess.Username, sess.HostUUID)
 
 	// Make the whole
 	filename := filepath.Join(sliverPath, histFile)

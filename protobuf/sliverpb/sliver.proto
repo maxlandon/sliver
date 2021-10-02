@@ -41,7 +41,7 @@ message BeaconTasks {
 message Register {
   string Name = 1;
   string Hostname = 2;
-  string Uuid = 3;
+  string HostUUID = 3;
   string Username = 4;
   string Uid = 5;
   string Gid = 6;
@@ -58,6 +58,7 @@ message Register {
   string WorkingDirectory = 17;
         
   string TransportID = 18;
+  string UUID = 19;
 }
 
 message BeaconRegister {

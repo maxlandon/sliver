@@ -38,7 +38,8 @@ import (
 // AddTransport - Add a new transport to an implant session
 func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportReq) (res *clientpb.AddTransport, err error) {
 
-	session := core.Sessions.Get(req.Request.SessionID)
+	session := core.Sessions.GetByUUID(req.Request.SessionUUID)
+	// session := core.Sessions.Get(req.Request.SessionID)
 
 	// Get the profile matching the requested profile ID
 	// Return if not found.
@@ -221,7 +222,8 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTran
 	// is about to switch transports, so no need to delete the session
 	// altogether, just keep it so that we can update it when the new
 	// transport is established.
-	session := core.Sessions.Get(req.Request.SessionID)
+	session := core.Sessions.GetByUUID(req.Request.SessionUUID)
+	// session := core.Sessions.Get(req.Request.SessionID)
 	err = core.RegisterTransportSwitch(session)
 	if err != nil {
 		return nil, err
@@ -250,7 +252,9 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTran
 
 // GetTransports - Get all transports loaded and available to a session.
 func (rpc *Server) GetTransports(ctx context.Context, req *clientpb.GetTransportsReq) (res *clientpb.GetTransports, err error) {
-	session := core.Sessions.Get(req.Request.SessionID)
+
+	session := core.Sessions.GetByUUID(req.Request.SessionUUID)
+	// session := core.Sessions.Get(req.Request.SessionID)
 
 	transports, err := db.TransportsBySession(session.UUID, session.Name)
 	if err != nil {

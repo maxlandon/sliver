@@ -54,10 +54,11 @@ var (
 type Session struct {
 	// Base
 	ID               uint32
+	UUID             string
 	Name             string
 	Hostname         string
 	Username         string
-	UUID             string
+	HostUUID         string
 	UID              string
 	GID              string
 	Os               string
@@ -107,10 +108,11 @@ func (s *Session) IsDead() bool {
 func (s *Session) ToProtobuf() *clientpb.Session {
 	return &clientpb.Session{
 		ID:                uint32(s.ID),
+		UUID:              s.UUID,
 		Name:              s.Name,
 		Hostname:          s.Hostname,
 		Username:          s.Username,
-		UUID:              s.UUID,
+		HostUUID:          s.HostUUID,
 		UID:               s.UID,
 		GID:               s.GID,
 		OS:                s.Os,
@@ -192,6 +194,18 @@ func (s *sessions) Get(sessionID uint32) *Session {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.sessions[sessionID]
+}
+
+// Get - Get a session by UUID
+func (s *sessions) GetByUUID(sessionUUID string) *Session {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	for _, sess := range s.sessions {
+		if sess.UUID == sessionUUID {
+			return sess
+		}
+	}
+	return nil
 }
 
 // Add - Add a sliver to the hive (atomically)

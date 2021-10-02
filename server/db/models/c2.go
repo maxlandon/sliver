@@ -33,8 +33,8 @@ import (
 type Transport struct {
 	ID             uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	CreatedAt      time.Time `gorm:"->;<-:create;"`
-	SessionID      uuid.UUID
-	ImplantBuildID uuid.UUID
+	ImplantBuildID uuid.UUID // Compile-time transports
+	SessionID      uuid.UUID // Runtime transports
 
 	Priority  int
 	Running   bool
@@ -42,6 +42,7 @@ type Transport struct {
 	Profile   *C2Profile
 }
 
+// ToProtobuf - The transport needs to be sent to a client console
 func (t *Transport) ToProtobuf() *clientpb.Transport {
 	transport := &clientpb.Transport{
 		ID:      t.ID.String(),

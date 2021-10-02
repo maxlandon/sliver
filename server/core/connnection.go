@@ -80,7 +80,7 @@ func RegisterTransportSwitch(sess *Session) (err error) {
 	// If the session is already marked switching (which should
 	// not happen), notify the caller it's not possible to do it now.
 	if _, found := Sessions.switching[sess.ID]; found {
-		return fmt.Errorf("Session %d (%s) is already currently switching its transport", sess.ID, sess.UUID)
+		return fmt.Errorf("Session %d (%s) is already currently switching its transport", sess.ID, sess.HostUUID)
 	}
 
 	// Else add it to the map.

@@ -51,9 +51,9 @@ func StartEventAutomation() {
 // Triggered on new session events, checks to see if the host is in
 // the database and adds it if not.
 func hostsSessionCallback(session *Session) {
-	coreLog.Debugf("Hosts session callback for %v", session.UUID)
+	coreLog.Debugf("Hosts session callback for %v", session.HostUUID)
 	dbSession := db.Session()
-	host, err := db.HostByHostUUID(session.UUID)
+	host, err := db.HostByHostUUID(session.HostUUID)
 	coreLog.Debugf("Hosts query result: %v %v", host, err)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		coreLog.Error(err)
@@ -62,7 +62,7 @@ func hostsSessionCallback(session *Session) {
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		coreLog.Infof("Session %v is from a new host", session.ID)
 		err := dbSession.Create(&models.Host{
-			HostUUID:      uuid.FromStringOrNil(session.UUID),
+			HostUUID:      uuid.FromStringOrNil(session.HostUUID),
 			Hostname:      session.Hostname,
 			OSVersion:     session.Os,
 			IOCs:          []models.IOC{},

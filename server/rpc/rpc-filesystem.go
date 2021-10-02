@@ -129,9 +129,9 @@ func trackIOC(req *sliverpb.UploadReq, resp *sliverpb.Upload) {
 		fsLog.Error("No session for upload request")
 		return
 	}
-	host, err := db.HostByHostUUID(session.UUID)
+	host, err := db.HostByHostUUID(session.HostUUID)
 	if err != nil {
-		fsLog.Errorf("No host for session uuid %v", session.UUID)
+		fsLog.Errorf("No host for session uuid %v", session.HostUUID)
 		return
 	}
 

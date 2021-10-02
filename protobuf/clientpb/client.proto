@@ -119,7 +119,7 @@ message Session {
   uint32 ID = 1;
   string Name = 2;
   string Hostname = 3;
-  string UUID = 4;
+  string HostUUID = 4;
   string Username = 5;
   string UID = 6;
   string GID = 7;
@@ -142,6 +142,7 @@ message Session {
   // string ConfigID = 24;
   string WorkingDirectory = 25;
   string TransportID = 26;
+  string UUID = 27; // generated at runtime by the session
 }
 
 message Beacon {

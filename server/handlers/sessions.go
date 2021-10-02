@@ -58,13 +58,14 @@ func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *s
 	session := core.NewSession(implantConn)
 
 	// Parse Register UUID
-	sessionUUID, err := uuid.Parse(register.Uuid)
+	hostUUID, err := uuid.Parse(register.HostUUID)
 	if err != nil {
-		sessionUUID = uuid.New() // Generate Random UUID
+		hostUUID = uuid.New() // Generate Random UUID
 	}
+	session.UUID = register.UUID
 	session.Name = register.Name
 	session.Hostname = register.Hostname
-	session.UUID = sessionUUID.String()
+	session.HostUUID = hostUUID.String()
 	session.Username = register.Username
 	session.UID = register.Uid
 	session.GID = register.Gid

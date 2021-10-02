@@ -112,7 +112,7 @@ func savePersistentJob(profile *models.C2Profile, job *core.Job, session *core.S
 	// If session, save the job in the DB, to be spawned the next time the session registers.
 	jobSave := &models.Job{
 		ID:              job.ID,
-		HostID:          uuid.FromStringOrNil(session.UUID),
+		HostID:          uuid.FromStringOrNil(session.HostUUID),
 		SessionName:     session.Name,
 		SessionUsername: session.Username,
 		Name:            job.Name,

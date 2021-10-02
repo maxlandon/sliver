@@ -93,7 +93,7 @@ func SessionsForHost(hostUUID string) []*clientpb.Session {
 	}
 	hostSessions := []*clientpb.Session{}
 	for _, session := range sessions.Sessions {
-		if session.UUID == hostUUID {
+		if session.HostUUID == hostUUID {
 			hostSessions = append(hostSessions, session)
 		}
 	}

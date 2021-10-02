@@ -386,7 +386,7 @@ func NewHandlerJob(profile *models.C2Profile, conn io.Closer, session *core.Sess
 
 	// If the job is running on a session, we assign the specifics
 	if session != nil {
-		job.SessionID = session.UUID
+		job.SessionID = session.HostUUID
 		job.SessionName = session.Name
 		job.SessionUsername = session.Username
 	}
@@ -415,7 +415,7 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 
 	// Get the jobs only for the very session we want, because
 	// several builds might run on the same host.
-	jobs, err := db.JobsBySession(session.Name, session.Username, session.UUID)
+	jobs, err := db.JobsBySession(session.Name, session.Username, session.HostUUID)
 	if err != nil {
 		return err
 	}

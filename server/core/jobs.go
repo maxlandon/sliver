@@ -145,9 +145,9 @@ func (j *jobs) NextSessionJobCount(session *Session) int {
 	// Else, create/increase the counter for the corresponding session.
 	var sessCount int
 	var found bool
-	if sessCount, found = j.sessionCounters[session.UUID+session.Name+session.Username]; found {
-		j.sessionCounters[session.UUID+session.Name+session.Username] = 0
-		sessCount = j.sessionCounters[session.UUID+session.Name+session.Username]
+	if sessCount, found = j.sessionCounters[session.HostUUID+session.Name+session.Username]; found {
+		j.sessionCounters[session.HostUUID+session.Name+session.Username] = 0
+		sessCount = j.sessionCounters[session.HostUUID+session.Name+session.Username]
 	}
 
 	sessCount = sessCount + 1
