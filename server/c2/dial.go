@@ -19,48 +19,44 @@ package c2
 */
 
 import (
-	"crypto/tls"
-	"errors"
-	"fmt"
+	"net"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/core"
-	"github.com/bishopfox/sliver/server/cryptography"
 	"github.com/bishopfox/sliver/server/db/models"
 )
 
 // Dial - Root function where all dialers for all C2 channels are called.
 // Please add a branch case for your C2 profile, where you should normally
 // just have to imitate the above lines.
-func Dial(profile *models.C2Profile, net comm.Net, session *core.Session) (err error) {
+func Dial(profile *models.C2Profile, network comm.Net, session *core.Session) (err error) {
+
+	// conn - If your C2 channel yields a net.Conn compliant connection, use this
+	// conn so that the server can transparently handle session handling, RPC setup
+	// around it and various other synchronization stuff that are useful to the client
+	// console having requested a dial.
+	var conn net.Conn
 
 	switch profile.Channel {
+
 	case sliverpb.C2Channel_MTLS:
-
-		// Fetch a TLS configuration from the values in the profile
-		tlsConfig := cryptography.TLSConfigFromProfile(profile)
-
-		hostport := fmt.Sprintf("%s:%d", profile.Hostname, profile.Port)
-		conn, err := net.Dial("tcp", hostport)
+		// Dial and yield a MutualTLS authenticated/encrypted connection,
+		// either pivoted through an implant comm or on the server interfaces.
+		conn, err = DialMutualTLS(profile, network)
 		if err != nil {
-			return err
+			return
 		}
-
-		// Upgrade to TLS, with certs loaded for mutual authentication
-		tlsConn := tls.Client(conn, tlsConfig)
-		if tlsConn == nil {
-			return errors.New("Failed to wrap TCP connection into Mutual TLS")
-		}
-
-		// Start reading the connection for C2 messages
-		go handleSliverConnection(tlsConn)
 
 	case sliverpb.C2Channel_HTTPS:
 
 	case sliverpb.C2Channel_DNS:
-	case sliverpb.C2Channel_WG:
 	}
+
+	// Automatically and transparently serve the connection, if the latter has been used.
+	// This function will return if this connection is not used (thus nil), without hampering
+	// on the session setup,registration and usage process.
+	go handleSliverConnection(conn)
 
 	return
 }

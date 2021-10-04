@@ -19,7 +19,9 @@ package core
 */
 
 import (
+	"fmt"
 	"sync"
+	"time"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -45,23 +47,51 @@ var (
 
 // Job - Background jobs on the server and sessions.
 type Job struct {
+	// Base
 	ID              uuid.UUID
 	SessionID       string
 	SessionName     string
 	SessionUsername string
+	Name            string
+	Description     string
+	Order           int
 
-	Name        string
-	Description string
-	Order       int
-	JobCtrl     chan bool
+	// Job concurrency tools
+	JobCtrl chan bool
+	Ticker  *time.Ticker
 
-	// C2 Profile: holds all the information
-	// that would be necessary to restart the
-	// job, including certificates, keys and
-	// any other options.
-	Profile *sliverpb.C2Profile
+	// C2
+	Profile  *sliverpb.C2Profile // All handler details
+	cleanups []func() error      // All cleanup functions that have been registered with this job
 }
 
+// RegisterCleanup - Add a cleanup function to this job. This function will be called
+// (in the INVERSE order in which it was registered) when the job receives the kill signal.
+func (j *Job) RegisterCleanup(cleanup func() error) {
+	j.cleanups = append(j.cleanups, cleanup)
+}
+
+// HandleCleanup - Waits for the job Ctrl to be closed, and performs all base
+// and user-specified cleanup tasks and logs any errors arising from them.
+func (j *Job) HandleCleanup() {
+	<-j.JobCtrl
+	j.Ticker.Stop()
+
+	// Successively perform all registered cleanup tasks IN REVERSE ORDER:
+	// The logic is: we must close the layers in the inverse order they have setup
+	for i := len(j.cleanups) - 1; i >= 0; i-- {
+		cleanup := j.cleanups[i]
+		err := cleanup()
+		if err != nil {
+			// TODO: Log error here
+		}
+	}
+
+	// Unregister the job and notify clients
+	Jobs.Remove(j)
+}
+
+// ToProtobuf - The job info to be passed to a client
 func (j *Job) ToProtobuf() *clientpb.Job {
 	return &clientpb.Job{
 		ID:              j.ID.String(),
@@ -111,9 +141,30 @@ func (j *jobs) Remove(job *Job) {
 	j.mutex.Lock()
 	defer j.mutex.Unlock()
 	delete(j.active, job.ID.String())
+
+	var description string
+
+	// If job is a C2 handler, populate event description
+	if job.Profile != nil {
+		var host string
+		if job.Profile.Port > 0 {
+			host = fmt.Sprintf("%s:%d%s", job.Profile.Hostname, job.Profile.Port, job.Profile.Path)
+		} else {
+			host = fmt.Sprintf("%s%s", job.Profile.Hostname, job.Profile.Path)
+		}
+		description = fmt.Sprintf(job.Profile.C2.String(), job.Profile.C2.Type, host, GetShortID(job.ID.String()))
+	}
+
+	// Else, simply use the job description as set when declared by the system
+	if job.Profile == nil {
+		description = job.Description
+	}
+
+	// Publish the job stopped event
 	EventBroker.Publish(Event{
 		Job:       job,
 		EventType: consts.JobStoppedEvent,
+		Data:      []byte(description),
 	})
 }
 
