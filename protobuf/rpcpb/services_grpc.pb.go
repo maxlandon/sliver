@@ -63,8 +63,8 @@ type SliverRPCClient interface {
 	SwitchTransport(ctx context.Context, in *clientpb.SwitchTransportReq, opts ...grpc.CallOption) (*clientpb.SwitchTransport, error)
 	GetTransports(ctx context.Context, in *clientpb.GetTransportsReq, opts ...grpc.CallOption) (*clientpb.GetTransports, error)
 	// *** Listeners ***
-	StartMTLSListener(ctx context.Context, in *clientpb.MTLSListenerReq, opts ...grpc.CallOption) (*clientpb.MTLSListener, error)
-	StartWGListener(ctx context.Context, in *clientpb.WGListenerReq, opts ...grpc.CallOption) (*clientpb.WGListener, error)
+	// rpc StartMTLSListener(clientpb.MTLSListenerReq) returns (clientpb.MTLSListener);
+	// rpc StartWGListener(clientpb.WGListenerReq) returns (clientpb.WGListener);
 	StartDNSListener(ctx context.Context, in *clientpb.DNSListenerReq, opts ...grpc.CallOption) (*clientpb.DNSListener, error)
 	StartHTTPSListener(ctx context.Context, in *clientpb.HTTPListenerReq, opts ...grpc.CallOption) (*clientpb.HTTPListener, error)
 	StartHTTPListener(ctx context.Context, in *clientpb.HTTPListenerReq, opts ...grpc.CallOption) (*clientpb.HTTPListener, error)
@@ -438,24 +438,6 @@ func (c *sliverRPCClient) SwitchTransport(ctx context.Context, in *clientpb.Swit
 func (c *sliverRPCClient) GetTransports(ctx context.Context, in *clientpb.GetTransportsReq, opts ...grpc.CallOption) (*clientpb.GetTransports, error) {
 	out := new(clientpb.GetTransports)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetTransports", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sliverRPCClient) StartMTLSListener(ctx context.Context, in *clientpb.MTLSListenerReq, opts ...grpc.CallOption) (*clientpb.MTLSListener, error) {
-	out := new(clientpb.MTLSListener)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartMTLSListener", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sliverRPCClient) StartWGListener(ctx context.Context, in *clientpb.WGListenerReq, opts ...grpc.CallOption) (*clientpb.WGListener, error) {
-	out := new(clientpb.WGListener)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartWGListener", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1417,8 +1399,8 @@ type SliverRPCServer interface {
 	SwitchTransport(context.Context, *clientpb.SwitchTransportReq) (*clientpb.SwitchTransport, error)
 	GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error)
 	// *** Listeners ***
-	StartMTLSListener(context.Context, *clientpb.MTLSListenerReq) (*clientpb.MTLSListener, error)
-	StartWGListener(context.Context, *clientpb.WGListenerReq) (*clientpb.WGListener, error)
+	// rpc StartMTLSListener(clientpb.MTLSListenerReq) returns (clientpb.MTLSListener);
+	// rpc StartWGListener(clientpb.WGListenerReq) returns (clientpb.WGListener);
 	StartDNSListener(context.Context, *clientpb.DNSListenerReq) (*clientpb.DNSListener, error)
 	StartHTTPSListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error)
 	StartHTTPListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error)
@@ -1620,12 +1602,6 @@ func (UnimplementedSliverRPCServer) SwitchTransport(context.Context, *clientpb.S
 }
 func (UnimplementedSliverRPCServer) GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransports not implemented")
-}
-func (UnimplementedSliverRPCServer) StartMTLSListener(context.Context, *clientpb.MTLSListenerReq) (*clientpb.MTLSListener, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartMTLSListener not implemented")
-}
-func (UnimplementedSliverRPCServer) StartWGListener(context.Context, *clientpb.WGListenerReq) (*clientpb.WGListener, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartWGListener not implemented")
 }
 func (UnimplementedSliverRPCServer) StartDNSListener(context.Context, *clientpb.DNSListenerReq) (*clientpb.DNSListener, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartDNSListener not implemented")
@@ -2446,42 +2422,6 @@ func _SliverRPC_GetTransports_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).GetTransports(ctx, req.(*clientpb.GetTransportsReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SliverRPC_StartMTLSListener_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.MTLSListenerReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SliverRPCServer).StartMTLSListener(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/StartMTLSListener",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).StartMTLSListener(ctx, req.(*clientpb.MTLSListenerReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SliverRPC_StartWGListener_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.WGListenerReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SliverRPCServer).StartWGListener(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/StartWGListener",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).StartWGListener(ctx, req.(*clientpb.WGListenerReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4347,14 +4287,6 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTransports",
 			Handler:    _SliverRPC_GetTransports_Handler,
-		},
-		{
-			MethodName: "StartMTLSListener",
-			Handler:    _SliverRPC_StartMTLSListener_Handler,
-		},
-		{
-			MethodName: "StartWGListener",
-			Handler:    _SliverRPC_StartWGListener_Handler,
 		},
 		{
 			MethodName: "StartDNSListener",

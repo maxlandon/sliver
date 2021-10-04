@@ -19,12 +19,9 @@ package c2
 */
 
 import (
-	"bufio"
-	"bytes"
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"sort"
@@ -34,7 +31,6 @@ import (
 
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/configs"
 	"github.com/bishopfox/sliver/server/core"
@@ -42,7 +38,6 @@ import (
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/gofrs/uuid"
-	"golang.zx2c4.com/wireguard/device"
 )
 
 var (
@@ -59,110 +54,6 @@ func init() {
 	// a function that automatically cleans up the transports set at
 	// runtime for a session. Called when the session is killed or dies (only).
 	core.CleanupSessionTransports = CleanupSessionTransports
-}
-
-// StartMTLSListenerJob - Start an mTLS listener as a job
-func StartMTLSListenerJob(host string, listenPort uint16) (*core.Job, error) {
-	// bind := fmt.Sprintf("%s:%d", host, listenPort)
-	// ln, err := StartMutualTLSListener(host, listenPort)
-	// if err != nil {
-	//         return nil, err // If we fail to bind don't setup the Job
-	// }
-	//
-	// job := &core.Job{
-	//         // ID:          core.NextJobID(),
-	//         // Name:        "mtls",
-	//         Description: fmt.Sprintf("mutual tls listener %s", bind),
-	//         // Protocol:    "tcp",
-	//         // Port:        listenPort,
-	//         // JobCtrl:     make(chan bool),
-	// }
-	//
-	// go func() {
-	//         <-job.JobCtrl
-	//         jobLog.Infof("Stopping mTLS listener (%d) ...", job.ID)
-	//         ln.Close() // Kills listener GoRoutines in StartMutualTLSListener() but NOT connections
-	//         core.Jobs.Remove(job)
-	// }()
-	// core.Jobs.Add(job)
-	//
-	return nil, nil
-}
-
-// StartWGListenerJob - Start a WireGuard listener as a job
-func StartWGListenerJob(listenPort uint16, nListenPort uint16, keyExchangeListenPort uint16) (*core.Job, error) {
-	ln, dev, currentWGConf, err := StartWGListener(listenPort, nListenPort, keyExchangeListenPort)
-	if err != nil {
-		return nil, err // If we fail to bind don't setup the Job
-	}
-
-	job := &core.Job{
-		// ID:          core.NextJobID(),
-		Name:        "wg",
-		Description: fmt.Sprintf("wg listener port: %d", listenPort),
-		// Protocol:    "udp",
-		// Port:        listenPort,
-		JobCtrl: make(chan bool),
-	}
-
-	ticker := time.NewTicker(5 * time.Second)
-	done := make(chan bool)
-
-	// Every 5 seconds update the wireguard config to include new peers
-	go func(dev *device.Device, currentWGConf *bytes.Buffer) {
-		oldNumPeers := 0
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				currentPeers, err := certs.GetWGPeers()
-				if err != nil {
-					jobLog.Errorf("Failed to get current Wireguard Peers %s", err)
-					continue
-				}
-
-				if len(currentPeers) > oldNumPeers {
-					jobLog.Infof("New WG peers. Updating Wireguard config")
-
-					oldNumPeers = len(currentPeers)
-
-					jobLog.Infof("Old WG config for peers: %s", currentWGConf.String())
-					for k, v := range currentPeers {
-						fmt.Fprintf(currentWGConf, "public_key=%s\n", k)
-						fmt.Fprintf(currentWGConf, "allowed_ip=%s/32\n", v)
-					}
-
-					jobLog.Infof("New WG config for peers: %s", currentWGConf.String())
-
-					if err := dev.IpcSetOperation(bufio.NewReader(currentWGConf)); err != nil {
-						jobLog.Errorf("Failed to update Wireguard Config %s", err)
-						continue
-					}
-					jobLog.Infof("Successfully updated Wireguard config")
-				}
-			}
-		}
-	}(dev, currentWGConf)
-
-	go func() {
-		<-job.JobCtrl
-		jobLog.Infof("Stopping wg listener (%d) ...", job.ID)
-		ticker.Stop()
-		done <- true
-		err = ln.Close() // Kills listener GoRoutines in StartWGListener()
-		if err != nil {
-			jobLog.Fatal("Error closing listener", err)
-		}
-		err = dev.Down() // Kill wg tunnel
-		if err != nil {
-			jobLog.Fatal("Error closing wg tunnel", err)
-		}
-		core.Jobs.Remove(job)
-	}()
-	core.Jobs.Add(job)
-
-	return job, nil
 }
 
 // StartDNSListenerJob - Start a DNS listener as a job
@@ -359,10 +250,18 @@ func StartHTTPStagerListenerJob(conf *HTTPServerConfig, data []byte) (*core.Job,
 	return job, nil
 }
 
-// NewHandlerJob - An easy function allowing a C2 developper to directly add its handler
-// to the list of jobs. He can pass either a net.Listener or a net.Conn, which will be
-// closed when the job is killed. This also manages jobs running on sessions, even persistent ones.
-func NewHandlerJob(profile *models.C2Profile, conn io.Closer, session *core.Session) (job *core.Job) {
+// NewHandlerJob - Create a new handler job based on the current C2 profile and the session context.
+// This returns a job that is both completely fulfilled with relevant information, as well as populated
+// with needed job control channels, which can be optionaly used when your C2 stack needs such for goroutine control.
+//
+// NOTES:
+// - The job is NOT started, nor its order value initialized: the function InitHandlerJob will be called AFTER
+//   your C2 stack has been started, and if it has done so successfully, then the job will be registered.
+//
+// - The handler job should, normally/in most cases, rest on a net.Listener running somewhere either on the session
+//   or on the server. This listener is automatically closed on job kill. You are free to use it or not: it won't have
+//   an impact on the overall C2 setup/usage workflow.
+func NewHandlerJob(profile *models.C2Profile, session *core.Session) (job *core.Job, ln net.Listener) {
 
 	// Base elements applying for all jobs, no matter where they run
 	var host string
@@ -372,15 +271,14 @@ func NewHandlerJob(profile *models.C2Profile, conn io.Closer, session *core.Sess
 		host = fmt.Sprintf("%s%s", profile.Hostname, profile.Path)
 	}
 
-	id, _ := uuid.NewV4()
-	description := fmt.Sprintf(profile.Channel.String(), profile.Channel.Type, host, id)
-
 	// Base job with these info.
+	id, _ := uuid.NewV4()
 	job = &core.Job{
 		ID:          id,
 		Name:        profile.Channel.String(),
 		Description: comm.SetHandlerCommString(host, session),
 		JobCtrl:     make(chan bool),
+		Ticker:      time.NewTicker(3600 * time.Second), // By default we don't care: one tick per hour
 		Profile:     profile.ToProtobuf(),
 	}
 
@@ -391,23 +289,32 @@ func NewHandlerJob(profile *models.C2Profile, conn io.Closer, session *core.Sess
 		job.SessionUsername = session.Username
 	}
 
-	// The order is computed based on where the job is running.
-	job.Order = core.Jobs.NextSessionJobCount(session)
+	// Monitor for kill signal in the background.
+	// Will perform all cleanups and job deregistering.
+	go job.HandleCleanup()
 
-	// Set the control channel for users to kill the job,
-	// and the various cleaning functions for listeners and conns.
-	go func(description string) {
-		<-job.JobCtrl
-		if conn != nil {
-			conn.Close()
+	return
+}
+
+// InitHandlerJob - After your C2 channel stack has been correctly setup and successfully started, this function
+// takes care of initializing the handler job order, and pushing it through the Sliver server's event system.
+func InitHandlerJob(job *core.Job, ln net.Listener) {
+
+	session := core.Sessions.GetByUUID(job.SessionID)  // this might be nil...
+	job.Order = core.Jobs.NextSessionJobCount(session) // because this deals with a potentially nil session
+
+	// Register the cleanup function for this listener:
+	// This is will be the first listener to be closed,
+	// and then any underlying listeners/interfaces will be closed
+	job.RegisterCleanup(func() error {
+		if ln != nil {
+			return ln.Close()
 		}
-		core.Jobs.Remove(job)
-	}(description)
+		return nil
+	})
 
 	// Finally add the job so everyone notices it.
 	core.Jobs.Add(job)
-
-	return
 }
 
 // StartPersistentSessionJobs - Start jobs that were set for a given session (UUID+name)

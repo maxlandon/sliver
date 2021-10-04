@@ -21,21 +21,20 @@ package c2
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"net"
+	"time"
 
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/bishopfox/sliver/server/certs"
-	"github.com/bishopfox/sliver/server/core"
-	"github.com/bishopfox/sliver/server/db"
-	serverHandlers "github.com/bishopfox/sliver/server/handlers"
-	"github.com/bishopfox/sliver/server/log"
-	"github.com/bishopfox/sliver/server/netstack"
 	"github.com/sirupsen/logrus"
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
-	"google.golang.org/protobuf/proto"
+
+	"github.com/bishopfox/sliver/server/certs"
+	"github.com/bishopfox/sliver/server/core"
+	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/db/models"
+	"github.com/bishopfox/sliver/server/log"
+	"github.com/bishopfox/sliver/server/netstack"
 )
 
 var (
@@ -50,13 +49,13 @@ var (
 	})
 )
 
-// StartWGListener - First creates an inet.af network stack.
-// then creates a Wireguard device/interface and applies configuration.
-// Go routines are spun up to handle key exchange connections, as well
-// as c2 comms connections.
-func StartWGListener(port uint16, netstackPort uint16, keyExchangeListenPort uint16) (net.Listener, *device.Device, *bytes.Buffer, error) {
-	StartPivotListener()
-	wgLog.Infof("Starting Wireguard listener on port: %d", port)
+// StartWireGuardDevInterface - Create, configure and start:
+// - An inet.af network stack.
+// - An interface device through which key-exchange & session connections will pass.
+// This function also starts monitoring new device interface peers in the background.
+func StartWireGuardDevInterface(profile *models.C2Profile, job *core.Job) (tNet *netstack.Net, err error) {
+
+	wgLog.Infof("Starting Wireguard listener on port: %d", profile.Port)
 
 	tun, tNet, err := netstack.CreateNetTUN(
 		[]net.IP{net.ParseIP(tunIP)},
@@ -65,17 +64,17 @@ func StartWGListener(port uint16, netstackPort uint16, keyExchangeListenPort uin
 	)
 	if err != nil {
 		wgLog.Errorf("CreateNetTUN failed: %v", err)
-		return nil, nil, nil, err
+		return nil, err
 	}
 
-	// Get existing server wg keys
+	// Get existing server wg keys. TODO: change if profile specifies certain keys
 	privateKey, _, err := certs.GetWGServerKeys()
 
 	if err != nil {
 		isPeer := false
 		privateKey, _, err = certs.GenerateWGKeys(isPeer, "")
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -85,13 +84,14 @@ func StartWGListener(port uint16, netstackPort uint16, keyExchangeListenPort uin
 	// redirect the logs from stdout
 	dev := device.NewDevice(tun, conn.NewDefaultBind(), device.NewLogger(device.LogLevelSilent, "[c2/wg] "))
 
+	// Populate and setup the device configuration
 	wgConf := bytes.NewBuffer(nil)
 	fmt.Fprintf(wgConf, "private_key=%s\n", privateKey)
-	fmt.Fprintf(wgConf, "listen_port=%d\n", port)
+	fmt.Fprintf(wgConf, "listen_port=%d\n", profile.Port)
 
 	peers, err := certs.GetWGPeers()
 	if err != nil && err != certs.ErrWGPeerDoesNotExist {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	for k, v := range peers {
@@ -99,39 +99,102 @@ func StartWGListener(port uint16, netstackPort uint16, keyExchangeListenPort uin
 		fmt.Fprintf(wgConf, "allowed_ip=%s/32\n", v)
 	}
 
-	// Set wg device config
+	// Load the device config
 	if err := dev.IpcSetOperation(bufio.NewReader(wgConf)); err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
+	// Start the device interface
 	err = dev.Up()
 	if err != nil {
 		wgLog.Errorf("Could not set up the device: %v", err)
-		return nil, nil, nil, err
+		return nil, err
 	}
 
-	// Open up key exchange TCP socket
-	keyExchangeListener, err := tNet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(keyExchangeListenPort)})
-	if err != nil {
-		wgLog.Errorf("Failed to setup up wg key exchange listener: %v", err)
-		return nil, nil, nil, err
-	}
-	wgLog.Printf("Successfully setup up wg key exchange listener")
-	go acceptKeyExchangeConnection(keyExchangeListener)
+	// Register the cleanup function for closing the device interface
+	job.RegisterCleanup(func() error {
+		return dev.Down()
+	})
 
-	// Open up c2 comms listener TCP socket
-	listener, err := tNet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(netstackPort)})
-	if err != nil {
-		wgLog.Errorf("Failed to setup up wg sliver listener: %v", err)
-		return nil, nil, nil, err
-	}
-	wgLog.Printf("Successfully setup up wg sliver listener")
-	go acceptWGSliverConnections(listener)
-	return listener, dev, wgConf, nil
+	// Setup and start the goroutine handling new peer connections.
+	job.Ticker.Reset(5 * time.Second) // Refresh the dev monitoring every 5 seconds
+	go serveDeviceInterfacePeers(dev, wgConf, job.JobCtrl, job.Ticker)
+
+	return
 }
 
-// acceptKeyExchangeConnection - accept connections to key exchange socket
-func acceptKeyExchangeConnection(ln net.Listener) {
+// serveDeviceInterfacePeers - Monitor the Wireguard device interface for new peer connections in the background.
+func serveDeviceInterfacePeers(dev *device.Device, config *bytes.Buffer, done chan bool, ticker *time.Ticker) {
+	oldNumPeers := 0
+	for {
+		select {
+		case <-done:
+			return
+		case <-ticker.C:
+			currentPeers, err := certs.GetWGPeers()
+			if err != nil {
+				jobLog.Errorf("Failed to get current Wireguard Peers %s", err)
+				continue
+			}
+
+			if len(currentPeers) > oldNumPeers {
+				jobLog.Infof("New WG peers. Updating Wireguard config")
+
+				oldNumPeers = len(currentPeers)
+
+				jobLog.Infof("Old WG config for peers: %s", config.String())
+				for k, v := range currentPeers {
+					fmt.Fprintf(config, "public_key=%s\n", k)
+					fmt.Fprintf(config, "allowed_ip=%s/32\n", v)
+				}
+
+				jobLog.Infof("New WG config for peers: %s", config.String())
+
+				if err := dev.IpcSetOperation(bufio.NewReader(config)); err != nil {
+					jobLog.Errorf("Failed to update Wireguard Config %s", err)
+					continue
+				}
+				jobLog.Infof("Successfully updated Wireguard config")
+			}
+		}
+	}
+}
+
+// ListenWireGuard - Start a TCP listener that handles incoming WireGuard implant session requests.
+// The listener returned is compliant with the generic RPC setup/usage mechanism, because it yields net.Conns
+func ListenWireGuard(profile *models.C2Profile, job *core.Job, tNet *netstack.Net) (ln net.Listener, err error) {
+
+	// Start listening for key exchange requests
+	keyExchangeListener, err := tNet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(profile.KeyExchangePort)})
+	if err != nil {
+		wgLog.Errorf("Failed to setup up wg key exchange listener: %v", err)
+		return nil, err
+	}
+	wgLog.Printf("Successfully setup up wg key exchange listener")
+	go serveKeyExchangeListener(keyExchangeListener)
+
+	// Register cleanup for key exchange listener
+	job.RegisterCleanup(func() error {
+		if keyExchangeListener != nil {
+			return keyExchangeListener.Close()
+		}
+		return nil
+	})
+
+	// Start a listener waiting for session connections requests and return it
+	ln, err = tNet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(profile.ControlPort)})
+	if err != nil {
+		wgLog.Errorf("Failed to setup up wg sliver listener: %v", err)
+		return nil, err
+	}
+
+	wgLog.Printf("Successfully setup up wg sliver listener")
+
+	return
+}
+
+// serveKeyExchangeListener - accept connections to key exchange socket
+func serveKeyExchangeListener(ln net.Listener) {
 	wgLog.Printf("Polling for connections to key exchange listener")
 	for {
 		conn, err := ln.Accept()
@@ -174,122 +237,6 @@ func handleKeyExchangeConnection(conn net.Conn) {
 		wgLog.Debugf("Sending new wg keys and IP: %s", message)
 		conn.Write([]byte(message))
 	}
-}
-
-func handleWGSliverConnection(conn net.Conn) {
-	wgLog.Infof("Accepted incoming connection: %s", conn.RemoteAddr())
-
-	implantConn := core.NewImplantConnection("wg", fmt.Sprintf("%s", conn.RemoteAddr()))
-	implantConn.UpdateLastMessage()
-	defer func() {
-		implantConn.Cleanup()
-		conn.Close()
-	}()
-
-	done := make(chan bool)
-	go func() {
-		defer func() {
-			done <- true
-		}()
-		handlers := serverHandlers.GetHandlers()
-		for {
-			envelope, err := socketWGReadEnvelope(conn)
-			if err != nil {
-				wgLog.Errorf("Socket read error %s", err)
-				return
-			}
-			implantConn.UpdateLastMessage()
-			if envelope.ID != 0 {
-				implantConn.RespMutex.RLock()
-				if resp, ok := implantConn.Resp[envelope.ID]; ok {
-					resp <- envelope // Could deadlock, maybe want to investigate better solutions
-				}
-				implantConn.RespMutex.RUnlock()
-			} else if handler, ok := handlers[envelope.Type]; ok {
-				go handler(implantConn, envelope.Data)
-			}
-		}
-	}()
-
-Loop:
-	for {
-		select {
-		case envelope := <-implantConn.Send:
-			err := socketWGWriteEnvelope(conn, envelope)
-			if err != nil {
-				wgLog.Errorf("Socket write failed %s", err)
-				break Loop
-			}
-		case <-done:
-			break Loop
-		}
-	}
-	wgLog.Debugf("Closing connection to implant %s", implantConn.ID)
-}
-
-// socketWGWriteEnvelope - Writes a message to the wireguard socket using length prefix framing
-// which is a fancy way of saying we write the length of the message then the message
-// e.g. [uint32 length|message] so the receiver can delimit messages properly
-func socketWGWriteEnvelope(connection net.Conn, envelope *sliverpb.Envelope) error {
-	data, err := proto.Marshal(envelope)
-	if err != nil {
-		wgLog.Errorf("Envelope marshaling error: %v", err)
-		return err
-	}
-	dataLengthBuf := new(bytes.Buffer)
-	binary.Write(dataLengthBuf, binary.LittleEndian, uint32(len(data)))
-	connection.Write(dataLengthBuf.Bytes())
-	connection.Write(data)
-	return nil
-}
-
-// socketWGReadEnvelope - Reads a message from the wireguard connection using length prefix framing
-// returns messageType, message, and error
-func socketWGReadEnvelope(connection net.Conn) (*sliverpb.Envelope, error) {
-
-	// Read the first four bytes to determine data length
-	dataLengthBuf := make([]byte, 4) // Size of uint32
-	_, err := connection.Read(dataLengthBuf)
-	if err != nil {
-		wgLog.Errorf("Socket error (read msg-length): %v", err)
-		return nil, err
-	}
-	dataLength := int(binary.LittleEndian.Uint32(dataLengthBuf))
-
-	// Read the length of the data, keep in mind each call to .Read() may not
-	// fill the entire buffer length that we specify, so instead we use two buffers
-	// readBuf is the result of each .Read() operation, which is then concatinated
-	// onto dataBuf which contains all of data read so far and we keep calling
-	// .Read() until the running total is equal to the length of the message that
-	// we're expecting or we get an error.
-	readBuf := make([]byte, readBufSize)
-	dataBuf := make([]byte, 0)
-	totalRead := 0
-	for {
-		n, err := connection.Read(readBuf)
-		dataBuf = append(dataBuf, readBuf[:n]...)
-		totalRead += n
-		if totalRead == dataLength {
-			break
-		}
-		if err != nil {
-			wgLog.Errorf("Read error: %s", err)
-			break
-		}
-	}
-
-	if err != nil {
-		wgLog.Errorf("Socket error (read data): %v", err)
-		return nil, err
-	}
-	// Unmarshal the protobuf envelope
-	envelope := &sliverpb.Envelope{}
-	err = proto.Unmarshal(dataBuf, envelope)
-	if err != nil {
-		wgLog.Errorf("Un-marshaling envelope error: %v", err)
-		return nil, err
-	}
-	return envelope, nil
 }
 
 // GenerateUniqueIP generates and returns an available IP which can then
@@ -363,18 +310,4 @@ func remove(stringSlice []string, remove []string) []string {
 		}
 	}
 	return result
-}
-
-func acceptWGSliverConnections(ln net.Listener) {
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			if errType, ok := err.(*net.OpError); ok && errType.Op == "accept" {
-				break
-			}
-			wgLog.Errorf("Accept failed: %v", err)
-			continue
-		}
-		go handleWGSliverConnection(conn)
-	}
 }

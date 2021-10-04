@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 
 	"github.com/bishopfox/sliver/client/command/c2"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // ListenerOptions - All listener options needed by HTTP handlers
@@ -46,6 +47,22 @@ type Listen struct {
 
 // Execute - Start an HTTPS listener on the server
 func (l *Listen) Execute(args []string) (err error) {
+
+	// Declare profile
+	profile := c2.ParseActionProfile(
+		sliverpb.C2Channel_HTTPS,     // A Channel using Mutual TLS
+		l.Args.LocalAddr,             // Targeting the host:[port] argument of our command
+		sliverpb.C2Direction_Reverse, // A listener
+	)
+	profile.Persistent = l.BaseListenerOptions.Core.Persistent
+
+	if profile.Port == 0 {
+		profile.Port = 443
+	}
+
+	// HTTPS-specific options
+	profile.Domains = []string{l.HTTPListenerOptions.Options.Domain} // Restrict responses to this domain
+
 	return
 }
 
