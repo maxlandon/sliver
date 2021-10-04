@@ -1,7 +1,5 @@
 package wg
 
-import "github.com/bishopfox/sliver/client/command/c2"
-
 /*
    Sliver Implant Framework
    Copyright (C) 2019  Bishop Fox
@@ -20,10 +18,21 @@ import "github.com/bishopfox/sliver/client/command/c2"
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import (
+	"context"
+
+	"github.com/bishopfox/sliver/client/command/c2"
+	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/log"
+	"github.com/bishopfox/sliver/client/transport"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
+)
+
 // Listener - Create and configure a Wireguard Listener profile
 type Listener struct {
 	Args struct {
-		Iface string `description:"interface to bind WG listener to"`
+		LocalAddr string `description:"interface to bind WG listener to"`
 	} `positional-args:"yes"`
 
 	// Base
@@ -43,5 +52,40 @@ type Listener struct {
 
 // Execute - Create and configure a Wireguard Listener profile
 func (l *Listener) Execute(args []string) (err error) {
+
+	// Base profile
+	profile := c2.ParseProfile(
+		sliverpb.C2Channel_WG,        // A Channel using Mutual TLS
+		l.Args.LocalAddr,             // Targeting the host:[port] argument of our command
+		sliverpb.C2Direction_Reverse, // A listener
+		l.ProfileOptions,             // This will automatically parse Profile options into the protobuf
+	)
+
+	// Wireguard-specific options
+	profile.Port = l.Options.LPort // Override the port value from LocalAddr, which is only an interface value
+	profile.ControlPort = l.Options.NPort
+	profile.KeyExchangePort = l.Options.KeyPort
+	profile.Credentials.ControlServerCert = []byte(l.Options.WGServerCert)
+	profile.Credentials.ControlClientKey = []byte(l.Options.WGPrivateKey)
+
+	// Send this profile to the server
+	req := &clientpb.CreateC2ProfileReq{
+		Profile: profile,
+		Request: core.ActiveTarget.Request(),
+	}
+	res, err := transport.RPC.CreateC2Profile(context.Background(), req)
+	if err != nil {
+		if res.Response.Err != "" {
+			log.PrintErrorf(err.Error())
+			log.PrintErrorf(res.Response.Err)
+			return nil
+		}
+		return log.Error(err)
+	}
+
+	// Print profile summary
+	log.Infof("Created C2 listener profile :\n")
+	c2.PrintProfileSummary(res.Profile)
+
 	return
 }

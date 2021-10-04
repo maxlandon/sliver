@@ -47,7 +47,7 @@ func (l *Listener) Execute(args []string) (err error) {
 	// that you have:
 	// - Added a new `sliverpb.C2Channel_YourProtocol` value in the sliverpb.C2Channel enum (sliver.proto)
 	//
-	// Declare profile
+	// Base profile
 	profile := c2.ParseProfile(
 		sliverpb.C2Channel_MTLS,      // A Channel using Mutual TLS
 		l.Args.LocalAddr,             // Targeting the host:[port] argument of our command
