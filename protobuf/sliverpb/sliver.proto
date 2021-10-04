@@ -82,21 +82,23 @@ message C2Profile {
   uint32 Port = 7;
   string Path = 8;
   repeated string Domains = 9;
-
-  // Beaconing
-  int64 Interval = 20;
-  int64 Jitter = 21;
+  bool Persistent = 19;
 
   // Technicals
   int64 PollTimeout = 10;
   int32 MaxConnectionErrors = 11;
   bool IsFallback = 13; // When previous C2 failed, this transport is used if next
-  bool Active = 14;
+  bool Active = 14;     // Probably not needed
   string ConnectionStrategy = 15;
+  bool CommDisabled = 18;
+
+  // Beaconing
+  int64 Interval = 20;
+  int64 Jitter = 21;
+
+  // Control Endpoints
   uint32 ControlPort = 16;
   uint32 KeyExchangePort = 17 ;
-  bool CommDisabled = 18;
-  bool Persistent = 19;
 
   // HTTP-related
   string ProxyURL = 30;

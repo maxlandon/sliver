@@ -19,9 +19,11 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/command/c2"
+	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // Listen - Start a WireGuard VPN listener
@@ -48,17 +50,35 @@ type Listen struct {
 // Execute - Start a WireGuard VPN listener
 func (w *Listen) Execute(args []string) (err error) {
 
-	log.Infof("Starting Wireguard listener ...")
-	wg, err := transport.RPC.StartWGListener(context.Background(), &clientpb.WGListenerReq{
-		Port:       w.Options.LPort,
-		NPort:      w.Options.NPort,
-		KeyPort:    w.Options.KeyPort,
-		Persistent: w.ListenerOptions.Core.Persistent,
+	// Declare profile
+	profile := c2.ParseActionProfile(
+		sliverpb.C2Channel_WG,        // A Channel using Mutual TLS
+		w.Args.LocalAddr,             // Targeting the host:[port] argument of our command
+		sliverpb.C2Direction_Reverse, // A listener
+	)
+	profile.Persistent = w.ListenerOptions.Core.Persistent
+
+	// Wireguard-specific otions
+	profile.Port = w.Options.LPort // Override the port value from LocalAddr, which is only an interface value
+	profile.ControlPort = w.Options.NPort
+	profile.KeyExchangePort = w.Options.KeyPort
+	profile.Credentials.ControlServerCert = []byte(w.Options.WGServerCert)
+	profile.Credentials.ControlClientKey = []byte(w.Options.WGPrivateKey)
+
+	log.Infof("Starting Wireguard listener (Iface: %s, UDP Port: %d, TCP Port: %d, Key Port: %d)...",
+		profile.Hostname, profile.Port, profile.ControlPort, profile.KeyExchangePort)
+
+	res, err := transport.RPC.StartC2Handler(context.Background(), &clientpb.HandlerStartReq{
+		Profile: profile,
+		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
 		return log.Error(err)
 	}
+	if !res.Success {
+		return log.Errorf("An unknown error happened: no success")
+	}
 
-	log.Infof("Successfully started job #%d", wg.JobID)
+	log.Infof("Successfully started WireGuard listener")
 	return
 }

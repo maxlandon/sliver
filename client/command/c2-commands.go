@@ -122,7 +122,7 @@ func bindCommandsC2(cc *gonsole.Menu) {
 	mtlsListener.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
 
 	mtlsDial := mtlsCmd.AddCommand(constants.DialStr,
-		"",
+		"Dial an implant listening for incoming MutualTLS connections",
 		help.GetHelpFor(constants.DialStr),
 		"",
 		[]string{""},
@@ -239,8 +239,8 @@ func bindCommandsC2(cc *gonsole.Menu) {
 			[]string{""},
 			func() gonsole.Commander { return &dns.DNS{} })
 
-		// dnsListen := dnsCmd.AddCommand(constants.DnsStr,
-		dnsCmd.AddCommand(constants.DnsStr,
+		// dnsListen := dnsCmd.AddCommand(constants.ListenStr,
+		dnsCmd.AddCommand(constants.ListenStr,
 			"Start a DNS listener on the server",
 			help.GetHelpFor(constants.DnsStr),
 			constants.TransportsGroup,

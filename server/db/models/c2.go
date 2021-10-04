@@ -75,7 +75,7 @@ type C2Profile struct {
 	ImplantBuildID   uuid.UUID
 	ContextSessionID uuid.UUID
 	JobID            uuid.UUID
-	Transports       []*Transport `gorm:"many2many:profile_transports"`
+	Transports       []*Transport `gorm:"many2many:profile_transports"` // Maybe not needed ?
 
 	Name      string
 	Type      sliverpb.C2Type
@@ -91,13 +91,16 @@ type C2Profile struct {
 	IsFallback          bool
 	Persistent          bool
 	Active              bool
-	ControlPort         uint32 // A generic ControlPort available to some C2 stacks (like Wireguard)
-	CommDisabled        bool   // Use the SSH-protocol based multiplexing on top of this C2 channel
+	CommDisabled        bool // Use the SSH-protocol based multiplexing on top of this C2 channel
 
 	// Beaconing
 	Beacon   bool
 	Interval int64
 	Jitter   int64
+
+	// Control Endpoints
+	ControlPort     uint32 // A generic ControlPort available to some C2 stacks (like Wireguard)
+	KeyExchangePort uint32 // Generic key-exchange port for some protocols (like Wireguard)
 
 	// HTTP related
 	HTTP     C2ProfileHTTP // Needs to be unmarshaled to a sliverpb.C2ProfileHTTP
@@ -150,8 +153,10 @@ func (p *C2Profile) ToProtobuf() *sliverpb.C2Profile {
 		IsFallback:          p.IsFallback,
 		Persistent:          p.Persistent,
 		Active:              p.Active,
-		ControlPort:         p.ControlPort,
 		CommDisabled:        p.CommDisabled,
+		// Control Endpoints
+		ControlPort:     p.ControlPort,
+		KeyExchangePort: p.KeyExchangePort,
 		// Beaconing
 		Interval: p.Interval,
 		Jitter:   p.Jitter,
@@ -190,17 +195,19 @@ func C2ProfileFromProtobuf(p *sliverpb.C2Profile) (profile *C2Profile) {
 		MaxConnectionErrors: p.MaxConnectionErrors,
 		IsFallback:          p.IsFallback,
 		Active:              p.Active,
-		ControlPort:         p.ControlPort,
 		CommDisabled:        p.CommDisabled,
 		Persistent:          p.Persistent,
+		// Control Endpoints
+		ControlPort:     p.ControlPort,
+		KeyExchangePort: p.KeyExchangePort,
 		// Beaconing
 		Interval: p.Interval,
 		Jitter:   p.Jitter,
 		// HTTP:
 		ProxyURL: p.ProxyURL,
-		// Security & Identity
 	}
 
+	// Security & Identity
 	if p.Credentials != nil {
 		profile.CACertPEM = []byte(p.Credentials.CACertPEM)
 		profile.CertPEM = []byte(p.Credentials.CertPEM)
