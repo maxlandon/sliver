@@ -98,35 +98,6 @@ func (rpc *Server) KillJob(ctx context.Context, kill *clientpb.KillJobReq) (*cli
 	return killJob, err
 }
 
-// StartDNSListener - Start a DNS listener TODO: respect request's Host specification
-func (rpc *Server) StartDNSListener(ctx context.Context, req *clientpb.DNSListenerReq) (*clientpb.DNSListener, error) {
-	if 65535 <= req.Port {
-		return nil, ErrInvalidPort
-	}
-	listenPort := uint16(defaultDNSPort)
-	if req.Port != 0 {
-		listenPort = uint16(req.Port)
-	}
-
-	_, err := c2.StartDNSListenerJob(req.Host, listenPort, req.Domains, req.Canaries)
-	if err != nil {
-		return nil, err
-	}
-
-	// if req.Persistent {
-	//         cfg := &configs.DNSJobConfig{
-	//                 Domains:  req.Domains,
-	//                 Host:     req.Host,
-	//                 Port:     listenPort,
-	//                 Canaries: req.Canaries,
-	//         }
-	//         configs.GetServerConfig().AddDNSJob(cfg)
-	//         job.PersistentID = cfg.JobID
-	// }
-
-	return &clientpb.DNSListener{JobID: 0}, nil
-}
-
 // StartHTTPSListener - Start an HTTPS listener
 func (rpc *Server) StartHTTPSListener(ctx context.Context, req *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
 

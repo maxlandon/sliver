@@ -21,9 +21,12 @@ import (
 	"context"
 	"strings"
 
+	"github.com/bishopfox/sliver/client/command/c2"
+	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 const (
@@ -33,41 +36,52 @@ const (
 // Listen - Start a DNS listener on the server or in the current context
 type Listen struct {
 	Args struct {
-		Domains []string `description:"one or more DNS C2 domains to callback"`
+		LocalAddr string `description:"host:port address to start DNS listener on (default: 0.0.0.0:53)"`
 	} `positional-args:"yes"`
+
+	c2.ListenerOptions
+
 	Options struct {
-		LPort      uint32 `long:"lport" short:"p" description:"listener UDP listen port"`
-		NoCanaries bool   `long:"no-canaries" short:"c" description:"disable DNS canary detection for this listener"`
-		Persistent bool   `long:"persistent" short:"P" description:"make listener persistent across server restarts"`
+		Domains    []string `long:"domains" short:"d" description:"one or more DNS C2 domains to callback"`
+		NoCanaries bool     `long:"no-canaries" short:"c" description:"disable DNS canary detection for this listener"`
 	} `group:"DNS listener options"`
 }
 
 // Execute - Start a DNS listener on the server or in the current context
 func (l *Listen) Execute(args []string) (err error) {
 
-	domains := l.Args.Domains
+	// Declare profile
+	profile := c2.ParseActionProfile(
+		sliverpb.C2Channel_DNS,       // A Channel using Mutual TLS
+		l.Args.LocalAddr,             // Targeting the host:[port] argument of our command
+		sliverpb.C2Direction_Reverse, // A listener
+	)
+	profile.Persistent = l.ListenerOptions.Core.Persistent
+	profile.Canaries = !l.Options.NoCanaries
+
+	domains := l.Options.Domains
 	for _, domain := range domains {
 		if !strings.HasSuffix(domain, ".") {
 			domain += "."
 		}
 	}
 
-	lport := l.Options.LPort
-	if lport == 0 {
-		lport = defaultDNSLPort
+	if profile.Port == 0 {
+		profile.Port = defaultDNSLPort
 	}
 
 	log.Infof("Starting DNS listener with parent domain(s) %v ...", domains)
-	dns, err := transport.RPC.StartDNSListener(context.Background(), &clientpb.DNSListenerReq{
-		Domains:    domains,
-		Port:       lport,
-		Canaries:   !l.Options.NoCanaries,
-		Persistent: l.Options.Persistent,
+	res, err := transport.RPC.StartC2Handler(context.Background(), &clientpb.HandlerStartReq{
+		Profile: profile,
+		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		return log.Errorf("Failed to start DNS listener: %s", err)
+		return log.Error(err)
 	}
-	log.Infof("Successfully started job #%d", dns.JobID)
+	if !res.Success {
+		return log.Errorf("An unknown error happened: no success")
+	}
 
+	log.Infof("Successfully started DNS listener")
 	return
 }

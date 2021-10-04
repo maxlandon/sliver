@@ -19,9 +19,6 @@ package c2
 */
 
 import (
-
-	// WireGuard C2
-
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/core"
@@ -74,6 +71,12 @@ func Listen(profile *models.C2Profile, network comm.Net, session *core.Session) 
 		}
 
 	case sliverpb.C2Channel_DNS:
+
+		// Start the DNS server and integrate its control/stop functions into the job
+		err = ServeDNS(profile, job)
+		if err != nil {
+			return nil, err
+		}
 
 	case sliverpb.C2Channel_HTTPS:
 	}

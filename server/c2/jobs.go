@@ -25,7 +25,6 @@ import (
 	"net"
 	"net/http"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -54,49 +53,6 @@ func init() {
 	// a function that automatically cleans up the transports set at
 	// runtime for a session. Called when the session is killed or dies (only).
 	core.CleanupSessionTransports = CleanupSessionTransports
-}
-
-// StartDNSListenerJob - Start a DNS listener as a job
-func StartDNSListenerJob(bindIface string, lport uint16, domains []string, canaries bool) (*core.Job, error) {
-	server := StartDNSListener(bindIface, lport, domains, canaries)
-	description := fmt.Sprintf("%s (canaries %v)", strings.Join(domains, " "), canaries)
-	job := &core.Job{
-		// ID:          core.NextJobID(),
-		Name:        "dns",
-		Description: description,
-		// Protocol:    "udp",
-		// Port:        lport,
-		JobCtrl: make(chan bool),
-		// Domains:     domains,
-	}
-
-	go func() {
-		<-job.JobCtrl
-		jobLog.Infof("Stopping DNS listener (%d) ...", job.ID)
-		server.Shutdown()
-		core.Jobs.Remove(job)
-		core.EventBroker.Publish(core.Event{
-			Job:       job,
-			EventType: consts.JobStoppedEvent,
-		})
-	}()
-
-	core.Jobs.Add(job)
-
-	// There is no way to call DNS' ListenAndServe() without blocking
-	// but we also need to check the error in the case the server
-	// fails to start at all, so we setup all the Job mechanics
-	// then kick off the server and if it fails we kill the job
-	// ourselves.
-	go func() {
-		err := server.ListenAndServe()
-		if err != nil {
-			jobLog.Errorf("DNS listener error %v", err)
-			job.JobCtrl <- true
-		}
-	}()
-
-	return job, nil
 }
 
 // StartHTTPListenerJob - Start a HTTP listener as a job

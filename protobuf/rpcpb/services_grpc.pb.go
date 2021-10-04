@@ -65,7 +65,7 @@ type SliverRPCClient interface {
 	// *** Listeners ***
 	// rpc StartMTLSListener(clientpb.MTLSListenerReq) returns (clientpb.MTLSListener);
 	// rpc StartWGListener(clientpb.WGListenerReq) returns (clientpb.WGListener);
-	StartDNSListener(ctx context.Context, in *clientpb.DNSListenerReq, opts ...grpc.CallOption) (*clientpb.DNSListener, error)
+	// rpc StartDNSListener(clientpb.DNSListenerReq) returns (clientpb.DNSListener);
 	StartHTTPSListener(ctx context.Context, in *clientpb.HTTPListenerReq, opts ...grpc.CallOption) (*clientpb.HTTPListener, error)
 	StartHTTPListener(ctx context.Context, in *clientpb.HTTPListenerReq, opts ...grpc.CallOption) (*clientpb.HTTPListener, error)
 	// *** Stager Listener ***
@@ -438,15 +438,6 @@ func (c *sliverRPCClient) SwitchTransport(ctx context.Context, in *clientpb.Swit
 func (c *sliverRPCClient) GetTransports(ctx context.Context, in *clientpb.GetTransportsReq, opts ...grpc.CallOption) (*clientpb.GetTransports, error) {
 	out := new(clientpb.GetTransports)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetTransports", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sliverRPCClient) StartDNSListener(ctx context.Context, in *clientpb.DNSListenerReq, opts ...grpc.CallOption) (*clientpb.DNSListener, error) {
-	out := new(clientpb.DNSListener)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartDNSListener", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1401,7 +1392,7 @@ type SliverRPCServer interface {
 	// *** Listeners ***
 	// rpc StartMTLSListener(clientpb.MTLSListenerReq) returns (clientpb.MTLSListener);
 	// rpc StartWGListener(clientpb.WGListenerReq) returns (clientpb.WGListener);
-	StartDNSListener(context.Context, *clientpb.DNSListenerReq) (*clientpb.DNSListener, error)
+	// rpc StartDNSListener(clientpb.DNSListenerReq) returns (clientpb.DNSListener);
 	StartHTTPSListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error)
 	StartHTTPListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error)
 	// *** Stager Listener ***
@@ -1602,9 +1593,6 @@ func (UnimplementedSliverRPCServer) SwitchTransport(context.Context, *clientpb.S
 }
 func (UnimplementedSliverRPCServer) GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransports not implemented")
-}
-func (UnimplementedSliverRPCServer) StartDNSListener(context.Context, *clientpb.DNSListenerReq) (*clientpb.DNSListener, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartDNSListener not implemented")
 }
 func (UnimplementedSliverRPCServer) StartHTTPSListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartHTTPSListener not implemented")
@@ -2422,24 +2410,6 @@ func _SliverRPC_GetTransports_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).GetTransports(ctx, req.(*clientpb.GetTransportsReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SliverRPC_StartDNSListener_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.DNSListenerReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SliverRPCServer).StartDNSListener(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/StartDNSListener",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).StartDNSListener(ctx, req.(*clientpb.DNSListenerReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4287,10 +4257,6 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTransports",
 			Handler:    _SliverRPC_GetTransports_Handler,
-		},
-		{
-			MethodName: "StartDNSListener",
-			Handler:    _SliverRPC_StartDNSListener_Handler,
 		},
 		{
 			MethodName: "StartHTTPSListener",

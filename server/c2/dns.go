@@ -89,6 +89,40 @@ var (
 	dnsSegmentReassembler      = &map[string](*map[int][]string){}
 )
 
+// ServeDNS - Start a DNS listener and integrate its control into a Job.
+func ServeDNS(profile *models.C2Profile, job *core.Job) (err error) {
+
+	// Create and start the DNS server
+	server := StartDNSListener(profile.Hostname,
+		uint16(profile.Port),
+		strings.Split(profile.Domains, ","),
+		profile.Canaries,
+	)
+
+	// Register cleanup function for server shutdown
+	job.RegisterCleanup(func() error {
+		if server != nil {
+			return server.Shutdown()
+		}
+		return nil
+	})
+
+	// There is no way to call DNS' ListenAndServe() without blocking
+	// but we also need to check the error in the case the server
+	// fails to start at all, so we setup all the Job mechanics
+	// then kick off the server and if it fails we kill the job
+	// ourselves.
+	go func() {
+		err := server.ListenAndServe()
+		if err != nil {
+			jobLog.Errorf("DNS listener error %v", err)
+			job.JobCtrl <- true
+		}
+	}()
+
+	return
+}
+
 // SendBlock - Data is encoded and split into `Blocks`
 type SendBlock struct {
 	ID   string

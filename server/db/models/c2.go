@@ -19,6 +19,7 @@ package models
 */
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -69,21 +70,26 @@ func (t *Transport) BeforeCreate(tx *gorm.DB) (err error) {
 
 // C2Profile - A complete C2 profile to be compiled into/ loaded by an implant.
 type C2Profile struct {
-	ID        uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
-	CreatedAt time.Time `gorm:"->;<-:create;"`
-
+	// Identification
+	ID               uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
+	CreatedAt        time.Time `gorm:"->;<-:create;"`
 	ImplantBuildID   uuid.UUID
 	ContextSessionID uuid.UUID
 	JobID            uuid.UUID
 	Transports       []*Transport `gorm:"many2many:profile_transports"` // Maybe not needed ?
 
-	Name      string
-	Type      sliverpb.C2Type
-	Channel   sliverpb.C2Channel
-	Direction sliverpb.C2Direction
-	Hostname  string
-	Port      uint32
-	Path      string
+	// Core
+	Name            string
+	Type            sliverpb.C2Type
+	Channel         sliverpb.C2Channel
+	Direction       sliverpb.C2Direction
+	Hostname        string
+	Port            uint32
+	Path            string
+	ControlPort     uint32 // A generic ControlPort available to some C2 stacks (like Wireguard)
+	KeyExchangePort uint32 // Generic key-exchange port for some protocols (like Wireguard)
+	Domains         string // Comma separated string of domains (DNS & HTTP listeners)
+	Canaries        bool
 
 	// Technicals
 	PollTimeout         int64
@@ -97,10 +103,6 @@ type C2Profile struct {
 	Beacon   bool
 	Interval int64
 	Jitter   int64
-
-	// Control Endpoints
-	ControlPort     uint32 // A generic ControlPort available to some C2 stacks (like Wireguard)
-	KeyExchangePort uint32 // Generic key-exchange port for some protocols (like Wireguard)
 
 	// HTTP related
 	HTTP     C2ProfileHTTP // Needs to be unmarshaled to a sliverpb.C2ProfileHTTP
@@ -142,11 +144,15 @@ func (p *C2Profile) ToProtobuf() *sliverpb.C2Profile {
 		ID:               p.ID.String(),
 		ContextSessionID: p.ContextSessionID.String(),
 		Name:             p.Name,
-		Hostname:         p.Hostname,
-		Port:             p.Port,
 		Type:             p.Type,
 		C2:               p.Channel,
 		Direction:        p.Direction,
+		Hostname:         p.Hostname,
+		Port:             p.Port,
+		ControlPort:      p.ControlPort,
+		KeyExchangePort:  p.KeyExchangePort,
+		Domains:          strings.Split(p.Domains, ","),
+		Canaries:         p.Canaries,
 		// Technicals
 		PollTimeout:         p.PollTimeout,
 		MaxConnectionErrors: p.MaxConnectionErrors,
@@ -154,9 +160,6 @@ func (p *C2Profile) ToProtobuf() *sliverpb.C2Profile {
 		Persistent:          p.Persistent,
 		Active:              p.Active,
 		CommDisabled:        p.CommDisabled,
-		// Control Endpoints
-		ControlPort:     p.ControlPort,
-		KeyExchangePort: p.KeyExchangePort,
 		// Beaconing
 		Interval: p.Interval,
 		Jitter:   p.Jitter,
@@ -185,11 +188,15 @@ func C2ProfileFromProtobuf(p *sliverpb.C2Profile) (profile *C2Profile) {
 		ID:               uuid.FromStringOrNil(p.ID),
 		ContextSessionID: uuid.FromStringOrNil(p.ContextSessionID),
 		Name:             p.Name,
-		Hostname:         p.Hostname,
-		Port:             p.Port,
 		Type:             p.Type,
 		Channel:          p.C2,
 		Direction:        p.Direction,
+		Hostname:         p.Hostname,
+		Port:             p.Port,
+		ControlPort:      p.ControlPort,
+		KeyExchangePort:  p.KeyExchangePort,
+		Domains:          strings.Join(p.Domains, ","),
+		Canaries:         p.Canaries,
 		// Technicals
 		PollTimeout:         p.PollTimeout,
 		MaxConnectionErrors: p.MaxConnectionErrors,
@@ -197,9 +204,6 @@ func C2ProfileFromProtobuf(p *sliverpb.C2Profile) (profile *C2Profile) {
 		Active:              p.Active,
 		CommDisabled:        p.CommDisabled,
 		Persistent:          p.Persistent,
-		// Control Endpoints
-		ControlPort:     p.ControlPort,
-		KeyExchangePort: p.KeyExchangePort,
 		// Beaconing
 		Interval: p.Interval,
 		Jitter:   p.Jitter,

@@ -74,6 +74,7 @@ message BeaconRegister {
 message C2Profile {
   // Base
   string ID = 1;
+  string ContextSessionID = 50;
   string Name = 2;
   C2Type Type = 3;
   C2Channel C2 = 4;
@@ -81,13 +82,16 @@ message C2Profile {
   string Hostname = 6;
   uint32 Port = 7;
   string Path = 8;
+  uint32 ControlPort = 16;
+  uint32 KeyExchangePort = 17 ;
   repeated string Domains = 9;
-  bool Persistent = 19;
+  bool Canaries = 22;
 
   // Technicals
   int64 PollTimeout = 10;
   int32 MaxConnectionErrors = 11;
   bool IsFallback = 13; // When previous C2 failed, this transport is used if next
+  bool Persistent = 19;
   bool Active = 14;     // Probably not needed
   string ConnectionStrategy = 15;
   bool CommDisabled = 18;
@@ -96,18 +100,12 @@ message C2Profile {
   int64 Interval = 20;
   int64 Jitter = 21;
 
-  // Control Endpoints
-  uint32 ControlPort = 16;
-  uint32 KeyExchangePort = 17 ;
-
   // HTTP-related
   string ProxyURL = 30;
   C2ProfileHTTP HTTP = 31;
  
   // Identity & Security
   Credentials Credentials = 40;
-
-  string ContextSessionID = 50;
 }
 
 enum C2Type {
