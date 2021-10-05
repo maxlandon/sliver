@@ -115,53 +115,53 @@ func (comm *Comm) DialContextPipe(ctx context.Context, name string) (conn net.Co
 
 // dialClientPipe - Forwards a Pipe connection coming from a Client Comm to an implant, revolved with current routes.
 // (In the end this function means a given Comm can find another Comm and route its connection through it)
-func dialClientPipe(info *commpb.Conn, ch ssh.NewChannel) error {
-
-	// If not found, check routes, return if not found: portfwds and proxies
-	// are supposedly not allowed to contact on the server's interfaces.
-	hostPort := fmt.Sprintf("%s:%d", info.RHost, info.RPort)
-	route, err := ResolveAddress(hostPort)
-	if err != nil || route == nil {
-		err := ch.Reject(ssh.Prohibited, "NOROUTE")
-		if err != nil {
-			rLog.Errorf("Error: rejecting Pipe stream: %s", err)
-		}
-		return fmt.Errorf("rejected Client Comm Pipe connection: (bad destination: %s)", hostPort)
-	}
-
-	// We might not have an ID for this connection yet, so add the ID of the route we resolved
-	info.ID = route.ID.String()
-
-	// Get a connection to the implant gateway.
-	dst, err := route.comm.DialContextPipe(context.Background(), "tcp", hostPort)
-	if err != nil {
-		err = ch.Reject(ssh.ConnectionFailed, err.Error())
-		if err != nil {
-			rLog.Errorf("error rejecting Pipe connection: %s", err.Error())
-		}
-		return fmt.Errorf("rejected Client Comm Pipe connection: %s", err.Error())
-	}
-
-	// Accept the Comm Client stream
-	src, reqs, err := ch.Accept()
-	if err != nil {
-		return fmt.Errorf("failed to accept stream (%s)", string(ch.ExtraData()))
-	}
-	go ssh.DiscardRequests(reqs)
-
-	// Pipe
-	err = transportConn(src, dst)
-	if err != nil {
-		rLog.Warnf("Error transporting connections (%s --> %s:%d): %v",
-			hostPort, info.LHost, info.LPort, err)
-	}
-
-	// Close connections once we're done, with a delay left so our
-	// custom RPC tunnel has time to transmit the remaining data.
-	closeConnections(src, dst)
-
-	rLog.Infof("[route] Closed Pipe stream %s:%d --> %s:%d",
-		info.LHost, info.LPort, info.RHost, info.RPort)
-
-	return nil
-}
+// func dialClientPipe(info *commpb.Conn, ch ssh.NewChannel) error {
+//
+//         // If not found, check routes, return if not found: portfwds and proxies
+//         // are supposedly not allowed to contact on the server's interfaces.
+//         hostPort := fmt.Sprintf("%s:%d", info.RHost, info.RPort)
+//         route, err := ResolveAddress(hostPort)
+//         if err != nil || route == nil {
+//                 err := ch.Reject(ssh.Prohibited, "NOROUTE")
+//                 if err != nil {
+//                         rLog.Errorf("Error: rejecting Pipe stream: %s", err)
+//                 }
+//                 return fmt.Errorf("rejected Client Comm Pipe connection: (bad destination: %s)", hostPort)
+//         }
+//
+//         // We might not have an ID for this connection yet, so add the ID of the route we resolved
+//         info.ID = route.ID.String()
+//
+//         // Get a connection to the implant gateway.
+//         dst, err := route.comm.DialContextPipe(context.Background(), "tcp", hostPort)
+//         if err != nil {
+//                 err = ch.Reject(ssh.ConnectionFailed, err.Error())
+//                 if err != nil {
+//                         rLog.Errorf("error rejecting Pipe connection: %s", err.Error())
+//                 }
+//                 return fmt.Errorf("rejected Client Comm Pipe connection: %s", err.Error())
+//         }
+//
+//         // Accept the Comm Client stream
+//         src, reqs, err := ch.Accept()
+//         if err != nil {
+//                 return fmt.Errorf("failed to accept stream (%s)", string(ch.ExtraData()))
+//         }
+//         go ssh.DiscardRequests(reqs)
+//
+//         // Pipe
+//         err = transportConn(src, dst)
+//         if err != nil {
+//                 rLog.Warnf("Error transporting connections (%s --> %s:%d): %v",
+//                         hostPort, info.LHost, info.LPort, err)
+//         }
+//
+//         // Close connections once we're done, with a delay left so our
+//         // custom RPC tunnel has time to transmit the remaining data.
+//         closeConnections(src, dst)
+//
+//         rLog.Infof("[route] Closed Pipe stream %s:%d --> %s:%d",
+//                 info.LHost, info.LPort, info.RHost, info.RPort)
+//
+//         return nil
+// }
