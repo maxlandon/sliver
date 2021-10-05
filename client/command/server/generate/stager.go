@@ -53,7 +53,7 @@ type GenerateStager struct {
 
 // Execute - Generate a stager payload using MSFVenom
 func (g *GenerateStager) Execute(args []string) (err error) {
-	var stageProto clientpb.StageProtocol
+	var stageProto clientpb.StagerProtocol
 	lhost := g.TransportOptions.LHost
 	if lhost == "" {
 		return log.Errorf("please specify a listening host")
@@ -97,11 +97,11 @@ func (g *GenerateStager) Execute(args []string) (err error) {
 
 	switch proto {
 	case "tcp":
-		stageProto = clientpb.StageProtocol_TCP
+		stageProto = clientpb.StagerProtocol_TCP
 	case "http":
-		stageProto = clientpb.StageProtocol_HTTP
+		stageProto = clientpb.StagerProtocol_HTTP
 	case "https":
-		stageProto = clientpb.StageProtocol_HTTPS
+		stageProto = clientpb.StagerProtocol_HTTPS
 	default:
 		return log.Errorf("%s staging protocol not supported", proto)
 	}

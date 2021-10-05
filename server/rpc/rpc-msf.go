@@ -124,12 +124,12 @@ func (rpc *Server) MsfStage(ctx context.Context, req *clientpb.MsfStagerReq) (*c
 	}
 
 	switch req.Protocol {
-	case clientpb.StageProtocol_TCP:
+	case clientpb.StagerProtocol_TCP:
 		payload = "meterpreter/reverse_tcp"
-	case clientpb.StageProtocol_HTTP:
+	case clientpb.StagerProtocol_HTTP:
 		payload = "meterpreter/reverse_http"
 		uri = generateCallbackURI()
-	case clientpb.StageProtocol_HTTPS:
+	case clientpb.StagerProtocol_HTTPS:
 		payload = "meterpreter/reverse_https"
 		uri = generateCallbackURI()
 	default:

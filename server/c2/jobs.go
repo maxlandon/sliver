@@ -19,16 +19,14 @@ package c2
 */
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"sort"
-	"sync"
 	"time"
 
-	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/gofrs/uuid"
+
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/configs"
@@ -36,7 +34,6 @@ import (
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
-	"github.com/gofrs/uuid"
 )
 
 var (
@@ -53,157 +50,6 @@ func init() {
 	// a function that automatically cleans up the transports set at
 	// runtime for a session. Called when the session is killed or dies (only).
 	core.CleanupSessionTransports = CleanupSessionTransports
-}
-
-// StartHTTPListenerJob - Start a HTTP listener as a job
-func StartHTTPListenerJob(conf *HTTPServerConfig) (*core.Job, error) {
-	server, err := StartHTTPSListener(conf)
-	if err != nil {
-		return nil, err
-	}
-	name := "http"
-	if conf.Secure {
-		name = "https"
-	}
-
-	job := &core.Job{
-		// ID:          core.NextJobID(),
-		Name:        name,
-		Description: fmt.Sprintf("%s for domain %s", name, conf.Domain),
-		// Protocol:    "tcp",
-		// Port:        uint16(conf.LPort),
-		JobCtrl: make(chan bool),
-		// Domains:     []string{conf.Domain},
-	}
-	core.Jobs.Add(job)
-
-	cleanup := func(err error) {
-		server.Cleanup()
-		core.Jobs.Remove(job)
-		core.EventBroker.Publish(core.Event{
-			Job:       job,
-			EventType: consts.JobStoppedEvent,
-			Err:       err,
-		})
-	}
-	once := &sync.Once{}
-
-	go func() {
-		var err error
-		if server.ServerConf.Secure {
-			if server.ServerConf.ACME {
-				err = server.HTTPServer.ListenAndServeTLS("", "") // ACME manager pulls the certs under the hood
-			} else {
-				err = listenAndServeTLS(server.HTTPServer, conf.Cert, conf.Key)
-			}
-		} else {
-			err = server.HTTPServer.ListenAndServe()
-		}
-		if err != nil {
-			jobLog.Errorf("%s listener error %v", name, err)
-			once.Do(func() { cleanup(err) })
-			job.JobCtrl <- true // Cleanup other goroutine
-		}
-	}()
-
-	go func() {
-		<-job.JobCtrl
-		once.Do(func() { cleanup(nil) })
-	}()
-
-	return job, nil
-}
-
-// StartTCPStagerListenerJob - Start a TCP staging payload listener
-func StartTCPStagerListenerJob(host string, port uint16, shellcode []byte) (*core.Job, error) {
-	ln, err := StartTCPListener(host, port, shellcode)
-	if err != nil {
-		return nil, err // If we fail to bind don't setup the Job
-	}
-
-	job := &core.Job{
-		// ID:          core.NextJobID(),
-		Name:        "TCP",
-		Description: "Raw TCP listener (stager only)",
-		// Protocol:    "tcp",
-		// Port:        port,
-		JobCtrl: make(chan bool),
-	}
-
-	go func() {
-		<-job.JobCtrl
-		jobLog.Infof("Stopping TCP listener (%d) ...", job.ID)
-		ln.Close() // Kills listener GoRoutines in startMutualTLSListener() but NOT connections
-
-		core.Jobs.Remove(job)
-
-		core.EventBroker.Publish(core.Event{
-			Job:       job,
-			EventType: consts.JobStoppedEvent,
-		})
-	}()
-
-	core.Jobs.Add(job)
-
-	return job, nil
-}
-
-// StartHTTPStagerListenerJob - Start an HTTP(S) stager payload listener
-func StartHTTPStagerListenerJob(conf *HTTPServerConfig, data []byte) (*core.Job, error) {
-	server, err := StartHTTPSListener(conf)
-	if err != nil {
-		return nil, err
-	}
-	name := "http"
-	if conf.Secure {
-		name = "https"
-	}
-	server.SliverStage = data
-	job := &core.Job{
-		// ID:          core.NextJobID(),
-		Name:        name,
-		Description: fmt.Sprintf("Stager handler %s for domain %s", name, conf.Domain),
-		// Protocol:    "tcp",
-		// Port:        uint16(conf.LPort),
-		JobCtrl: make(chan bool),
-	}
-	core.Jobs.Add(job)
-
-	cleanup := func(err error) {
-		server.Cleanup()
-		core.Jobs.Remove(job)
-		core.EventBroker.Publish(core.Event{
-			Job:       job,
-			EventType: consts.JobStoppedEvent,
-			Err:       err,
-		})
-	}
-	once := &sync.Once{}
-
-	go func() {
-		var err error
-		if server.ServerConf.Secure {
-			if server.ServerConf.ACME {
-				err = server.HTTPServer.ListenAndServeTLS("", "") // ACME manager pulls the certs under the hood
-			} else {
-				err = listenAndServeTLS(server.HTTPServer, conf.Cert, conf.Key)
-			}
-		} else {
-			err = server.HTTPServer.ListenAndServe()
-		}
-		if err != nil {
-			jobLog.Errorf("%s listener error %v", name, err)
-			once.Do(func() { cleanup(err) })
-			job.JobCtrl <- true // Cleanup other goroutine
-		}
-	}()
-
-	go func() {
-		<-job.JobCtrl
-		once.Do(func() { cleanup(nil) })
-	}()
-
-	return job, nil
 }
 
 // NewHandlerJob - Create a new handler job based on the current C2 profile and the session context.
@@ -434,49 +280,49 @@ func checkInterface(a string) bool {
 
 // Fuck'in Go - https://stackoverflow.com/questions/30815244/golang-https-server-passing-certfile-and-kyefile-in-terms-of-byte-array
 // basically the same as server.ListenAndServerTLS() but we can pass in byte slices instead of file paths
-func listenAndServeTLS(srv *http.Server, certPEMBlock, keyPEMBlock []byte) error {
-	addr := srv.Addr
-	if addr == "" {
-		addr = ":https"
-	}
-	config := &tls.Config{}
-	if srv.TLSConfig != nil {
-		*config = *srv.TLSConfig
-	}
-	if config.NextProtos == nil {
-		config.NextProtos = []string{"http/1.1"}
-	}
-
-	var err error
-	config.Certificates = make([]tls.Certificate, 1)
-	config.Certificates[0], err = tls.X509KeyPair(certPEMBlock, keyPEMBlock)
-	if err != nil {
-		return err
-	}
-
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-
-	tlsListener := tls.NewListener(tcpKeepAliveListener{ln.(*net.TCPListener)}, config)
-	return srv.Serve(tlsListener)
-}
-
-// tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
-// connections. It's used by ListenAndServe and ListenAndServeTLS so
-// dead TCP connections (e.g. closing laptop mid-download) eventually
-// go away.
-type tcpKeepAliveListener struct {
-	*net.TCPListener
-}
-
-func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
-	tc, err := ln.AcceptTCP()
-	if err != nil {
-		return
-	}
-	tc.SetKeepAlive(true)
-	tc.SetKeepAlivePeriod(3 * time.Minute)
-	return tc, nil
-}
+// func listenAndServeTLS(srv *http.Server, certPEMBlock, keyPEMBlock []byte) error {
+//         addr := srv.Addr
+//         if addr == "" {
+//                 addr = ":https"
+//         }
+//         config := &tls.Config{}
+//         if srv.TLSConfig != nil {
+//                 *config = *srv.TLSConfig
+//         }
+//         // if config.NextProtos == nil {
+//         //         config.NextProtos = []string{"http/1.1"}
+//         // }
+//
+//         var err error
+//         config.Certificates = make([]tls.Certificate, 1)
+//         config.Certificates[0], err = tls.X509KeyPair(certPEMBlock, keyPEMBlock)
+//         if err != nil {
+//                 return err
+//         }
+//
+//         ln, err := net.Listen("tcp", addr)
+//         if err != nil {
+//                 return err
+//         }
+//
+//         tlsListener := tls.NewListener(tcpKeepAliveListener{ln.(*net.TCPListener)}, config)
+//         return srv.Serve(tlsListener)
+// }
+//
+// // tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
+// // connections. It's used by ListenAndServe and ListenAndServeTLS so
+// // dead TCP connections (e.g. closing laptop mid-download) eventually
+// // go away.
+// type tcpKeepAliveListener struct {
+//         *net.TCPListener
+// }
+//
+// func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+//         tc, err := ln.AcceptTCP()
+//         if err != nil {
+//                 return
+//         }
+//         tc.SetKeepAlive(true)
+//         tc.SetKeepAlivePeriod(3 * time.Minute)
+//         return tc, nil
+// }

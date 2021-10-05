@@ -20,8 +20,8 @@ package c2
 
 import (
 	"encoding/binary"
-	"fmt"
 	"net"
+	"strings"
 
 	"github.com/bishopfox/sliver/server/log"
 )
@@ -30,34 +30,50 @@ var (
 	tcpLog = log.NamedLogger("c2", "tcp-stager")
 )
 
-// StartTCPListener - Start a TCP listener
-func StartTCPListener(bindIface string, port uint16, data []byte) (net.Listener, error) {
-	StartPivotListener()
-	tcpLog.Infof("Starting Raw TCP listener on %s:%d", bindIface, port)
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", bindIface, port))
-	if err != nil {
-		mtlsLog.Error(err)
-		return nil, err
-	}
-	go acceptConnections(ln, data)
-	return ln, nil
-}
+// ServeStagerConnections - Given a listener, accept and handle incoming connections that are requesting
+// a stage payload. This function is strictly the same than ServeListenerConnections, except that we
+// just write the payload to the connection and exit.
+func ServeStagerConnections(ln net.Listener, payload []byte) {
 
-func acceptConnections(ln net.Listener, data []byte) {
+	// The C2 root listen function might not have passed any listener,
+	// because the protocol doesn't use one, like HTTP or DNS
+	if ln == nil {
+		return
+	}
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
+			mtlsLog.Errorf("Accept failed: %v", err)
 			if errType, ok := err.(*net.OpError); ok && errType.Op == "accept" {
 				break
 			}
-			tcpLog.Errorf("Accept failed: %v", err)
+			// Added to handle closed listeners from the Comm system.
+			if err == net.ErrClosed {
+				break
+			}
+			// Also added for closed listeners from the Comm system
+			if errType, ok := err.(*net.OpError); ok && strings.Contains(errType.Error(), "closed listener") {
+				break
+			}
 			continue
 		}
-		go handleConnection(conn, data)
+
+		// For some reason when closing the listener
+		// from the Comm system returns a nil connection...
+		if conn == nil {
+			mtlsLog.Errorf("Accepted a nil conn: %v", err)
+			break
+		}
+
+		// Set up the RPC layer around the connection
+		go handleStagerConnection(conn, payload)
+
 	}
 }
 
-func handleConnection(conn net.Conn, data []byte) {
+// handleStagerConnection - Writes a stage payload to a connection, for execution on the remote side.
+func handleStagerConnection(conn net.Conn, data []byte) {
 	mtlsLog.Infof("Accepted incoming connection: %s", conn.RemoteAddr())
 	// Send shellcode size
 	dataSize := uint32(len(data))

@@ -21,11 +21,9 @@ package rpc
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/configs"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
@@ -96,86 +94,4 @@ func (rpc *Server) KillJob(ctx context.Context, kill *clientpb.KillJobReq) (*cli
 	}
 
 	return killJob, err
-}
-
-// StartHTTPSListener - Start an HTTPS listener
-func (rpc *Server) StartHTTPSListener(ctx context.Context, req *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
-
-	if 65535 <= req.Port {
-		return nil, ErrInvalidPort
-	}
-	listenPort := uint16(defaultHTTPSPort)
-	if req.Port != 0 {
-		listenPort = uint16(req.Port)
-	}
-
-	conf := &c2.HTTPServerConfig{
-		Addr:    fmt.Sprintf("%s:%d", req.Host, listenPort),
-		LPort:   listenPort,
-		Secure:  true,
-		Domain:  req.Domain,
-		Website: req.Website,
-		Cert:    req.Cert,
-		Key:     req.Key,
-		ACME:    req.ACME,
-	}
-	_, err := c2.StartHTTPListenerJob(conf)
-	if err != nil {
-		return nil, err
-	}
-
-	// if req.Persistent {
-	//         cfg := &configs.HTTPJobConfig{
-	//                 Domain:  req.Domain,
-	//                 Host:    req.Host,
-	//                 Port:    listenPort,
-	//                 Secure:  true,
-	//                 Website: req.Website,
-	//                 Cert:    req.Cert,
-	//                 Key:     req.Key,
-	//                 ACME:    req.ACME,
-	//         }
-	//         configs.GetServerConfig().AddHTTPJob(cfg)
-	//         job.PersistentID = cfg.JobID
-	// }
-
-	return &clientpb.HTTPListener{JobID: 0}, nil
-}
-
-// StartHTTPListener - Start an HTTP listener
-func (rpc *Server) StartHTTPListener(ctx context.Context, req *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
-	if 65535 <= req.Port {
-		return nil, ErrInvalidPort
-	}
-	listenPort := uint16(defaultHTTPPort)
-	if req.Port != 0 {
-		listenPort = uint16(req.Port)
-	}
-
-	conf := &c2.HTTPServerConfig{
-		Addr:    fmt.Sprintf("%s:%d", req.Host, listenPort),
-		LPort:   listenPort,
-		Domain:  req.Domain,
-		Website: req.Website,
-		Secure:  false,
-		ACME:    false,
-	}
-	_, err := c2.StartHTTPListenerJob(conf)
-	if err != nil {
-		return nil, err
-	}
-
-	// if req.Persistent {
-	//         cfg := &configs.HTTPJobConfig{
-	//                 Domain:  req.Domain,
-	//                 Host:    req.Host,
-	//                 Port:    listenPort,
-	//                 Secure:  false,
-	//                 Website: req.Website,
-	//         }
-	//         configs.GetServerConfig().AddHTTPJob(cfg)
-	//         job.PersistentID = cfg.JobID
-	// }
-
-	return &clientpb.HTTPListener{JobID: 0}, nil
 }

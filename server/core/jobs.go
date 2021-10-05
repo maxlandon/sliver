@@ -61,8 +61,10 @@ type Job struct {
 	Ticker  *time.Ticker
 
 	// C2
-	Profile  *sliverpb.C2Profile // All handler details
-	cleanups []func() error      // All cleanup functions that have been registered with this job
+	Profile      *sliverpb.C2Profile // All handler details
+	StageImplant string
+	StageBytes   []byte
+	cleanups     []func() error // All cleanup functions that have been registered with this job
 }
 
 // RegisterCleanup - Add a cleanup function to this job. This function will be called
@@ -103,7 +105,8 @@ func (j *Job) ToProtobuf() *clientpb.Job {
 		Description: j.Description,
 		Order:       int32(j.Order),
 
-		Profile: j.Profile,
+		Profile:      j.Profile,
+		StageImplant: j.StageImplant,
 	}
 }
 

