@@ -153,6 +153,7 @@ const (
 	JobsKillStr    = "kill"
 	JobsKillAllStr = "kill-all"
 	MtlsStr        = "mtls"
+	TcpStr         = "tcp"
 	WGStr          = "wg"
 	DnsStr         = "dns"
 	HttpStr        = "http"

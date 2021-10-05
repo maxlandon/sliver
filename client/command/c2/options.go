@@ -1,5 +1,7 @@
 package c2
 
+import "github.com/bishopfox/sliver/protobuf/clientpb"
+
 /*
    Sliver Implant Framework
    Copyright (C) 2019  Bishop Fox
@@ -86,12 +88,17 @@ type SecurityOptions struct {
 	} `group:"core security options"`
 }
 
-// Configure - Root C2 profile management command for
-// all root commands needing it (malleable, mtls, dns, http, etc...)
-type Configure struct {
+// StagerOptions - Options for C2 handlers that stage payloads.
+type StagerOptions struct {
+	Core struct {
+		Profile   string `long:"profile" short:"p" description:"implant profile/build to serve as stage"`
+		LocalPath string `long:"file" short:"f" description:"local path to file containing stage payload bytes"`
+		Bytes     string `long:"bytes" short:"b" description:"payload bytes, single-quoted if spaces in it"`
+	} `group:"stager options"`
 }
 
-// Execute - Dispatch to sub command specialized per C2 type.
-func (t *Configure) Execute(args []string) (err error) {
+// ParseStagerOptions - Based on the user-given values
+func ParseStagerOptions(req *clientpb.HandlerStagerReq, opts StagerOptions) (err error) {
+
 	return
 }
