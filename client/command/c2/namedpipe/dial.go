@@ -1,4 +1,4 @@
-package tcp
+package namedpipe
 
 /*
    Sliver Implant Framework
@@ -32,7 +32,7 @@ import (
 // Dial - Dial a remote address to connect to a listening implant
 type Dial struct {
 	Args struct {
-		RemoteAddr string `description:"host:port address to dial"`
+		RemoteAddr string `description:"name of pipe to dial"`
 	} `positional-args:"yes"`
 
 	c2.DialerOptions
@@ -43,19 +43,15 @@ func (d *Dial) Execute(args []string) (err error) {
 
 	// Declare profile
 	profile := c2.ParseActionProfile(
-		sliverpb.C2Channel_TCP,    // A Channel using TCP
-		d.Args.RemoteAddr,         // Targeting the host:[port] argument of our command
-		sliverpb.C2Direction_Bind, // A dialer
+		sliverpb.C2Channel_NamedPipe, // A Channel using Named Pipe
+		d.Args.RemoteAddr,            // Targeting the host:[port] argument of our command
+		sliverpb.C2Direction_Bind,    // A dialer
 	)
 
-	server := profile.Hostname
-	lport := uint16(profile.Port)
+	// Override hostname, just in doubt: it's just a pipe name/path
+	profile.Hostname = d.Args.RemoteAddr
 
-	if lport == 0 {
-		lport = 9898
-	}
-
-	log.Infof("Starting TCP dialer  ( ==>  %s:%d) ...", server, lport)
+	log.Infof("Starting Named Pipe dialer  ( ==>  %s) ...", "\\\\.\\pipe\\"+profile.Hostname)
 	res, err := transport.RPC.StartHandlerStage(context.Background(), &clientpb.HandlerStageReq{
 		Profile: profile,
 		Request: core.ActiveTarget.Request(),
@@ -67,6 +63,6 @@ func (d *Dial) Execute(args []string) (err error) {
 		return log.Errorf("An unknown error happened: no success")
 	}
 
-	log.Infof("Successfully executed TCP dialer")
+	log.Infof("Successfully executed Named Pipe dialer")
 	return
 }

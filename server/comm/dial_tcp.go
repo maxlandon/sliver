@@ -71,16 +71,30 @@ func DialTCP(network string, host string) (conn net.Conn, err error) {
 }
 
 // Dial - Get a network connection to a host in this Comm.
-// Valid stream networks are "tcp", "tcp4" and "tcp6"
+// Valid stream networks are "tcp", "tcp4" and "tcp6", or "pipe" with "name" as the other parameter.
 func (comm *Comm) Dial(network, host string) (conn net.Conn, err error) {
-	return comm.DialContextTCP(context.Background(), network, host)
+	switch network {
+	case "tcp", "tcp4", "tcp6":
+		return comm.DialContextTCP(context.Background(), network, host)
+	case "pipe":
+		return comm.DialContextPipe(context.Background(), host)
+	default:
+		return nil, errors.New("invalid network type")
+	}
 }
 
 // DialContext - Get a network connection to a host in this Comm, with a Context. It is not mandatory to pass
 // a context with a timeout, though all dial functions from the comm API will automatically include a default one.
-// Valid stream networks are "tcp", "tcp4" and "tcp6"
+// Valid stream networks are "tcp", "tcp4" and "tcp6", or "pipe" with "name" as the other parameter.
 func (comm *Comm) DialContext(ctx context.Context, network string, host string) (conn net.Conn, err error) {
-	return comm.DialContextTCP(ctx, network, host)
+	switch network {
+	case "tcp", "tcp4", "tcp6":
+		return comm.DialContextTCP(ctx, network, host)
+	case "pipe":
+		return comm.DialContextPipe(context.Background(), host)
+	default:
+		return nil, errors.New("invalid network type")
+	}
 }
 
 // DialContextTCP - Get a network connection to a host in this Comm (as route), with a Context. It is not mandatory to

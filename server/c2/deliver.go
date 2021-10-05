@@ -48,6 +48,14 @@ func Deliver(profile *models.C2Profile, network comm.Net, payload []byte) (err e
 		if err != nil {
 			return
 		}
+
+	case sliverpb.C2Channel_NamedPipe:
+
+		// Dial on a pipe accessible to the current active session.
+		conn, err = network.Dial("pipe", profile.Hostname)
+		if err != nil {
+			return
+		}
 	}
 
 	// Automatically and transparently serve the connection, if the latter has been used.

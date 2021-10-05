@@ -19,6 +19,7 @@ package c2
 */
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -45,6 +46,24 @@ func Dial(profile *models.C2Profile, network comm.Net, session *core.Session) (e
 		// Dial and yield a MutualTLS authenticated/encrypted connection,
 		// either pivoted through an implant comm or on the server interfaces.
 		conn, err = DialMutualTLS(profile, network)
+		if err != nil {
+			return
+		}
+
+	case sliverpb.C2Channel_TCP:
+
+		// Use the Comm system network to automatically dispatch dial through
+		// the right interface (either the server's, or the active session)
+		hostport := fmt.Sprintf("%s:%d", profile.Hostname, profile.Port)
+		conn, err = network.Dial("tcp", hostport)
+		if err != nil {
+			return
+		}
+
+	case sliverpb.C2Channel_NamedPipe:
+
+		// Dial on a pipe accessible to the current active session.
+		conn, err = network.Dial("pipe", profile.Hostname)
 		if err != nil {
 			return
 		}

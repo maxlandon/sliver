@@ -164,6 +164,7 @@ const (
 	DialerStr      = "dialer"
 	ListenStr      = "listen"
 	ServeStr       = "serve"
+	DeliverStr     = "deliver"
 	StageStr       = "stage"
 	ListenerStr    = "listener"
 	ConfigureStr   = "configure"

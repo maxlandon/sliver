@@ -69,6 +69,14 @@ func Serve(profile *models.C2Profile, network comm.Net, job *core.Job, ln net.Li
 		if err != nil {
 			return err
 		}
+
+	case sliverpb.C2Channel_NamedPipe:
+
+		// Listen on a pipe routed to the current active session.
+		ln, err = network.Listen("pipe", profile.Hostname)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Transparent Stager Handling & Job Setup ------------------------------------------------

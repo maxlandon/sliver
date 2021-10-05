@@ -145,7 +145,7 @@ func newListenerTCP(uri *url.URL, comm *Comm) (*tcpListener, error) {
 		ln.info.Application = commpb.Application_HTTPS
 	case "socks5":
 		ln.info.Application = commpb.Application_Socks5
-	case "pipe":
+	case "pipe", "namedpipe", "named_pipe":
 		ln.info.Application = commpb.Application_NamedPipe
 	default:
 		ln.info.Application = commpb.Application_None

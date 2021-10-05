@@ -31,10 +31,9 @@ import (
 	"github.com/bishopfox/sliver/client/command/c2/dns"
 	"github.com/bishopfox/sliver/client/command/c2/http"
 	"github.com/bishopfox/sliver/client/command/c2/https"
-	"github.com/bishopfox/sliver/client/command/c2/listeners"
 	"github.com/bishopfox/sliver/client/command/c2/malleable"
 	"github.com/bishopfox/sliver/client/command/c2/mtls"
-	"github.com/bishopfox/sliver/client/command/c2/pivots"
+	"github.com/bishopfox/sliver/client/command/c2/namedpipe"
 	"github.com/bishopfox/sliver/client/command/c2/tcp"
 	"github.com/bishopfox/sliver/client/command/c2/transports"
 	"github.com/bishopfox/sliver/client/command/c2/websites"
@@ -62,14 +61,14 @@ func bindCommandsC2(cc *gonsole.Menu) {
 		help.GetHelpFor(constants.DialerStr),
 		"creation",
 		[]string{""},
-		func() gonsole.Commander { return &c2.Dialer{} })
+		func() gonsole.Commander { return &malleable.Dialer{} })
 
 	malleableListener := malleableCmd.AddCommand(constants.ListenerStr,
 		"Create a new listener (reverse) C2 Profile for any available protocol",
 		help.GetHelpFor(constants.DialerStr),
 		"creation",
 		[]string{""},
-		func() gonsole.Commander { return &c2.Dialer{} })
+		func() gonsole.Commander { return &malleable.Listener{} })
 
 	// C2 profiles management commands -----------------
 	malleableList := malleableCmd.AddCommand(constants.ListStr,
@@ -143,7 +142,7 @@ func bindCommandsC2(cc *gonsole.Menu) {
 	//
 	tcpCmd := cc.AddCommand(constants.TcpStr,
 		"TCP handlers usage & management",
-		help.GetHelpFor(constants.MtlsStr),
+		help.GetHelpFor(constants.TcpStr),
 		constants.TransportsGroup,
 		[]string{"comm"},
 		func() gonsole.Commander { return &tcp.TCP{} })
@@ -179,6 +178,26 @@ func bindCommandsC2(cc *gonsole.Menu) {
 		[]string{""},
 		func() gonsole.Commander { return &tcp.Dialer{} })
 	tcpDialer.AddArgumentCompletion("RemoteAddr", completion.ServerInterfaceAddrs)
+
+	tcpDeliver := tcpCmd.AddCommand(constants.DeliverStr,
+		"Deliver an implant stage with a TCP dial (bind to target)",
+		help.GetHelpFor(constants.DeliverStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &tcp.Deliver{} })
+	tcpDeliver.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+	tcpDeliver.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
+	tcpDeliver.AddOptionCompletion("Profile", completion.ImplantProfiles)
+
+	tcpServe := tcpCmd.AddCommand(constants.ServeStr,
+		"Serve an implant stage over an TCP listener",
+		help.GetHelpFor(constants.ServeStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &tcp.Serve{} })
+	tcpServe.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+	tcpServe.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
+	tcpServe.AddOptionCompletion("Profile", completion.ImplantProfiles)
 
 	//
 	// Transports --------------------------------------------------------------------------------
@@ -330,6 +349,7 @@ func bindCommandsC2(cc *gonsole.Menu) {
 			func() gonsole.Commander { return &https.Serve{} })
 		httpsServe.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
 		httpsServe.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
+		httpsServe.AddOptionCompletion("Profile", completion.ImplantProfiles)
 		httpsServe.AddOptionCompletion("Domain", completion.ServerInterfaceAddrs)
 		httpsServe.AddOptionCompletionDynamic("Certificate", core.Console.Completer.LocalPathAndFiles)
 		httpsServe.AddOptionCompletionDynamic("PrivateKey", core.Console.Completer.LocalPathAndFiles)
@@ -366,17 +386,18 @@ func bindCommandsC2(cc *gonsole.Menu) {
 			func() gonsole.Commander { return &http.Serve{} })
 		httpServe.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
 		httpServe.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
+		httpServe.AddOptionCompletion("Profile", completion.ImplantProfiles)
 
-		stager := cc.AddCommand(constants.StageListenerStr,
-			"Start a staging listener (TCP/HTTP/HTTPS), bound to a Sliver profile",
-			help.GetHelpFor(constants.StageListenerStr),
-			constants.TransportsGroup,
-			[]string{""},
-			func() gonsole.Commander { return &listeners.StageListener{} })
-		stager.AddOptionCompletionDynamic("URL", completion.NewURLCompleterStager().CompleteURL)
-		stager.AddOptionCompletionDynamic("Certificate", core.Console.Completer.LocalPathAndFiles)
-		stager.AddOptionCompletionDynamic("PrivateKey", core.Console.Completer.LocalPathAndFiles)
-		stager.AddOptionCompletion("Profile", completion.ImplantProfiles)
+		// stager := cc.AddCommand(constants.StageListenerStr,
+		//         "Start a staging listener (TCP/HTTP/HTTPS), bound to a Sliver profile",
+		//         help.GetHelpFor(constants.StageListenerStr),
+		//         constants.TransportsGroup,
+		//         []string{""},
+		//         func() gonsole.Commander { return &listeners.StageListener{} })
+		// stager.AddOptionCompletionDynamic("URL", completion.NewURLCompleterStager().CompleteURL)
+		// stager.AddOptionCompletionDynamic("Certificate", core.Console.Completer.LocalPathAndFiles)
+		// stager.AddOptionCompletionDynamic("PrivateKey", core.Console.Completer.LocalPathAndFiles)
+		// stager.AddOptionCompletion("Profile", completion.ImplantProfiles)
 
 		// Websites --------------------------------
 		ws := cc.AddCommand(constants.WebsitesStr,
@@ -418,24 +439,73 @@ func bindCommandsC2(cc *gonsole.Menu) {
 			func() gonsole.Commander { return &websites.WebsiteType{} })
 		wu.AddOptionCompletionDynamic("Content", core.Console.Completer.LocalPathAndFiles)
 
+		//
 	// ----------------------------------------------------------------------------------------------
-	// All C2 transports that can listen on/ dial from the implant.
+	// All C2 transports that can listen on/ dial only from the implant.
 	// ----------------------------------------------------------------------------------------------
 	case constants.SliverMenu:
-		// C2 listeners -----------------------------------------------------------------
-		tcp := cc.AddCommand(constants.TCPListenerStr,
-			"Start a TCP pivot listener (unencrypted!)",
-			"",
-			constants.TransportsGroup,
-			[]string{""},
-			func() gonsole.Commander { return &pivots.TCPPivot{} })
-		tcp.AddOptionCompletion("LHost", completion.ActiveSessionIfaceAddrs)
 
-		cc.AddCommand(constants.NamedPipeStr,
-			"Start a named pipe pivot listener",
-			"",
+		//
+		// Named Pipe --------------------------
+		//
+		namedpipeCmd := cc.AddCommand(constants.NamedPipeStr,
+			"Named Pipe handlers usage & management",
+			help.GetHelpFor(constants.TcpStr),
 			constants.TransportsGroup,
-			[]string{"windows"}, // Command is only available if the sliver host OS is Windows
-			func() gonsole.Commander { return &pivots.NamedPipePivot{} })
+			[]string{"comm", "windows"},
+			func() gonsole.Commander { return &namedpipe.NamedPipe{} })
+
+		namedpipeListen := namedpipeCmd.AddCommand(constants.ListenStr,
+			"Start a Named Pipe listener on the current session",
+			help.GetHelpFor(constants.ListenStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &namedpipe.Listen{} })
+		namedpipeListen.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+
+		namedpipeListener := malleableListener.AddCommand(constants.TcpStr,
+			"Create and configure a new Named Pipe Listener profile (reverse from implant)",
+			help.GetHelpFor(constants.ListenerStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &namedpipe.Listener{} })
+		namedpipeListener.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+
+		namedpipeDial := namedpipeCmd.AddCommand(constants.DialStr,
+			"Dial an implant listening for incoming Named Pipe connections",
+			help.GetHelpFor(constants.DialStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &namedpipe.Dial{} })
+		namedpipeDial.AddArgumentCompletion("RemoteAddr", completion.ServerInterfaceAddrs)
+
+		namedpipeDialer := malleableDialer.AddCommand(constants.TcpStr,
+			"Create and configure a new Named Pipe Dialer profile (bind to implant)",
+			help.GetHelpFor(constants.DialerStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &namedpipe.Dialer{} })
+		namedpipeDialer.AddArgumentCompletion("RemoteAddr", completion.ServerInterfaceAddrs)
+
+		namedpipeDeliver := namedpipeCmd.AddCommand(constants.DeliverStr,
+			"Deliver an implant stage with a Named Pipe dial (bind to target)",
+			help.GetHelpFor(constants.DeliverStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &namedpipe.Deliver{} })
+		namedpipeDeliver.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+		namedpipeDeliver.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
+		namedpipeDeliver.AddOptionCompletion("Profile", completion.ImplantProfiles)
+
+		namedpipeServe := namedpipeCmd.AddCommand(constants.ServeStr,
+			"Serve an implant stage over a Named Pipe listener",
+			help.GetHelpFor(constants.ServeStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &namedpipe.Serve{} })
+		namedpipeServe.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+		namedpipeServe.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
+		namedpipeServe.AddOptionCompletion("Profile", completion.ImplantProfiles)
+
 	}
 }

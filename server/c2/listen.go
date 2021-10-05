@@ -113,6 +113,14 @@ func Listen(profile *models.C2Profile, network comm.Net, session *core.Session) 
 		if err != nil {
 			return nil, err
 		}
+
+	case sliverpb.C2Channel_NamedPipe:
+
+		// Listen on a pipe routed to the current active session.
+		ln, err = network.Listen("pipe", profile.Hostname)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Transparent Session Handling & Job Setup ------------------------------------------------

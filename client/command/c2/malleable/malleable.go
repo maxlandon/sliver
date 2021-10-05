@@ -26,3 +26,20 @@ type Malleable struct {
 func (n *Malleable) Execute(args []string) (err error) {
 	return
 }
+
+// Dialer - Create a new dialer C2 Profile for any available protocol
+type Dialer struct {
+}
+
+// Execute - Create a new dialer C2 Profile for any available protocol
+func (d *Dialer) Execute(args []string) (err error) {
+	return
+}
+
+// Listener - Create a new listener C2 Profile for available protocol
+type Listener struct{}
+
+// Execute - Create a new listener C2 Profile for available protocol
+func (l *Listener) Execute(args []string) (err error) {
+	return
+}

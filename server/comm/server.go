@@ -53,6 +53,9 @@ func (s *serverNet) Dial(network, host string) (net.Conn, error) {
 		}
 		return net.DialUDP(network, nil, raddr)
 
+	case "pipe":
+		return nil, errors.New("named pipes are not available on the server")
+
 	default:
 		return nil, errors.New("invalid network")
 	}

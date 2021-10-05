@@ -1,7 +1,5 @@
 package c2
 
-import "github.com/bishopfox/sliver/protobuf/clientpb"
-
 /*
    Sliver Implant Framework
    Copyright (C) 2019  Bishop Fox
@@ -20,6 +18,27 @@ import "github.com/bishopfox/sliver/protobuf/clientpb"
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import (
+	"errors"
+	"fmt"
+	"io/ioutil"
+
+	"github.com/bishopfox/sliver/protobuf/clientpb"
+)
+
+const (
+	defaultMTLSLPort    = 8888
+	defaultHTTPLPort    = 80
+	defaultHTTPSLPort   = 443
+	defaultDNSLPort     = 53
+	defaultTCPPivotPort = 9898
+
+	defaultReconnect = 60
+	defaultMaxErrors = 1000
+
+	defaultTimeout = 60
+)
+
 // GenericCmd - Generic root command
 type GenericCmd struct {
 }
@@ -35,28 +54,11 @@ type DialerOptions struct {
 	} `group:"core dialer options"`
 }
 
-// Dialer - Create a new dialer C2 Profile for any available protocol
-type Dialer struct {
-}
-
-// Execute - Create a new dialer C2 Profile for any available protocol
-func (d *Dialer) Execute(args []string) (err error) {
-	return
-}
-
 type ListenerOptions struct {
 	Core struct {
 		Profile    string `long:"profile" short:"p" description:"Profile to use as listener driver: will listen on content"`
 		Persistent bool   `long:"persistent" short:"P" description:"listen: transport is a fallback one, and dial: will start listening when implant reconnects"`
 	} `group:"core listener options"`
-}
-
-// Listener - Create a new listener C2 Profile for available protocol
-type Listener struct{}
-
-// Execute - Create a new listener C2 Profile for available protocol
-func (l *Listener) Execute(args []string) (err error) {
-	return
 }
 
 type ProfileOptions struct {
@@ -98,7 +100,49 @@ type StagerOptions struct {
 }
 
 // ParseStagerOptions - Based on the user-given values
-func ParseStagerOptions(req *clientpb.HandlerStagerReq, opts StagerOptions) (err error) {
+func ParseStagerOptions(req *clientpb.HandlerStagerReq, options StagerOptions) (err error) {
+	opts := options.Core
+
+	if opts.Profile == "" && opts.LocalPath == "" && len(opts.Bytes) == 0 {
+		return errors.New("You need to provide a stage with either --profile, --file or --bytes options")
+	}
+
+	// If a profile name is given, return this: bytes will be populated server-side
+	if opts.Profile != "" {
+		req.StageImplant = opts.Profile
+		return
+	}
+
+	// Read a file for its payload and return without any name.
+	if opts.LocalPath != "" {
+		bytes, err := ioutil.ReadFile(opts.LocalPath)
+		if err != nil {
+			return fmt.Errorf("failed to read payload file: %s", err)
+		}
+		req.StageBytes = bytes
+		return nil
+	}
+
+	// If the payload was directly given as an option, populate and return.
+	if len(opts.Bytes) > 0 {
+		req.StageBytes = []byte(opts.Bytes)
+		return
+	}
 
 	return
+}
+
+func getLocalCertificatePair(certPath, keyPath string) ([]byte, []byte, error) {
+	if certPath == "" && keyPath == "" {
+		return nil, nil, nil
+	}
+	cert, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	key, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	return cert, key, nil
 }
