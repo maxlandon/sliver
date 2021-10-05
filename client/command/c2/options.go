@@ -50,13 +50,13 @@ func (c *GenericCmd) Execute(args []string) (err error) {
 
 type DialerOptions struct {
 	Core struct {
-		Profile string `long:"profile" short:"p" description:"profile to use as dialer driver: will target its content"`
+		Profile string `long:"malleable" short:"m" description:"profile to use as dialer driver: will target its content"`
 	} `group:"core dialer options"`
 }
 
 type ListenerOptions struct {
 	Core struct {
-		Profile    string `long:"profile" short:"p" description:"Profile to use as listener driver: will listen on content"`
+		Profile    string `long:"malleable" short:"m" description:"Profile to use as listener driver: will listen on content"`
 		Persistent bool   `long:"persistent" short:"P" description:"listen: transport is a fallback one, and dial: will start listening when implant reconnects"`
 	} `group:"core listener options"`
 }

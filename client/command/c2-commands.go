@@ -200,6 +200,24 @@ func bindCommandsC2(cc *gonsole.Menu) {
 	tcpServe.AddOptionCompletion("Profile", completion.ImplantProfiles)
 
 	//
+	// Named Pipe --------------------------
+	//
+
+	malleableListener.AddCommand(constants.NamedPipeStr,
+		"Create and configure a new Named Pipe Listener profile (reverse from implant)",
+		help.GetHelpFor(constants.ListenerStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &namedpipe.Listener{} })
+
+	malleableDialer.AddCommand(constants.NamedPipeStr,
+		"Create and configure a new Named Pipe Dialer profile (bind to implant)",
+		help.GetHelpFor(constants.DialerStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &namedpipe.Dialer{} })
+
+	//
 	// Transports --------------------------------------------------------------------------------
 	//
 
@@ -463,14 +481,6 @@ func bindCommandsC2(cc *gonsole.Menu) {
 			func() gonsole.Commander { return &namedpipe.Listen{} })
 		namedpipeListen.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
 
-		namedpipeListener := malleableListener.AddCommand(constants.TcpStr,
-			"Create and configure a new Named Pipe Listener profile (reverse from implant)",
-			help.GetHelpFor(constants.ListenerStr),
-			"",
-			[]string{""},
-			func() gonsole.Commander { return &namedpipe.Listener{} })
-		namedpipeListener.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
-
 		namedpipeDial := namedpipeCmd.AddCommand(constants.DialStr,
 			"Dial an implant listening for incoming Named Pipe connections",
 			help.GetHelpFor(constants.DialStr),
@@ -478,14 +488,6 @@ func bindCommandsC2(cc *gonsole.Menu) {
 			[]string{""},
 			func() gonsole.Commander { return &namedpipe.Dial{} })
 		namedpipeDial.AddArgumentCompletion("RemoteAddr", completion.ServerInterfaceAddrs)
-
-		namedpipeDialer := malleableDialer.AddCommand(constants.TcpStr,
-			"Create and configure a new Named Pipe Dialer profile (bind to implant)",
-			help.GetHelpFor(constants.DialerStr),
-			"",
-			[]string{""},
-			func() gonsole.Commander { return &namedpipe.Dialer{} })
-		namedpipeDialer.AddArgumentCompletion("RemoteAddr", completion.ServerInterfaceAddrs)
 
 		namedpipeDeliver := namedpipeCmd.AddCommand(constants.DeliverStr,
 			"Deliver an implant stage with a Named Pipe dial (bind to target)",
@@ -506,6 +508,6 @@ func bindCommandsC2(cc *gonsole.Menu) {
 		namedpipeServe.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
 		namedpipeServe.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 		namedpipeServe.AddOptionCompletion("Profile", completion.ImplantProfiles)
-
 	}
+
 }
