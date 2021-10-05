@@ -16,12 +16,7 @@ package listeners
 */
 
 import (
-	"context"
 	"io/ioutil"
-
-	"github.com/bishopfox/sliver/client/log"
-	"github.com/bishopfox/sliver/client/transport"
-	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // HTTPSListener - Start a HTTP(S) listener
@@ -40,35 +35,35 @@ type HTTPSListener struct {
 
 // Execute - Start a HTTP(S) listener
 func (m *HTTPSListener) Execute(args []string) (err error) {
-	domain := m.Options.Domain
-	website := m.Options.Website
-	lport := m.Options.LPort
-	if lport == 0 {
-		lport = defaultHTTPSLPort
-	}
-
-	cert, key, err := getLocalCertificatePair(m.Options.Certificate, m.Options.PrivateKey)
-	if err != nil {
-		return log.Errorf("Failed to load local certificate %v", err)
-	}
-
-	log.Infof("Starting HTTPS %s:%d listener ...", domain, lport)
-	https, err := transport.RPC.StartHTTPSListener(context.Background(), &clientpb.HTTPListenerReq{
-		Domain:     domain,
-		Website:    website,
-		Host:       m.Options.LHost,
-		Port:       lport,
-		Secure:     true,
-		Cert:       cert,
-		Key:        key,
-		ACME:       m.Options.LetsEncrypt,
-		Persistent: m.Options.Persistent,
-	})
-	if err != nil {
-		return log.Errorf("Failed to start HTTPS listener: %s", err)
-	}
-
-	log.Infof("Successfully started job #%d\n", https.JobID)
+	// domain := m.Options.Domain
+	// website := m.Options.Website
+	// lport := m.Options.LPort
+	// if lport == 0 {
+	//         lport = defaultHTTPSLPort
+	// }
+	//
+	// cert, key, err := getLocalCertificatePair(m.Options.Certificate, m.Options.PrivateKey)
+	// if err != nil {
+	//         return log.Errorf("Failed to load local certificate %v", err)
+	// }
+	//
+	// log.Infof("Starting HTTPS %s:%d listener ...", domain, lport)
+	// https, err := transport.RPC.StartHTTPSListener(context.Background(), &clientpb.HTTPListenerReq{
+	//         Domain:     domain, //
+	//         Website:    website,
+	//         Host:       m.Options.LHost, //
+	//         Port:       lport,           //
+	//         Secure:     true,
+	//         Cert:       cert, // NOT SURE
+	//         Key:        key,  //NOT SURE
+	//         ACME:       m.Options.LetsEncrypt,
+	//         Persistent: m.Options.Persistent, //
+	// })
+	// if err != nil {
+	//         return log.Errorf("Failed to start HTTPS listener: %s", err)
+	// }
+	//
+	// log.Infof("Successfully started job #%d\n", https.JobID)
 	return
 }
 

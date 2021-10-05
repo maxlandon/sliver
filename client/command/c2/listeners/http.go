@@ -15,14 +15,6 @@ package listeners
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import (
-	"context"
-
-	"github.com/bishopfox/sliver/client/log"
-	"github.com/bishopfox/sliver/client/transport"
-	"github.com/bishopfox/sliver/protobuf/clientpb"
-)
-
 // HTTPListener - Start a HTTP listener
 type HTTPListener struct {
 	Options struct {
@@ -36,25 +28,25 @@ type HTTPListener struct {
 
 // Execute - Start a HTTP listener
 func (m *HTTPListener) Execute(args []string) (err error) {
-	domain := m.Options.Domain
-	lport := m.Options.LPort
-	if lport == 0 {
-		lport = defaultHTTPSLPort
-	}
-
-	log.Infof("Starting HTTP %s:%d listener ...", domain, lport)
-	http, err := transport.RPC.StartHTTPListener(context.Background(), &clientpb.HTTPListenerReq{
-		Domain:     domain,
-		Website:    m.Options.Website,
-		Host:       m.Options.LHost,
-		Port:       lport,
-		Secure:     false,
-		Persistent: m.Options.Persistent,
-	})
-	if err != nil {
-		return log.Errorf("Failed to start HTTP listener: %s", err)
-	}
-
-	log.Infof("Successfully started job #%d", http.JobID)
+	// domain := m.Options.Domain
+	// lport := m.Options.LPort
+	// if lport == 0 {
+	//         lport = defaultHTTPSLPort
+	// }
+	//
+	// log.Infof("Starting HTTP %s:%d listener ...", domain, lport)
+	// http, err := transport.RPC.StartHTTPListener(context.Background(), &clientpb.HTTPListenerReq{
+	//         Domain:     domain,
+	//         Website:    m.Options.Website,
+	//         Host:       m.Options.LHost,
+	//         Port:       lport,
+	//         Secure:     false,
+	//         Persistent: m.Options.Persistent,
+	// })
+	// if err != nil {
+	//         return log.Errorf("Failed to start HTTP listener: %s", err)
+	// }
+	//
+	// log.Infof("Successfully started job #%d", http.JobID)
 	return
 }

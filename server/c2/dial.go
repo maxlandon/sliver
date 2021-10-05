@@ -41,16 +41,13 @@ func Dial(profile *models.C2Profile, network comm.Net, session *core.Session) (e
 	switch profile.Channel {
 
 	case sliverpb.C2Channel_MTLS:
+
 		// Dial and yield a MutualTLS authenticated/encrypted connection,
 		// either pivoted through an implant comm or on the server interfaces.
 		conn, err = DialMutualTLS(profile, network)
 		if err != nil {
 			return
 		}
-
-	case sliverpb.C2Channel_HTTPS:
-
-	case sliverpb.C2Channel_DNS:
 	}
 
 	// Automatically and transparently serve the connection, if the latter has been used.

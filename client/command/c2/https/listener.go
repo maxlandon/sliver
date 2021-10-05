@@ -23,6 +23,15 @@ import (
 	"github.com/bishopfox/sliver/client/command/c2/http"
 )
 
+// ListenerOptions - All listener options needed by HTTP handlers
+type ListenerOptions struct {
+	Options struct {
+		Domain      string `long:"domain" short:"d" description:"limit responses to specific domain)"`
+		LetsEncrypt bool   `long:"lets-encrypt" short:"e" description:"attempt to provision a let's encrypt certificate"`
+		Website     string `long:"website" short:"w" description:"website name (see 'websites' command)"`
+	} `group:"HTTP(S) listener options"`
+}
+
 // Listener - Create a new HTTPS server listener C2 Profile
 type Listener struct {
 	Args struct {
@@ -30,10 +39,11 @@ type Listener struct {
 	} `positional-args:"yes"`
 
 	c2.ListenerOptions
+	HTTPListenerOptions ListenerOptions
 	c2.ProfileOptions
 	c2.SecurityOptions
 
-	// Website extension configurations
+	// HTTP C2 Profile configurations
 	http.AdvancedOptions
 }
 

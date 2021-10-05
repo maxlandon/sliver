@@ -19,20 +19,16 @@ package https
 */
 
 import (
+	"context"
 	"io/ioutil"
 
 	"github.com/bishopfox/sliver/client/command/c2"
+	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/log"
+	"github.com/bishopfox/sliver/client/transport"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
-
-// ListenerOptions - All listener options needed by HTTP handlers
-type ListenerOptions struct {
-	Options struct {
-		Domain      string `long:"domain" short:"d" description:"limit responses to specific domain)"`
-		LetsEncrypt bool   `long:"lets-encrypt" short:"e" description:"attempt to provision a let's encrypt certificate"`
-		Website     string `long:"website" short:"w" description:"website name (see 'websites' command)"`
-	} `group:"HTTP(S) listener options"`
-}
 
 // Listen - Start an HTTPS listener on the server
 type Listen struct {
@@ -62,7 +58,22 @@ func (l *Listen) Execute(args []string) (err error) {
 
 	// HTTPS-specific options
 	profile.Domains = []string{l.HTTPListenerOptions.Options.Domain} // Restrict responses to this domain
+	profile.Website = l.HTTPListenerOptions.Options.Website
+	profile.LetsEncrypt = l.HTTPListenerOptions.Options.LetsEncrypt
 
+	log.Infof("Starting HTTPS %s:%d listener ...", profile.Domains[0], profile.Port)
+	res, err := transport.RPC.StartHandlerStage(context.Background(), &clientpb.HandlerStageReq{
+		Profile: profile,
+		Request: core.ActiveTarget.Request(),
+	})
+	if err != nil {
+		return log.Error(err)
+	}
+	if !res.Success {
+		return log.Errorf("An unknown error happened: no success")
+	}
+
+	log.Infof("Successfully started HTTPS listener")
 	return
 }
 

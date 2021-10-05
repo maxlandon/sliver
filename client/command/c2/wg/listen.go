@@ -68,7 +68,7 @@ func (w *Listen) Execute(args []string) (err error) {
 	log.Infof("Starting Wireguard listener (Iface: %s, UDP Port: %d, TCP Port: %d, Key Port: %d)...",
 		profile.Hostname, profile.Port, profile.ControlPort, profile.KeyExchangePort)
 
-	res, err := transport.RPC.StartC2Handler(context.Background(), &clientpb.HandlerStartReq{
+	res, err := transport.RPC.StartHandlerStage(context.Background(), &clientpb.HandlerStageReq{
 		Profile: profile,
 		Request: core.ActiveTarget.Request(),
 	})

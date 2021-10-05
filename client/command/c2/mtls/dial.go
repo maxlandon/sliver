@@ -57,7 +57,7 @@ func (d *Dial) Execute(args []string) (err error) {
 	}
 
 	log.Infof("Starting mTLS dialer  ( ==>  %s:%d) ...", server, lport)
-	res, err := transport.RPC.StartC2Handler(context.Background(), &clientpb.HandlerStartReq{
+	res, err := transport.RPC.StartHandlerStage(context.Background(), &clientpb.HandlerStageReq{
 		Profile: profile,
 		Request: core.ActiveTarget.Request(),
 	})

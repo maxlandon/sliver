@@ -55,7 +55,7 @@ func (l *Listen) Execute(args []string) (err error) {
 	}
 
 	log.Infof("Starting mTLS listener (%s:%d)...", profile.Hostname, profile.Port)
-	res, err := transport.RPC.StartC2Handler(context.Background(), &clientpb.HandlerStartReq{
+	res, err := transport.RPC.StartHandlerStage(context.Background(), &clientpb.HandlerStageReq{
 		Profile: profile,
 		Request: core.ActiveTarget.Request(),
 	})
