@@ -105,8 +105,9 @@ type C2Profile struct {
 	Jitter   int64
 
 	// HTTP related
-	HTTP     C2ProfileHTTP // Needs to be unmarshaled to a sliverpb.C2ProfileHTTP
+	HTTP     *C2ProfileHTTP // Needs to be unmarshaled to a sliverpb.C2ProfileHTTP
 	ProxyURL string
+	Website  string
 
 	// Identity & Security. TODO: Credential model integration
 	// C2 Core
@@ -117,6 +118,7 @@ type C2Profile struct {
 	// Advanced
 	ControlServerCert []byte
 	ControlClientKey  []byte
+	LetsEncrypt       bool
 
 	// If compiled with legacy generate, this is just a profile for compilation
 	// We will not include those in most completions/commands that manipulate profiles.
@@ -164,8 +166,9 @@ func (p *C2Profile) ToProtobuf() *sliverpb.C2Profile {
 		Interval: p.Interval,
 		Jitter:   p.Jitter,
 		// HTTP:
-		HTTP:     p.HTTP.ToProtobuf(),
-		ProxyURL: p.ProxyURL,
+		ProxyURL:    p.ProxyURL,
+		Website:     p.Website,
+		LetsEncrypt: p.LetsEncrypt,
 		// Security & Identity
 		Credentials: &sliverpb.Credentials{
 			CACertPEM:         []byte(p.CACertPEM),
@@ -175,6 +178,10 @@ func (p *C2Profile) ToProtobuf() *sliverpb.C2Profile {
 			ControlServerCert: []byte(p.ControlServerCert),
 			ControlClientKey:  []byte(p.ControlClientKey),
 		},
+	}
+
+	if p.HTTP != nil {
+		profile.HTTP = p.HTTP.ToProtobuf()
 	}
 
 	return profile
@@ -209,6 +216,7 @@ func C2ProfileFromProtobuf(p *sliverpb.C2Profile) (profile *C2Profile) {
 		Jitter:   p.Jitter,
 		// HTTP:
 		ProxyURL: p.ProxyURL,
+		Website:  p.Website,
 	}
 
 	// Security & Identity
@@ -223,7 +231,7 @@ func C2ProfileFromProtobuf(p *sliverpb.C2Profile) (profile *C2Profile) {
 
 	if p.HTTP != nil {
 		httpProfileData, _ := proto.Marshal(p.HTTP)
-		profile.HTTP = C2ProfileHTTP{
+		profile.HTTP = &C2ProfileHTTP{
 			ID:   uuid.FromStringOrNil(p.HTTP.ID),
 			Data: httpProfileData,
 		}

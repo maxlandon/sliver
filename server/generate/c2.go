@@ -104,7 +104,7 @@ func InitImplantC2Configuration(pbConfig *clientpb.ImplantConfig, cfg *models.Im
 		// HTTP protocols need to check their builtin configuration, as well as
 		// serializing those HTTP profiles in order to store them in the Database.
 		if validated.Channel == sliverpb.C2Channel_HTTP || validated.Channel == sliverpb.C2Channel_HTTPS {
-			validated.HTTP.Data = setupC2ProfileHTTP(profile, cfg)
+			validated.HTTP.Data = setupC2ProfileClientHTTP(profile, cfg)
 		}
 
 		// Finally, add the C2 profile as a transport to the configuration
@@ -138,8 +138,8 @@ func InitImplantC2Configuration(pbConfig *clientpb.ImplantConfig, cfg *models.Im
 	return nil
 }
 
-// setupC2ProfileHTTP - Validates and/or populates any required HTTP C2 Profile stuff.
-func setupC2ProfileHTTP(p *sliverpb.C2Profile, config *models.ImplantConfig) (httpProfileData []byte) {
+// setupC2ProfileClientHTTP - Validates and/or populates any required HTTP C2 Profile stuff.
+func setupC2ProfileClientHTTP(p *sliverpb.C2Profile, config *models.ImplantConfig) (httpProfileData []byte) {
 
 	// If there are any miningful values set up, don't touch anything
 	// and pass along, we assume the guy throwing the config has set it up already.
@@ -148,8 +148,10 @@ func setupC2ProfileHTTP(p *sliverpb.C2Profile, config *models.ImplantConfig) (ht
 	}
 
 	// Load default HTTP configuration, either compiled in server or in server config path
-	httpConfig := configs.GetHTTPC2Config().RandomImplantConfig()
-	p.HTTP = httpConfig.ToProtobuf()
+	if p.HTTP == nil {
+		httpConfig := configs.GetHTTPC2Config().RandomImplantConfig()
+		p.HTTP = httpConfig.C2ProfileHTTP // DOES NOT LOAD ANY SERVER VALUES
+	}
 
 	// Generate User agent for the implant
 	p.HTTP.UserAgent = configs.GetHTTPC2Config().GenerateUserAgent(config.GOOS, config.GOARCH)

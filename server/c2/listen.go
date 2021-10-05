@@ -19,7 +19,10 @@ package c2
 */
 
 import (
+	"fmt"
+
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/c2/http"
 	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db/models"
@@ -28,21 +31,32 @@ import (
 // Listen - Root function where all listeners/servers for all C2 channels are called.
 // Please add a branch case for your C2 profile, where you should normally just have
 // to imitate the above lines. The session is passed for providing the good network.
+//
+// The server automatically creates and populates a server job, but DOES NOT start it.
+// Examples of useful fields in this Job:
+// - Ctrl/Ticker stuff for handling/killing goroutine-based C2 handlers/monitoring stuff.
+// - Cleanup() function, allows you to add additional cleanup tasks for your C2 job.
+//
+// The listener is nil: you can optionally assign it to a listener that you started  within
+// your C2 channel implementation. The listener is then transparently handled by the job system.
 func Listen(profile *models.C2Profile, network comm.Net, session *core.Session) (job *core.Job, err error) {
 
 	// Automatic C2 handler & Job Setup -------------------------------------------------------
 
-	// The server automatically creates and populates a server job, but DOES NOT start it.
-	// Examples of useful fields in this Job:
-	// - Ctrl/Ticker stuff for handling/killing goroutine-based C2 handlers/monitoring stuff.
-	// - Cleanup() function, allows you to add additional cleanup tasks for your C2 job.
-	//
-	// The listener is nil: you can optionally assign it to a listener that you started  within
-	// your C2 channel implementation. The listener is then transparently handled by the job system.
 	job, ln := NewHandlerJob(profile, session)
 
 	// C2 Protocols Implementations -----------------------------------------------------------
 	switch profile.Channel {
+
+	case sliverpb.C2Channel_TCP:
+
+		// Use the Comm system network to automatically dispatch dial/listen
+		// to the right interface (either the server's, or the active session)
+		hostport := fmt.Sprintf("%s:%d", profile.Hostname, profile.Port)
+		ln, err = network.Listen("tcp", hostport)
+		if err != nil {
+			return nil, err
+		}
 
 	case sliverpb.C2Channel_MTLS:
 
@@ -73,15 +87,35 @@ func Listen(profile *models.C2Profile, network comm.Net, session *core.Session) 
 	case sliverpb.C2Channel_DNS:
 
 		// Start the DNS server and integrate its control/stop functions into the job
+		// (No listener, Sliver connections are handled from within the DNS server implementation.)
 		err = ServeDNS(profile, job)
 		if err != nil {
 			return nil, err
 		}
 
-	case sliverpb.C2Channel_HTTPS:
+	case sliverpb.C2Channel_HTTPS, sliverpb.C2Channel_HTTP:
+
+		// Instantiate a new HTTP(S) Server configured with the target C2 profile
+		server, err := http.NewServerFromProfile(profile)
+		if err != nil {
+			return nil, err
+		}
+
+		// Initialize the HTTP Server with job control/cleanup
+		err = server.InitServer(job)
+		if err != nil {
+			return nil, err
+		}
+
+		// Start the HTTP Server, handing its control to the job.
+		// (No listener, Sliver connections are handled from within the HTTP server implementation.)
+		err = server.Serve(job)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Transparent Session Service & Job Setup ------------------------------------------------
+	// Transparent Session Handling & Job Setup ------------------------------------------------
 
 	// If the listener is used (thus spawned/started), serve the connections
 	// hitting it in the background. This will return transparently if not used/nil

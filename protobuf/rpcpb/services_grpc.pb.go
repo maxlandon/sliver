@@ -55,22 +55,17 @@ type SliverRPCClient interface {
 	UpdateC2Profile(ctx context.Context, in *clientpb.UpdateC2ProfileReq, opts ...grpc.CallOption) (*clientpb.UpdateC2Profile, error)
 	GetC2Profiles(ctx context.Context, in *clientpb.GetC2ProfilesReq, opts ...grpc.CallOption) (*clientpb.GetC2Profiles, error)
 	// *** C2 Handlers ***
-	StartC2Handler(ctx context.Context, in *clientpb.HandlerStartReq, opts ...grpc.CallOption) (*clientpb.HandlerStart, error)
+	StartHandlerStage(ctx context.Context, in *clientpb.HandlerStageReq, opts ...grpc.CallOption) (*clientpb.HandlerStage, error)
+	StartHandlerStager(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error)
 	CloseC2Handler(ctx context.Context, in *clientpb.HandlerCloseReq, opts ...grpc.CallOption) (*clientpb.HandlerClose, error)
 	// *** Transports ****
 	AddTransport(ctx context.Context, in *clientpb.AddTransportReq, opts ...grpc.CallOption) (*clientpb.AddTransport, error)
 	DeleteTransport(ctx context.Context, in *clientpb.DeleteTransportReq, opts ...grpc.CallOption) (*clientpb.DeleteTransport, error)
 	SwitchTransport(ctx context.Context, in *clientpb.SwitchTransportReq, opts ...grpc.CallOption) (*clientpb.SwitchTransport, error)
 	GetTransports(ctx context.Context, in *clientpb.GetTransportsReq, opts ...grpc.CallOption) (*clientpb.GetTransports, error)
-	// *** Listeners ***
-	// rpc StartMTLSListener(clientpb.MTLSListenerReq) returns (clientpb.MTLSListener);
-	// rpc StartWGListener(clientpb.WGListenerReq) returns (clientpb.WGListener);
-	// rpc StartDNSListener(clientpb.DNSListenerReq) returns (clientpb.DNSListener);
-	StartHTTPSListener(ctx context.Context, in *clientpb.HTTPListenerReq, opts ...grpc.CallOption) (*clientpb.HTTPListener, error)
-	StartHTTPListener(ctx context.Context, in *clientpb.HTTPListenerReq, opts ...grpc.CallOption) (*clientpb.HTTPListener, error)
 	// *** Stager Listener ***
-	StartTCPStagerListener(ctx context.Context, in *clientpb.StagerListenerReq, opts ...grpc.CallOption) (*clientpb.StagerListener, error)
-	StartHTTPStagerListener(ctx context.Context, in *clientpb.StagerListenerReq, opts ...grpc.CallOption) (*clientpb.StagerListener, error)
+	StartTCPStagerListener(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error)
+	StartHTTPStagerListener(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error)
 	// *** Server Adresses ***
 	GetServerInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error)
 	// *** Loot ***
@@ -390,9 +385,18 @@ func (c *sliverRPCClient) GetC2Profiles(ctx context.Context, in *clientpb.GetC2P
 	return out, nil
 }
 
-func (c *sliverRPCClient) StartC2Handler(ctx context.Context, in *clientpb.HandlerStartReq, opts ...grpc.CallOption) (*clientpb.HandlerStart, error) {
-	out := new(clientpb.HandlerStart)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartC2Handler", in, out, opts...)
+func (c *sliverRPCClient) StartHandlerStage(ctx context.Context, in *clientpb.HandlerStageReq, opts ...grpc.CallOption) (*clientpb.HandlerStage, error) {
+	out := new(clientpb.HandlerStage)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartHandlerStage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) StartHandlerStager(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error) {
+	out := new(clientpb.HandlerStager)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartHandlerStager", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -444,26 +448,8 @@ func (c *sliverRPCClient) GetTransports(ctx context.Context, in *clientpb.GetTra
 	return out, nil
 }
 
-func (c *sliverRPCClient) StartHTTPSListener(ctx context.Context, in *clientpb.HTTPListenerReq, opts ...grpc.CallOption) (*clientpb.HTTPListener, error) {
-	out := new(clientpb.HTTPListener)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartHTTPSListener", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sliverRPCClient) StartHTTPListener(ctx context.Context, in *clientpb.HTTPListenerReq, opts ...grpc.CallOption) (*clientpb.HTTPListener, error) {
-	out := new(clientpb.HTTPListener)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartHTTPListener", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sliverRPCClient) StartTCPStagerListener(ctx context.Context, in *clientpb.StagerListenerReq, opts ...grpc.CallOption) (*clientpb.StagerListener, error) {
-	out := new(clientpb.StagerListener)
+func (c *sliverRPCClient) StartTCPStagerListener(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error) {
+	out := new(clientpb.HandlerStager)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartTCPStagerListener", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -471,8 +457,8 @@ func (c *sliverRPCClient) StartTCPStagerListener(ctx context.Context, in *client
 	return out, nil
 }
 
-func (c *sliverRPCClient) StartHTTPStagerListener(ctx context.Context, in *clientpb.StagerListenerReq, opts ...grpc.CallOption) (*clientpb.StagerListener, error) {
-	out := new(clientpb.StagerListener)
+func (c *sliverRPCClient) StartHTTPStagerListener(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error) {
+	out := new(clientpb.HandlerStager)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartHTTPStagerListener", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1382,22 +1368,17 @@ type SliverRPCServer interface {
 	UpdateC2Profile(context.Context, *clientpb.UpdateC2ProfileReq) (*clientpb.UpdateC2Profile, error)
 	GetC2Profiles(context.Context, *clientpb.GetC2ProfilesReq) (*clientpb.GetC2Profiles, error)
 	// *** C2 Handlers ***
-	StartC2Handler(context.Context, *clientpb.HandlerStartReq) (*clientpb.HandlerStart, error)
+	StartHandlerStage(context.Context, *clientpb.HandlerStageReq) (*clientpb.HandlerStage, error)
+	StartHandlerStager(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error)
 	CloseC2Handler(context.Context, *clientpb.HandlerCloseReq) (*clientpb.HandlerClose, error)
 	// *** Transports ****
 	AddTransport(context.Context, *clientpb.AddTransportReq) (*clientpb.AddTransport, error)
 	DeleteTransport(context.Context, *clientpb.DeleteTransportReq) (*clientpb.DeleteTransport, error)
 	SwitchTransport(context.Context, *clientpb.SwitchTransportReq) (*clientpb.SwitchTransport, error)
 	GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error)
-	// *** Listeners ***
-	// rpc StartMTLSListener(clientpb.MTLSListenerReq) returns (clientpb.MTLSListener);
-	// rpc StartWGListener(clientpb.WGListenerReq) returns (clientpb.WGListener);
-	// rpc StartDNSListener(clientpb.DNSListenerReq) returns (clientpb.DNSListener);
-	StartHTTPSListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error)
-	StartHTTPListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error)
 	// *** Stager Listener ***
-	StartTCPStagerListener(context.Context, *clientpb.StagerListenerReq) (*clientpb.StagerListener, error)
-	StartHTTPStagerListener(context.Context, *clientpb.StagerListenerReq) (*clientpb.StagerListener, error)
+	StartTCPStagerListener(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error)
+	StartHTTPStagerListener(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error)
 	// *** Server Adresses ***
 	GetServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error)
 	// *** Loot ***
@@ -1576,8 +1557,11 @@ func (UnimplementedSliverRPCServer) UpdateC2Profile(context.Context, *clientpb.U
 func (UnimplementedSliverRPCServer) GetC2Profiles(context.Context, *clientpb.GetC2ProfilesReq) (*clientpb.GetC2Profiles, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetC2Profiles not implemented")
 }
-func (UnimplementedSliverRPCServer) StartC2Handler(context.Context, *clientpb.HandlerStartReq) (*clientpb.HandlerStart, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartC2Handler not implemented")
+func (UnimplementedSliverRPCServer) StartHandlerStage(context.Context, *clientpb.HandlerStageReq) (*clientpb.HandlerStage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartHandlerStage not implemented")
+}
+func (UnimplementedSliverRPCServer) StartHandlerStager(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartHandlerStager not implemented")
 }
 func (UnimplementedSliverRPCServer) CloseC2Handler(context.Context, *clientpb.HandlerCloseReq) (*clientpb.HandlerClose, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CloseC2Handler not implemented")
@@ -1594,16 +1578,10 @@ func (UnimplementedSliverRPCServer) SwitchTransport(context.Context, *clientpb.S
 func (UnimplementedSliverRPCServer) GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransports not implemented")
 }
-func (UnimplementedSliverRPCServer) StartHTTPSListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartHTTPSListener not implemented")
-}
-func (UnimplementedSliverRPCServer) StartHTTPListener(context.Context, *clientpb.HTTPListenerReq) (*clientpb.HTTPListener, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartHTTPListener not implemented")
-}
-func (UnimplementedSliverRPCServer) StartTCPStagerListener(context.Context, *clientpb.StagerListenerReq) (*clientpb.StagerListener, error) {
+func (UnimplementedSliverRPCServer) StartTCPStagerListener(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartTCPStagerListener not implemented")
 }
-func (UnimplementedSliverRPCServer) StartHTTPStagerListener(context.Context, *clientpb.StagerListenerReq) (*clientpb.StagerListener, error) {
+func (UnimplementedSliverRPCServer) StartHTTPStagerListener(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartHTTPStagerListener not implemented")
 }
 func (UnimplementedSliverRPCServer) GetServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error) {
@@ -2306,20 +2284,38 @@ func _SliverRPC_GetC2Profiles_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SliverRPC_StartC2Handler_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.HandlerStartReq)
+func _SliverRPC_StartHandlerStage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.HandlerStageReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SliverRPCServer).StartC2Handler(ctx, in)
+		return srv.(SliverRPCServer).StartHandlerStage(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/StartC2Handler",
+		FullMethod: "/rpcpb.SliverRPC/StartHandlerStage",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).StartC2Handler(ctx, req.(*clientpb.HandlerStartReq))
+		return srv.(SliverRPCServer).StartHandlerStage(ctx, req.(*clientpb.HandlerStageReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_StartHandlerStager_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.HandlerStagerReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).StartHandlerStager(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/StartHandlerStager",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).StartHandlerStager(ctx, req.(*clientpb.HandlerStagerReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2414,44 +2410,8 @@ func _SliverRPC_GetTransports_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SliverRPC_StartHTTPSListener_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.HTTPListenerReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SliverRPCServer).StartHTTPSListener(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/StartHTTPSListener",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).StartHTTPSListener(ctx, req.(*clientpb.HTTPListenerReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SliverRPC_StartHTTPListener_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.HTTPListenerReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SliverRPCServer).StartHTTPListener(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/StartHTTPListener",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).StartHTTPListener(ctx, req.(*clientpb.HTTPListenerReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _SliverRPC_StartTCPStagerListener_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.StagerListenerReq)
+	in := new(clientpb.HandlerStagerReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2463,13 +2423,13 @@ func _SliverRPC_StartTCPStagerListener_Handler(srv interface{}, ctx context.Cont
 		FullMethod: "/rpcpb.SliverRPC/StartTCPStagerListener",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).StartTCPStagerListener(ctx, req.(*clientpb.StagerListenerReq))
+		return srv.(SliverRPCServer).StartTCPStagerListener(ctx, req.(*clientpb.HandlerStagerReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SliverRPC_StartHTTPStagerListener_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.StagerListenerReq)
+	in := new(clientpb.HandlerStagerReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2481,7 +2441,7 @@ func _SliverRPC_StartHTTPStagerListener_Handler(srv interface{}, ctx context.Con
 		FullMethod: "/rpcpb.SliverRPC/StartHTTPStagerListener",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).StartHTTPStagerListener(ctx, req.(*clientpb.StagerListenerReq))
+		return srv.(SliverRPCServer).StartHTTPStagerListener(ctx, req.(*clientpb.HandlerStagerReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4235,8 +4195,12 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SliverRPC_GetC2Profiles_Handler,
 		},
 		{
-			MethodName: "StartC2Handler",
-			Handler:    _SliverRPC_StartC2Handler_Handler,
+			MethodName: "StartHandlerStage",
+			Handler:    _SliverRPC_StartHandlerStage_Handler,
+		},
+		{
+			MethodName: "StartHandlerStager",
+			Handler:    _SliverRPC_StartHandlerStager_Handler,
 		},
 		{
 			MethodName: "CloseC2Handler",
@@ -4257,14 +4221,6 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTransports",
 			Handler:    _SliverRPC_GetTransports_Handler,
-		},
-		{
-			MethodName: "StartHTTPSListener",
-			Handler:    _SliverRPC_StartHTTPSListener_Handler,
-		},
-		{
-			MethodName: "StartHTTPListener",
-			Handler:    _SliverRPC_StartHTTPListener_Handler,
 		},
 		{
 			MethodName: "StartTCPStagerListener",

@@ -336,6 +336,7 @@ message Job {
   int32 Order = 7;
 
   sliverpb.C2Profile Profile = 8;
+  string StageImplant = 9;
 }
 
 
@@ -394,13 +395,31 @@ message GetC2Profiles {
 // [ C2 Handlers ] -----------------------------------------
 
 // The server requests an implant/the server to start a handler.
-message HandlerStartReq {
-  
+message HandlerStageReq {
   sliverpb.C2Profile Profile = 1;
   commonpb.Request Request = 9;
 }
 
-message HandlerStart {
+message HandlerStage {
+  bool Success = 1;
+  commonpb.Response Response = 9;
+}
+
+enum StagerProtocol {
+  TCP = 0;
+  HTTP = 1;
+  HTTPS = 2;
+}
+
+message HandlerStagerReq {
+  StagerProtocol Protocol = 1;
+  string StageImplant = 2;
+  bytes StageBytes = 3;
+  sliverpb.C2Profile Profile = 5;
+  commonpb.Request Request = 9;
+}
+
+message HandlerStager {
   bool Success = 1;
   commonpb.Response Response = 9;
 }
@@ -587,26 +606,6 @@ message MSFRemoteReq {
   commonpb.Request Request = 9;
 }
 
-enum StageProtocol {
-  TCP = 0;
-  HTTP = 1;
-  HTTPS = 2;
-}
-
-message StagerListenerReq {
-  StageProtocol Protocol = 1;
-  string Host = 2;
-  uint32 Port = 3;
-  bytes Data = 4;
-  bytes Cert = 5;
-  bytes Key = 6;
-  bool ACME = 7;
-}
-
-message StagerListener {
-  uint32 JobID = 1;
-}
-
 message ShellcodeRDIReq {
   bytes Data = 1;
   string FunctionName = 2;
@@ -623,7 +622,7 @@ message MsfStagerReq {
   uint32 Port = 3;
   string Host = 4;
   string OS = 5; // reserved for future usage
-  StageProtocol Protocol = 6;
+  StagerProtocol Protocol = 6;
   repeated string BadChars = 7;
 }
 

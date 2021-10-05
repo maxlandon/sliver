@@ -20,6 +20,7 @@ package c2
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/certs"
@@ -49,8 +50,8 @@ func SetupHandlerSecurity(p *models.C2Profile, hostname string) (err error) {
 func SetupProfileSecurity(p *models.C2Profile, certificateHostname string) (err error) {
 
 	// Always set up the basic security level:
+
 	// - TLS authenticated implants
-	// - SSH-authenticated Comm system
 	if p.Channel == sliverpb.C2Channel_MTLS {
 		err = setupSecurityMTLS(p, certificateHostname)
 		if err != nil {
@@ -58,10 +59,23 @@ func SetupProfileSecurity(p *models.C2Profile, certificateHostname string) (err 
 		}
 	}
 
-	// Specialized Authentication & Encryption setup ----------------------------------
-	// Add anything you want.
+	// Wireguard implants
+	if p.Channel == sliverpb.C2Channel_WG {
+		err = setupWireGuardAuth(p)
+		if err != nil {
+			return
+		}
+	}
 
-	err = setupWireGuardAuth(p)
+	// HTTP implants
+	// The difference here is that instead of generating certificates
+	// with implant names as hostnames, we use the domain used by the C2 profile.
+	if p.Channel == sliverpb.C2Channel_HTTPS {
+		err = setupSecurityHTTPS(p)
+		if err != nil {
+			return
+		}
+	}
 
 	return nil
 }
@@ -126,11 +140,51 @@ func setupSecurityMTLS(p *models.C2Profile, certificateHostname string) (err err
 	return nil
 }
 
+// setupSecurityHTTPS - HTTPS cert providing has strictly the same functionning as MTLS, except
+// that the name of the implant is not passed as host, but the very C2 domain to be targeted.
+func setupSecurityHTTPS(p *models.C2Profile) (err error) {
+
+	// If no credentials whatsoever, this means we need basic certificate setup,
+	// but if anything was set before, assume that whoever populated them knew
+	// what they were doing...
+	if len(p.CACertPEM) > 0 || len(p.CertPEM) > 0 || len(p.KeyPEM) > 0 {
+		return nil
+	}
+
+	// Setup the hostname depending on available Listener domains or implant C2 callback URLs
+	var hostname string
+	if len(strings.Split(p.Domains, ",")) == 0 {
+		hostname = p.Hostname
+	} else {
+		hostname = strings.Split(p.Domains, ",")[0]
+	}
+
+	// If the profile is a dialer, it means the implant is going to be the server
+	// accepting the connections. Therefore we inverse the roles: we give it the
+	// ServerC2 generated certificates.
+	if p.Direction == sliverpb.C2Direction_Bind {
+		p.CACertPEM, _, _ = certs.GetCertificateAuthorityPEM(certs.MtlsImplantCA)
+		p.CertPEM, p.KeyPEM, err = certs.MtlsC2ServerGenerateECCCertificate(hostname)
+		if err != nil {
+			return err
+		}
+	}
+
+	// If the profile is a listener, the implant reaches back to the
+	// server, so we give it the sliver-specific certifcates and keys.
+	if p.Direction == sliverpb.C2Direction_Reverse {
+		p.CACertPEM, _, _ = certs.GetCertificateAuthorityPEM(certs.MtlsServerCA)
+		p.CertPEM, p.KeyPEM, _ = certs.MtlsC2ImplantGenerateECCCertificate(hostname)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // setupWireGuardAuth - Adds an additional public private key pair for layer 3 (IP) encryption.
 func setupWireGuardAuth(p *models.C2Profile) (err error) {
-	if p.Channel != sliverpb.C2Channel_WG {
-		return
-	}
 
 	implantPrivKey, _, err := certs.ImplantGenerateWGKeys(p.Hostname)
 	_, serverPubKey, err := certs.GetWGServerKeys()

@@ -101,8 +101,10 @@ message C2Profile {
   int64 Jitter = 21;
 
   // HTTP-related
-  string ProxyURL = 30;
-  C2ProfileHTTP HTTP = 31;
+  C2ProfileHTTP HTTP = 30;
+  string ProxyURL = 31;
+  string Website = 32;
+  bool LetsEncrypt = 33;
  
   // Identity & Security
   Credentials Credentials = 40;
@@ -115,12 +117,13 @@ enum C2Type {
 }
 
 enum C2Channel {
-  MTLS = 0;
-  HTTP = 1;
-  HTTPS = 2;
-  DNS = 3;
-  WG = 4;
-  NamedPipe = 5;
+  TCP = 0;
+  MTLS = 1;
+  HTTP = 2;
+  HTTPS = 3;
+  DNS = 4;
+  WG = 5;
+  NamedPipe = 6;
 }
 
 enum C2Direction {

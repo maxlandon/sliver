@@ -53,7 +53,8 @@ service SliverRPC {
     rpc GetC2Profiles(clientpb.GetC2ProfilesReq) returns (clientpb.GetC2Profiles);
 
     // *** C2 Handlers ***
-    rpc StartC2Handler(clientpb.HandlerStartReq) returns (clientpb.HandlerStart);
+    rpc StartHandlerStage(clientpb.HandlerStageReq) returns (clientpb.HandlerStage);
+    rpc StartHandlerStager(clientpb.HandlerStagerReq) returns (clientpb.HandlerStager);
     rpc CloseC2Handler(clientpb.HandlerCloseReq) returns (clientpb.HandlerClose);
 
     // *** Transports ****
@@ -66,12 +67,12 @@ service SliverRPC {
     // rpc StartMTLSListener(clientpb.MTLSListenerReq) returns (clientpb.MTLSListener);
     // rpc StartWGListener(clientpb.WGListenerReq) returns (clientpb.WGListener);
     // rpc StartDNSListener(clientpb.DNSListenerReq) returns (clientpb.DNSListener);
-    rpc StartHTTPSListener(clientpb.HTTPListenerReq) returns (clientpb.HTTPListener);
-    rpc StartHTTPListener(clientpb.HTTPListenerReq) returns (clientpb.HTTPListener);
+    // rpc StartHTTPSListener(clientpb.HTTPListenerReq) returns (clientpb.HTTPListener);
+    // rpc StartHTTPListener(clientpb.HTTPListenerReq) returns (clientpb.HTTPListener);
     
     // *** Stager Listener ***
-    rpc StartTCPStagerListener(clientpb.StagerListenerReq) returns(clientpb.StagerListener);
-    rpc StartHTTPStagerListener(clientpb.StagerListenerReq) returns(clientpb.StagerListener);
+    rpc StartTCPStagerListener(clientpb.HandlerStagerReq) returns(clientpb.HandlerStager);
+    rpc StartHTTPStagerListener(clientpb.HandlerStagerReq) returns(clientpb.HandlerStager);
     
     // *** Server Adresses ***
     rpc GetServerInterfaces(sliverpb.IfconfigReq) returns (sliverpb.Ifconfig);

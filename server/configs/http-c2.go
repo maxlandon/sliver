@@ -89,7 +89,9 @@ func (h *HTTPC2Config) ChromeVer() string {
 
 // RandomImplantConfig - Randomly generate a config
 func (h *HTTPC2Config) RandomImplantConfig() *HTTPC2ImplantConfig {
-	config := &HTTPC2ImplantConfig{}
+	config := &HTTPC2ImplantConfig{
+		C2ProfileHTTP: &sliverpb.C2ProfileHTTP{},
+	}
 	*config = *h.ImplantConfig
 
 	config.KeyExchangeFiles = h.ImplantConfig.RandomKeyExchangeFiles()
@@ -128,71 +130,75 @@ type HTTPC2ServerConfig struct {
 //  .js = poll
 // .png = stop
 // .woff = sliver shellcode
+// type HTTPC2ImplantConfig struct {
+//         UserAgent     string   `json:"user_agent"`
+//         URLParameters []string `json:"url_parameters"`
+//         Headers       []string `json:"headers"`
+//
+//         MaxFiles int `json:"max_files"`
+//         MinFiles int `json:"min_files"`
+//         MaxPaths int `json:"max_paths"`
+//         MinPaths int `json:"min_paths"`
+//
+//         // Stager File Extension
+//         StagerFileExt string `json:"stager_file_ext"`
+//
+//         // Key Exchange (default .txt) files and paths
+//         KeyExchangeFileExt string   `json:"key_exchange_file_ext"`
+//         KeyExchangeFiles   []string `json:"key_exchange_files"`
+//         KeyExchangePaths   []string `json:"key_exchange_paths"`
+//
+//         // Poll files and paths
+//         PollFileExt string   `json:"poll_file_ext"`
+//         PollFiles   []string `json:"poll_files"`
+//         PollPaths   []string `json:"poll_paths"`
+//
+//         // Session files and paths
+//         StartSessionFileExt string   `json:"start_session_file_ext"`
+//         SessionFileExt      string   `json:"session_file_ext"`
+//         SessionFiles        []string `json:"session_files"`
+//         SessionPaths        []string `json:"session_paths"`
+//
+//         // Close session files and paths
+//         CloseFileExt string   `json:"close_file_ext"`
+//         CloseFiles   []string `json:"close_files"`
+//         ClosePaths   []string `json:"close_paths"`
+// }
+
 type HTTPC2ImplantConfig struct {
-	UserAgent     string   `json:"user_agent"`
-	URLParameters []string `json:"url_parameters"`
-	Headers       []string `json:"headers"`
-
-	MaxFiles int `json:"max_files"`
-	MinFiles int `json:"min_files"`
-	MaxPaths int `json:"max_paths"`
-	MinPaths int `json:"min_paths"`
-
-	// Stager File Extension
-	StagerFileExt string `json:"stager_file_ext"`
-
-	// Key Exchange (default .txt) files and paths
-	KeyExchangeFileExt string   `json:"key_exchange_file_ext"`
-	KeyExchangeFiles   []string `json:"key_exchange_files"`
-	KeyExchangePaths   []string `json:"key_exchange_paths"`
-
-	// Poll files and paths
-	PollFileExt string   `json:"poll_file_ext"`
-	PollFiles   []string `json:"poll_files"`
-	PollPaths   []string `json:"poll_paths"`
-
-	// Session files and paths
-	StartSessionFileExt string   `json:"start_session_file_ext"`
-	SessionFileExt      string   `json:"session_file_ext"`
-	SessionFiles        []string `json:"session_files"`
-	SessionPaths        []string `json:"session_paths"`
-
-	// Close session files and paths
-	CloseFileExt string   `json:"close_file_ext"`
-	CloseFiles   []string `json:"close_files"`
-	ClosePaths   []string `json:"close_paths"`
+	*sliverpb.C2ProfileHTTP
 }
 
 // ToProtobuf - Get a protobuf version  of this HTTP profile,
 // so that we can compile it more easily, or send it on the wire
-func (h *HTTPC2ImplantConfig) ToProtobuf() *sliverpb.C2ProfileHTTP {
-	p := &sliverpb.C2ProfileHTTP{
-		// Core
-		UserAgent:     h.UserAgent,
-		URLParameters: h.URLParameters,
-		Headers:       h.Headers,
-		MaxFiles:      int32(h.MaxFiles),
-		MinFiles:      int32(h.MinFiles),
-		MaxPaths:      int32(h.MaxPaths),
-		MinPaths:      int32(h.MinPaths),
-		// Stager File Extension
-		StagerFileExt: h.StagerFileExt,
-		// Key Exchange (default .txt) files and paths
-		KeyExchangeFileExt: h.KeyExchangeFileExt,
-		KeyExchangeFiles:   h.KeyExchangeFiles,
-		KeyExchangePaths:   h.KeyExchangePaths,
-		// Poll files and paths
-		StartSessionFileExt: h.StartSessionFileExt,
-		SessionFileExt:      h.SessionFileExt,
-		SessionFiles:        h.SessionFiles,
-		SessionPaths:        h.SessionPaths,
-		// Close session files and paths
-		CloseFileExt: h.CloseFileExt,
-		CloseFiles:   h.CloseFiles,
-		ClosePaths:   h.ClosePaths,
-	}
-	return p
-}
+// func (h *HTTPC2ImplantConfig) ToProtobuf() *sliverpb.C2ProfileHTTP {
+//         p := &sliverpb.C2ProfileHTTP{
+//                 // Core
+//                 UserAgent:     h.UserAgent,
+//                 URLParameters: h.URLParameters,
+//                 Headers:       h.Headers,
+//                 MaxFiles:      int32(h.MaxFiles),
+//                 MinFiles:      int32(h.MinFiles),
+//                 MaxPaths:      int32(h.MaxPaths),
+//                 MinPaths:      int32(h.MinPaths),
+//                 // Stager File Extension
+//                 StagerFileExt: h.StagerFileExt,
+//                 // Key Exchange (default .txt) files and paths
+//                 KeyExchangeFileExt: h.KeyExchangeFileExt,
+//                 KeyExchangeFiles:   h.KeyExchangeFiles,
+//                 KeyExchangePaths:   h.KeyExchangePaths,
+//                 // Poll files and paths
+//                 StartSessionFileExt: h.StartSessionFileExt,
+//                 SessionFileExt:      h.SessionFileExt,
+//                 SessionFiles:        h.SessionFiles,
+//                 SessionPaths:        h.SessionPaths,
+//                 // Close session files and paths
+//                 CloseFileExt: h.CloseFileExt,
+//                 CloseFiles:   h.CloseFiles,
+//                 ClosePaths:   h.ClosePaths,
+//         }
+//         return p
+// }
 
 func (h *HTTPC2ImplantConfig) RandomKeyExchangeFiles() []string {
 	min := h.MinFiles
@@ -242,8 +248,9 @@ func (h *HTTPC2ImplantConfig) RandomSessionPaths() []string {
 	return h.randomSample(h.SessionPaths, "", h.MinPaths, h.MaxPaths)
 }
 
-func (h *HTTPC2ImplantConfig) randomSample(values []string, ext string, min int, max int) []string {
-	count := insecureRand.Intn(len(values))
+func (h *HTTPC2ImplantConfig) randomSample(values []string, ext string, min int32, max int32) []string {
+	count := insecureRand.Int31n(int32(len(values)))
+	// count := insecureRand.Intn(len(values))
 	if count < min {
 		count = min
 	}
@@ -251,8 +258,8 @@ func (h *HTTPC2ImplantConfig) randomSample(values []string, ext string, min int,
 		count = max
 	}
 	sample := []string{}
-	for i := 0; len(sample) < count; i++ {
-		index := (count + i) % len(values)
+	for i := 0; int32(len(sample)) < count; i++ {
+		index := (count + int32(i)) % int32(len(values))
 		sample = append(sample, values[index])
 	}
 	return sample
@@ -271,7 +278,7 @@ var (
 				{"Cache-Control", "no-store, no-cache, must-revalidate"},
 			},
 		},
-		ImplantConfig: &HTTPC2ImplantConfig{
+		ImplantConfig: &HTTPC2ImplantConfig{&sliverpb.C2ProfileHTTP{
 			UserAgent: "", // Blank string is rendered as randomized platform user-agent
 			MaxFiles:  8,
 			MinFiles:  2,
@@ -318,8 +325,29 @@ var (
 				"static", "www", "assets", "images", "icons", "image", "icon", "png",
 			},
 		},
-	}
+		}}
 )
+
+func GetHTTPC2ConfigFromProfile(profile *sliverpb.C2ProfileHTTP) (config *HTTPC2Config) {
+	if profile == nil {
+		return &defaultHTTPC2Config
+	}
+
+	config = &HTTPC2Config{}
+
+	// Add per-profile values
+	config.ImplantConfig = &HTTPC2ImplantConfig{profile}
+	config.ServerConfig = defaultHTTPC2Config.ServerConfig // TODO: change this options and profile
+
+	// Test the validity of the C2ProfileHTTP
+	err := CheckHTTPC2Config(config)
+	if err != nil {
+		httpC2ConfigLog.Errorf("Invalid http c2 config: %s", err)
+		return &defaultHTTPC2Config
+	}
+
+	return
+}
 
 // GetHTTPC2ConfigPath - File path to http-c2.json
 func GetHTTPC2ConfigPath() string {
