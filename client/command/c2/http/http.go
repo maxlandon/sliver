@@ -18,6 +18,8 @@ package http
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import "github.com/bishopfox/sliver/protobuf/sliverpb"
+
 // HTTP - HTTP handlers management root command.
 type HTTP struct{}
 
@@ -58,4 +60,29 @@ type AdvancedOptions struct {
 		CloseFiles   []string `long:"close_files" description:"filenames for closing session"`
 		ClosePaths   []string `long:"close_paths" description:"paths for closing session"`
 	} `group:"advanced http options"`
+}
+
+func PopulateProfileHTTP(profile *sliverpb.C2Profile, options AdvancedOptions) {
+	opts := options.Core
+
+	profile.HTTP = &sliverpb.C2ProfileHTTP{
+		// Stager File Extension
+		// StagerFileExt : opts.S
+
+		// Key Exchange (default .txt) files and paths
+		KeyExchangeFileExt: opts.KeyExchangeFileExt,
+		KeyExchangeFiles:   opts.KeyExchangeFiles,
+		KeyExchangePaths:   opts.KeyExchangePaths,
+
+		// Poll files and paths
+		PollFileExt: opts.PollFileExt,
+		PollFiles:   opts.PollFiles,
+		PollPaths:   opts.PollPaths,
+
+		// Session files and paths
+		StartSessionFileExt: opts.StartSessionFileExt,
+		SessionFileExt:      opts.SessionFileExt,
+		SessionFiles:        opts.SessionFiles,
+		SessionPaths:        opts.SessionPaths,
+	}
 }

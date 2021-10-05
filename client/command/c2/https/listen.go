@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 
 	"github.com/bishopfox/sliver/client/command/c2"
+	"github.com/bishopfox/sliver/client/command/c2/http"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
@@ -36,9 +37,10 @@ type Listen struct {
 		LocalAddr string `description:"interface:[port] to bind the HTTP(S) server to"`
 	} `positional-args:"yes"`
 
-	BaseListenerOptions c2.ListenerOptions
-	HTTPListenerOptions ListenerOptions
+	c2.ListenerOptions
+	HTTPOptions ListenerOptions
 	c2.SecurityOptions
+	http.AdvancedOptions
 }
 
 // Execute - Start an HTTPS listener on the server
@@ -50,18 +52,21 @@ func (l *Listen) Execute(args []string) (err error) {
 		l.Args.LocalAddr,             // Targeting the host:[port] argument of our command
 		sliverpb.C2Direction_Reverse, // A listener
 	)
-	profile.Persistent = l.BaseListenerOptions.Core.Persistent
+	profile.Persistent = l.ListenerOptions.Core.Persistent
 
 	if profile.Port == 0 {
 		profile.Port = 443
 	}
 
-	// HTTPS-specific options
-	profile.Domains = []string{l.HTTPListenerOptions.Options.Domain} // Restrict responses to this domain
-	profile.Website = l.HTTPListenerOptions.Options.Website
-	profile.LetsEncrypt = l.HTTPListenerOptions.Options.LetsEncrypt
+	// HTTP-specific options
+	http.PopulateProfileHTTP(profile, l.AdvancedOptions)
 
-	log.Infof("Starting HTTPS %s:%d listener ...", profile.Domains[0], profile.Port)
+	// HTTPS-specific options
+	profile.Domains = []string{l.HTTPOptions.Options.Domain} // Restrict responses to this domain
+	profile.Website = l.HTTPOptions.Options.Website
+	profile.LetsEncrypt = l.HTTPOptions.Options.LetsEncrypt
+
+	log.Infof("Starting HTTPS %s:%d listener (%s)...", profile.Hostname, profile.Port, profile.Domains[0])
 	res, err := transport.RPC.StartHandlerStage(context.Background(), &clientpb.HandlerStageReq{
 		Profile: profile,
 		Request: core.ActiveTarget.Request(),
@@ -90,21 +95,4 @@ func getLocalCertificatePair(certPath, keyPath string) ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 	return cert, key, nil
-}
-
-// Serve - Serve an implant stage with an HTTP server
-type Serve struct {
-	Args struct {
-		Profile   string `description:"implant profile/build to serve a stage" required:"1-1"`
-		LocalAddr string `description:"interface:[port] to bind the HTTP(S) server to" required:"1-1"`
-	} `positional-args:"yes" required:"yes"`
-
-	BaseListenerOptions c2.ListenerOptions
-	HTTPListenerOptions ListenerOptions
-	c2.SecurityOptions
-}
-
-// Execute - Serve an implant stage with an HTTP server
-func (s *Serve) Execute(args []string) (err error) {
-	return
 }

@@ -35,6 +35,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/c2/malleable"
 	"github.com/bishopfox/sliver/client/command/c2/mtls"
 	"github.com/bishopfox/sliver/client/command/c2/pivots"
+	"github.com/bishopfox/sliver/client/command/c2/tcp"
 	"github.com/bishopfox/sliver/client/command/c2/transports"
 	"github.com/bishopfox/sliver/client/command/c2/websites"
 	"github.com/bishopfox/sliver/client/command/c2/wg"
@@ -136,6 +137,48 @@ func bindCommandsC2(cc *gonsole.Menu) {
 		[]string{""},
 		func() gonsole.Commander { return &mtls.Dialer{} })
 	mtlsDialer.AddArgumentCompletion("RemoteAddr", completion.ServerInterfaceAddrs)
+
+	//
+	// TCP --------------------------
+	//
+	tcpCmd := cc.AddCommand(constants.TcpStr,
+		"TCP handlers usage & management",
+		help.GetHelpFor(constants.MtlsStr),
+		constants.TransportsGroup,
+		[]string{"comm"},
+		func() gonsole.Commander { return &tcp.TCP{} })
+
+	tcpListen := tcpCmd.AddCommand(constants.ListenStr,
+		"Start an TCP listener on the server, or on a routed session",
+		help.GetHelpFor(constants.ListenStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &tcp.Listen{} })
+	tcpListen.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+
+	tcpListener := malleableListener.AddCommand(constants.TcpStr,
+		"Create and configure a new TCP Listener profile (reverse from implant)",
+		help.GetHelpFor(constants.ListenerStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &tcp.Listener{} })
+	tcpListener.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+
+	tcpDial := tcpCmd.AddCommand(constants.DialStr,
+		"Dial an implant listening for incoming TCP connections",
+		help.GetHelpFor(constants.DialStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &tcp.Dial{} })
+	tcpDial.AddArgumentCompletion("RemoteAddr", completion.ServerInterfaceAddrs)
+
+	tcpDialer := malleableDialer.AddCommand(constants.TcpStr,
+		"Create and configure a new TCP Dialer profile (bind to implant)",
+		help.GetHelpFor(constants.DialerStr),
+		"",
+		[]string{""},
+		func() gonsole.Commander { return &tcp.Dialer{} })
+	tcpDialer.AddArgumentCompletion("RemoteAddr", completion.ServerInterfaceAddrs)
 
 	//
 	// Transports --------------------------------------------------------------------------------
@@ -282,11 +325,11 @@ func bindCommandsC2(cc *gonsole.Menu) {
 		httpsServe := httpsCmd.AddCommand(constants.ServeStr,
 			"Serve an implant stage over an HTTPS server",
 			help.GetHelpFor(constants.ServeStr),
-			"stagers subcommands",
+			"",
 			[]string{""},
 			func() gonsole.Commander { return &https.Serve{} })
-		httpsServe.AddArgumentCompletion("Profile", completion.ImplantNames)
 		httpsServe.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+		httpsServe.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 		httpsServe.AddOptionCompletion("Domain", completion.ServerInterfaceAddrs)
 		httpsServe.AddOptionCompletionDynamic("Certificate", core.Console.Completer.LocalPathAndFiles)
 		httpsServe.AddOptionCompletionDynamic("PrivateKey", core.Console.Completer.LocalPathAndFiles)
@@ -299,20 +342,30 @@ func bindCommandsC2(cc *gonsole.Menu) {
 			func() gonsole.Commander { return &http.HTTP{} })
 
 		httpListen := httpCmd.AddCommand(constants.ListenStr,
-			"Start an HTTP listener on the server",
+			"Start an HTTP listener on the server (no TLS, but comms encrypted)",
 			help.GetHelpFor(constants.HttpStr),
-			constants.TransportsGroup,
+			"",
 			[]string{""},
 			func() gonsole.Commander { return &http.Listen{} })
 		httpListen.AddOptionCompletion("LHost", completion.ServerInterfaceAddrs)
 
+		httpListener := malleableListener.AddCommand(constants.HttpStr,
+			"Create a complete HTTP server C2 profile (no TLS, but comms encrypted)",
+			help.GetHelpFor(constants.HttpStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &http.Listener{} })
+		httpListener.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+		httpListener.AddOptionCompletion("Domain", completion.ServerInterfaceAddrs)
+
 		httpServe := httpCmd.AddCommand(constants.ServeStr,
 			"Serve an implant stage over an HTTP server",
 			help.GetHelpFor(constants.ServeStr),
-			"stagers subcommands",
+			"",
 			[]string{""},
 			func() gonsole.Commander { return &http.Serve{} })
 		httpServe.AddArgumentCompletion("LocalAddr", completion.ServerInterfaceAddrs)
+		httpServe.AddOptionCompletionDynamic("LocalPath", core.Console.Completer.LocalPathAndFiles)
 
 		stager := cc.AddCommand(constants.StageListenerStr,
 			"Start a staging listener (TCP/HTTP/HTTPS), bound to a Sliver profile",

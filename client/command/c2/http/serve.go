@@ -29,12 +29,12 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// Listen - Start an HTTP listener on the server
-type Listen struct {
+// Serve - Serve an implant stage with an HTTP server
+type Serve struct {
 	Args struct {
-		LocalAddr string `description:"interface:[port] to bind the HTTP server to"`
+		LocalAddr string `description:"interface:[port] to bind the HTTP server to" required:"yes"`
 	} `positional-args:"yes"`
-
+	c2.StagerOptions
 	c2.ListenerOptions
 
 	HTTPOptions struct {
@@ -44,30 +44,35 @@ type Listen struct {
 	AdvancedOptions
 }
 
-// Execute - Start an HTTPS listener on the server
-func (l *Listen) Execute(args []string) (err error) {
+// Execute - Serve an implant stage with an HTTP server
+func (s *Serve) Execute(args []string) (err error) {
 
-	// Declare profile
+	//Base profile
 	profile := c2.ParseActionProfile(
-		sliverpb.C2Channel_HTTP,      // A Channel using Mutual TLS
-		l.Args.LocalAddr,             // Targeting the host:[port] argument of our command
-		sliverpb.C2Direction_Reverse, // A listener
+		sliverpb.C2Channel_HTTP,
+		s.Args.LocalAddr,
+		sliverpb.C2Direction_Reverse,
 	)
-	profile.Persistent = l.ListenerOptions.Core.Persistent
+	profile.Persistent = s.ListenerOptions.Core.Persistent
 
 	if profile.Port == 0 {
 		profile.Port = 80
 	}
 
-	// HTTP-specific options
-	profile.Domains = []string{l.HTTPOptions.Domain} // Restrict responses to this domain
-	PopulateProfileHTTP(profile, l.AdvancedOptions)
-
-	log.Infof("Starting HTTP %s:%d listener (%s)...", profile.Hostname, profile.Port, profile.Domains[0])
-	res, err := transport.RPC.StartHandlerStage(context.Background(), &clientpb.HandlerStageReq{
+	// Prepare request
+	req := &clientpb.HandlerStagerReq{
 		Profile: profile,
 		Request: core.ActiveTarget.Request(),
-	})
+	}
+
+	// Parse stager options and set the request accordingly
+	err = c2.ParseStagerOptions(req, s.StagerOptions)
+	if err != nil {
+		return log.Errorf("Failed to set up stage: %s", err)
+	}
+
+	log.Infof("Starting HTTP stage listener - %s:%d (%s) ...", profile.Hostname, profile.Port, profile.Domains[0])
+	res, err := transport.RPC.StartHandlerStager(context.Background(), req)
 	if err != nil {
 		return log.Error(err)
 	}
@@ -75,6 +80,6 @@ func (l *Listen) Execute(args []string) (err error) {
 		return log.Errorf("An unknown error happened: no success")
 	}
 
-	log.Infof("Successfully started HTTP listener")
+	log.Infof("Successfully started HTTP stage listener")
 	return
 }
