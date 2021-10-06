@@ -231,18 +231,17 @@ func streamReadEnvelope(connection io.ReadWriteCloser) (*sliverpb.Envelope, erro
 	// onto dataBuf which contains all of data read so far and we keep calling
 	// .Read() until the running total is equal to the length of the message that
 	// we're expecting or we get an error.
-	readBuf := make([]byte, readBufSize)
+	// readBuf := make([]byte, readBufSize)
 	dataBuf := make([]byte, 0)
 	totalRead := 0
 	for {
-
 		// Compute the precise length of the temporary buffer
-		// var readBuf []byte
-		// if dataLength-len(dataBuf) > readBufSize {
-		//         readBuf = make([]byte, readBufSize)
-		// } else {
-		//         readBuf = make([]byte, (dataLength - len(dataBuf)))
-		// }
+		var readBuf []byte
+		if dataLength-len(dataBuf) > readBufSize {
+			readBuf = make([]byte, readBufSize)
+		} else {
+			readBuf = make([]byte, (dataLength - len(dataBuf)))
+		}
 
 		n, err := connection.Read(readBuf)
 		dataBuf = append(dataBuf, readBuf[:n]...)

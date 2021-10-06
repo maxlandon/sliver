@@ -298,12 +298,21 @@ func streamReadEnvelope(stream io.ReadWriteCloser) (*pb.Envelope, error) {
 		} else {
 			readBuf = make([]byte, (dataLength - len(dataBuf)))
 		}
+		// {{if .Config.Debug}}
+		log.Printf("Readbuf size: %d", len(readBuf))
+		// {{end}}
 
 		// And read it
 		n, err := stream.Read(readBuf)
 		dataBuf = append(dataBuf, readBuf[:n]...)
 		totalRead += n
 		if totalRead == dataLength {
+			break
+		}
+		if totalRead > dataLength {
+			// {{if .Config.Debug}}
+			log.Printf("Read error: totalRead %d > dataLength %d", totalRead, dataLength)
+			// {{end}}
 			break
 		}
 		if err != nil {
