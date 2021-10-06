@@ -38,6 +38,7 @@ import (
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/generate"
+	"github.com/bishopfox/sliver/server/log"
 )
 
 // StartHandlerStage - A generic RPC method used to open handlers for all supported C2 channels, either on the server or on implants.
@@ -47,6 +48,10 @@ func (rpc *Server) StartHandlerStage(ctx context.Context, req *clientpb.HandlerS
 	// Any low level management stuff before anything.
 	profile := models.C2ProfileFromProtobuf(req.Profile)
 	session := core.Sessions.Get(req.Request.SessionID)
+
+	// Get a logger for the entire stream
+	client := core.Clients.Get(req.Request.ClientID)
+	logger := log.ClientLogger(client.ID, "handler")
 
 	// We get the comm.Net interface for the session: if nil,
 	// pass 0 and return the server interfaces functions
@@ -84,14 +89,14 @@ func (rpc *Server) StartHandlerStage(ctx context.Context, req *clientpb.HandlerS
 
 	// Dialers
 	case sliverpb.C2Direction_Bind:
-		err = c2.Dial(profile, net, session)
+		err = c2.Dial(logger, profile, net, session)
 		if err != nil {
 			return nil, err
 		}
 
 	// Listeners
 	case sliverpb.C2Direction_Reverse:
-		job, err = c2.Listen(profile, net, session)
+		job, err = c2.Listen(logger, profile, net, session)
 		if err != nil {
 			return nil, err
 		}

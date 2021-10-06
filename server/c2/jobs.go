@@ -145,8 +145,13 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 		}
 	}
 
+	// Add a logger with no client ID
+	logger := log.ClientLogger("", "handler")
+
 	// Start each job in the correct order
 	for _, job := range ordered {
+
+		logger.Infof("Restarting persistent session job %s", core.GetShortID(job.ID.String()))
 
 		// Get the current transport for this session: some of them, like beacons
 		// or those that are expressely comm disabled, can run persistent jobs
@@ -182,7 +187,7 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 
 		// Dialers
 		case sliverpb.C2Direction_Bind:
-			err = Dial(job.Profile, net, session)
+			err = Dial(logger, job.Profile, net, session)
 			if err != nil {
 				return err
 			}
@@ -191,7 +196,7 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 		case sliverpb.C2Direction_Reverse:
 			// This is supposed to return us a
 			// job but we don't need to save it again
-			_, err := Listen(job.Profile, net, session)
+			_, err := Listen(logger, job.Profile, net, session)
 			if err != nil {
 				return err
 			}
@@ -207,7 +212,13 @@ func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 		return nil
 	}
 
+	// Add a logger with no client ID
+	logger := log.ClientLogger("", "handler")
+
 	for _, job := range cfg.Jobs {
+
+		logger.Infof("Restarting persistent server job %s", core.GetShortID(job.ID))
+
 		// Any low level management stuff before anything.
 		profile := models.C2ProfileFromProtobuf(job.Profile)
 
@@ -235,7 +246,7 @@ func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 
 		// Dialers
 		case sliverpb.C2Direction_Bind:
-			err = Dial(profile, net, nil)
+			err = Dial(logger, profile, net, nil)
 			if err != nil {
 				return err
 			}
@@ -244,7 +255,7 @@ func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 		case sliverpb.C2Direction_Reverse:
 			// This is supposed to return us a
 			// job but we don't need to save it again
-			_, err := Listen(profile, net, nil)
+			_, err := Listen(logger, profile, net, nil)
 			if err != nil {
 				return err
 			}

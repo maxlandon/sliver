@@ -26,6 +26,7 @@ import (
 	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db/models"
+	"github.com/sirupsen/logrus"
 )
 
 // Listen - Root function where all listeners/servers for all C2 channels are called.
@@ -39,7 +40,7 @@ import (
 //
 // The listener is nil: you can optionally assign it to a listener that you started  within
 // your C2 channel implementation. The listener is then transparently handled by the job system.
-func Listen(profile *models.C2Profile, network comm.Net, session *core.Session) (job *core.Job, err error) {
+func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, session *core.Session) (job *core.Job, err error) {
 
 	// Automatic C2 handler & Job Setup -------------------------------------------------------
 
@@ -127,7 +128,7 @@ func Listen(profile *models.C2Profile, network comm.Net, session *core.Session) 
 
 	// If the listener is used (thus spawned/started), serve the connections
 	// hitting it in the background. This will return transparently if not used/nil
-	go ServeListenerConnections(ln)
+	go ServeListenerConnections(log, ln)
 
 	// If we are here, it means the C2 stack has successfully started
 	// (within what can be guaranteed excluding goroutine-based stuff).

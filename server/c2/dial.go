@@ -26,12 +26,13 @@ import (
 	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db/models"
+	"github.com/sirupsen/logrus"
 )
 
 // Dial - Root function where all dialers for all C2 channels are called.
 // Please add a branch case for your C2 profile, where you should normally
 // just have to imitate the above lines.
-func Dial(profile *models.C2Profile, network comm.Net, session *core.Session) (err error) {
+func Dial(log *logrus.Entry, profile *models.C2Profile, network comm.Net, session *core.Session) (err error) {
 
 	// conn - If your C2 channel yields a net.Conn compliant connection, use this
 	// conn so that the server can transparently handle session handling, RPC setup
@@ -72,7 +73,7 @@ func Dial(profile *models.C2Profile, network comm.Net, session *core.Session) (e
 	// Automatically and transparently serve the connection, if the latter has been used.
 	// This function will return if this connection is not used (thus nil), without hampering
 	// on the session setup,registration and usage process.
-	go handleSliverConnection(conn)
+	go handleSliverConnection(log, conn)
 
 	return
 }

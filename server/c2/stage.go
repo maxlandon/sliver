@@ -26,6 +26,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
 	consts "github.com/bishopfox/sliver/client/constants"
@@ -55,7 +56,7 @@ var (
 //
 // As well, this function is made so that it will automatically handle
 // deregistering transports that have been set on the session at runtime.
-func ServeListenerConnections(ln net.Listener) {
+func ServeListenerConnections(log *logrus.Entry, ln net.Listener) {
 
 	// The C2 root listen function might not have passed any listener,
 	// because the protocol doesn't use one, like HTTP or DNS
@@ -63,10 +64,13 @@ func ServeListenerConnections(ln net.Listener) {
 		return
 	}
 
+	// Setup the logger
+	log = log.WithField("component", "handler")
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			mtlsLog.Errorf("Accept failed: %v", err)
+			log.Debugf("Accept failed: %v", err)
 			if errType, ok := err.(*net.OpError); ok && errType.Op == "accept" {
 				break
 			}
@@ -84,12 +88,12 @@ func ServeListenerConnections(ln net.Listener) {
 		// For some reason when closing the listener
 		// from the Comm system returns a nil connection...
 		if conn == nil {
-			mtlsLog.Errorf("Accepted a nil conn: %v", err)
+			log.Debugf("Accepted a nil conn: %v", err)
 			break
 		}
 
 		// Set up the RPC layer around the connection
-		go handleSliverConnection(conn)
+		go handleSliverConnection(log, conn)
 	}
 }
 
@@ -98,17 +102,23 @@ func ServeListenerConnections(ln net.Listener) {
 // will support the Sliver RPC communication model.
 // This function is also in charge of setting up various cleanup tasks, such
 // as session transports reset and deletion from DB upon connection closing.
-func handleSliverConnection(conn net.Conn) {
-	mtlsLog.Infof("Accepted incoming connection: %s", conn.RemoteAddr())
+func handleSliverConnection(log *logrus.Entry, conn net.Conn) {
+	log = log.WithField("component", "conn")
+
+	log.Debugf("Accepted incoming connection: %s", conn.RemoteAddr())
 	implantConn := core.NewImplantConnection(consts.MtlsStr, conn.RemoteAddr().String())
 
 	// In the cleanup function, we add the automatic cleaning/deletion
 	// of transports that have been set at runtime and that are currently
 	// saved into the database.
 	defer func() {
-		mtlsLog.Debugf("mtls connection closing") // TODO: Remove
-		conn.Close()                              // Close the physical/logical connection
-		implantConn.Cleanup()                     // Close the RPC layer
+		err := conn.Close() // Close the physical/logical connection
+		if err != nil {
+			log.Tracef("error closing connection: %s", err)
+		} else {
+			log.Tracef("closed connection (%s <=> %s)", conn.LocalAddr(), conn.RemoteAddr()) // TODO: Remove
+		}
+		implantConn.Cleanup() // Close the RPC layer
 	}()
 
 	done := make(chan bool)
@@ -120,7 +130,7 @@ func handleSliverConnection(conn net.Conn) {
 		for {
 			envelope, err := streamReadEnvelope(conn)
 			if err != nil {
-				mtlsLog.Errorf("Socket read error %v", err)
+				log.Debugf("Socket read error: %v", err)
 				return
 			}
 			implantConn.UpdateLastMessage()
@@ -147,14 +157,14 @@ Loop:
 		case envelope := <-implantConn.Send:
 			err := streamWriteEnvelope(conn, envelope)
 			if err != nil {
-				mtlsLog.Errorf("Socket write failed %v", err)
+				log.Debugf("Socket write failed %v", err)
 				break Loop
 			}
 		case <-done:
 			break Loop
 		}
 	}
-	mtlsLog.Debugf("Closing implant connection %s", implantConn.ID)
+	log.Debugf("Closing implant connection %s", implantConn.ID)
 }
 
 // func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
@@ -202,7 +212,6 @@ Loop:
 func streamWriteEnvelope(connection io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
 	data, err := proto.Marshal(envelope)
 	if err != nil {
-		mtlsLog.Errorf("Envelope marshaling error: %v", err)
 		return err
 	}
 	dataLengthBuf := new(bytes.Buffer)
@@ -214,14 +223,13 @@ func streamWriteEnvelope(connection io.ReadWriteCloser, envelope *sliverpb.Envel
 
 // streamReadEnvelope - Reads a message from the stream using length prefix framing
 // returns messageType, message, and error
-func streamReadEnvelope(connection io.ReadWriteCloser) (*sliverpb.Envelope, error) {
+func streamReadEnvelope(connection io.ReadWriteCloser) (env *sliverpb.Envelope, err error) {
 
 	// Read the first four bytes to determine data length
 	dataLengthBuf := make([]byte, 4) // Size of uint32
-	_, err := connection.Read(dataLengthBuf)
+	_, err = connection.Read(dataLengthBuf)
 	if err != nil {
-		mtlsLog.Errorf("Socket error (read msg-length): %v", err)
-		return nil, err
+		return nil, fmt.Errorf("(read msg-length): %v", err)
 	}
 	dataLength := int(binary.LittleEndian.Uint32(dataLengthBuf))
 
@@ -250,21 +258,18 @@ func streamReadEnvelope(connection io.ReadWriteCloser) (*sliverpb.Envelope, erro
 			break
 		}
 		if err != nil {
-			mtlsLog.Errorf("Read error: %s", err)
 			break
 		}
 	}
-
 	if err != nil {
-		mtlsLog.Errorf("Socket error (read data): %v", err)
 		return nil, err
 	}
+
 	// Unmarshal the protobuf envelope
 	envelope := &sliverpb.Envelope{}
 	err = proto.Unmarshal(dataBuf, envelope)
 	if err != nil {
-		mtlsLog.Errorf("Un-marshaling envelope error: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("unmarshaling envelope error: %v", err)
 	}
 	return envelope, nil
 }
