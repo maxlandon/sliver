@@ -59,7 +59,7 @@ func (c *ImplantConnection) UpdateLastMessage() {
 func NewImplantConnection(transport string, remoteAddress string) *ImplantConnection {
 	return &ImplantConnection{
 		ID:            generateImplantConnectionID(),
-		Send:          make(chan *sliverpb.Envelope),
+		Send:          make(chan *sliverpb.Envelope, 100),
 		RespMutex:     &sync.RWMutex{},
 		Resp:          map[int64]chan *sliverpb.Envelope{},
 		Transport:     transport,

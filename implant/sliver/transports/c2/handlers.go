@@ -20,6 +20,7 @@ package c2
 
 import (
 	// {{if .Config.Debug}}
+
 	"log"
 	// {{end}}
 

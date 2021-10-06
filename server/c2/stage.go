@@ -157,6 +157,45 @@ Loop:
 	mtlsLog.Debugf("Closing implant connection %s", implantConn.ID)
 }
 
+// func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
+//         // func writeEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
+//         data, err := proto.Marshal(envelope)
+//         if err != nil {
+//                 // {{if .Config.Debug}}
+//                 // log.Print("[namedpipe] Marshaling error: ", err)
+//                 // {{end}}
+//                 return err
+//         }
+//         dataLengthBuf := new(bytes.Buffer)
+//         binary.Write(dataLengthBuf, binary.LittleEndian, uint32(len(data)))
+//         _, err = conn.Write(dataLengthBuf.Bytes())
+//         if err != nil {
+//                 // {{if .Config.Debug}}
+//                 // log.Printf("[namedpipe] Error %s and %d\n", err, dataLengthBuf)
+//                 // {{end}}
+//         }
+//         totalWritten := 0
+//         for totalWritten < len(data)-readBufSize {
+//                 n, err2 := conn.Write(data[totalWritten : totalWritten+readBufSize])
+//                 totalWritten += n
+//                 if err2 != nil {
+//                         // {{if .Config.Debug}}
+//                         // log.Printf("[namedpipe] Error %s\n", err)
+//                         // {{end}}
+//                 }
+//         }
+//         if totalWritten < len(data) {
+//                 missing := len(data) - totalWritten
+//                 _, err := conn.Write(data[totalWritten : totalWritten+missing])
+//                 if err != nil {
+//                         // {{if .Config.Debug}}
+//                         // log.Printf("[namedpipe] Error %s", err)
+//                         // {{end}}
+//                 }
+//         }
+//         return nil
+// }
+
 // streamWriteEnvelope - Writes a message to the stream using length prefix framing
 // which is a fancy way of saying we write the length of the message then the message
 // e.g. [uint32 length|message] so the receiver can delimit messages properly
@@ -196,6 +235,15 @@ func streamReadEnvelope(connection io.ReadWriteCloser) (*sliverpb.Envelope, erro
 	dataBuf := make([]byte, 0)
 	totalRead := 0
 	for {
+
+		// Compute the precise length of the temporary buffer
+		// var readBuf []byte
+		// if dataLength-len(dataBuf) > readBufSize {
+		//         readBuf = make([]byte, readBufSize)
+		// } else {
+		//         readBuf = make([]byte, (dataLength - len(dataBuf)))
+		// }
+
 		n, err := connection.Read(readBuf)
 		dataBuf = append(dataBuf, readBuf[:n]...)
 		totalRead += n

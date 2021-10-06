@@ -20,7 +20,9 @@ package transports
 
 import (
 	// {{if .Config.Debug}}
+	"fmt"
 	"log"
+
 	// {{end}}
 
 	"bytes"
@@ -152,8 +154,8 @@ func (c *Connection) RequestRecv() chan *pb.Envelope {
 // SetupConnectionStream - Create a primitive ReadWriteCloser on our goroutines (to rule them all)
 func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func()) (*Connection, error) {
 
-	send := make(chan *pb.Envelope)
-	recv := make(chan *pb.Envelope)
+	send := make(chan *pb.Envelope, 100)
+	recv := make(chan *pb.Envelope, 100)
 	ctrl := make(chan bool)
 	connection := &Connection{
 		Send:    send,
@@ -178,6 +180,7 @@ func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func()) (*Conn
 		for {
 			envelope, err := streamReadEnvelope(stream)
 			if err == io.EOF {
+				fmt.Println(err)
 				break
 			}
 			if err == net.ErrClosed {
@@ -191,6 +194,50 @@ func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func()) (*Conn
 
 	return connection, nil
 }
+
+const (
+	readBufSizeNamedPipe  = 1024
+	writeBufSizeNamedPipe = 1024
+)
+
+// func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
+//         // func writeEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
+//         data, err := proto.Marshal(envelope)
+//         if err != nil {
+//                 // {{if .Config.Debug}}
+//                 log.Print("[namedpipe] Marshaling error: ", err)
+//                 // {{end}}
+//                 return err
+//         }
+//         dataLengthBuf := new(bytes.Buffer)
+//         binary.Write(dataLengthBuf, binary.LittleEndian, uint32(len(data)))
+//         _, err = conn.Write(dataLengthBuf.Bytes())
+//         if err != nil {
+//                 // {{if .Config.Debug}}
+//                 log.Printf("[namedpipe] Error %s and %d\n", err, dataLengthBuf)
+//                 // {{end}}
+//         }
+//         totalWritten := 0
+//         for totalWritten < len(data)-writeBufSizeNamedPipe {
+//                 n, err2 := conn.Write(data[totalWritten : totalWritten+writeBufSizeNamedPipe])
+//                 totalWritten += n
+//                 if err2 != nil {
+//                         // {{if .Config.Debug}}
+//                         log.Printf("[namedpipe] Error %s\n", err)
+//                         // {{end}}
+//                 }
+//         }
+//         if totalWritten < len(data) {
+//                 missing := len(data) - totalWritten
+//                 _, err := conn.Write(data[totalWritten : totalWritten+missing])
+//                 if err != nil {
+//                         // {{if .Config.Debug}}
+//                         log.Printf("[namedpipe] Error %s", err)
+//                         // {{end}}
+//                 }
+//         }
+//         return nil
+// }
 
 // streamWriteEnvelope - Writes a message to the TLS socket using length prefix framing
 // which is a fancy way of saying we write the length of the message then the message
@@ -240,10 +287,19 @@ func streamReadEnvelope(stream io.ReadWriteCloser) (*pb.Envelope, error) {
 	dataLength := int(binary.LittleEndian.Uint32(dataLengthBuf))
 
 	// Read the length of the data
-	readBuf := make([]byte, readBufSize)
+	// readBuf := make([]byte, readBufSize)
 	dataBuf := make([]byte, 0)
 	totalRead := 0
 	for {
+		// Compute the precise length of the temporary buffer
+		var readBuf []byte
+		if dataLength-len(dataBuf) > readBufSize {
+			readBuf = make([]byte, readBufSize)
+		} else {
+			readBuf = make([]byte, (dataLength - len(dataBuf)))
+		}
+
+		// And read it
 		n, err := stream.Read(readBuf)
 		dataBuf = append(dataBuf, readBuf[:n]...)
 		totalRead += n

@@ -113,10 +113,6 @@ func (t *Tunnel) Write(data []byte) (n int, err error) {
 		Type: sliverpb.MsgCommTunnelData,
 		Data: sdata,
 	})
-	// t.ToServer <- &sliverpb.Envelope{
-	//         Type: sliverpb.MsgCommTunnelData,
-	//         Data: sdata,
-	// }
 	return len(data), err
 }
 
