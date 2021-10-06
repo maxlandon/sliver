@@ -178,8 +178,11 @@ func NextBeacon() *Beacon {
 		// {{end}} - DNSc2Enabled
 
 	default:
+		beacon = &Beacon{uri: uri} // Avoid unused variable for unsupported protos
+
 		// {{if .Config.Debug}}
 		log.Printf("Unknown c2 protocol %s", uri.Scheme)
+		log.Printf(beacon.uri.String())
 		// {{end}}
 	}
 

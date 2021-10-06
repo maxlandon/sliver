@@ -340,6 +340,21 @@ func (comm *Comm) serveRequests() {
 
 			var err error
 
+			switch openReq.Handler.Application {
+			case commpb.Application_NamedPipe:
+				// {{if .Config.NamePipec2Enabled}}
+				_, err = ListenNamedPipe(openReq.Handler)
+				if err != nil {
+				}
+				// {{ else }}
+				err = errors.New("named pipes not implemented on this platform")
+				// {{end}} -NamePipec2Enabled
+				goto REPLY
+			default:
+				goto TRANSPORT
+			}
+
+		TRANSPORT:
 			// Swith on transport protocol.
 			switch openReq.Handler.Transport {
 			case commpb.Transport_TCP:
@@ -349,6 +364,7 @@ func (comm *Comm) serveRequests() {
 				err = ListenUDP(openReq.Handler)
 			}
 
+		REPLY:
 			// Send back reply to the server Comm
 			if err != nil {
 				open.Response.Err = err.Error()

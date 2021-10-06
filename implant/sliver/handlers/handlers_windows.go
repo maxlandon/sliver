@@ -38,7 +38,6 @@ import (
 	"github.com/bishopfox/sliver/implant/sliver/registry"
 	"github.com/bishopfox/sliver/implant/sliver/service"
 	"github.com/bishopfox/sliver/implant/sliver/taskrunner"
-	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
@@ -375,7 +374,7 @@ func spawnDllHandler(data []byte, resp RPCResponse) {
 	resp(data, err)
 }
 
-func namedPipeListenerHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func namedPipeListenerHandler(envelope *sliverpb.Envelope, connection Connection) {
 	namedPipeReq := &sliverpb.NamedPipesReq{}
 	err := proto.Unmarshal(envelope.Data, namedPipeReq)
 	if err != nil {
@@ -387,10 +386,10 @@ func namedPipeListenerHandler(envelope *sliverpb.Envelope, connection *transport
 			Response: &commonpb.Response{Err: err.Error()},
 		}
 		data, _ := proto.Marshal(namedPipeResp)
-		connection.Send <- &sliverpb.Envelope{
+		connection.RequestSend(&sliverpb.Envelope{
 			ID:   envelope.GetID(),
 			Data: data,
-		}
+		})
 		return
 	}
 	err = pivots.StartNamedPipeListener(namedPipeReq.GetPipeName())
@@ -403,20 +402,20 @@ func namedPipeListenerHandler(envelope *sliverpb.Envelope, connection *transport
 			Response: &commonpb.Response{Err: err.Error()},
 		}
 		data, _ := proto.Marshal(namedPipeResp)
-		connection.Send <- &sliverpb.Envelope{
+		connection.RequestSend(&sliverpb.Envelope{
 			ID:   envelope.GetID(),
 			Data: data,
-		}
+		})
 		return
 	}
 	namedPipeResp := &sliverpb.NamedPipes{
 		Success: true,
 	}
 	data, _ := proto.Marshal(namedPipeResp)
-	connection.Send <- &sliverpb.Envelope{
+	connection.RequestSend(&sliverpb.Envelope{
 		ID:   envelope.GetID(),
 		Data: data,
-	}
+	})
 }
 
 func makeTokenHandler(data []byte, resp RPCResponse) {

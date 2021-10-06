@@ -23,14 +23,13 @@ package handlers
 import (
 	"os"
 
-	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	"google.golang.org/protobuf/proto"
 )
 
 var specialHandlers = map[uint32]TransportHandler{
-	sliverpb.MsgKillSessionReq: killHandlerS,
+	sliverpb.MsgKillSessionReq: killHandler,
 }
 
 // GetSpecialHandlers returns the specialHandlers map
@@ -44,7 +43,7 @@ type C2 interface {
 	Stop() error
 }
 
-func killHandlerS(data []byte, transport C2) error {
+func killHandler(data []byte, transport C2) error {
 	killReq := &sliverpb.KillSessionReq{}
 	err := proto.Unmarshal(data, killReq)
 	// {{if .Config.Debug}}
@@ -57,24 +56,6 @@ func killHandlerS(data []byte, transport C2) error {
 	if transport != nil {
 		transport.Stop()
 	}
-	// {{if .Config.Debug}}
-	println("Let's exit!")
-	// {{end}}
-	os.Exit(0)
-	return nil
-}
-
-func killHandler(data []byte, connection *transports.Connection) error {
-	killReq := &sliverpb.KillSessionReq{}
-	err := proto.Unmarshal(data, killReq)
-	// {{if .Config.Debug}}
-	println("KILL called")
-	// {{end}}
-	if err != nil {
-		return err
-	}
-	// Cleanup connection
-	connection.Cleanup()
 	// {{if .Config.Debug}}
 	println("Let's exit!")
 	// {{end}}

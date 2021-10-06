@@ -23,7 +23,6 @@ package handlers
 import (
 	"os"
 
-	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	// {{if or .Config.IsSharedLib .Config.IsShellcode}}
@@ -37,16 +36,22 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var specialHandlers = map[uint32]SpecialHandler{
+var specialHandlers = map[uint32]TransportHandler{
 	sliverpb.MsgKillSessionReq: killHandler,
 }
 
+// C2 - A small interface allowing us to
+// close the C2 channel when killing the implant
+type C2 interface {
+	Stop() error
+}
+
 // GetSpecialHandlers returns the specialHandlers map
-func GetSpecialHandlers() map[uint32]SpecialHandler {
+func GetSpecialHandlers() map[uint32]TransportHandler {
 	return specialHandlers
 }
 
-func killHandler(data []byte, connection *transports.Connection) error {
+func killHandler(data []byte, transport C2) error {
 	killReq := &sliverpb.KillSessionReq{}
 	err := proto.Unmarshal(data, killReq)
 	// {{if .Config.Debug}}
@@ -55,6 +60,12 @@ func killHandler(data []byte, connection *transports.Connection) error {
 	if err != nil {
 		return err
 	}
+
+	// Cleanup connection
+	if transport != nil {
+		transport.Stop()
+	}
+
 	// {{if eq .Config.GOOS "windows"}}
 	// {{if or .Config.IsSharedLib .Config.IsShellcode}}
 	if runtime.GOOS == "windows" {
@@ -73,7 +84,7 @@ func killHandler(data []byte, connection *transports.Connection) error {
 	// {{end}}
 	// {{end}}
 	// Cleanup connection
-	connection.Cleanup()
+	// connection.Cleanup()
 	// {{if .Config.Debug}}
 	println("Let's exit!")
 	// {{end}}
