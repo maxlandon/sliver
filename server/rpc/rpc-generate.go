@@ -26,7 +26,6 @@ import (
 	"path"
 	"runtime"
 
-	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/server/c2"
@@ -72,8 +71,8 @@ func (rpc *Server) Generate(ctx context.Context, req *clientpb.GenerateReq) (*cl
 	}
 
 	core.EventBroker.Publish(core.Event{
-		EventType: consts.BuildCompletedEvent,
-		Data:      []byte(fmt.Sprintf("%s build completed", filename)),
+		Type: clientpb.EventType_BuildCompleted,
+		Data: []byte(fmt.Sprintf("%s build completed", filename)),
 	})
 
 	return &clientpb.Generate{
@@ -181,8 +180,8 @@ func (rpc *Server) SaveImplantProfile(ctx context.Context, profile *clientpb.Imp
 			return nil, err
 		}
 		core.EventBroker.Publish(core.Event{
-			EventType: consts.ProfileEvent,
-			Data:      []byte(fmt.Sprintf("%s", profile.Name)),
+			Type: clientpb.EventType_Profile,
+			Data: []byte(fmt.Sprintf("%s", profile.Name)),
 		})
 		return profile, nil
 	}
@@ -198,8 +197,8 @@ func (rpc *Server) DeleteImplantProfile(ctx context.Context, req *clientpb.Delet
 	err = db.Session().Delete(profile).Error
 	if err == nil {
 		core.EventBroker.Publish(core.Event{
-			EventType: consts.ProfileEvent,
-			Data:      []byte(fmt.Sprintf("%s", profile.Name)),
+			Type: clientpb.EventType_Profile,
+			Data: []byte(fmt.Sprintf("%s", profile.Name)),
 		})
 	}
 	return &commonpb.Empty{}, err
@@ -218,8 +217,8 @@ func (rpc *Server) DeleteImplantBuild(ctx context.Context, req *clientpb.DeleteR
 	err = generate.ImplantFileDelete(build)
 	if err == nil {
 		core.EventBroker.Publish(core.Event{
-			EventType: consts.BuildEvent,
-			Data:      []byte(fmt.Sprintf("%s", build.Name)),
+			Type: clientpb.EventType_BuildDeleted,
+			Data: []byte(fmt.Sprintf("%s", build.Name)),
 		})
 	}
 	return &commonpb.Empty{}, err

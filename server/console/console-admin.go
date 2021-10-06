@@ -30,8 +30,8 @@ import (
 	"regexp"
 
 	"github.com/bishopfox/sliver/client/assets"
-	"github.com/bishopfox/sliver/client/constants"
 	clientLog "github.com/bishopfox/sliver/client/log"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/core"
@@ -244,14 +244,14 @@ func jobStartClientListener(host string, port uint16) (string, error) {
 
 	go func() {
 		<-job.JobCtrl
-		adminLog.Printf("Stopping client listener (%d) ...\n", job.ID)
+		adminLog.Printf("Stopping client listener (%d) ...", job.ID)
 		ln.Close() // Kills listener GoRoutines in startMutualTLSListener() but NOT connections
 
 		core.Jobs.Remove(job)
 
 		core.EventBroker.Publish(core.Event{
-			Job:       job,
-			EventType: constants.JobStoppedEvent,
+			Job:  job,
+			Type: clientpb.EventType_JobStopped,
 		})
 	}()
 

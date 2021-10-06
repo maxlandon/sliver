@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/configs"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
@@ -37,9 +37,9 @@ func handleBurnedImplant(result *snitch.ScanResult) {
 		// Won't work for sessions that have been renamed
 		if session.Name == result.Sample.Name() {
 			core.EventBroker.Publish(core.Event{
-				Session:   session,
-				EventType: consts.WatchtowerEvent,
-				Data:      []byte(fmt.Sprintf("%s - %v", result.Provider, result.LastSeen)),
+				Session: session,
+				Type:    clientpb.EventType_Watchtower,
+				Data:    []byte(fmt.Sprintf("%s - %v", result.Provider, result.LastSeen)),
 			})
 		}
 	}

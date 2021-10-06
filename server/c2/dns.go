@@ -27,6 +27,7 @@ import (
 	"net"
 	"sort"
 
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
@@ -45,7 +46,6 @@ import (
 	"sync"
 	"time"
 
-	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/cryptography"
 	serverHandlers "github.com/bishopfox/sliver/server/handlers"
@@ -246,8 +246,8 @@ func handleCanary(req *dns.Msg) *dns.Msg {
 				Session: &core.Session{
 					Name: canary.ImplantName,
 				},
-				Data:      []byte(canary.Domain),
-				EventType: consts.CanaryEvent,
+				Data: []byte(canary.Domain),
+				Type: clientpb.EventType_CanaryBurned,
 			})
 			canary.Triggered = true
 			canary.FirstTrigger = time.Now()

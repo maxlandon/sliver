@@ -21,7 +21,7 @@ package core
 import (
 	"errors"
 
-	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
@@ -36,9 +36,9 @@ var (
 func StartEventAutomation() {
 	go func() {
 		for event := range EventBroker.Subscribe() {
-			switch event.EventType {
+			switch event.Type {
 
-			case consts.SessionOpenedEvent:
+			case clientpb.EventType_SessionOpened:
 				if event.Session != nil {
 					hostsSessionCallback(event.Session)
 				}

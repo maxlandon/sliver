@@ -24,7 +24,6 @@ import (
 	"mime"
 	"path/filepath"
 
-	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
@@ -82,8 +81,8 @@ func (rpc *Server) WebsiteRemove(ctx context.Context, req *clientpb.Website) (*c
 	}
 
 	core.EventBroker.Publish(core.Event{
-		EventType: consts.WebsiteEvent,
-		Data:      []byte(fmt.Sprintf("%s", req.Name)),
+		Type: clientpb.EventType_WebsiteEvent,
+		Data: []byte(fmt.Sprintf("%s", req.Name)),
 	})
 
 	return &commonpb.Empty{}, nil
@@ -121,8 +120,8 @@ func (rpc *Server) WebsiteAddContent(ctx context.Context, req *clientpb.WebsiteA
 	}
 
 	core.EventBroker.Publish(core.Event{
-		EventType: consts.WebsiteEvent,
-		Data:      []byte(fmt.Sprintf("%s", req.Name)),
+		Type: clientpb.EventType_WebsiteEvent,
+		Data: []byte(fmt.Sprintf("%s", req.Name)),
 	})
 
 	return website.MapContent(req.Name, false)
@@ -148,8 +147,8 @@ func (rpc *Server) WebsiteUpdateContent(ctx context.Context, req *clientpb.Websi
 	}
 
 	core.EventBroker.Publish(core.Event{
-		EventType: consts.WebsiteEvent,
-		Data:      []byte(fmt.Sprintf("%s", req.Name)),
+		Type: clientpb.EventType_WebsiteEvent,
+		Data: []byte(fmt.Sprintf("%s", req.Name)),
 	})
 
 	return website.MapContent(req.Name, false)
@@ -166,8 +165,8 @@ func (rpc *Server) WebsiteRemoveContent(ctx context.Context, req *clientpb.Websi
 	}
 
 	core.EventBroker.Publish(core.Event{
-		EventType: consts.WebsiteEvent,
-		Data:      []byte(fmt.Sprintf("%s", req.Name)),
+		Type: clientpb.EventType_WebsiteEvent,
+		Data: []byte(fmt.Sprintf("%s", req.Name)),
 	})
 
 	return website.MapContent(req.Name, false)

@@ -18,6 +18,8 @@ package core
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import "github.com/bishopfox/sliver/protobuf/clientpb"
+
 const (
 	// Size is arbitrary, just want to avoid weird cases where we'd block on channel sends
 	eventBufSize = 5
@@ -26,14 +28,16 @@ const (
 // Event - An event is fired when there's a state change involving a
 //         session, job, or client.
 type Event struct {
+	Type      clientpb.EventType
+	Name      string
+	Component string
+	Level     clientpb.Level
+	Data      []byte
+	Err       error
+
 	Session *Session
 	Job     *Job
 	Client  *Client
-
-	EventType string
-
-	Data []byte
-	Err  error
 }
 
 type eventBroker struct {

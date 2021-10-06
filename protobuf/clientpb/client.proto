@@ -677,13 +677,61 @@ message Client {
 }
 
 message Event {
-  string EventType = 1;
-  Session Session = 2;
-  Job Job = 3;
-  Client Client = 4;
+  EventType Type = 1;
+  string Name = 2;
+  string Component = 3;
+  Level Level = 4;
   bytes Data = 5;
-
   string Err = 6; // Can't trigger normal gRPC error
+
+  Session Session = 10;
+  Job Job = 11;
+  Client Client = 12;
+}
+
+// EventType - All major types of events 
+enum EventType {
+  // Base
+  Log = 0;
+  UserJoined = 1;
+  UserLeft = 2;
+  CanaryBurned = 3;
+  Watchtower = 4;
+  JobStarted = 5;
+  JobStopped = 6;
+
+  // Implants
+  Profile = 7;
+  BuildCompleted = 8;
+  BuildDeleted = 9;
+
+  // C2
+  Handler = 11;
+  WebsiteEvent = 12;
+
+  // Sessions
+  SessionOpened = 20;
+  SessionUpdated = 21;
+  SessionClosed = 22;
+
+  // Beacons
+  BeaconRegistered = 31;
+  BeaconTaskResult = 32;
+
+  // Loot
+  LootAdded = 40;
+  LootRemoved = 41;
+}
+
+// Level - Some components in Sliver will push to the event system through 
+// logger hooks, for more granular output of log information.
+enum Level {
+        TRACE = 0;
+        DEBUG = 1;
+        INFO = 2;
+        WARNING = 3;
+        ERROR = 4;
+        SUCCESS = 5;
 }
 
 message Operators { 

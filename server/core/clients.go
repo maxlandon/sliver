@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"sync"
 
-	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/gofrs/uuid"
 )
@@ -66,8 +65,8 @@ func (cc *clients) Add(client *Client) {
 
 	if len(cc.OperatorClients(client.Operator.Name)) == 1 {
 		EventBroker.Publish(Event{
-			EventType: consts.JoinedEvent,
-			Client:    client,
+			Type:   clientpb.EventType_UserJoined,
+			Client: client,
 		})
 	}
 }
@@ -112,8 +111,8 @@ func (cc *clients) Remove(clientID string) {
 
 	if len(cc.OperatorClients(client.Operator.Name)) == 0 {
 		EventBroker.Publish(Event{
-			EventType: consts.LeftEvent,
-			Client:    client,
+			Type:   clientpb.EventType_UserLeft,
+			Client: client,
 		})
 	}
 }

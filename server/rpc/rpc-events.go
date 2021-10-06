@@ -31,8 +31,8 @@ func (s *Server) Events(req *commonpb.Request, stream rpcpb.SliverRPC_EventsServ
 			return nil
 		case event := <-events:
 			pbEvent := &clientpb.Event{
-				EventType: event.EventType,
-				Data:      event.Data,
+				Type: event.Type,
+				Data: event.Data,
 			}
 
 			if event.Job != nil {

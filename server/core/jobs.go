@@ -26,8 +26,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/gofrs/uuid"
-
-	consts "github.com/bishopfox/sliver/client/constants"
 )
 
 var (
@@ -134,8 +132,8 @@ func (j *jobs) Add(job *Job) {
 	defer j.mutex.Unlock()
 	j.active[job.ID.String()] = job
 	EventBroker.Publish(Event{
-		Job:       job,
-		EventType: consts.JobStartedEvent,
+		Job:  job,
+		Type: clientpb.EventType_JobStarted,
 	})
 }
 
@@ -165,9 +163,9 @@ func (j *jobs) Remove(job *Job) {
 
 	// Publish the job stopped event
 	EventBroker.Publish(Event{
-		Job:       job,
-		EventType: consts.JobStoppedEvent,
-		Data:      []byte(description),
+		Job:  job,
+		Type: clientpb.EventType_JobStopped,
+		Data: []byte(description),
 	})
 }
 

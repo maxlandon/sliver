@@ -214,8 +214,8 @@ func (s *sessions) Add(session *Session) *Session {
 	defer s.mutex.Unlock()
 	s.sessions[session.ID] = session
 	EventBroker.Publish(Event{
-		EventType: consts.SessionOpenedEvent,
-		Session:   session,
+		Type:    clientpb.EventType_SessionOpened,
+		Session: session,
 	})
 	return session
 }
@@ -245,8 +245,8 @@ func (s *sessions) Remove(sessionID uint32) {
 		// And notify the clients
 		delete(s.sessions, sessionID)
 		EventBroker.Publish(Event{
-			EventType: consts.SessionClosedEvent,
-			Session:   session,
+			Type:    clientpb.EventType_SessionClosed,
+			Session: session,
 		})
 	}
 }
@@ -284,8 +284,8 @@ func (s *sessions) UpdateSession(session *Session) *Session {
 	defer s.mutex.Unlock()
 	s.sessions[session.ID] = session
 	EventBroker.Publish(Event{
-		EventType: consts.SessionUpdateEvent,
-		Session:   session,
+		Type:    clientpb.EventType_SessionUpdated,
+		Session: session,
 	})
 	return session
 }

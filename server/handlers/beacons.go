@@ -26,7 +26,7 @@ import (
 	"errors"
 	"time"
 
-	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	sliverpb "github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
@@ -90,8 +90,8 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 
 	eventData, _ := proto.Marshal(beacon.ToProtobuf())
 	core.EventBroker.Publish(core.Event{
-		EventType: consts.BeaconRegisteredEvent,
-		Data:      eventData,
+		Type: clientpb.EventType_BeaconRegistered,
+		Data: eventData,
 	})
 
 	return nil
@@ -182,8 +182,8 @@ func beaconTaskResults(beaconID string, taskEnvelopes []*sliverpb.Envelope) *sli
 		}
 		eventData, _ := proto.Marshal(dbTask.ToProtobuf(false))
 		core.EventBroker.Publish(core.Event{
-			EventType: consts.BeaconTaskResultEvent,
-			Data:      eventData,
+			Type: clientpb.EventType_BeaconTaskResult,
+			Data: eventData,
 		})
 	}
 	return nil

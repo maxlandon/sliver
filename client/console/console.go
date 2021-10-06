@@ -100,14 +100,8 @@ func Start(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds, config *assets.Client
 		return fmt.Errorf("Console setup failed: %s", err)
 	}
 
-	// Start monitoring all logs from the server and the client.
-	err = clientLog.Init(core.Console, rpc)
-	if err != nil {
-		return fmt.Errorf("Failed to start log monitor (%s)", err.Error())
-	}
-
 	// Start monitoring incoming events
-	go eventLoop(rpc)
+	go eventLoopAlt(rpc)
 
 	// Print banner and version information. (checks last updates)
 	printSliverBanner(rpc)
@@ -162,6 +156,12 @@ func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
 	// Do the same for the completion package, which is needed by commands.
 	core.Console = console
 	completion.Console = console
+
+	// Start monitoring all logs from the server and the client.
+	err = clientLog.Init(console, rpc)
+	if err != nil {
+		return fmt.Errorf("Failed to start log monitor (%s)", err.Error())
+	}
 
 	// Bind admin commands if we are the server binary.
 	if extraCmds != nil {

@@ -21,7 +21,6 @@ package rpc
 import (
 	"context"
 
-	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/server/core"
@@ -40,8 +39,8 @@ func (rpc *Server) LootAdd(ctx context.Context, lootReq *clientpb.Loot) (*client
 		return nil, err
 	}
 	core.EventBroker.Publish(core.Event{
-		EventType: consts.LootAddedEvent,
-		Data:      []byte(loot.LootID),
+		Type: clientpb.EventType_LootAdded,
+		Data: []byte(loot.LootID),
 	})
 	return loot, nil
 }
@@ -53,7 +52,7 @@ func (rpc *Server) LootRm(ctx context.Context, lootReq *clientpb.Loot) (*commonp
 		return nil, err
 	}
 	core.EventBroker.Publish(core.Event{
-		EventType: consts.LootRemovedEvent,
+		Type: clientpb.EventType_LootRemoved,
 	})
 	return &commonpb.Empty{}, err
 }
@@ -65,7 +64,7 @@ func (rpc *Server) LootUpdate(ctx context.Context, lootReq *clientpb.Loot) (*cli
 		return nil, err
 	}
 	core.EventBroker.Publish(core.Event{
-		EventType: consts.LootAddedEvent,
+		Type: clientpb.EventType_LootAdded,
 	})
 	return loot, err
 }
