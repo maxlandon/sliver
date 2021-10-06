@@ -39,6 +39,7 @@ import (
 	"github.com/bishopfox/sliver/server/gogo"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/util"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -241,7 +242,7 @@ func GetSliversDir() string {
 // -----------------------
 
 // SliverShellcode - Generates a sliver shellcode using sRDI
-func SliverShellcode(name string, config *models.ImplantConfig) (string, error) {
+func SliverShellcode(name string, config *models.ImplantConfig, log *logrus.Entry) (string, error) {
 	// Compile go code
 	// Compile go code
 	var cc string
@@ -252,7 +253,7 @@ func SliverShellcode(name string, config *models.ImplantConfig) (string, error) 
 	// Don't use a cross-compiler if the target bin is built on the same platform
 	// as the sliver-server.
 	if runtime.GOOS != config.GOOS {
-		buildLog.Infof("Cross-compiling from %s/%s to %s/%s", runtime.GOOS, runtime.GOARCH, config.GOOS, config.GOARCH)
+		log.Tracef("Cross-compiling from %s/%s to %s/%s", runtime.GOOS, runtime.GOARCH, config.GOOS, config.GOARCH)
 		cc, cxx = findCrossCompilers(config.GOOS, config.GOARCH)
 		if cc == "" {
 			return "", fmt.Errorf("CC '%s/%s' not found", config.GOOS, config.GOARCH)
@@ -273,7 +274,7 @@ func SliverShellcode(name string, config *models.ImplantConfig) (string, error) 
 		GOPRIVATE:   GoPrivate,
 	}
 
-	pkgPath, err := renderSliverGoCode(name, config, goConfig)
+	pkgPath, err := renderSliverGoCode(name, config, goConfig, log)
 	if err != nil {
 		return "", err
 	}
@@ -291,8 +292,12 @@ func SliverShellcode(name string, config *models.ImplantConfig) (string, error) 
 	asmflags := fmt.Sprintf("")
 	// trimpath is now a separate flag since Go 1.13
 	trimpath := "-trimpath"
+
+	log.Debugf("Compiling implant binary for shellcode")
 	_, err = gogo.GoBuild(*goConfig, pkgPath, dest, "pie", tags, ldflags, gcflags, asmflags, trimpath)
 	config.FileName = path.Base(dest)
+
+	log.Debugf("Producing shellcode with Donut")
 	shellcode, err := DonutShellcodeFromFile(dest, config.GOARCH, false, "", "", "")
 
 	if err != nil {
@@ -303,8 +308,9 @@ func SliverShellcode(name string, config *models.ImplantConfig) (string, error) 
 		return "", err
 	}
 	config.Format = clientpb.OutputFormat_SHELLCODE
-	// Save to database
 
+	// Save to database
+	log.Tracef("Saving implant shellcode")
 	saveBuildErr := ImplantBuildSave(name, config, dest)
 	if saveBuildErr != nil {
 		buildLog.Errorf("Failed to save build: %s", saveBuildErr)
@@ -314,7 +320,7 @@ func SliverShellcode(name string, config *models.ImplantConfig) (string, error) 
 }
 
 // SliverSharedLibrary - Generates a sliver shared library (DLL/dylib/so) binary
-func SliverSharedLibrary(name string, config *models.ImplantConfig) (string, error) {
+func SliverSharedLibrary(name string, config *models.ImplantConfig, log *logrus.Entry) (string, error) {
 	// Compile go code
 	var cc string
 	var cxx string
@@ -323,7 +329,7 @@ func SliverSharedLibrary(name string, config *models.ImplantConfig) (string, err
 	// Don't use a cross-compiler if the target bin is built on the same platform
 	// as the sliver-server.
 	if runtime.GOOS != config.GOOS {
-		buildLog.Infof("Cross-compiling from %s/%s to %s/%s", runtime.GOOS, runtime.GOARCH, config.GOOS, config.GOARCH)
+		log.Tracef("Cross-compiling from %s/%s to %s/%s", runtime.GOOS, runtime.GOARCH, config.GOOS, config.GOARCH)
 		cc, cxx = findCrossCompilers(config.GOOS, config.GOARCH)
 		if cc == "" {
 			return "", fmt.Errorf("CC '%s/%s' not found", config.GOOS, config.GOARCH)
@@ -343,7 +349,7 @@ func SliverSharedLibrary(name string, config *models.ImplantConfig) (string, err
 		Obfuscation: config.ObfuscateSymbols,
 		GOPRIVATE:   GoPrivate,
 	}
-	pkgPath, err := renderSliverGoCode(name, config, goConfig)
+	pkgPath, err := renderSliverGoCode(name, config, goConfig, log)
 	if err != nil {
 		return "", err
 	}
@@ -364,14 +370,18 @@ func SliverSharedLibrary(name string, config *models.ImplantConfig) (string, err
 	if !config.Debug && goConfig.GOOS == WINDOWS {
 		ldflags[0] += " -H=windowsgui"
 	}
+
 	// Keep those for potential later use
 	gcflags := fmt.Sprintf("")
 	asmflags := fmt.Sprintf("")
 	// trimpath is now a separate flag since Go 1.13
 	trimpath := "-trimpath"
+
+	log.Debugf("Compiling implant shared library")
 	_, err = gogo.GoBuild(*goConfig, pkgPath, dest, "c-shared", tags, ldflags, gcflags, asmflags, trimpath)
 	config.FileName = path.Base(dest)
 
+	log.Tracef("Saving implant binary")
 	err = ImplantBuildSave(name, config, dest)
 	if err != nil {
 		buildLog.Errorf("Failed to save build: %s", err)
@@ -380,7 +390,7 @@ func SliverSharedLibrary(name string, config *models.ImplantConfig) (string, err
 }
 
 // SliverExecutable - Generates a sliver executable binary
-func SliverExecutable(name string, config *models.ImplantConfig) (string, error) {
+func SliverExecutable(name string, config *models.ImplantConfig, log *logrus.Entry) (string, error) {
 	// Compile go code
 	appDir := assets.GetRootAppDir()
 	cgo := "0"
@@ -400,7 +410,7 @@ func SliverExecutable(name string, config *models.ImplantConfig) (string, error)
 		GOPRIVATE:   GoPrivate,
 	}
 
-	pkgPath, err := renderSliverGoCode(name, config, goConfig)
+	pkgPath, err := renderSliverGoCode(name, config, goConfig, log)
 	if err != nil {
 		return "", err
 	}
@@ -425,11 +435,12 @@ func SliverExecutable(name string, config *models.ImplantConfig) (string, error)
 	if !config.Debug {
 		trimpath = "-trimpath"
 	}
+	log.Debugf("Compiling implant executable")
 	_, err = gogo.GoBuild(*goConfig, pkgPath, dest, "", tags, ldflags, gcflags, asmflags, trimpath)
 	config.FileName = path.Base(dest)
 
+	log.Tracef("Saving implant binary")
 	err = ImplantBuildSave(name, config, dest)
-
 	if err != nil {
 		buildLog.Errorf("Failed to save build: %s", err)
 	}
@@ -437,14 +448,15 @@ func SliverExecutable(name string, config *models.ImplantConfig) (string, error)
 }
 
 // This function is a little too long, we should probably refactor it as some point
-func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gogo.GoConfig) (string, error) {
+func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gogo.GoConfig, log *logrus.Entry) (string, error) {
+
 	var err error
 	target := fmt.Sprintf("%s/%s", config.GOOS, config.GOARCH)
 	if _, ok := gogo.ValidCompilerTargets[target]; !ok {
 		return "", fmt.Errorf("Invalid compiler target: %s", target)
 	}
 
-	buildLog.Infof("Generating new sliver binary '%s'", name)
+	log.Tracef("Generating new sliver binary '%s'", name)
 
 	sliversDir := GetSliversDir() // ~/.sliver/slivers
 	projectGoPathDir := path.Join(sliversDir, config.GOOS, config.GOARCH, path.Base(name))
@@ -489,6 +501,7 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 	// }
 
 	// Saving the implant before we generate one-time things with it
+	log.Tracef("Saving build config before igniting C2 profiles")
 	err = ImplantConfigSave(config)
 	if err != nil {
 		return "", err
@@ -496,6 +509,7 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 
 	// Init all last & one time security details on the profiles,
 	// and then we are almost ready to generate.
+	log.Debugf("Igniting build C2 profiles")
 	var Transports []string
 
 	for _, transport := range config.Transports {
@@ -518,12 +532,14 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 		// Add Profile compilation string
 		Transports = append(Transports, string(transportBytes))
 	}
+	log.Tracef("Done igniting build C2 profiles")
 
 	// binDir - ~/.sliver/slivers/<os>/<arch>/<name>/bin
 	binDir := path.Join(projectGoPathDir, "bin")
 	os.MkdirAll(binDir, 0700)
 
 	// srcDir - ~/.sliver/slivers/<os>/<arch>/<name>/src
+	log.Tracef("Setting up Go path")
 	srcDir := path.Join(projectGoPathDir, "src")
 	assets.SetupGoPath(srcDir)            // Extract GOPATH dependency files
 	err = util.ChmodR(srcDir, 0600, 0700) // Ensures src code files are writable
@@ -535,9 +551,10 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 	sliverPkgDir := path.Join(srcDir, "github.com", "bishopfox", "sliver") // "main"
 	err = os.MkdirAll(sliverPkgDir, 0700)
 	if err != nil {
-		return "", nil
+		return "", fmt.Errorf("failed to create GOPATH directories for build")
 	}
 
+	log.Debugf("Rendering source files with build & C2 configuration")
 	err = fs.WalkDir(implant.FS, ".", func(fsPath string, f fs.DirEntry, err error) error {
 		if f.IsDir() {
 			return nil
@@ -611,7 +628,7 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 		}
 
 		// Render canaries
-		buildLog.Infof("Canary domain(s): %v", config.CanaryDomains)
+		log.Debugf("Canary domain(s): %v", config.CanaryDomains)
 		canaryTmpl := template.New("canary").Delims("[[", "]]")
 		canaryGenerator := &CanaryGenerator{
 			ImplantName:   name,
@@ -636,7 +653,7 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 	}
 
 	// Render GoMod
-	buildLog.Info("Rendering go.mod file ...")
+	log.Tracef("Rendering go.mod file ...")
 	goModPath := path.Join(sliverPkgDir, "go.mod")
 	err = ioutil.WriteFile(goModPath, []byte(implant.GoMod), 0600)
 	if err != nil {
@@ -647,7 +664,8 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 	if err != nil {
 		return "", err
 	}
-	buildLog.Infof("Created %s", goModPath)
+	log.Tracef("Created go.mod file (%s)", goModPath)
+	log.Debugf("Tyding go.mod file for build (can require Internet access)")
 	output, err := gogo.GoMod((*goConfig), sliverPkgDir, []string{"tidy"})
 	if err != nil {
 		buildLog.Errorf("Go mod tidy failed:\n%s", output)

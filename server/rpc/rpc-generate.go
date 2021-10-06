@@ -41,6 +41,11 @@ var (
 
 // Generate - Generate a new implant
 func (rpc *Server) Generate(ctx context.Context, req *clientpb.GenerateReq) (*clientpb.Generate, error) {
+
+	// Get a logger for the entire stream
+	client := core.Clients.Get(req.Request.ClientID)
+	logger := log.ClientLogger(client.ID, "compiler")
+
 	var fPath string
 	var err error
 	name, config := generate.ImplantConfigFromProtobuf(req.Config)
@@ -52,12 +57,12 @@ func (rpc *Server) Generate(ctx context.Context, req *clientpb.GenerateReq) (*cl
 	case clientpb.OutputFormat_SERVICE:
 		fallthrough
 	case clientpb.OutputFormat_EXECUTABLE:
-		fPath, err = generate.SliverExecutable(name, config)
+		fPath, err = generate.SliverExecutable(name, config, logger)
 		break
 	case clientpb.OutputFormat_SHARED_LIB:
-		fPath, err = generate.SliverSharedLibrary(name, config)
+		fPath, err = generate.SliverSharedLibrary(name, config, logger)
 	case clientpb.OutputFormat_SHELLCODE:
-		fPath, err = generate.SliverShellcode(name, config)
+		fPath, err = generate.SliverShellcode(name, config, logger)
 	}
 
 	if err != nil {

@@ -32,11 +32,16 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/generate"
+	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/util/encoders"
 )
 
 // Backdoor - Inject a sliver payload in a file on the remote system
 func (rpc *Server) Backdoor(ctx context.Context, req *sliverpb.BackdoorReq) (*sliverpb.Backdoor, error) {
+	// Get a logger for the entire stream
+	client := core.Clients.Get(req.Request.ClientID)
+	logger := log.ClientLogger(client.ID, "compiler")
+
 	resp := &sliverpb.Backdoor{}
 	session := core.Sessions.Get(req.Request.SessionID)
 	if session.Os != "windows" {
@@ -78,7 +83,7 @@ func (rpc *Server) Backdoor(ctx context.Context, req *sliverpb.BackdoorReq) (*sl
 	}
 
 	name, config := generate.ImplantConfigFromProtobuf(p.Config)
-	fPath, err := generate.SliverShellcode(name, config)
+	fPath, err := generate.SliverShellcode(name, config, logger)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

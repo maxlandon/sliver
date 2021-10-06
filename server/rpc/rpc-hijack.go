@@ -36,11 +36,17 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/generate"
+	"github.com/bishopfox/sliver/server/log"
 	"github.com/bishopfox/sliver/util/encoders"
 )
 
 // HijackDLL - RPC call to automatically perform DLL hijacking attacks
 func (rpc *Server) HijackDLL(ctx context.Context, req *clientpb.DllHijackReq) (*clientpb.DllHijack, error) {
+
+	// Get a logger for the entire stream
+	client := core.Clients.Get(req.Request.ClientID)
+	logger := log.ClientLogger(client.ID, "hijack")
+
 	var (
 		refDLL        []byte
 		targetDLLData []byte
@@ -112,7 +118,7 @@ func (rpc *Server) HijackDLL(ctx context.Context, req *clientpb.DllHijackReq) (*
 				return nil, err
 			}
 		}
-		fPath, err := generate.SliverSharedLibrary(name, config)
+		fPath, err := generate.SliverSharedLibrary(name, config, logger)
 		if err != nil {
 			return nil, err
 		}

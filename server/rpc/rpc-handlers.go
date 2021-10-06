@@ -25,6 +25,7 @@ import (
 	"net"
 
 	"github.com/gofrs/uuid"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -115,6 +116,10 @@ func (rpc *Server) StartHandlerStager(ctx context.Context, req *clientpb.Handler
 	profile := models.C2ProfileFromProtobuf(req.Profile)
 	session := core.Sessions.Get(req.Request.SessionID)
 
+	// Get a logger for the entire stream
+	client := core.Clients.Get(req.Request.ClientID)
+	logger := log.ClientLogger(client.ID, "handler")
+
 	// We get the comm.Net interface for the session: if nil,
 	// pass 0 and return the server interfaces functions
 	var net comm.Net
@@ -145,7 +150,7 @@ func (rpc *Server) StartHandlerStager(ctx context.Context, req *clientpb.Handler
 	job, listener := c2.NewHandlerJob(profile, session)
 
 	// Load the payload stage:
-	err = setupStage(req.StageImplant, req.StageBytes, job)
+	err = setupStage(req.StageImplant, req.StageBytes, job, logger)
 
 	// Dispatch the profile to either the root Dialer functions or Listener ones.
 	// The actual implementation of the C2 handlers are in there, or possibly in
@@ -174,7 +179,9 @@ func (rpc *Server) StartHandlerStager(ctx context.Context, req *clientpb.Handler
 }
 
 // setupStage - Depending on the user-provided elements, fetch and/or load the payload into the job
-func setupStage(implantName string, implantBytes []byte, job *core.Job) (err error) {
+func setupStage(implantName string, implantBytes []byte, job *core.Job, log *logrus.Entry) (err error) {
+
+	log = log.WithField("component", "stager")
 
 	// if the bytes are given, add conventional name and add bytes to the job below.
 	if implantName == "" && len(implantBytes) > 0 {
@@ -194,12 +201,12 @@ func setupStage(implantName string, implantBytes []byte, job *core.Job) (err err
 			case clientpb.OutputFormat_SERVICE:
 				fallthrough
 			case clientpb.OutputFormat_EXECUTABLE:
-				fPath, err = generate.SliverExecutable(profile.Name, config)
+				fPath, err = generate.SliverExecutable(profile.Name, config, log)
 				break
 			case clientpb.OutputFormat_SHARED_LIB:
-				fPath, err = generate.SliverSharedLibrary(profile.Name, config)
+				fPath, err = generate.SliverSharedLibrary(profile.Name, config, log)
 			case clientpb.OutputFormat_SHELLCODE:
-				fPath, err = generate.SliverShellcode(profile.Name, config)
+				fPath, err = generate.SliverShellcode(profile.Name, config, log)
 			}
 			if err != nil {
 				return err
@@ -223,6 +230,9 @@ func setupStage(implantName string, implantBytes []byte, job *core.Job) (err err
 			return err
 		}
 	}
+
+	// Done with the stage compilation
+	log = log.WithField("component", "handler")
 
 	return
 }

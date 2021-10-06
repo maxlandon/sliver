@@ -30,14 +30,15 @@ import (
 	"strings"
 
 	"github.com/Binject/debug/pe"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/generate"
-
-	"google.golang.org/protobuf/proto"
+	slog "github.com/bishopfox/sliver/server/log"
 )
 
 // Task - Execute shellcode in-memory
@@ -52,6 +53,11 @@ func (rpc *Server) Task(ctx context.Context, req *sliverpb.TaskReq) (*sliverpb.T
 
 // Migrate - Migrate to a new process on the remote system (Windows only)
 func (rpc *Server) Migrate(ctx context.Context, req *clientpb.MigrateReq) (*sliverpb.Migrate, error) {
+
+	// Get a logger for the entire stream
+	client := core.Clients.Get(req.Request.ClientID)
+	logger := slog.ClientLogger(client.ID, "compiler")
+
 	var shellcode []byte
 	session := core.Sessions.Get(req.Request.SessionID)
 	if session == nil {
@@ -69,7 +75,7 @@ func (rpc *Server) Migrate(ctx context.Context, req *clientpb.MigrateReq) (*sliv
 		}
 		config.Format = clientpb.OutputFormat_SHELLCODE
 		config.ObfuscateSymbols = true
-		shellcodePath, err := generate.SliverShellcode(name, config)
+		shellcodePath, err := generate.SliverShellcode(name, config, logger)
 		if err != nil {
 			return nil, err
 		}

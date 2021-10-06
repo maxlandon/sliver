@@ -28,6 +28,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/generate"
+	"github.com/bishopfox/sliver/server/log"
 
 	"google.golang.org/protobuf/proto"
 )
@@ -64,6 +65,11 @@ func (rpc *Server) RevToSelf(ctx context.Context, req *sliverpb.RevToSelfReq) (*
 
 // GetSystem - Attempt to get 'NT AUTHORITY/SYSTEM' access on a remote Windows system
 func (rpc *Server) GetSystem(ctx context.Context, req *clientpb.GetSystemReq) (*sliverpb.GetSystem, error) {
+
+	// Get a logger for the entire stream
+	client := core.Clients.Get(req.Request.ClientID)
+	logger := log.ClientLogger(client.ID, "compiler")
+
 	var shellcode []byte
 	session := core.Sessions.Get(req.Request.SessionID)
 	if session == nil {
@@ -82,7 +88,7 @@ func (rpc *Server) GetSystem(ctx context.Context, req *clientpb.GetSystemReq) (*
 		}
 		config.Format = clientpb.OutputFormat_SHELLCODE
 		config.ObfuscateSymbols = false
-		shellcodePath, err := generate.SliverShellcode(name, config)
+		shellcodePath, err := generate.SliverShellcode(name, config, logger)
 		if err != nil {
 			return nil, err
 		}

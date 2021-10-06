@@ -527,7 +527,8 @@ func Compile(config *clientpb.ImplantConfig, save string) (*commonpb.File, error
 	go log.SpinUntil("Compiling, please wait ...", ctrl)
 
 	generated, err := transport.RPC.Generate(context.Background(), &clientpb.GenerateReq{
-		Config: config,
+		Config:  config,
+		Request: core.ActiveTarget.Request(),
 	})
 	ctrl <- true
 	<-ctrl
