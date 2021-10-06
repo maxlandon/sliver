@@ -100,10 +100,16 @@ func (l *clientHook) Fire(log *logrus.Entry) (err error) {
 		component = l.name
 	}
 
-	// Maybe can switch on different printing behavior depending on name & component.
-
 	// Final status line to be printed
-	line := logrusPrintLevels[log.Level]
+	var line string
+
+	// Surround with empty line if important
+	if _, yes := log.Data["important"]; yes {
+		line = line + "\n"
+	}
+
+	// Status level printing
+	line = logrusPrintLevels[log.Level]
 
 	// Print the component name in red if error
 	if log.Level == logrus.ErrorLevel {
@@ -112,6 +118,11 @@ func (l *clientHook) Fire(log *logrus.Entry) (err error) {
 	} else {
 		line += fmt.Sprintf("%s%-10v %s-%s %s \n",
 			readline.DIM, component, readline.DIM, readline.RESET, log.Message)
+	}
+
+	// Surround with empty line if important
+	if _, yes := log.Data["important"]; yes {
+		line = line + "\n"
 	}
 
 	// If we are in the middle of a command, we just print the log without refreshing prompt

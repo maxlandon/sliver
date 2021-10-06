@@ -21,9 +21,12 @@ package console
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/bishopfox/sliver/client/completion"
 	"github.com/bishopfox/sliver/client/core"
 	clientLog "github.com/bishopfox/sliver/client/log"
+	"github.com/bishopfox/sliver/client/prelude"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -103,6 +106,10 @@ func handleEvent(event *clientpb.Event, log *logrus.Entry, autoLevel func(format
 
 // handleEventOpsec - Display an opsec event.
 func handleEventOpsec(event *clientpb.Event, log *logrus.Entry, autoLevel func(format string, args ...interface{})) {
+
+	// For all OPSEC message, add one empty line before and after the log
+	log = log.WithField("important", true)
+
 	switch event.Type {
 
 	// Canaries
@@ -133,9 +140,65 @@ func handleEventOpsec(event *clientpb.Event, log *logrus.Entry, autoLevel func(f
 // handleEventSession - Display a session event
 func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func(format string, args ...interface{})) {
 
+	session := event.Session
+	currentTime := time.Now().Format(time.RFC1123)
+
 	switch event.Type {
 	case clientpb.EventType_SessionOpened:
+		log = log.WithField("name", "New Session")
+		log = log.WithField("important", true) // Add empty lines around the news
+
+		// Create a new session data cache for completions
+		completion.Cache.AddSessionCache(session)
+
+		// Clear the screen
+		fmt.Print(seqClearScreenBelow)
+
+		// And print the event to the console
+		news := fmt.Sprintf(" #%d %s - %s (%s) - %s/%s - %v",
+			// news := fmt.Sprintf("Session #%d %s - %s (%s) - %s/%s - %v",
+			session.ID, session.Name, session.RemoteAddress,
+			session.Hostname, session.OS, session.Arch, currentTime)
+
+		// Finally, update the console
+		log.Infof(news)
+
+		// Finally, update the console
+		// prompt := console.CurrentMenu().Prompt.Render()
+		// console.RefreshPromptCustom(news, prompt, 0)
+
+		// Prelude Operator
+		if prelude.SessionMapper != nil {
+			err := prelude.SessionMapper.AddSession(session)
+			if err != nil {
+				failed := fmt.Sprintf("Could not add session to Operator: %s", err)
+				core.Console.RefreshPromptLog(failed)
+			}
+		}
+
 	case clientpb.EventType_SessionUpdated:
+
+		updated := fmt.Sprintf("Session #%d has been updated - %v\n", session.ID, currentTime)
+
+		var id string
+		if core.ActiveTarget.IsSession() || core.ActiveTarget.IsBeacon() {
+			id = core.ActiveTarget.UUID()
+		}
+
+		// if core.ActiveTarget.Beacon != nil {
+		//         bid, _ := strconv.Atoi(core.ActiveTarget.Beacon.ID)
+		//         id = uint32(bid)
+		// }
+
+		if id == session.UUID {
+			// prompt := console.CurrentMenu().Prompt.Render()
+			// console.RefreshPromptCustom(updated, prompt, 0)
+			log.Infof(updated)
+		} else {
+			log.Infof(updated)
+			// console.RefreshPromptLog(updated)
+		}
+
 	case clientpb.EventType_SessionClosed:
 	}
 }

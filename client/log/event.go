@@ -36,7 +36,7 @@ var (
 		clientpb.Level_INFO:    logrus.Infof,
 		clientpb.Level_WARNING: logrus.Warnf,
 		clientpb.Level_ERROR:   logrus.Errorf,
-		// Trick: fatal is used as success.
+		// Trick: fatal is used as success not possible
 		clientpb.Level_SUCCESS: logrus.Infof,
 	}
 )

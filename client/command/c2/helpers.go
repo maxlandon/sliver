@@ -167,6 +167,7 @@ func ParseProfile(c2Type sliverpb.C2Channel, target string, direction sliverpb.C
 	profile = defaultC2Profile()
 	profile.Name = opts.Profile.Name
 	profile.Direction = direction
+	profile.C2 = c2Type
 
 	// Target address/host/path/etc
 	scheme, defaultPort := getProfileSheme(c2Type, profile)
@@ -195,6 +196,7 @@ func ParseActionProfile(c2Type sliverpb.C2Channel, target string, direction sliv
 	// Base, with default timeouts, max conn errors, etc
 	profile = defaultC2Profile()
 	profile.Direction = direction
+	profile.C2 = c2Type
 
 	// Target address/host/path/etc
 	scheme, defaultPort := getProfileSheme(c2Type, profile)

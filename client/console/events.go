@@ -63,40 +63,11 @@ package console
 //
 //                 switch event.EventType {
 //
-//                 // Operators ---------------------------------------------------------------------------------
-//                 case consts.JoinedEvent:
-//                         joined := fmt.Sprintf(Woot+"%s has joined the game\n", event.Client.Operator.Name)
-//                         console.RefreshPromptLog(joined)
-//                 case consts.LeftEvent:
-//                         left := fmt.Sprintf(Info+"%s left the game\n", event.Client.Operator.Name)
-//                         console.RefreshPromptLog(left)
-//
 //                         // Jobs --------------------------------------------------------------------------------------
 //                 case consts.JobStoppedEvent:
 //                         job := event.Job
 //                         line := fmt.Sprintf(Info+"Job #%s stopped (%s %s)\n", c2.GetShortID(job.ID), job.Profile.C2.String(), job.Profile.Hostname)
 //                         console.RefreshPromptLog(line)
-//
-//                         // OPSEC -------------------------------------------------------------------------------------
-//                 case consts.CanaryEvent:
-//                         fmt.Printf("\n\n") // Clear screen a bit before announcing shitty news
-//                         fmt.Printf(Warning+"WARNING: %s%s has been burned (DNS Canary)\n", normal, event.Session.Name)
-//                         sessions := core.GetSessionsByName(event.Session.Name, transport.RPC)
-//                         var alert string
-//                         for _, session := range sessions {
-//                                 alert += fmt.Sprintf("\t🔥 Session #%d is affected\n", session.ID)
-//                         }
-//                         console.RefreshPromptLog(alert)
-//
-//                 case consts.WatchtowerEvent:
-//                         msg := string(event.Data)
-//                         fmt.Printf(Warning+"WARNING: %s%s has been burned (seen on %s)\n", normal, event.Session.Name, msg)
-//                         sessions := core.GetSessionsByName(event.Session.Name, transport.RPC)
-//                         var alert string
-//                         for _, session := range sessions {
-//                                 alert += fmt.Sprintf("\t🔥 Session #%d is affected\n", session.ID)
-//                         }
-//                         console.RefreshPromptLog(alert)
 //
 //                         // Sessions ---------------------------------------------------------------------------------
 //                 case consts.SessionOpenedEvent:
