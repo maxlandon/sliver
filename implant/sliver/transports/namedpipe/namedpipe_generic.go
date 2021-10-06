@@ -25,17 +25,30 @@ import (
 	"net"
 	"net/url"
 
+	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-func NamedPipeConnect(_ *url.URL) (net.Conn, error) {
-	return nil, errors.New("{{if .Config.Debug}}NamedPipeConnect not implemented on this platform{{end}}")
+func Dial(uri *url.URL, p *sliverpb.C2Profile) (c net.Conn, err error) {
+	return nil, errors.New("{{if .Config.Debug}}namedpipe.Dial not implemented on this platform{{end}}")
 }
 
-func writeEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
-	return errors.New("{{if .Config.Debug}}Namedpipe: writeEnvelope (internal) not implemented on this platform{{end}}")
+func Listen(uri *url.URL, p *sliverpb.C2Profile) (c net.Conn, err error) {
+	return nil, errors.New("{{if .Config.Debug}}namedpipe.Listen not implemented on this platform{{end}}")
 }
 
-func readEnvelope(conn *net.Conn) (*sliverpb.Envelope, error) {
-	return nil, errors.New("{{if .Config.Debug}}Namedpipe: readEnvelope (internal) not implemented on this platform{{end}}")
+func SetupConnectionNamedPipe(conn net.Conn, userCleanup func()) (t *transports.Connection, err error) {
+	return nil, errors.New("{{if .Config.Debug}}Named Pipe sessions not implemented on this platform{{end}}")
 }
+
+// func NamedPipeConnect(_ *url.URL) (net.Conn, error) {
+//         return nil, errors.New("{{if .Config.Debug}}NamedPipeConnect not implemented on this platform{{end}}")
+// }
+//
+// func writeEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
+//         return errors.New("{{if .Config.Debug}}Namedpipe: writeEnvelope (internal) not implemented on this platform{{end}}")
+// }
+//
+// func readEnvelope(conn *net.Conn) (*sliverpb.Envelope, error) {
+//         return nil, errors.New("{{if .Config.Debug}}Namedpipe: readEnvelope (internal) not implemented on this platform{{end}}")
+// }
