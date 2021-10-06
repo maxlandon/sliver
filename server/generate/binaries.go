@@ -628,7 +628,6 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 		}
 
 		// Render canaries
-		log.Debugf("Canary domain(s): %v", config.CanaryDomains)
 		canaryTmpl := template.New("canary").Delims("[[", "]]")
 		canaryGenerator := &CanaryGenerator{
 			ImplantName:   name,

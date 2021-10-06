@@ -159,14 +159,14 @@ func (rpc *Server) StartHandlerStager(ctx context.Context, req *clientpb.Handler
 
 	// Dialers
 	case sliverpb.C2Direction_Bind:
-		err = c2.Deliver(profile, net, job.StageBytes)
+		err = c2.Deliver(logger, profile, net, job.StageBytes)
 		if err != nil {
 			return nil, err
 		}
 
 	// Listeners
 	case sliverpb.C2Direction_Reverse:
-		err = c2.Serve(profile, net, job, listener)
+		err = c2.Serve(logger, profile, net, job, listener)
 		if err != nil {
 			return nil, err
 		}

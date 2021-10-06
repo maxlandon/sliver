@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/c2/http"
 	"github.com/bishopfox/sliver/server/comm"
@@ -32,7 +34,7 @@ import (
 // Serve - Listen and serve a stage payload over a specific protocol or C2 stack.
 // The listener parameter is a placeholder, which you can use if you intend to use (at least one).
 // This listener is already registered for cleanup when the stager handler job will be killed
-func Serve(profile *models.C2Profile, network comm.Net, job *core.Job, ln net.Listener) (err error) {
+func Serve(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job *core.Job, ln net.Listener) (err error) {
 
 	switch profile.Channel {
 
@@ -83,7 +85,7 @@ func Serve(profile *models.C2Profile, network comm.Net, job *core.Job, ln net.Li
 
 	// If the listener is used (thus spawned/started), serve the stage request connections
 	// hitting it in the background. This will return transparently if not used/nil
-	go ServeStagerConnections(ln, job.StageBytes)
+	go ServeStagerConnections(log, ln, job.StageBytes)
 
 	// If we are here, it means the C2 stack has successfully started
 	// (within what can be guaranteed excluding goroutine-based stuff).

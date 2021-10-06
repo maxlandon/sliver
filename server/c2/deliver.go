@@ -25,11 +25,12 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/db/models"
+	"github.com/sirupsen/logrus"
 )
 
 // Deliver - Delive a stage payload through a dial connection (bind handler). Most of the implementation
 // is the same as for Dial(), except that we just write the payload to the connection and exit.
-func Deliver(profile *models.C2Profile, network comm.Net, payload []byte) (err error) {
+func Deliver(log *logrus.Entry, profile *models.C2Profile, network comm.Net, payload []byte) (err error) {
 
 	// conn - If your C2 channel yields a net.Conn compliant connection, use this
 	// conn so that the server can transparently handle session handling, RPC setup
@@ -61,7 +62,7 @@ func Deliver(profile *models.C2Profile, network comm.Net, payload []byte) (err e
 	// Automatically and transparently serve the connection, if the latter has been used.
 	// This function will return if this connection is not used (thus nil), without hampering
 	// on the session setup,registration and usage process.
-	go handleStagerConnection(conn, payload)
+	go handleStagerConnection(log, conn, payload)
 
 	return
 }
