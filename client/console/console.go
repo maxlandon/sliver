@@ -101,7 +101,7 @@ func Start(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds, config *assets.Client
 	}
 
 	// Start monitoring incoming events
-	go eventLoopAlt(rpc)
+	go eventLoop(rpc)
 
 	// Print banner and version information. (checks last updates)
 	printSliverBanner(rpc)
