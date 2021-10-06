@@ -50,10 +50,6 @@ func (l *Listen) Execute(args []string) (err error) {
 	)
 	profile.Persistent = l.ListenerOptions.Core.Persistent
 
-	if profile.Port == 0 {
-		profile.Port = 9898
-	}
-
 	log.Infof("Starting mTLS listener (%s:%d)...", profile.Hostname, profile.Port)
 	res, err := transport.RPC.StartHandlerStage(context.Background(), &clientpb.HandlerStageReq{
 		Profile: profile,

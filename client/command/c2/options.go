@@ -26,19 +26,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
-const (
-	defaultMTLSLPort    = 8888
-	defaultHTTPLPort    = 80
-	defaultHTTPSLPort   = 443
-	defaultDNSLPort     = 53
-	defaultTCPPivotPort = 9898
-
-	defaultReconnect = 60
-	defaultMaxErrors = 1000
-
-	defaultTimeout = 60
-)
-
 // GenericCmd - Generic root command
 type GenericCmd struct {
 }

@@ -51,10 +51,6 @@ func (d *Dial) Execute(args []string) (err error) {
 	server := profile.Hostname
 	lport := uint16(profile.Port)
 
-	if lport == 0 {
-		lport = 9898
-	}
-
 	log.Infof("Starting TCP dialer  ( ==>  %s:%d) ...", server, lport)
 	res, err := transport.RPC.StartHandlerStage(context.Background(), &clientpb.HandlerStageReq{
 		Profile: profile,

@@ -31,6 +31,19 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
+const (
+	defaultMTLSLPort  = 8888
+	defaultHTTPLPort  = 80
+	defaultHTTPSLPort = 443
+	defaultDNSLPort   = 53
+	defaultTCPPort    = 9898
+
+	defaultReconnect = 60
+	defaultMaxErrors = 1000
+
+	defaultTimeout = 60
+)
+
 // PrintProfileSummary - Get a quick overview of a profile upon modification or creation, with analysis made
 // here so that this is kinda context/malleable sensitive, you will have what you'll need each time.
 func PrintProfileSummaryLong(profile *sliverpb.C2Profile) {
@@ -174,7 +187,7 @@ func ParseProfile(c2Type sliverpb.C2Channel, target string, direction sliverpb.C
 	full := strings.Join([]string{scheme, target}, "://")
 	profile.Hostname, _, profile.Port, _ = getHostPortFromURL(full)
 	if profile.Port == 0 {
-		profile.Port = defaultPort // Always check the default port is set
+		profile.Port = defaultPort
 	}
 
 	// Base connection settings, which might be overriden
@@ -203,7 +216,7 @@ func ParseActionProfile(c2Type sliverpb.C2Channel, target string, direction sliv
 	full := strings.Join([]string{scheme, target}, "://")
 	profile.Hostname, _, profile.Port, _ = getHostPortFromURL(full)
 	if profile.Port == 0 {
-		profile.Port = defaultPort // Always check the default port is set
+		profile.Port = defaultPort
 	}
 
 	// When started from a handler, the profile is always marked anonymous: this
@@ -234,24 +247,37 @@ func defaultC2Profile() *sliverpb.C2Profile {
 	return profile
 }
 
-func getProfileSheme(c2Type sliverpb.C2Channel, profile *sliverpb.C2Profile) (scheme string, defaultPort uint32) {
+func getProfileSheme(c2Type sliverpb.C2Channel, profile *sliverpb.C2Profile) (scheme string, port uint32) {
+
+	// Never override a port that has been set
+	if profile.Port != 0 {
+		scheme = strings.ToLower(c2Type.String())
+		return scheme, profile.Port
+	}
+
 	switch profile.C2 {
 	case sliverpb.C2Channel_MTLS:
 		profile.C2 = sliverpb.C2Channel_MTLS
-		defaultPort = 9898
+		profile.Port = defaultMTLSLPort
 	case sliverpb.C2Channel_WG:
 		profile.C2 = sliverpb.C2Channel_WG
+		profile.Port = 53
+		profile.ControlPort = 8888
+		profile.KeyExchangePort = 1337
 	case sliverpb.C2Channel_DNS:
 		profile.C2 = sliverpb.C2Channel_DNS
-		defaultPort = 53
+		profile.Port = defaultDNSLPort
 	case sliverpb.C2Channel_HTTP:
 		profile.C2 = sliverpb.C2Channel_HTTP
-		defaultPort = 8080
+		profile.Port = defaultHTTPLPort
 	case sliverpb.C2Channel_HTTPS:
 		profile.C2 = sliverpb.C2Channel_HTTPS
-		defaultPort = 443
+		profile.Port = defaultHTTPSLPort
 	case sliverpb.C2Channel_NamedPipe:
 		profile.C2 = sliverpb.C2Channel_NamedPipe
+	case sliverpb.C2Channel_TCP:
+		profile.C2 = sliverpb.C2Channel_TCP
+		profile.Port = defaultTCPPort
 	default:
 		// We don't care, it's just for being able to
 		// parse addresses easily with url.Parse(path)
@@ -260,7 +286,7 @@ func getProfileSheme(c2Type sliverpb.C2Channel, profile *sliverpb.C2Profile) (sc
 	}
 
 	scheme = strings.ToLower(c2Type.String())
-	return
+	return scheme, profile.Port
 }
 
 // getHostPortFromURL - Parse the host:port combination given by arguments of commands (C2, transports, etc)

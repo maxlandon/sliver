@@ -67,10 +67,6 @@ ConnLoop:
 
 		// {{if .Config.MTLSc2Enabled}}
 		case "mtls":
-			// {{if .Config.Debug}}
-			log.Printf("Connecting -> %s", t.uri.Host)
-			// {{end}}
-
 			// Get physical
 			t.Conn, err = mtls.Dial(t.uri, t.Profile)
 			if err != nil {
@@ -86,9 +82,6 @@ ConnLoop:
 
 		// {{if .Config.WGc2Enabled}}
 		case "wg":
-			// {{if .Config.Debug}}
-			log.Printf("Connecting -> %s", t.uri.Host)
-			// {{end}}
 			lport, err := strconv.Atoi(t.uri.Port())
 			if err != nil {
 				lport = 53
@@ -127,7 +120,7 @@ ConnLoop:
 				dev.Close()
 			}
 			break ConnLoop
-			// {{end}}
+			// {{end}} - WGc2Enabled
 
 		// {{if .Config.NamePipec2Enabled}}
 		case "namedpipe":
@@ -190,12 +183,9 @@ func (t *C2) startBind() (err error) {
 ConnLoop:
 	for t.attempts < int(t.Profile.MaxConnectionErrors) {
 		switch t.uri.Scheme {
+
 		// {{if .Config.MTLSc2Enabled}}
 		case "mtls":
-			// {{if .Config.Debug}}
-			log.Printf("Listening on %s", t.uri.Host)
-			// {{end}}
-
 			// Get physical
 			t.Conn, err = mtls.Listen(t.uri, t.Profile)
 			if err != nil {
@@ -208,7 +198,7 @@ ConnLoop:
 			break ConnLoop
 			// {{end}} - MTLSc2Enabled
 
-			// {{if .Config.NamePipec2Enabled}}
+		// {{if .Config.NamePipec2Enabled}}
 		case "namedpipe", "named_pipe", "pipe":
 			t.Conn, err = namedpipe.Listen(t.uri, t.Profile)
 			if err != nil {
@@ -221,12 +211,8 @@ ConnLoop:
 			break ConnLoop
 			// {{end}} -NamePipec2Enabled
 
-			// {{if .Config.TCPc2Enabled}}
+		// {{if .Config.TCPc2Enabled}}
 		case "tcp":
-			// {{if .Config.Debug}}
-			log.Printf("Listening on %s", t.uri.Host)
-			// {{end}}
-
 			// Get physical
 			t.Conn, err = tcp.Listen(t.uri, t.Profile)
 			if err != nil {

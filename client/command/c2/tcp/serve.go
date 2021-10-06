@@ -49,10 +49,6 @@ func (s *Serve) Execute(args []string) (err error) {
 	)
 	profile.Persistent = s.ListenerOptions.Core.Persistent
 
-	if profile.Port == 0 {
-		profile.Port = 80
-	}
-
 	// Prepare request
 	req := &clientpb.HandlerStagerReq{
 		Profile: profile,

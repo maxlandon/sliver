@@ -54,10 +54,6 @@ func (l *Listen) Execute(args []string) (err error) {
 	)
 	profile.Persistent = l.ListenerOptions.Core.Persistent
 
-	if profile.Port == 0 {
-		profile.Port = 443
-	}
-
 	// HTTP-specific options
 	http.PopulateProfileHTTP(profile, l.AdvancedOptions)
 

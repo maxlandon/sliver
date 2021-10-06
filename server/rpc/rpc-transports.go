@@ -39,7 +39,6 @@ import (
 func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportReq) (res *clientpb.AddTransport, err error) {
 
 	session := core.Sessions.GetByUUID(req.Request.SessionUUID)
-	// session := core.Sessions.Get(req.Request.SessionID)
 
 	// Get the profile matching the requested profile ID
 	// Return if not found.

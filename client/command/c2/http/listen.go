@@ -55,10 +55,6 @@ func (l *Listen) Execute(args []string) (err error) {
 	)
 	profile.Persistent = l.ListenerOptions.Core.Persistent
 
-	if profile.Port == 0 {
-		profile.Port = 80
-	}
-
 	// HTTP-specific options
 	profile.Domains = []string{l.HTTPOptions.Domain} // Restrict responses to this domain
 	PopulateProfileHTTP(profile, l.AdvancedOptions)

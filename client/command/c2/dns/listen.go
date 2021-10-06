@@ -29,10 +29,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-const (
-	defaultDNSLPort = 53
-)
-
 // Listen - Start a DNS listener on the server or in the current context
 type Listen struct {
 	Args struct {
@@ -64,10 +60,6 @@ func (l *Listen) Execute(args []string) (err error) {
 		if !strings.HasSuffix(domain, ".") {
 			domain += "."
 		}
-	}
-
-	if profile.Port == 0 {
-		profile.Port = defaultDNSLPort
 	}
 
 	log.Infof("Starting DNS listener with parent domain(s) %v ...", domains)
