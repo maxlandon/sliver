@@ -217,58 +217,6 @@ func bindCommandsC2(cc *gonsole.Menu) {
 		[]string{""},
 		func() gonsole.Commander { return &namedpipe.Dialer{} })
 
-	//
-	// Transports --------------------------------------------------------------------------------
-	//
-
-	transportCmd := cc.AddCommand(constants.TransportsStr,
-		"Session transports management commands (accepts an session ID before the command from server menu)",
-		help.GetHelpFor(constants.TransportsStr),
-		constants.SessionsGroup,
-		[]string{""},
-		func() gonsole.Commander { return &transports.Transports{} })
-	transportCmd.AddArgumentCompletion("SessionID", completion.SessionIDs)
-
-	transportAdd := transportCmd.AddCommand(constants.AddStr,
-		"Load a C2 profile as an available transport to the current session or context",
-		help.GetHelpFor(constants.RmStr),
-		"",
-		[]string{""},
-		func() gonsole.Commander { return &transports.Add{} })
-	transportAdd.AddArgumentCompletion("ProfileID", completion.MalleableIDs)
-
-	transportRm := transportCmd.AddCommand(constants.RmStr,
-		"Remove one or more transports from the current session or context",
-		help.GetHelpFor(constants.RmStr),
-		"",
-		[]string{""},
-		func() gonsole.Commander { return &transports.Remove{} })
-	transportRm.AddArgumentCompletion("TransportID", completion.TransportsIDs)
-
-	transportList := transportCmd.AddCommand(constants.ListStr,
-		"List all or some transports (passed as arguments)",
-		help.GetHelpFor(constants.ListStr),
-		"",
-		[]string{""},
-		func() gonsole.Commander { return &transports.List{} })
-	transportList.AddArgumentCompletion("TransportID", completion.TransportsIDs)
-
-	transportShow := transportCmd.AddCommand(constants.ShowStr,
-		"Show one or more transports in detailed output",
-		help.GetHelpFor(constants.ShowStr),
-		"",
-		[]string{""},
-		func() gonsole.Commander { return &transports.Show{} })
-	transportShow.AddArgumentCompletion("TransportID", completion.MalleableIDs)
-
-	transportSwitch := transportCmd.AddCommand(constants.SwitchStr,
-		"Switch to a given transport for the current session or context one",
-		help.GetHelpFor(constants.SwitchStr),
-		"",
-		[]string{""},
-		func() gonsole.Commander { return &transports.Switch{} })
-	transportSwitch.AddArgumentCompletion("TransportID", completion.TransportsIDs)
-
 	switch cc.Name {
 	// ----------------------------------------------------------------------------------------------
 	// All C2 transports that can listen on/ dial from the server.
@@ -462,6 +410,58 @@ func bindCommandsC2(cc *gonsole.Menu) {
 	// All C2 transports that can listen on/ dial only from the implant.
 	// ----------------------------------------------------------------------------------------------
 	case constants.SliverMenu:
+
+		//
+		// Transports --------------------------------------------------------------------------------
+		//
+
+		transportCmd := cc.AddCommand(constants.TransportsStr,
+			"Session transports management commands (accepts an session ID before the command from server menu)",
+			help.GetHelpFor(constants.TransportsStr),
+			constants.SessionsGroup,
+			[]string{""},
+			func() gonsole.Commander { return &transports.Transports{} })
+		transportCmd.AddArgumentCompletion("SessionID", completion.SessionIDs)
+
+		transportAdd := transportCmd.AddCommand(constants.AddStr,
+			"Load a C2 profile as an available transport to the current session or context",
+			help.GetHelpFor(constants.RmStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &transports.Add{} })
+		transportAdd.AddArgumentCompletion("ProfileID", completion.MalleableIDs)
+
+		transportRm := transportCmd.AddCommand(constants.RmStr,
+			"Remove one or more transports from the current session or context",
+			help.GetHelpFor(constants.RmStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &transports.Remove{} })
+		transportRm.AddArgumentCompletion("TransportID", completion.TransportsIDs)
+
+		transportList := transportCmd.AddCommand(constants.ListStr,
+			"List all or some transports (passed as arguments)",
+			help.GetHelpFor(constants.ListStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &transports.List{} })
+		transportList.AddArgumentCompletion("TransportID", completion.TransportsIDs)
+
+		transportShow := transportCmd.AddCommand(constants.ShowStr,
+			"Show one or more transports in detailed output",
+			help.GetHelpFor(constants.ShowStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &transports.Show{} })
+		transportShow.AddArgumentCompletion("TransportID", completion.MalleableIDs)
+
+		transportSwitch := transportCmd.AddCommand(constants.SwitchStr,
+			"Switch to a given transport for the current session or context one",
+			help.GetHelpFor(constants.SwitchStr),
+			"",
+			[]string{""},
+			func() gonsole.Commander { return &transports.Switch{} })
+		transportSwitch.AddArgumentCompletion("TransportID", completion.TransportsIDs)
 
 		//
 		// Named Pipe --------------------------
