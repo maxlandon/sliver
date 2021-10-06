@@ -43,6 +43,10 @@ import (
 	// {{if .Config.NamePipec2Enabled}}
 	_ "github.com/bishopfox/sliver/implant/sliver/transports/namedpipe"
 	// {{end}}
+
+	// {{if .Config.TCPc2Enabled}}
+	_ "github.com/bishopfox/sliver/implant/sliver/transports/tcp"
+	// {{end}}
 )
 
 var (
