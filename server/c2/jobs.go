@@ -149,9 +149,9 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 	logger := log.ClientLogger("", "handler")
 
 	// Start each job in the correct order
-	for _, job := range ordered {
+	for _, persisted := range ordered {
 
-		logger.Infof("Restarting persistent session job %s", core.GetShortID(job.ID.String()))
+		logger.Infof("Restarting persistent session job %s", core.GetShortID(persisted.ID.String()))
 
 		// Get the current transport for this session: some of them, like beacons
 		// or those that are expressely comm disabled, can run persistent jobs
@@ -175,19 +175,23 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 
 		// Init profile security details: load certificates and keys if any, or default.
 		// As well, if there are nothing in it, it will just load the default
-		err = SetupHandlerSecurity(job.Profile, job.Profile.Hostname)
+		err = SetupHandlerSecurity(persisted.Profile, persisted.Profile.Hostname)
 		if err != nil {
 			return err
 		}
 
+		// A job object that will be used after the listener dialer is started,
+		// for saving it into the database or server config if the job is persistent
+		job, listener := NewHandlerJob(persisted.Profile, session)
+
 		// Dispatch the profile to either the root Dialer functions or Listener ones.
 		// The actual implementation of the C2 handlers are in there, or possibly in
 		// functions still down the way.
-		switch job.Profile.Direction {
+		switch persisted.Profile.Direction {
 
 		// Dialers
 		case sliverpb.C2Direction_Bind:
-			err = Dial(logger, job.Profile, net, session)
+			err = Dial(logger, persisted.Profile, net, session)
 			if err != nil {
 				return err
 			}
@@ -196,11 +200,17 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 		case sliverpb.C2Direction_Reverse:
 			// This is supposed to return us a
 			// job but we don't need to save it again
-			_, err := Listen(logger, job.Profile, net, session)
+			err := Listen(logger, persisted.Profile, net, job, listener)
 			if err != nil {
 				return err
 			}
+
+			// If we are here, it means the C2 stack has successfully started
+			// (within what can be guaranteed excluding goroutine-based stuff).
+			// Assign an order value to this job and register it to the server job & event system.
+			InitHandlerJob(job, listener)
 		}
+
 	}
 
 	return
@@ -215,12 +225,12 @@ func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 	// Add a logger with no client ID
 	logger := log.ClientLogger("", "handler")
 
-	for _, job := range cfg.Jobs {
+	for _, persisted := range cfg.Jobs {
 
-		logger.Infof("Restarting persistent server job %s", core.GetShortID(job.ID))
+		logger.Infof("Restarting persistent server job %s", core.GetShortID(persisted.ID))
 
 		// Any low level management stuff before anything.
-		profile := models.C2ProfileFromProtobuf(job.Profile)
+		profile := models.C2ProfileFromProtobuf(persisted.Profile)
 
 		// We get the comm.Net interface for the session: if nil,
 		// pass 0 and return the server interfaces functions
@@ -239,6 +249,10 @@ func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 			return err
 		}
 
+		// A job object that will be used after the listener dialer is started,
+		// for saving it into the database or server config if the job is persistent
+		job, listener := NewHandlerJob(profile, nil)
+
 		// Dispatch the profile to either the root Dialer functions or Listener ones.
 		// The actual implementation of the C2 handlers are in there, or possibly in
 		// functions still down the way.
@@ -255,10 +269,14 @@ func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 		case sliverpb.C2Direction_Reverse:
 			// This is supposed to return us a
 			// job but we don't need to save it again
-			_, err := Listen(logger, profile, net, nil)
+			err = Listen(logger, profile, net, job, listener)
 			if err != nil {
 				return err
 			}
+			// If we are here, it means the C2 stack has successfully started
+			// (within what can be guaranteed excluding goroutine-based stuff).
+			// Assign an order value to this job and register it to the server job & event system.
+			InitHandlerJob(job, listener)
 		}
 	}
 	return nil

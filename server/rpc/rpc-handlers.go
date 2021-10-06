@@ -81,7 +81,7 @@ func (rpc *Server) StartHandlerStage(ctx context.Context, req *clientpb.HandlerS
 
 	// A job object that will be used after the listener dialer is started,
 	// for saving it into the database or server config if the job is persistent
-	var job *core.Job
+	job, listener := c2.NewHandlerJob(profile, session)
 
 	// Dispatch the profile to either the root Dialer functions or Listener ones.
 	// The actual implementation of the C2 handlers are in there, or possibly in
@@ -97,10 +97,14 @@ func (rpc *Server) StartHandlerStage(ctx context.Context, req *clientpb.HandlerS
 
 	// Listeners
 	case sliverpb.C2Direction_Reverse:
-		job, err = c2.Listen(logger, profile, net, session)
+		err = c2.Listen(logger, profile, net, job, listener)
 		if err != nil {
 			return nil, err
 		}
+		// If we are here, it means the C2 stack has successfully started
+		// (within what can be guaranteed excluding goroutine-based stuff).
+		// Assign an order value to this job and register it to the server job & event system.
+		c2.InitHandlerJob(job, listener)
 	}
 
 	// Save the job if it's marked persistent
@@ -170,6 +174,11 @@ func (rpc *Server) StartHandlerStager(ctx context.Context, req *clientpb.Handler
 		if err != nil {
 			return nil, err
 		}
+
+		// If we are here, it means the C2 stack has successfully started
+		// (within what can be guaranteed excluding goroutine-based stuff).
+		// Assign an order value to this job and register it to the server job & event system.
+		c2.InitHandlerJob(job, listener)
 	}
 
 	// Save the job if it's marked persistent

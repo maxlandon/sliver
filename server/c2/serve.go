@@ -82,15 +82,9 @@ func Serve(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job *
 	}
 
 	// Transparent Stager Handling & Job Setup ------------------------------------------------
-
 	// If the listener is used (thus spawned/started), serve the stage request connections
 	// hitting it in the background. This will return transparently if not used/nil
 	go ServeStagerConnections(log, ln, job.StageBytes)
-
-	// If we are here, it means the C2 stack has successfully started
-	// (within what can be guaranteed excluding goroutine-based stuff).
-	// Assign an order value to this job and register it to the server job & event system.
-	InitHandlerJob(job, ln)
 
 	return
 }

@@ -20,6 +20,7 @@ package c2
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/c2/http"
@@ -40,11 +41,7 @@ import (
 //
 // The listener is nil: you can optionally assign it to a listener that you started  within
 // your C2 channel implementation. The listener is then transparently handled by the job system.
-func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, session *core.Session) (job *core.Job, err error) {
-
-	// Automatic C2 handler & Job Setup -------------------------------------------------------
-
-	job, ln := NewHandlerJob(profile, session)
+func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job *core.Job, ln net.Listener) (err error) {
 
 	// C2 Protocols Implementations -----------------------------------------------------------
 	switch profile.Channel {
@@ -56,7 +53,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, sess
 		hostport := fmt.Sprintf("%s:%d", profile.Hostname, profile.Port)
 		ln, err = network.Listen("tcp", hostport)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 	case sliverpb.C2Channel_MTLS:
@@ -65,7 +62,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, sess
 		// The latter's cleanup is registered in InitHandlerJob()
 		ln, err = ListenMutualTLS(profile, network)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 	case sliverpb.C2Channel_WG:
@@ -74,7 +71,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, sess
 		// Specifies additional control listeners & device cleanup tasks for the job.
 		tNet, err := StartWireGuardDevInterface(profile, job)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		// Setup and start the WireGuard connection listener.
@@ -82,7 +79,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, sess
 		// Specifies additional control listeners & device cleanup tasks (key exchange listener)
 		ln, err = ListenWireGuard(profile, job, tNet)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 	case sliverpb.C2Channel_DNS:
@@ -91,7 +88,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, sess
 		// (No listener, Sliver connections are handled from within the DNS server implementation.)
 		err = ServeDNS(profile, job)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 	case sliverpb.C2Channel_HTTPS, sliverpb.C2Channel_HTTP:
@@ -99,20 +96,20 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, sess
 		// Instantiate a new HTTP(S) Server configured with the target C2 profile
 		server, err := http.NewServerFromProfile(profile)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		// Initialize the HTTP Server with job control/cleanup
 		err = server.InitServer(job)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		// Start the HTTP Server, handing its control to the job.
 		// (No listener, Sliver connections are handled from within the HTTP server implementation.)
 		err = server.Serve(job)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 	case sliverpb.C2Channel_NamedPipe:
@@ -120,20 +117,14 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, sess
 		// Listen on a pipe routed to the current active session.
 		ln, err = network.Listen("pipe", profile.Hostname)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	// Transparent Session Handling & Job Setup ------------------------------------------------
-
 	// If the listener is used (thus spawned/started), serve the connections
 	// hitting it in the background. This will return transparently if not used/nil
 	go ServeListenerConnections(log, ln)
 
-	// If we are here, it means the C2 stack has successfully started
-	// (within what can be guaranteed excluding goroutine-based stuff).
-	// Assign an order value to this job and register it to the server job & event system.
-	InitHandlerJob(job, ln)
-
-	return job, nil
+	return
 }
