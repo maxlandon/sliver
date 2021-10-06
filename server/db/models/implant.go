@@ -128,7 +128,7 @@ type ImplantConfig struct {
 	HTTPc2Enabled     bool
 	DNSc2Enabled      bool
 	NamePipec2Enabled bool
-	TCPPivotc2Enabled bool
+	TCPc2Enabled      bool
 
 	// C2 profiles
 	Transports []*Transport `gorm:"-"`

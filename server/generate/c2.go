@@ -176,7 +176,7 @@ func setRuntimeTransports(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantC
 		cfg.DNSc2Enabled = true
 		cfg.WGc2Enabled = true
 		cfg.NamePipec2Enabled = true
-		cfg.TCPPivotc2Enabled = true
+		cfg.TCPc2Enabled = true
 	} else {
 		// Or filter them
 		for _, c2 := range strings.Split(cfg.RuntimeC2s, ",") {
@@ -210,8 +210,10 @@ func setRuntimeTransports(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantC
 		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_NamedPipe.String()))
 	}
 
-	// cfg.TCPPivotc2Enabled = isC2EnabledTest([]string{sliverpb.C2Channel_T}, cfg.C2)
-	cfg.TCPPivotc2Enabled = true
+	tcp := append([]string{sliverpb.C2Channel_TCP.String()}, compiledC2s...)
+	if cfg.TCPc2Enabled = c2Enabled(tcp, cfg.Transports); cfg.TCPc2Enabled {
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_TCP.String()))
+	}
 
 	// Determine if SSH comm is enabled and needs to be compiled
 	cfg.CommEnabled = isCommEnabled(pbConfig, cfg.Transports)

@@ -49,7 +49,7 @@ type StageOptions struct {
 		DNS         []string `long:"dns" short:"n" description:"DNS C2 domain(s), comma-separated (ex: mydomain.com)" env-delim:","`
 		HTTP        []string `long:"http" short:"h" description:"HTTP(S) C2 domain(s)" env-delim:","`
 		NamedPipe   []string `long:"named-pipe" short:"p" description:"Named pipe transport strings, comma-separated" env-delim:","`
-		TCPPivot    []string `long:"tcp-pivot" short:"i" description:"TCP pivot transport strings, comma-separated" env-delim:","`
+		TCP         []string `long:"tcp" short:"i" description:"TCP transport strings, comma-separated" env-delim:","`
 		KeyExchange int      `long:"key-exchange" short:"X" description:"WireGuard key exchange port" default:"1337"`
 		TCPComms    int      `long:"tcp-comms" short:"T" description:"WireGuard C2 comms port" default:"8888"`
 		Reconnect   int      `long:"reconnect" short:"j" description:"attempt to reconnect every n second(s)" default:"60"`

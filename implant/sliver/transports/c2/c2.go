@@ -83,7 +83,6 @@ type C2 struct {
 	// If the Transport is the ActiveConnection to the C2 server, this cannot
 	// be nil, as all underlying transports allow to register a RPC layer.
 	Connection Connection
-	// Connection *Connection
 
 	// Beacon - The transport can instantiate and use a Beacon client that matches
 	// the profile. This beacon is the equivalent of the above C2.Connection field
@@ -174,11 +173,11 @@ func (t *C2) Start() (err error) {
 	// This setp should ALWAYS return a working Connection/Beacon object, regardless of if
 	// an underlying transport primitive was created in step 1.
 	if t.Profile.Type == sliverpb.C2Type_Session {
-		err = t.StartConnection()
+		err = t.StartSession()
 		if err != nil {
 			return
 		}
-		go t.ServeConnectionHandlers()
+		go t.ServeSessionHandlers()
 	}
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
 		t.startBeacon()

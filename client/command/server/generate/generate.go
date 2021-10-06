@@ -294,6 +294,18 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 		}
 	}
 
+	if len(g.TransportOptions.TCP) > 0 {
+		for _, address := range g.TransportOptions.TCP {
+			profile := c2.ParseProfile(
+				sliverpb.C2Channel_TCP,       // A Channel using Mutual TLS
+				address,                      // Targeting the host:[port] argument of our command
+				sliverpb.C2Direction_Reverse, // A listener
+				c2.ProfileOptions{},          // This will automatically parse Profile options into the protobuf
+			)
+			cfg.C2S = append(cfg.C2S, profile)
+		}
+	}
+
 	// Base Options -----------------------------------------------------------------------------------
 
 	// If connection settings have been specified, apply them to all profiles indiscriminatly.
