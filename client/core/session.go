@@ -140,6 +140,9 @@ func (t *activeTarget) Request() (req *commonpb.Request) {
 		return req
 	}
 
+	// Client specifics
+	req.ClientID = ClientID
+
 	// Get timeout
 	if opt := parser.FindOptionByLongName("timeout"); opt != nil {
 		if val, ok := opt.Value().(int64); ok {

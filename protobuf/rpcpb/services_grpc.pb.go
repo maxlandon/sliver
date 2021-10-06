@@ -167,7 +167,7 @@ type SliverRPCClient interface {
 	CloseTunnel(ctx context.Context, in *sliverpb.Tunnel, opts ...grpc.CallOption) (*commonpb.Empty, error)
 	TunnelData(ctx context.Context, opts ...grpc.CallOption) (SliverRPC_TunnelDataClient, error)
 	// *** Events ***
-	Events(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (SliverRPC_EventsClient, error)
+	Events(ctx context.Context, in *commonpb.Request, opts ...grpc.CallOption) (SliverRPC_EventsClient, error)
 }
 
 type sliverRPCClient struct {
@@ -1298,7 +1298,7 @@ func (x *sliverRPCTunnelDataClient) Recv() (*sliverpb.TunnelData, error) {
 	return m, nil
 }
 
-func (c *sliverRPCClient) Events(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (SliverRPC_EventsClient, error) {
+func (c *sliverRPCClient) Events(ctx context.Context, in *commonpb.Request, opts ...grpc.CallOption) (SliverRPC_EventsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &SliverRPC_ServiceDesc.Streams[1], "/rpcpb.SliverRPC/Events", opts...)
 	if err != nil {
 		return nil, err
@@ -1480,7 +1480,7 @@ type SliverRPCServer interface {
 	CloseTunnel(context.Context, *sliverpb.Tunnel) (*commonpb.Empty, error)
 	TunnelData(SliverRPC_TunnelDataServer) error
 	// *** Events ***
-	Events(*commonpb.Empty, SliverRPC_EventsServer) error
+	Events(*commonpb.Request, SliverRPC_EventsServer) error
 	mustEmbedUnimplementedSliverRPCServer()
 }
 
@@ -1854,7 +1854,7 @@ func (UnimplementedSliverRPCServer) CloseTunnel(context.Context, *sliverpb.Tunne
 func (UnimplementedSliverRPCServer) TunnelData(SliverRPC_TunnelDataServer) error {
 	return status.Errorf(codes.Unimplemented, "method TunnelData not implemented")
 }
-func (UnimplementedSliverRPCServer) Events(*commonpb.Empty, SliverRPC_EventsServer) error {
+func (UnimplementedSliverRPCServer) Events(*commonpb.Request, SliverRPC_EventsServer) error {
 	return status.Errorf(codes.Unimplemented, "method Events not implemented")
 }
 func (UnimplementedSliverRPCServer) mustEmbedUnimplementedSliverRPCServer() {}
@@ -4075,7 +4075,7 @@ func (x *sliverRPCTunnelDataServer) Recv() (*sliverpb.TunnelData, error) {
 }
 
 func _SliverRPC_Events_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(commonpb.Empty)
+	m := new(commonpb.Request)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}

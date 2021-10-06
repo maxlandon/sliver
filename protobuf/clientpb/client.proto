@@ -70,12 +70,14 @@ message History {
 
 // Ask for config
 message GetConsoleConfigReq {
+  string ClientID = 1;
   commonpb.Request Request = 9;
 }
 
 // Get config
 message GetConsoleConfig {
   bytes Config = 1;
+  string ClientID = 2; // Sent back to identify this precise client
   commonpb.Response Response = 9;
 }
 
@@ -668,7 +670,7 @@ message CloseTunnelReq {
 
 // [ Events ] ----------------------------------------
 message Client {
-  uint32 ID = 1;
+  string ID = 1;
   string Name = 2;
 
   Operator Operator = 3;

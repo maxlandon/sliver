@@ -27,13 +27,20 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/server/assets"
+	"github.com/bishopfox/sliver/server/core"
 )
 
-// LoadConsoleConfig - The client requires its console configuration (per-user)
+// LoadConsoleConfig - The client requires its console configuration (per-user).
 func (rpc *Server) LoadConsoleConfig(ctx context.Context, req *clientpb.GetConsoleConfigReq) (*clientpb.GetConsoleConfig, error) {
 
-	// Get an ID/operator name for this client
+	// Get an ID/operator name for this client, for sending it back in case
 	name := rpc.getClientCommonName(ctx)
+	var clientID string
+	if req.ClientID == "" {
+		client := core.NewClient(name)
+		core.Clients.Add(client)
+		clientID = client.ID
+	}
 
 	// Find file data, cut it and process it. If the name is empty,
 	// we are the server and we write to a dedicated file.
@@ -47,14 +54,20 @@ func (rpc *Server) LoadConsoleConfig(ctx context.Context, req *clientpb.GetConso
 
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return &clientpb.GetConsoleConfig{Response: &commonpb.Response{Err: "could not find user console configuration"}}, nil
+		return &clientpb.GetConsoleConfig{
+			ClientID: clientID,
+			Response: &commonpb.Response{Err: "could not find user console configuration"},
+		}, nil
 	}
 
 	if err != nil {
-		return &clientpb.GetConsoleConfig{Response: &commonpb.Response{Err: "failed to unmarshal user console configuration"}}, nil
+		return &clientpb.GetConsoleConfig{
+			ClientID: clientID,
+			Response: &commonpb.Response{Err: "failed to unmarshal user console configuration"},
+		}, nil
 	}
 
-	return &clientpb.GetConsoleConfig{Config: data, Response: &commonpb.Response{}}, nil
+	return &clientpb.GetConsoleConfig{ClientID: clientID, Config: data, Response: &commonpb.Response{}}, nil
 }
 
 // SaveUserConsoleConfig - The client user wants to save its current console configuration.

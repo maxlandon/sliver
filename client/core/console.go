@@ -26,6 +26,13 @@ var (
 	Console = gonsole.NewConsole()
 )
 
+var (
+	// ClientID - Given by the server when requiring the console configuration.
+	// Whether or not there is one, this clientID is written, and should stay the same
+	// for the whole lifetime of the console.
+	ClientID string
+)
+
 // GetCommandForMenu - Allows different menus to access each other command.
 func GetCommandForMenu(commandName string, menu string) *gonsole.Command {
 	m := Console.GetMenu(menu)

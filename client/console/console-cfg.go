@@ -31,6 +31,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 )
@@ -95,6 +96,9 @@ func loadConsoleConfig(rpc rpcpb.SliverRPCClient) (config *gonsole.Config, err e
 
 	req := &clientpb.GetConsoleConfigReq{}
 	res, err := rpc.LoadConsoleConfig(context.Background(), req, grpc.EmptyCallOption{})
+	if res != nil {
+		core.ClientID = res.ClientID
+	}
 	if err != nil {
 		config = loadDefaultConsoleConfig()
 		return config, fmt.Errorf("RPC Error: %s", err.Error())

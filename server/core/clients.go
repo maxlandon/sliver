@@ -19,16 +19,19 @@ package core
 */
 
 import (
+	"math/rand"
+	"strconv"
 	"sync"
 
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/gofrs/uuid"
 )
 
 var (
 	// Clients - Manages client active
 	Clients = &clients{
-		active: map[int]*Client{},
+		active: map[string]*Client{},
 		mutex:  &sync.Mutex{},
 	}
 
@@ -37,22 +40,22 @@ var (
 
 // Client - Single client connection
 type Client struct {
-	ID       int
+	ID       string
 	Operator *clientpb.Operator
 }
 
 // ToProtobuf - Get the protobuf version of the object
 func (c *Client) ToProtobuf() *clientpb.Client {
 	return &clientpb.Client{
-		ID:       uint32(c.ID),
+		ID:       c.ID,
 		Operator: c.Operator,
 	}
 }
 
 // clients - Manage active clients
 type clients struct {
+	active map[string]*Client
 	mutex  *sync.Mutex
-	active map[int]*Client
 }
 
 // AddClient - Add a client struct atomically
@@ -60,10 +63,13 @@ func (cc *clients) Add(client *Client) {
 	cc.mutex.Lock()
 	defer cc.mutex.Unlock()
 	cc.active[client.ID] = client
-	EventBroker.Publish(Event{
-		EventType: consts.JoinedEvent,
-		Client:    client,
-	})
+
+	if len(cc.OperatorClients(client.Operator.Name)) == 1 {
+		EventBroker.Publish(Event{
+			EventType: consts.JoinedEvent,
+			Client:    client,
+		})
+	}
 }
 
 // AddClient - Add a client struct atomically
@@ -77,23 +83,49 @@ func (cc *clients) ActiveOperators() []string {
 	return operators
 }
 
+// Get - Find a client by its ID, always sent in command requests
+func (cc *clients) Get(ID string) *Client {
+	for _, client := range cc.active {
+		if client.ID == ID {
+			return client
+		}
+	}
+	return nil
+}
+
+// Get all clients for an operator
+func (cc *clients) OperatorClients(name string) (clis []*Client) {
+	for _, client := range cc.active {
+		if client.Operator.Name == name {
+			clis = append(clis, client)
+		}
+	}
+	return
+}
+
 // RemoveClient - Remove a client struct atomically
-func (cc *clients) Remove(clientID int) {
+func (cc *clients) Remove(clientID string) {
 	cc.mutex.Lock()
 	defer cc.mutex.Unlock()
 	client := cc.active[clientID]
 	delete(cc.active, clientID)
-	EventBroker.Publish(Event{
-		EventType: consts.LeftEvent,
-		Client:    client,
-	})
+
+	if len(cc.OperatorClients(client.Operator.Name)) == 0 {
+		EventBroker.Publish(Event{
+			EventType: consts.LeftEvent,
+			Client:    client,
+		})
+	}
 }
 
 // nextClientID - Get a client ID
-func nextClientID() int {
-	newID := clientID + 1
-	clientID++
-	return newID
+func nextClientID() string {
+	id, err := uuid.NewV4()
+	if err != nil {
+		coreLog.Errorf("Failed to get ID for new console client: %s", err)
+		return strconv.Itoa(rand.Int())
+	}
+	return id.String()
 }
 
 // NewClient - Create a new client object

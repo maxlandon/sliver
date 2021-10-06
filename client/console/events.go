@@ -46,7 +46,9 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 	console := core.Console
 
 	// Call the server events stream.
-	events, err := rpc.Events(context.Background(), &commonpb.Empty{})
+	events, err := rpc.Events(context.Background(), &commonpb.Request{
+		ClientID: core.ClientID,
+	})
 	if err != nil {
 		fmt.Printf(Error+"%s\n", err)
 		return

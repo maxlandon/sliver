@@ -13,18 +13,18 @@ var (
 )
 
 // Events - Stream events to client
-func (s *Server) Events(_ *commonpb.Empty, stream rpcpb.SliverRPC_EventsServer) error {
-	commonName := s.getClientCommonName(stream.Context())
-	client := core.NewClient(commonName)
-	core.Clients.Add(client)
+func (s *Server) Events(req *commonpb.Request, stream rpcpb.SliverRPC_EventsServer) error {
+	client := core.Clients.Get(req.ClientID)
 	events := core.EventBroker.Subscribe()
 
 	defer func() {
-		rpcEventsLog.Infof("%d client disconnected", client.ID)
+		rpcEventsLog.Infof("%d client disconnected (user: %s)", client.ID, client.Operator.Name)
 		core.EventBroker.Unsubscribe(events)
 		core.Clients.Remove(client.ID)
 	}()
 
+	// This client ID is going to be pushed in the events.
+	// Only this very client will receive this confirmation.
 	for {
 		select {
 		case <-stream.Context().Done():

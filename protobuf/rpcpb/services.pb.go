@@ -31,7 +31,7 @@ var file_rpcpb_services_proto_rawDesc = []byte{
 	0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x15, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2f, 0x73,
 	0x6c, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x15, 0x63, 0x6c, 0x69,
 	0x65, 0x6e, 0x74, 0x70, 0x62, 0x2f, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x2e, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x32, 0xcc, 0x39, 0x0a, 0x09, 0x53, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x52, 0x50, 0x43,
+	0x74, 0x6f, 0x32, 0xce, 0x39, 0x0a, 0x09, 0x53, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x52, 0x50, 0x43,
 	0x12, 0x30, 0x0a, 0x0a, 0x47, 0x65, 0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x0f,
 	0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a,
 	0x11, 0x2e, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x70, 0x62, 0x2e, 0x56, 0x65, 0x72, 0x73, 0x69,
@@ -489,13 +489,13 @@ var file_rpcpb_services_proto_rawDesc = []byte{
 	0x61, 0x74, 0x61, 0x12, 0x14, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x54,
 	0x75, 0x6e, 0x6e, 0x65, 0x6c, 0x44, 0x61, 0x74, 0x61, 0x1a, 0x14, 0x2e, 0x73, 0x6c, 0x69, 0x76,
 	0x65, 0x72, 0x70, 0x62, 0x2e, 0x54, 0x75, 0x6e, 0x6e, 0x65, 0x6c, 0x44, 0x61, 0x74, 0x61, 0x28,
-	0x01, 0x30, 0x01, 0x12, 0x2c, 0x0a, 0x06, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x12, 0x0f, 0x2e,
-	0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x0f,
-	0x2e, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x70, 0x62, 0x2e, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x30,
-	0x01, 0x42, 0x2c, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
-	0x62, 0x69, 0x73, 0x68, 0x6f, 0x70, 0x66, 0x6f, 0x78, 0x2f, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72,
-	0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2f, 0x72, 0x70, 0x63, 0x70, 0x62, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x01, 0x30, 0x01, 0x12, 0x2e, 0x0a, 0x06, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x12, 0x11, 0x2e,
+	0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x0f, 0x2e, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x70, 0x62, 0x2e, 0x45, 0x76, 0x65, 0x6e,
+	0x74, 0x30, 0x01, 0x42, 0x2c, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
+	0x6d, 0x2f, 0x62, 0x69, 0x73, 0x68, 0x6f, 0x70, 0x66, 0x6f, 0x78, 0x2f, 0x73, 0x6c, 0x69, 0x76,
+	0x65, 0x72, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2f, 0x72, 0x70, 0x63, 0x70,
+	0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var file_rpcpb_services_proto_goTypes = []interface{}{
@@ -593,93 +593,94 @@ var file_rpcpb_services_proto_goTypes = []interface{}{
 	(*sliverpb.PortfwdReq)(nil),            // 91: sliverpb.PortfwdReq
 	(*sliverpb.Tunnel)(nil),                // 92: sliverpb.Tunnel
 	(*sliverpb.TunnelData)(nil),            // 93: sliverpb.TunnelData
-	(*clientpb.Version)(nil),               // 94: clientpb.Version
-	(*clientpb.History)(nil),               // 95: clientpb.History
-	(*clientpb.AddCmdHistory)(nil),         // 96: clientpb.AddCmdHistory
-	(*clientpb.GetConsoleConfig)(nil),      // 97: clientpb.GetConsoleConfig
-	(*clientpb.SaveConsoleConfig)(nil),     // 98: clientpb.SaveConsoleConfig
-	(*clientpb.GetSliverSettings)(nil),     // 99: clientpb.GetSliverSettings
-	(*clientpb.SaveSliverSettings)(nil),    // 100: clientpb.SaveSliverSettings
-	(*clientpb.Operators)(nil),             // 101: clientpb.Operators
-	(*clientpb.Sessions)(nil),              // 102: clientpb.Sessions
-	(*clientpb.Session)(nil),               // 103: clientpb.Session
-	(*clientpb.Beacons)(nil),               // 104: clientpb.Beacons
-	(*clientpb.BeaconTasks)(nil),           // 105: clientpb.BeaconTasks
-	(*commonpb.Response)(nil),              // 106: commonpb.Response
-	(*clientpb.Jobs)(nil),                  // 107: clientpb.Jobs
-	(*clientpb.KillJob)(nil),               // 108: clientpb.KillJob
-	(*clientpb.CreateC2Profile)(nil),       // 109: clientpb.CreateC2Profile
-	(*clientpb.DeleteC2Profile)(nil),       // 110: clientpb.DeleteC2Profile
-	(*clientpb.UpdateC2Profile)(nil),       // 111: clientpb.UpdateC2Profile
-	(*clientpb.GetC2Profiles)(nil),         // 112: clientpb.GetC2Profiles
-	(*clientpb.HandlerStage)(nil),          // 113: clientpb.HandlerStage
-	(*clientpb.HandlerStager)(nil),         // 114: clientpb.HandlerStager
-	(*clientpb.HandlerClose)(nil),          // 115: clientpb.HandlerClose
-	(*clientpb.AddTransport)(nil),          // 116: clientpb.AddTransport
-	(*clientpb.DeleteTransport)(nil),       // 117: clientpb.DeleteTransport
-	(*clientpb.SwitchTransport)(nil),       // 118: clientpb.SwitchTransport
-	(*clientpb.GetTransports)(nil),         // 119: clientpb.GetTransports
-	(*sliverpb.Ifconfig)(nil),              // 120: sliverpb.Ifconfig
-	(*clientpb.AllLoot)(nil),               // 121: clientpb.AllLoot
-	(*clientpb.AllHosts)(nil),              // 122: clientpb.AllHosts
-	(*clientpb.Generate)(nil),              // 123: clientpb.Generate
-	(*clientpb.ImplantBuilds)(nil),         // 124: clientpb.ImplantBuilds
-	(*clientpb.Canaries)(nil),              // 125: clientpb.Canaries
-	(*clientpb.WGClientConfig)(nil),        // 126: clientpb.WGClientConfig
-	(*clientpb.UniqueWGIP)(nil),            // 127: clientpb.UniqueWGIP
-	(*clientpb.ImplantProfiles)(nil),       // 128: clientpb.ImplantProfiles
-	(*clientpb.MsfStager)(nil),             // 129: clientpb.MsfStager
-	(*clientpb.ShellcodeRDI)(nil),          // 130: clientpb.ShellcodeRDI
-	(*clientpb.Compiler)(nil),              // 131: clientpb.Compiler
-	(*clientpb.Websites)(nil),              // 132: clientpb.Websites
-	(*sliverpb.Ps)(nil),                    // 133: sliverpb.Ps
-	(*sliverpb.Terminate)(nil),             // 134: sliverpb.Terminate
-	(*sliverpb.Netstat)(nil),               // 135: sliverpb.Netstat
-	(*sliverpb.Ls)(nil),                    // 136: sliverpb.Ls
-	(*sliverpb.Pwd)(nil),                   // 137: sliverpb.Pwd
-	(*sliverpb.Rm)(nil),                    // 138: sliverpb.Rm
-	(*sliverpb.Mkdir)(nil),                 // 139: sliverpb.Mkdir
-	(*sliverpb.Download)(nil),              // 140: sliverpb.Download
-	(*sliverpb.Upload)(nil),                // 141: sliverpb.Upload
-	(*sliverpb.ProcessDump)(nil),           // 142: sliverpb.ProcessDump
-	(*sliverpb.RunAs)(nil),                 // 143: sliverpb.RunAs
-	(*sliverpb.Impersonate)(nil),           // 144: sliverpb.Impersonate
-	(*sliverpb.RevToSelf)(nil),             // 145: sliverpb.RevToSelf
-	(*sliverpb.GetSystem)(nil),             // 146: sliverpb.GetSystem
-	(*sliverpb.Task)(nil),                  // 147: sliverpb.Task
-	(*sliverpb.ExecuteAssembly)(nil),       // 148: sliverpb.ExecuteAssembly
-	(*sliverpb.Migrate)(nil),               // 149: sliverpb.Migrate
-	(*sliverpb.Execute)(nil),               // 150: sliverpb.Execute
-	(*sliverpb.Sideload)(nil),              // 151: sliverpb.Sideload
-	(*sliverpb.SpawnDll)(nil),              // 152: sliverpb.SpawnDll
-	(*sliverpb.Screenshot)(nil),            // 153: sliverpb.Screenshot
-	(*sliverpb.NamedPipes)(nil),            // 154: sliverpb.NamedPipes
-	(*sliverpb.TCPPivot)(nil),              // 155: sliverpb.TCPPivot
-	(*sliverpb.PivotList)(nil),             // 156: sliverpb.PivotList
-	(*sliverpb.ServiceInfo)(nil),           // 157: sliverpb.ServiceInfo
-	(*sliverpb.MakeToken)(nil),             // 158: sliverpb.MakeToken
-	(*sliverpb.EnvInfo)(nil),               // 159: sliverpb.EnvInfo
-	(*sliverpb.SetEnv)(nil),                // 160: sliverpb.SetEnv
-	(*sliverpb.UnsetEnv)(nil),              // 161: sliverpb.UnsetEnv
-	(*sliverpb.Backdoor)(nil),              // 162: sliverpb.Backdoor
-	(*sliverpb.RegistryRead)(nil),          // 163: sliverpb.RegistryRead
-	(*sliverpb.RegistryWrite)(nil),         // 164: sliverpb.RegistryWrite
-	(*sliverpb.RegistryCreateKey)(nil),     // 165: sliverpb.RegistryCreateKey
-	(*sliverpb.RegistrySubKeyList)(nil),    // 166: sliverpb.RegistrySubKeyList
-	(*sliverpb.RegistryValuesList)(nil),    // 167: sliverpb.RegistryValuesList
-	(*sliverpb.SSHCommand)(nil),            // 168: sliverpb.SSHCommand
-	(*clientpb.DllHijack)(nil),             // 169: clientpb.DllHijack
-	(*sliverpb.GetPrivs)(nil),              // 170: sliverpb.GetPrivs
-	(*sliverpb.RegisterExtension)(nil),     // 171: sliverpb.RegisterExtension
-	(*sliverpb.CallExtension)(nil),         // 172: sliverpb.CallExtension
-	(*sliverpb.ListExtensions)(nil),        // 173: sliverpb.ListExtensions
-	(*sliverpb.WGPortForward)(nil),         // 174: sliverpb.WGPortForward
-	(*sliverpb.WGSocks)(nil),               // 175: sliverpb.WGSocks
-	(*sliverpb.WGTCPForwarders)(nil),       // 176: sliverpb.WGTCPForwarders
-	(*sliverpb.WGSocksServers)(nil),        // 177: sliverpb.WGSocksServers
-	(*sliverpb.Shell)(nil),                 // 178: sliverpb.Shell
-	(*sliverpb.Portfwd)(nil),               // 179: sliverpb.Portfwd
-	(*clientpb.Event)(nil),                 // 180: clientpb.Event
+	(*commonpb.Request)(nil),               // 94: commonpb.Request
+	(*clientpb.Version)(nil),               // 95: clientpb.Version
+	(*clientpb.History)(nil),               // 96: clientpb.History
+	(*clientpb.AddCmdHistory)(nil),         // 97: clientpb.AddCmdHistory
+	(*clientpb.GetConsoleConfig)(nil),      // 98: clientpb.GetConsoleConfig
+	(*clientpb.SaveConsoleConfig)(nil),     // 99: clientpb.SaveConsoleConfig
+	(*clientpb.GetSliverSettings)(nil),     // 100: clientpb.GetSliverSettings
+	(*clientpb.SaveSliverSettings)(nil),    // 101: clientpb.SaveSliverSettings
+	(*clientpb.Operators)(nil),             // 102: clientpb.Operators
+	(*clientpb.Sessions)(nil),              // 103: clientpb.Sessions
+	(*clientpb.Session)(nil),               // 104: clientpb.Session
+	(*clientpb.Beacons)(nil),               // 105: clientpb.Beacons
+	(*clientpb.BeaconTasks)(nil),           // 106: clientpb.BeaconTasks
+	(*commonpb.Response)(nil),              // 107: commonpb.Response
+	(*clientpb.Jobs)(nil),                  // 108: clientpb.Jobs
+	(*clientpb.KillJob)(nil),               // 109: clientpb.KillJob
+	(*clientpb.CreateC2Profile)(nil),       // 110: clientpb.CreateC2Profile
+	(*clientpb.DeleteC2Profile)(nil),       // 111: clientpb.DeleteC2Profile
+	(*clientpb.UpdateC2Profile)(nil),       // 112: clientpb.UpdateC2Profile
+	(*clientpb.GetC2Profiles)(nil),         // 113: clientpb.GetC2Profiles
+	(*clientpb.HandlerStage)(nil),          // 114: clientpb.HandlerStage
+	(*clientpb.HandlerStager)(nil),         // 115: clientpb.HandlerStager
+	(*clientpb.HandlerClose)(nil),          // 116: clientpb.HandlerClose
+	(*clientpb.AddTransport)(nil),          // 117: clientpb.AddTransport
+	(*clientpb.DeleteTransport)(nil),       // 118: clientpb.DeleteTransport
+	(*clientpb.SwitchTransport)(nil),       // 119: clientpb.SwitchTransport
+	(*clientpb.GetTransports)(nil),         // 120: clientpb.GetTransports
+	(*sliverpb.Ifconfig)(nil),              // 121: sliverpb.Ifconfig
+	(*clientpb.AllLoot)(nil),               // 122: clientpb.AllLoot
+	(*clientpb.AllHosts)(nil),              // 123: clientpb.AllHosts
+	(*clientpb.Generate)(nil),              // 124: clientpb.Generate
+	(*clientpb.ImplantBuilds)(nil),         // 125: clientpb.ImplantBuilds
+	(*clientpb.Canaries)(nil),              // 126: clientpb.Canaries
+	(*clientpb.WGClientConfig)(nil),        // 127: clientpb.WGClientConfig
+	(*clientpb.UniqueWGIP)(nil),            // 128: clientpb.UniqueWGIP
+	(*clientpb.ImplantProfiles)(nil),       // 129: clientpb.ImplantProfiles
+	(*clientpb.MsfStager)(nil),             // 130: clientpb.MsfStager
+	(*clientpb.ShellcodeRDI)(nil),          // 131: clientpb.ShellcodeRDI
+	(*clientpb.Compiler)(nil),              // 132: clientpb.Compiler
+	(*clientpb.Websites)(nil),              // 133: clientpb.Websites
+	(*sliverpb.Ps)(nil),                    // 134: sliverpb.Ps
+	(*sliverpb.Terminate)(nil),             // 135: sliverpb.Terminate
+	(*sliverpb.Netstat)(nil),               // 136: sliverpb.Netstat
+	(*sliverpb.Ls)(nil),                    // 137: sliverpb.Ls
+	(*sliverpb.Pwd)(nil),                   // 138: sliverpb.Pwd
+	(*sliverpb.Rm)(nil),                    // 139: sliverpb.Rm
+	(*sliverpb.Mkdir)(nil),                 // 140: sliverpb.Mkdir
+	(*sliverpb.Download)(nil),              // 141: sliverpb.Download
+	(*sliverpb.Upload)(nil),                // 142: sliverpb.Upload
+	(*sliverpb.ProcessDump)(nil),           // 143: sliverpb.ProcessDump
+	(*sliverpb.RunAs)(nil),                 // 144: sliverpb.RunAs
+	(*sliverpb.Impersonate)(nil),           // 145: sliverpb.Impersonate
+	(*sliverpb.RevToSelf)(nil),             // 146: sliverpb.RevToSelf
+	(*sliverpb.GetSystem)(nil),             // 147: sliverpb.GetSystem
+	(*sliverpb.Task)(nil),                  // 148: sliverpb.Task
+	(*sliverpb.ExecuteAssembly)(nil),       // 149: sliverpb.ExecuteAssembly
+	(*sliverpb.Migrate)(nil),               // 150: sliverpb.Migrate
+	(*sliverpb.Execute)(nil),               // 151: sliverpb.Execute
+	(*sliverpb.Sideload)(nil),              // 152: sliverpb.Sideload
+	(*sliverpb.SpawnDll)(nil),              // 153: sliverpb.SpawnDll
+	(*sliverpb.Screenshot)(nil),            // 154: sliverpb.Screenshot
+	(*sliverpb.NamedPipes)(nil),            // 155: sliverpb.NamedPipes
+	(*sliverpb.TCPPivot)(nil),              // 156: sliverpb.TCPPivot
+	(*sliverpb.PivotList)(nil),             // 157: sliverpb.PivotList
+	(*sliverpb.ServiceInfo)(nil),           // 158: sliverpb.ServiceInfo
+	(*sliverpb.MakeToken)(nil),             // 159: sliverpb.MakeToken
+	(*sliverpb.EnvInfo)(nil),               // 160: sliverpb.EnvInfo
+	(*sliverpb.SetEnv)(nil),                // 161: sliverpb.SetEnv
+	(*sliverpb.UnsetEnv)(nil),              // 162: sliverpb.UnsetEnv
+	(*sliverpb.Backdoor)(nil),              // 163: sliverpb.Backdoor
+	(*sliverpb.RegistryRead)(nil),          // 164: sliverpb.RegistryRead
+	(*sliverpb.RegistryWrite)(nil),         // 165: sliverpb.RegistryWrite
+	(*sliverpb.RegistryCreateKey)(nil),     // 166: sliverpb.RegistryCreateKey
+	(*sliverpb.RegistrySubKeyList)(nil),    // 167: sliverpb.RegistrySubKeyList
+	(*sliverpb.RegistryValuesList)(nil),    // 168: sliverpb.RegistryValuesList
+	(*sliverpb.SSHCommand)(nil),            // 169: sliverpb.SSHCommand
+	(*clientpb.DllHijack)(nil),             // 170: clientpb.DllHijack
+	(*sliverpb.GetPrivs)(nil),              // 171: sliverpb.GetPrivs
+	(*sliverpb.RegisterExtension)(nil),     // 172: sliverpb.RegisterExtension
+	(*sliverpb.CallExtension)(nil),         // 173: sliverpb.CallExtension
+	(*sliverpb.ListExtensions)(nil),        // 174: sliverpb.ListExtensions
+	(*sliverpb.WGPortForward)(nil),         // 175: sliverpb.WGPortForward
+	(*sliverpb.WGSocks)(nil),               // 176: sliverpb.WGSocks
+	(*sliverpb.WGTCPForwarders)(nil),       // 177: sliverpb.WGTCPForwarders
+	(*sliverpb.WGSocksServers)(nil),        // 178: sliverpb.WGSocksServers
+	(*sliverpb.Shell)(nil),                 // 179: sliverpb.Shell
+	(*sliverpb.Portfwd)(nil),               // 180: sliverpb.Portfwd
+	(*clientpb.Event)(nil),                 // 181: clientpb.Event
 }
 var file_rpcpb_services_proto_depIdxs = []int32{
 	0,   // 0: rpcpb.SliverRPC.GetVersion:input_type -> commonpb.Empty
@@ -804,130 +805,130 @@ var file_rpcpb_services_proto_depIdxs = []int32{
 	92,  // 119: rpcpb.SliverRPC.CreateTunnel:input_type -> sliverpb.Tunnel
 	92,  // 120: rpcpb.SliverRPC.CloseTunnel:input_type -> sliverpb.Tunnel
 	93,  // 121: rpcpb.SliverRPC.TunnelData:input_type -> sliverpb.TunnelData
-	0,   // 122: rpcpb.SliverRPC.Events:input_type -> commonpb.Empty
-	94,  // 123: rpcpb.SliverRPC.GetVersion:output_type -> clientpb.Version
-	95,  // 124: rpcpb.SliverRPC.GetHistory:output_type -> clientpb.History
-	96,  // 125: rpcpb.SliverRPC.AddToHistory:output_type -> clientpb.AddCmdHistory
-	97,  // 126: rpcpb.SliverRPC.LoadConsoleConfig:output_type -> clientpb.GetConsoleConfig
-	98,  // 127: rpcpb.SliverRPC.SaveUserConsoleConfig:output_type -> clientpb.SaveConsoleConfig
-	99,  // 128: rpcpb.SliverRPC.LoadSliverSettings:output_type -> clientpb.GetSliverSettings
-	100, // 129: rpcpb.SliverRPC.SaveUserSliverSettings:output_type -> clientpb.SaveSliverSettings
-	101, // 130: rpcpb.SliverRPC.GetOperators:output_type -> clientpb.Operators
-	102, // 131: rpcpb.SliverRPC.GetSessions:output_type -> clientpb.Sessions
+	94,  // 122: rpcpb.SliverRPC.Events:input_type -> commonpb.Request
+	95,  // 123: rpcpb.SliverRPC.GetVersion:output_type -> clientpb.Version
+	96,  // 124: rpcpb.SliverRPC.GetHistory:output_type -> clientpb.History
+	97,  // 125: rpcpb.SliverRPC.AddToHistory:output_type -> clientpb.AddCmdHistory
+	98,  // 126: rpcpb.SliverRPC.LoadConsoleConfig:output_type -> clientpb.GetConsoleConfig
+	99,  // 127: rpcpb.SliverRPC.SaveUserConsoleConfig:output_type -> clientpb.SaveConsoleConfig
+	100, // 128: rpcpb.SliverRPC.LoadSliverSettings:output_type -> clientpb.GetSliverSettings
+	101, // 129: rpcpb.SliverRPC.SaveUserSliverSettings:output_type -> clientpb.SaveSliverSettings
+	102, // 130: rpcpb.SliverRPC.GetOperators:output_type -> clientpb.Operators
+	103, // 131: rpcpb.SliverRPC.GetSessions:output_type -> clientpb.Sessions
 	0,   // 132: rpcpb.SliverRPC.KillSession:output_type -> commonpb.Empty
-	103, // 133: rpcpb.SliverRPC.UpdateSession:output_type -> clientpb.Session
-	104, // 134: rpcpb.SliverRPC.GetBeacons:output_type -> clientpb.Beacons
+	104, // 133: rpcpb.SliverRPC.UpdateSession:output_type -> clientpb.Session
+	105, // 134: rpcpb.SliverRPC.GetBeacons:output_type -> clientpb.Beacons
 	0,   // 135: rpcpb.SliverRPC.RmBeacon:output_type -> commonpb.Empty
-	105, // 136: rpcpb.SliverRPC.GetBeaconTasks:output_type -> clientpb.BeaconTasks
+	106, // 136: rpcpb.SliverRPC.GetBeaconTasks:output_type -> clientpb.BeaconTasks
 	10,  // 137: rpcpb.SliverRPC.GetBeaconTaskContent:output_type -> clientpb.BeaconTask
-	106, // 138: rpcpb.SliverRPC.MonitorStart:output_type -> commonpb.Response
+	107, // 138: rpcpb.SliverRPC.MonitorStart:output_type -> commonpb.Response
 	0,   // 139: rpcpb.SliverRPC.MonitorStop:output_type -> commonpb.Empty
-	107, // 140: rpcpb.SliverRPC.GetJobs:output_type -> clientpb.Jobs
-	108, // 141: rpcpb.SliverRPC.KillJob:output_type -> clientpb.KillJob
-	109, // 142: rpcpb.SliverRPC.CreateC2Profile:output_type -> clientpb.CreateC2Profile
-	110, // 143: rpcpb.SliverRPC.DeleteC2Profile:output_type -> clientpb.DeleteC2Profile
-	111, // 144: rpcpb.SliverRPC.UpdateC2Profile:output_type -> clientpb.UpdateC2Profile
-	112, // 145: rpcpb.SliverRPC.GetC2Profiles:output_type -> clientpb.GetC2Profiles
-	113, // 146: rpcpb.SliverRPC.StartHandlerStage:output_type -> clientpb.HandlerStage
-	114, // 147: rpcpb.SliverRPC.StartHandlerStager:output_type -> clientpb.HandlerStager
-	115, // 148: rpcpb.SliverRPC.CloseC2Handler:output_type -> clientpb.HandlerClose
-	116, // 149: rpcpb.SliverRPC.AddTransport:output_type -> clientpb.AddTransport
-	117, // 150: rpcpb.SliverRPC.DeleteTransport:output_type -> clientpb.DeleteTransport
-	118, // 151: rpcpb.SliverRPC.SwitchTransport:output_type -> clientpb.SwitchTransport
-	119, // 152: rpcpb.SliverRPC.GetTransports:output_type -> clientpb.GetTransports
-	114, // 153: rpcpb.SliverRPC.StartTCPStagerListener:output_type -> clientpb.HandlerStager
-	114, // 154: rpcpb.SliverRPC.StartHTTPStagerListener:output_type -> clientpb.HandlerStager
-	120, // 155: rpcpb.SliverRPC.GetServerInterfaces:output_type -> sliverpb.Ifconfig
+	108, // 140: rpcpb.SliverRPC.GetJobs:output_type -> clientpb.Jobs
+	109, // 141: rpcpb.SliverRPC.KillJob:output_type -> clientpb.KillJob
+	110, // 142: rpcpb.SliverRPC.CreateC2Profile:output_type -> clientpb.CreateC2Profile
+	111, // 143: rpcpb.SliverRPC.DeleteC2Profile:output_type -> clientpb.DeleteC2Profile
+	112, // 144: rpcpb.SliverRPC.UpdateC2Profile:output_type -> clientpb.UpdateC2Profile
+	113, // 145: rpcpb.SliverRPC.GetC2Profiles:output_type -> clientpb.GetC2Profiles
+	114, // 146: rpcpb.SliverRPC.StartHandlerStage:output_type -> clientpb.HandlerStage
+	115, // 147: rpcpb.SliverRPC.StartHandlerStager:output_type -> clientpb.HandlerStager
+	116, // 148: rpcpb.SliverRPC.CloseC2Handler:output_type -> clientpb.HandlerClose
+	117, // 149: rpcpb.SliverRPC.AddTransport:output_type -> clientpb.AddTransport
+	118, // 150: rpcpb.SliverRPC.DeleteTransport:output_type -> clientpb.DeleteTransport
+	119, // 151: rpcpb.SliverRPC.SwitchTransport:output_type -> clientpb.SwitchTransport
+	120, // 152: rpcpb.SliverRPC.GetTransports:output_type -> clientpb.GetTransports
+	115, // 153: rpcpb.SliverRPC.StartTCPStagerListener:output_type -> clientpb.HandlerStager
+	115, // 154: rpcpb.SliverRPC.StartHTTPStagerListener:output_type -> clientpb.HandlerStager
+	121, // 155: rpcpb.SliverRPC.GetServerInterfaces:output_type -> sliverpb.Ifconfig
 	24,  // 156: rpcpb.SliverRPC.LootAdd:output_type -> clientpb.Loot
 	0,   // 157: rpcpb.SliverRPC.LootRm:output_type -> commonpb.Empty
 	24,  // 158: rpcpb.SliverRPC.LootUpdate:output_type -> clientpb.Loot
 	24,  // 159: rpcpb.SliverRPC.LootContent:output_type -> clientpb.Loot
-	121, // 160: rpcpb.SliverRPC.LootAll:output_type -> clientpb.AllLoot
-	121, // 161: rpcpb.SliverRPC.LootAllOf:output_type -> clientpb.AllLoot
-	122, // 162: rpcpb.SliverRPC.Hosts:output_type -> clientpb.AllHosts
+	122, // 160: rpcpb.SliverRPC.LootAll:output_type -> clientpb.AllLoot
+	122, // 161: rpcpb.SliverRPC.LootAllOf:output_type -> clientpb.AllLoot
+	123, // 162: rpcpb.SliverRPC.Hosts:output_type -> clientpb.AllHosts
 	25,  // 163: rpcpb.SliverRPC.Host:output_type -> clientpb.Host
 	0,   // 164: rpcpb.SliverRPC.HostRm:output_type -> commonpb.Empty
 	0,   // 165: rpcpb.SliverRPC.HostIOCRm:output_type -> commonpb.Empty
-	123, // 166: rpcpb.SliverRPC.Generate:output_type -> clientpb.Generate
-	123, // 167: rpcpb.SliverRPC.Regenerate:output_type -> clientpb.Generate
-	124, // 168: rpcpb.SliverRPC.ImplantBuilds:output_type -> clientpb.ImplantBuilds
+	124, // 166: rpcpb.SliverRPC.Generate:output_type -> clientpb.Generate
+	124, // 167: rpcpb.SliverRPC.Regenerate:output_type -> clientpb.Generate
+	125, // 168: rpcpb.SliverRPC.ImplantBuilds:output_type -> clientpb.ImplantBuilds
 	0,   // 169: rpcpb.SliverRPC.DeleteImplantBuild:output_type -> commonpb.Empty
-	125, // 170: rpcpb.SliverRPC.Canaries:output_type -> clientpb.Canaries
-	126, // 171: rpcpb.SliverRPC.GenerateWGClientConfig:output_type -> clientpb.WGClientConfig
-	127, // 172: rpcpb.SliverRPC.GenerateUniqueIP:output_type -> clientpb.UniqueWGIP
-	128, // 173: rpcpb.SliverRPC.ImplantProfiles:output_type -> clientpb.ImplantProfiles
+	126, // 170: rpcpb.SliverRPC.Canaries:output_type -> clientpb.Canaries
+	127, // 171: rpcpb.SliverRPC.GenerateWGClientConfig:output_type -> clientpb.WGClientConfig
+	128, // 172: rpcpb.SliverRPC.GenerateUniqueIP:output_type -> clientpb.UniqueWGIP
+	129, // 173: rpcpb.SliverRPC.ImplantProfiles:output_type -> clientpb.ImplantProfiles
 	0,   // 174: rpcpb.SliverRPC.DeleteImplantProfile:output_type -> commonpb.Empty
 	30,  // 175: rpcpb.SliverRPC.SaveImplantProfile:output_type -> clientpb.ImplantProfile
-	129, // 176: rpcpb.SliverRPC.MsfStage:output_type -> clientpb.MsfStager
-	130, // 177: rpcpb.SliverRPC.ShellcodeRDI:output_type -> clientpb.ShellcodeRDI
-	131, // 178: rpcpb.SliverRPC.GetCompiler:output_type -> clientpb.Compiler
-	132, // 179: rpcpb.SliverRPC.Websites:output_type -> clientpb.Websites
+	130, // 176: rpcpb.SliverRPC.MsfStage:output_type -> clientpb.MsfStager
+	131, // 177: rpcpb.SliverRPC.ShellcodeRDI:output_type -> clientpb.ShellcodeRDI
+	132, // 178: rpcpb.SliverRPC.GetCompiler:output_type -> clientpb.Compiler
+	133, // 179: rpcpb.SliverRPC.Websites:output_type -> clientpb.Websites
 	33,  // 180: rpcpb.SliverRPC.Website:output_type -> clientpb.Website
 	0,   // 181: rpcpb.SliverRPC.WebsiteRemove:output_type -> commonpb.Empty
 	33,  // 182: rpcpb.SliverRPC.WebsiteAddContent:output_type -> clientpb.Website
 	33,  // 183: rpcpb.SliverRPC.WebsiteUpdateContent:output_type -> clientpb.Website
 	33,  // 184: rpcpb.SliverRPC.WebsiteRemoveContent:output_type -> clientpb.Website
 	36,  // 185: rpcpb.SliverRPC.Ping:output_type -> sliverpb.Ping
-	133, // 186: rpcpb.SliverRPC.Ps:output_type -> sliverpb.Ps
-	134, // 187: rpcpb.SliverRPC.Terminate:output_type -> sliverpb.Terminate
-	120, // 188: rpcpb.SliverRPC.Ifconfig:output_type -> sliverpb.Ifconfig
-	135, // 189: rpcpb.SliverRPC.Netstat:output_type -> sliverpb.Netstat
-	136, // 190: rpcpb.SliverRPC.Ls:output_type -> sliverpb.Ls
-	137, // 191: rpcpb.SliverRPC.Cd:output_type -> sliverpb.Pwd
-	137, // 192: rpcpb.SliverRPC.Pwd:output_type -> sliverpb.Pwd
-	138, // 193: rpcpb.SliverRPC.Rm:output_type -> sliverpb.Rm
-	139, // 194: rpcpb.SliverRPC.Mkdir:output_type -> sliverpb.Mkdir
-	140, // 195: rpcpb.SliverRPC.Download:output_type -> sliverpb.Download
-	141, // 196: rpcpb.SliverRPC.Upload:output_type -> sliverpb.Upload
-	142, // 197: rpcpb.SliverRPC.ProcessDump:output_type -> sliverpb.ProcessDump
-	143, // 198: rpcpb.SliverRPC.RunAs:output_type -> sliverpb.RunAs
-	144, // 199: rpcpb.SliverRPC.Impersonate:output_type -> sliverpb.Impersonate
-	145, // 200: rpcpb.SliverRPC.RevToSelf:output_type -> sliverpb.RevToSelf
-	146, // 201: rpcpb.SliverRPC.GetSystem:output_type -> sliverpb.GetSystem
-	147, // 202: rpcpb.SliverRPC.Task:output_type -> sliverpb.Task
+	134, // 186: rpcpb.SliverRPC.Ps:output_type -> sliverpb.Ps
+	135, // 187: rpcpb.SliverRPC.Terminate:output_type -> sliverpb.Terminate
+	121, // 188: rpcpb.SliverRPC.Ifconfig:output_type -> sliverpb.Ifconfig
+	136, // 189: rpcpb.SliverRPC.Netstat:output_type -> sliverpb.Netstat
+	137, // 190: rpcpb.SliverRPC.Ls:output_type -> sliverpb.Ls
+	138, // 191: rpcpb.SliverRPC.Cd:output_type -> sliverpb.Pwd
+	138, // 192: rpcpb.SliverRPC.Pwd:output_type -> sliverpb.Pwd
+	139, // 193: rpcpb.SliverRPC.Rm:output_type -> sliverpb.Rm
+	140, // 194: rpcpb.SliverRPC.Mkdir:output_type -> sliverpb.Mkdir
+	141, // 195: rpcpb.SliverRPC.Download:output_type -> sliverpb.Download
+	142, // 196: rpcpb.SliverRPC.Upload:output_type -> sliverpb.Upload
+	143, // 197: rpcpb.SliverRPC.ProcessDump:output_type -> sliverpb.ProcessDump
+	144, // 198: rpcpb.SliverRPC.RunAs:output_type -> sliverpb.RunAs
+	145, // 199: rpcpb.SliverRPC.Impersonate:output_type -> sliverpb.Impersonate
+	146, // 200: rpcpb.SliverRPC.RevToSelf:output_type -> sliverpb.RevToSelf
+	147, // 201: rpcpb.SliverRPC.GetSystem:output_type -> sliverpb.GetSystem
+	148, // 202: rpcpb.SliverRPC.Task:output_type -> sliverpb.Task
 	0,   // 203: rpcpb.SliverRPC.Msf:output_type -> commonpb.Empty
 	0,   // 204: rpcpb.SliverRPC.MsfRemote:output_type -> commonpb.Empty
-	148, // 205: rpcpb.SliverRPC.ExecuteAssembly:output_type -> sliverpb.ExecuteAssembly
-	149, // 206: rpcpb.SliverRPC.Migrate:output_type -> sliverpb.Migrate
-	150, // 207: rpcpb.SliverRPC.Execute:output_type -> sliverpb.Execute
-	150, // 208: rpcpb.SliverRPC.ExecuteToken:output_type -> sliverpb.Execute
-	151, // 209: rpcpb.SliverRPC.Sideload:output_type -> sliverpb.Sideload
-	152, // 210: rpcpb.SliverRPC.SpawnDll:output_type -> sliverpb.SpawnDll
-	153, // 211: rpcpb.SliverRPC.Screenshot:output_type -> sliverpb.Screenshot
-	154, // 212: rpcpb.SliverRPC.NamedPipes:output_type -> sliverpb.NamedPipes
-	155, // 213: rpcpb.SliverRPC.TCPListener:output_type -> sliverpb.TCPPivot
-	156, // 214: rpcpb.SliverRPC.ListPivots:output_type -> sliverpb.PivotList
-	157, // 215: rpcpb.SliverRPC.StartService:output_type -> sliverpb.ServiceInfo
-	157, // 216: rpcpb.SliverRPC.StopService:output_type -> sliverpb.ServiceInfo
-	157, // 217: rpcpb.SliverRPC.RemoveService:output_type -> sliverpb.ServiceInfo
-	158, // 218: rpcpb.SliverRPC.MakeToken:output_type -> sliverpb.MakeToken
-	159, // 219: rpcpb.SliverRPC.GetEnv:output_type -> sliverpb.EnvInfo
-	160, // 220: rpcpb.SliverRPC.SetEnv:output_type -> sliverpb.SetEnv
-	161, // 221: rpcpb.SliverRPC.UnsetEnv:output_type -> sliverpb.UnsetEnv
-	162, // 222: rpcpb.SliverRPC.Backdoor:output_type -> sliverpb.Backdoor
-	163, // 223: rpcpb.SliverRPC.RegistryRead:output_type -> sliverpb.RegistryRead
-	164, // 224: rpcpb.SliverRPC.RegistryWrite:output_type -> sliverpb.RegistryWrite
-	165, // 225: rpcpb.SliverRPC.RegistryCreateKey:output_type -> sliverpb.RegistryCreateKey
-	166, // 226: rpcpb.SliverRPC.RegistryListSubKeys:output_type -> sliverpb.RegistrySubKeyList
-	167, // 227: rpcpb.SliverRPC.RegistryListValues:output_type -> sliverpb.RegistryValuesList
-	168, // 228: rpcpb.SliverRPC.RunSSHCommand:output_type -> sliverpb.SSHCommand
-	169, // 229: rpcpb.SliverRPC.HijackDLL:output_type -> clientpb.DllHijack
-	170, // 230: rpcpb.SliverRPC.GetPrivs:output_type -> sliverpb.GetPrivs
-	171, // 231: rpcpb.SliverRPC.RegisterExtension:output_type -> sliverpb.RegisterExtension
-	172, // 232: rpcpb.SliverRPC.CallExtension:output_type -> sliverpb.CallExtension
-	173, // 233: rpcpb.SliverRPC.ListExtensions:output_type -> sliverpb.ListExtensions
-	174, // 234: rpcpb.SliverRPC.WGStartPortForward:output_type -> sliverpb.WGPortForward
-	174, // 235: rpcpb.SliverRPC.WGStopPortForward:output_type -> sliverpb.WGPortForward
-	175, // 236: rpcpb.SliverRPC.WGStartSocks:output_type -> sliverpb.WGSocks
-	175, // 237: rpcpb.SliverRPC.WGStopSocks:output_type -> sliverpb.WGSocks
-	176, // 238: rpcpb.SliverRPC.WGListForwarders:output_type -> sliverpb.WGTCPForwarders
-	177, // 239: rpcpb.SliverRPC.WGListSocksServers:output_type -> sliverpb.WGSocksServers
-	178, // 240: rpcpb.SliverRPC.Shell:output_type -> sliverpb.Shell
-	179, // 241: rpcpb.SliverRPC.Portfwd:output_type -> sliverpb.Portfwd
+	149, // 205: rpcpb.SliverRPC.ExecuteAssembly:output_type -> sliverpb.ExecuteAssembly
+	150, // 206: rpcpb.SliverRPC.Migrate:output_type -> sliverpb.Migrate
+	151, // 207: rpcpb.SliverRPC.Execute:output_type -> sliverpb.Execute
+	151, // 208: rpcpb.SliverRPC.ExecuteToken:output_type -> sliverpb.Execute
+	152, // 209: rpcpb.SliverRPC.Sideload:output_type -> sliverpb.Sideload
+	153, // 210: rpcpb.SliverRPC.SpawnDll:output_type -> sliverpb.SpawnDll
+	154, // 211: rpcpb.SliverRPC.Screenshot:output_type -> sliverpb.Screenshot
+	155, // 212: rpcpb.SliverRPC.NamedPipes:output_type -> sliverpb.NamedPipes
+	156, // 213: rpcpb.SliverRPC.TCPListener:output_type -> sliverpb.TCPPivot
+	157, // 214: rpcpb.SliverRPC.ListPivots:output_type -> sliverpb.PivotList
+	158, // 215: rpcpb.SliverRPC.StartService:output_type -> sliverpb.ServiceInfo
+	158, // 216: rpcpb.SliverRPC.StopService:output_type -> sliverpb.ServiceInfo
+	158, // 217: rpcpb.SliverRPC.RemoveService:output_type -> sliverpb.ServiceInfo
+	159, // 218: rpcpb.SliverRPC.MakeToken:output_type -> sliverpb.MakeToken
+	160, // 219: rpcpb.SliverRPC.GetEnv:output_type -> sliverpb.EnvInfo
+	161, // 220: rpcpb.SliverRPC.SetEnv:output_type -> sliverpb.SetEnv
+	162, // 221: rpcpb.SliverRPC.UnsetEnv:output_type -> sliverpb.UnsetEnv
+	163, // 222: rpcpb.SliverRPC.Backdoor:output_type -> sliverpb.Backdoor
+	164, // 223: rpcpb.SliverRPC.RegistryRead:output_type -> sliverpb.RegistryRead
+	165, // 224: rpcpb.SliverRPC.RegistryWrite:output_type -> sliverpb.RegistryWrite
+	166, // 225: rpcpb.SliverRPC.RegistryCreateKey:output_type -> sliverpb.RegistryCreateKey
+	167, // 226: rpcpb.SliverRPC.RegistryListSubKeys:output_type -> sliverpb.RegistrySubKeyList
+	168, // 227: rpcpb.SliverRPC.RegistryListValues:output_type -> sliverpb.RegistryValuesList
+	169, // 228: rpcpb.SliverRPC.RunSSHCommand:output_type -> sliverpb.SSHCommand
+	170, // 229: rpcpb.SliverRPC.HijackDLL:output_type -> clientpb.DllHijack
+	171, // 230: rpcpb.SliverRPC.GetPrivs:output_type -> sliverpb.GetPrivs
+	172, // 231: rpcpb.SliverRPC.RegisterExtension:output_type -> sliverpb.RegisterExtension
+	173, // 232: rpcpb.SliverRPC.CallExtension:output_type -> sliverpb.CallExtension
+	174, // 233: rpcpb.SliverRPC.ListExtensions:output_type -> sliverpb.ListExtensions
+	175, // 234: rpcpb.SliverRPC.WGStartPortForward:output_type -> sliverpb.WGPortForward
+	175, // 235: rpcpb.SliverRPC.WGStopPortForward:output_type -> sliverpb.WGPortForward
+	176, // 236: rpcpb.SliverRPC.WGStartSocks:output_type -> sliverpb.WGSocks
+	176, // 237: rpcpb.SliverRPC.WGStopSocks:output_type -> sliverpb.WGSocks
+	177, // 238: rpcpb.SliverRPC.WGListForwarders:output_type -> sliverpb.WGTCPForwarders
+	178, // 239: rpcpb.SliverRPC.WGListSocksServers:output_type -> sliverpb.WGSocksServers
+	179, // 240: rpcpb.SliverRPC.Shell:output_type -> sliverpb.Shell
+	180, // 241: rpcpb.SliverRPC.Portfwd:output_type -> sliverpb.Portfwd
 	92,  // 242: rpcpb.SliverRPC.CreateTunnel:output_type -> sliverpb.Tunnel
 	0,   // 243: rpcpb.SliverRPC.CloseTunnel:output_type -> commonpb.Empty
 	93,  // 244: rpcpb.SliverRPC.TunnelData:output_type -> sliverpb.TunnelData
-	180, // 245: rpcpb.SliverRPC.Events:output_type -> clientpb.Event
+	181, // 245: rpcpb.SliverRPC.Events:output_type -> clientpb.Event
 	123, // [123:246] is the sub-list for method output_type
 	0,   // [0:123] is the sub-list for method input_type
 	0,   // [0:0] is the sub-list for extension type_name
