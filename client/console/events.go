@@ -71,7 +71,7 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 		if event.Component != "" {
 			log = logger.WithField("component", event.Component)
 		}
-		var autoLevel = clientLog.Levels[event.Level]
+		var autoLevel = clientLog.AutoLogLevel(log, event.Level)
 
 		// Handle the event with the logger, optionnally overriding log settings.
 		handleEvent(event, log, autoLevel)
@@ -80,13 +80,14 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 
 // handleEvent - Given an event coming from the server and a logger configured with the available info, either
 // use the logger itself to override the level (with all appropriate functions) or use the automatic one: autoLevel.
-func handleEvent(event *clientpb.Event, log *logrus.Entry, autoLevel func(format string, args ...interface{})) {
+func handleEvent(event *clientpb.Event, log *logrus.Entry, autoLog func(format string, args ...interface{})) {
 
 	// Adapt behavior and message based on type.
 	switch event.Type {
 
 	// Generic Log events
 	case clientpb.EventType_Log:
+		handleEventLog(event, log, autoLog)
 
 	// Operators Events
 	case clientpb.EventType_UserJoined:
@@ -96,15 +97,15 @@ func handleEvent(event *clientpb.Event, log *logrus.Entry, autoLevel func(format
 
 	// OPSEC Events
 	case clientpb.EventType_CanaryBurned, clientpb.EventType_Watchtower:
-		handleEventOpsec(event, log, autoLevel)
+		handleEventOpsec(event, log, autoLog)
 
 	// Session Events
 	case clientpb.EventType_SessionOpened, clientpb.EventType_SessionUpdated, clientpb.EventType_SessionClosed:
-		handleEventSession(event, log, autoLevel)
+		handleEventSession(event, log, autoLog)
 
 	// Beacon Events
 	case clientpb.EventType_BeaconRegistered, clientpb.EventType_BeaconTaskResult:
-		handleEventBeacon(event, log, autoLevel)
+		handleEventBeacon(event, log, autoLog)
 	}
 
 	//                 case consts.JobStoppedEvent:
@@ -115,6 +116,13 @@ func handleEvent(event *clientpb.Event, log *logrus.Entry, autoLevel func(format
 	// For all events, trigger reactions. These will not happen
 	// if none have been registered for the event we just processed here.
 	triggerReactions(event)
+}
+
+// handleEventLog - Display a generic log event. Might be thrown by any component server side, either targetin a session,
+// a client or both. We aim to make as good discretionnary choices as possible when deciding when to print when not, in
+// addition to the console current log level for those components.
+func handleEventLog(event *clientpb.Event, log *logrus.Entry, autoLog func(format string, args ...interface{})) {
+	autoLog(string(event.Data))
 }
 
 // handleEventOpsec - Display an opsec event.

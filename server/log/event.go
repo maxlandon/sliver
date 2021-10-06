@@ -35,6 +35,7 @@ var (
 // clients, along with the message itself.
 func ClientLogger(clientID, name string) (log *logrus.Entry) {
 	logger := rootLogger()
+	logger.Level = logrus.TraceLevel // Always push all logs
 	logger.AddHook(&ClientHook{
 		clientID: clientID,
 	})

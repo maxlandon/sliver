@@ -114,9 +114,9 @@ func handleSliverConnection(log *logrus.Entry, conn net.Conn) {
 	defer func() {
 		err := conn.Close() // Close the physical/logical connection
 		if err != nil {
-			log.Tracef("error closing connection: %s", err)
+			log.Debugf("error closing connection: %s", err)
 		} else {
-			log.Tracef("closed connection (%s <=> %s)", conn.LocalAddr(), conn.RemoteAddr()) // TODO: Remove
+			log.Debugf("closed connection (%s <=> %s)", conn.LocalAddr(), conn.RemoteAddr()) // TODO: Remove
 		}
 		implantConn.Cleanup() // Close the RPC layer
 	}()
@@ -164,7 +164,6 @@ Loop:
 			break Loop
 		}
 	}
-	log.Debugf("Closing implant connection %s", implantConn.ID)
 }
 
 // func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) error {

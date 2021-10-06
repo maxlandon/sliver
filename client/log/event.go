@@ -41,6 +41,25 @@ var (
 	}
 )
 
+// AutoLogLevel - Automatically call the logger with the correct level based on the event protobuf level.
+func AutoLogLevel(logger *logrus.Entry, level clientpb.Level) func(format string, args ...interface{}) {
+
+	switch level {
+	case clientpb.Level_DEBUG:
+		return logger.Debugf
+	case clientpb.Level_TRACE:
+		return logger.Tracef
+	case clientpb.Level_INFO:
+		return logger.Infof
+	case clientpb.Level_WARNING:
+		return logger.Warnf
+	case clientpb.Level_ERROR:
+		return logger.Errorf
+	default:
+		return logger.Infof
+	}
+}
+
 // NewEventLogger - A text logger used to print events coming from the server
 func NewEventLogger() *logrus.Logger {
 	logger := logrus.New()
@@ -74,8 +93,6 @@ func (l *eventHook) Fire(log *logrus.Entry) (err error) {
 			component = ""
 		}
 	}
-
-	// Maybe can switch on different printing behavior depending on name & component.
 
 	// Final status line to be printed
 	line := logrusPrintLevels[log.Level]
