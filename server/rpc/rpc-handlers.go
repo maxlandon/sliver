@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"net"
 
+	"github.com/gofrs/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -37,7 +38,6 @@ import (
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/generate"
-	"github.com/gofrs/uuid"
 )
 
 // StartHandlerStage - A generic RPC method used to open handlers for all supported C2 channels, either on the server or on implants.

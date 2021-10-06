@@ -18,12 +18,24 @@ package core
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import "github.com/bishopfox/sliver/protobuf/clientpb"
+import (
+	"errors"
+
+	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/server/log"
+)
 
 const (
-	// Size is arbitrary, just want to avoid weird cases where we'd block on channel sends
+	// Size is arbitrary, just want to avoid weird
+	// cases where we'd block on channel sends
 	eventBufSize = 5
 )
+
+func init() {
+	// This is needed to wire the event system with
+	// the log system, while avoiding circular imports
+	log.PublishLogEvent = EventBroker.PublishFromProtobuf
+}
 
 // Event - An event is fired when there's a state change involving a
 //         session, job, or client.
@@ -88,6 +100,36 @@ func (broker *eventBroker) Unsubscribe(events chan Event) {
 
 // Publish - Push a message to all subscribers
 func (broker *eventBroker) Publish(event Event) {
+	broker.publish <- event
+}
+
+// Publish - Push a message to all subscribers
+func (broker *eventBroker) PublishFromProtobuf(eventPb *clientpb.Event) {
+
+	event := Event{
+		Type:      eventPb.Type,
+		Name:      eventPb.Name,
+		Component: eventPb.Component,
+		Level:     eventPb.Level,
+		Data:      eventPb.Data,
+		Err:       errors.New(eventPb.Err),
+	}
+
+	// Get the session based on ID of the one in the proto
+	if eventPb.Session != nil {
+		event.Session = Sessions.GetByUUID(eventPb.Session.UUID)
+	}
+
+	// Same for job
+	if eventPb.Job != nil {
+		event.Job = Jobs.Get(eventPb.Job.ID)
+	}
+
+	// Same for client
+	if eventPb.Client != nil {
+		event.Client = Clients.Get(eventPb.Client.ID)
+	}
+
 	broker.publish <- event
 }
 
