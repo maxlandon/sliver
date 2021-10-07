@@ -55,7 +55,7 @@ type RPCResponse func([]byte, error)
 type RPCHandler func([]byte, RPCResponse)
 
 // TransportHandler - Handlers that need to interact directly with the transport
-type TransportHandler func([]byte, C2) error
+type TransportHandler func([]byte, c2) error
 
 type SpecialHandler func([]byte, *transports.Connection) error
 

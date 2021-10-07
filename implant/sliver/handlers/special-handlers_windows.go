@@ -40,10 +40,10 @@ var specialHandlers = map[uint32]TransportHandler{
 	sliverpb.MsgKillSessionReq: killHandler,
 }
 
-// C2 - A small interface allowing us to
-// close the C2 channel when killing the implant
-type C2 interface {
-	Stop() error
+// c2 - A small interface allowing us to control
+// the transports stack when killing the implant.
+type c2 interface {
+	Shutdown() error
 }
 
 // GetSpecialHandlers returns the specialHandlers map
@@ -61,9 +61,12 @@ func killHandler(data []byte, transport C2) error {
 		return err
 	}
 
-	// Cleanup connection
-	if transport != nil {
-		transport.Stop()
+	// Shutdown the complete transport stack
+	if transports != nil {
+		err = transports.Shutdown()
+		if err != nil {
+			print("Error shuting down transports: %s", err)
+		}
 	}
 
 	// {{if eq .Config.GOOS "windows"}}
@@ -83,8 +86,7 @@ func killHandler(data []byte, transport C2) error {
 	// {{else}}
 	// {{end}}
 	// {{end}}
-	// Cleanup connection
-	// connection.Cleanup()
+
 	// {{if .Config.Debug}}
 	println("Let's exit!")
 	// {{end}}

@@ -42,9 +42,10 @@ const (
 
 // SetupConnectionNamedPipe - Wraps a Named Pipe connection into a logical Connection stream.
 // The generic SetupConnectionStream is not used, due to Read and Write functions being slightly different.
-func SetupConnectionNamedPipe(conn net.Conn, userCleanup func()) (*transports.Connection, error) {
+func SetupConnectionNamedPipe(conn net.Conn) (*transports.Connection, error) {
 
 	connection := transports.NewConnection()
+	connection.cleanup = conn.Close
 
 	go func() {
 		defer connection.Cleanup()

