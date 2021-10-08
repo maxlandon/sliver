@@ -62,7 +62,7 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 	}
 	beacon.Name = beaconReg.Register.Name
 	beacon.Hostname = beaconReg.Register.Hostname
-	beacon.UUID = uuid.FromStringOrNil(beaconReg.Register.HostUUID)
+	beacon.HostUUID = uuid.FromStringOrNil(beaconReg.Register.HostUUID)
 	beacon.Username = beaconReg.Register.Username
 	beacon.UID = beaconReg.Register.Uid
 	beacon.GID = beaconReg.Register.Gid
@@ -78,6 +78,7 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 	beacon.ProxyURL = beaconReg.Register.ProxyURL
 	beacon.PollTimeout = beaconReg.Register.PollTimeout
 	// beacon.ConfigID = uuid.FromStringOrNil(beaconReg.Register.ConfigID)
+	beacon.WorkingDirectory = beaconReg.Register.WorkingDirectory
 
 	beacon.Interval = beaconReg.Interval
 	beacon.Jitter = beaconReg.Jitter
@@ -90,8 +91,9 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 
 	eventData, _ := proto.Marshal(beacon.ToProtobuf())
 	core.EventBroker.Publish(core.Event{
-		Type: clientpb.EventType_BeaconRegistered,
-		Data: eventData,
+		Type:   clientpb.EventType_BeaconRegistered,
+		Data:   eventData,
+		Beacon: beacon,
 	})
 
 	return nil

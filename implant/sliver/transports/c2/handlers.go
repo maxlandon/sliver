@@ -99,6 +99,7 @@ func addTransportHandler(envelope *sliverpb.Envelope, connection Connection) {
 		})
 		return
 	}
+	c2.Priority = int(req.Priority)
 
 	// Add to available c2
 	// TODO: change code for handling priority

@@ -22,6 +22,7 @@ import (
 	"errors"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
 )
 
@@ -48,6 +49,7 @@ type Event struct {
 	Err       error
 
 	Session *Session
+	Beacon  *models.Beacon
 	Job     *Job
 	Client  *Client
 }

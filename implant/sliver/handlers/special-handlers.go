@@ -56,9 +56,11 @@ func killHandler(data []byte, transports c2) error {
 	// Shutdown the complete transport stack
 	if transports != nil {
 		err = transports.Shutdown()
+		// {{if .Config.Debug}}
 		if err != nil {
-			print("Error shuting down transports: %s", err)
+			println("Error shuting down transports: %s", err.Error())
 		}
+		// {{end}}
 	}
 
 	// {{if .Config.Debug}}

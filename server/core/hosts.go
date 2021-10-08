@@ -42,6 +42,10 @@ func StartEventAutomation() {
 				if event.Session != nil {
 					hostsSessionCallback(event.Session)
 				}
+			case clientpb.EventType_BeaconRegistered:
+				if event.Beacon != nil {
+					hostsBeaconCallback(event.Beacon)
+				}
 			}
 
 		}
@@ -65,6 +69,31 @@ func hostsSessionCallback(session *Session) {
 			HostUUID:      uuid.FromStringOrNil(session.HostUUID),
 			Hostname:      session.Hostname,
 			OSVersion:     session.Os,
+			IOCs:          []models.IOC{},
+			ExtensionData: []models.ExtensionData{},
+		}).Error
+		if err != nil {
+			coreLog.Error(err)
+			return
+		}
+	}
+}
+
+func hostsBeaconCallback(beacon *models.Beacon) {
+	coreLog.Debugf("Hosts session callback for %v", beacon.HostUUID)
+	dbSession := db.Session()
+	host, err := db.HostByHostUUID(beacon.HostUUID.String())
+	coreLog.Debugf("Hosts query result: %v %v", host, err)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		coreLog.Error(err)
+		return
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		coreLog.Infof("Session %v is from a new host", beacon.ID)
+		err := dbSession.Create(&models.Host{
+			HostUUID:      uuid.FromStringOrNil(beacon.HostUUID.String()),
+			Hostname:      beacon.Hostname,
+			OSVersion:     beacon.OS,
 			IOCs:          []models.IOC{},
 			ExtensionData: []models.ExtensionData{},
 		}).Error

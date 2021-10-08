@@ -129,6 +129,7 @@ func (s *Session) ToProtobuf() *clientpb.Session {
 		ProxyURL:          s.ProxyURL,
 		PollTimeout:       s.PollTimeout,
 		Burned:            s.Burned,
+		WorkingDirectory:  s.WorkingDirectory,
 		// ConfigID:          s.ConfigID,
 		TransportID: s.TransportID,
 	}

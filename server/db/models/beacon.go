@@ -37,7 +37,7 @@ type Beacon struct {
 	ID                uuid.UUID `gorm:"type:uuid;"`
 	Name              string
 	Hostname          string
-	UUID              uuid.UUID `gorm:"type:uuid;"` // Host UUID
+	HostUUID          uuid.UUID `gorm:"type:uuid;"` // Host UUID
 	Username          string
 	UID               string
 	GID               string
@@ -74,7 +74,7 @@ func (b *Beacon) ToProtobuf() *clientpb.Beacon {
 		ID:            b.ID.String(),
 		Name:          b.Name,
 		Hostname:      b.Hostname,
-		UUID:          b.UUID.String(),
+		UUID:          b.HostUUID.String(),
 		Username:      b.Username,
 		UID:           b.UID,
 		GID:           b.GID,
