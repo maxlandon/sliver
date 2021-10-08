@@ -164,7 +164,7 @@ func BindCommands(cc *gonsole.Menu) {
 		"List session directory contents", "",
 		constants.FilesystemGroup,
 		[]string{""},
-		func() gonsole.Commander { return &filesystem.ListSessionDirectories{} })
+		func() gonsole.Commander { return &filesystem.ListDirectories{} })
 	ls.AddArgumentCompletionDynamic("Path", completion.CompleteRemotePathAndFiles)
 
 	rm := cc.AddCommand(constants.RmStr,

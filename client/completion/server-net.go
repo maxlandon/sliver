@@ -20,7 +20,7 @@ func ServerInterfaceAddrs() (comps []*readline.CompletionGroup) {
 	}
 	var suggestions []string
 
-	resp, err := transport.RPC.GetServerInterfaces(context.Background(), &sliverpb.IfconfigReq{})
+	resp, err := transport.RPC.CompleteServerInterfaces(context.Background(), &sliverpb.IfconfigReq{})
 	if err != nil {
 		return
 	}

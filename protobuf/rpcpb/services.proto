@@ -63,19 +63,12 @@ service SliverRPC {
     rpc SwitchTransport(clientpb.SwitchTransportReq) returns (clientpb.SwitchTransport);
     rpc GetTransports(clientpb.GetTransportsReq) returns (clientpb.GetTransports);
 
-    // *** Listeners ***
-    // rpc StartMTLSListener(clientpb.MTLSListenerReq) returns (clientpb.MTLSListener);
-    // rpc StartWGListener(clientpb.WGListenerReq) returns (clientpb.WGListener);
-    // rpc StartDNSListener(clientpb.DNSListenerReq) returns (clientpb.DNSListener);
-    // rpc StartHTTPSListener(clientpb.HTTPListenerReq) returns (clientpb.HTTPListener);
-    // rpc StartHTTPListener(clientpb.HTTPListenerReq) returns (clientpb.HTTPListener);
-    
-    // *** Stager Listener ***
-    rpc StartTCPStagerListener(clientpb.HandlerStagerReq) returns(clientpb.HandlerStager);
-    rpc StartHTTPStagerListener(clientpb.HandlerStagerReq) returns(clientpb.HandlerStager);
-    
-    // *** Server Adresses ***
-    rpc GetServerInterfaces(sliverpb.IfconfigReq) returns (sliverpb.Ifconfig);
+    // *** Completions ****  
+    rpc CompleteServerInterfaces(sliverpb.IfconfigReq) returns (sliverpb.Ifconfig);
+    rpc CompleteSessionPath(sliverpb.LsReq) returns (sliverpb.Ls);
+    rpc CompleteSessionProcesses(sliverpb.PsReq) returns (sliverpb.Ps);
+    rpc CompleteSessionInterfaces(sliverpb.IfconfigReq) returns (sliverpb.Ifconfig);
+    rpc CompleteSessionEnv(sliverpb.EnvReq) returns (sliverpb.EnvInfo);
 
     // *** Loot ***
     rpc LootAdd(clientpb.Loot) returns(clientpb.Loot);

@@ -32,6 +32,11 @@ func (rpc *Server) Ifconfig(ctx context.Context, req *sliverpb.IfconfigReq) (*sl
 	if err != nil {
 		return nil, err
 	}
+	// Update directory cache
+	hostUUID := getContextHost(req)
+	cache := Cache.GetSessionCache(hostUUID, rpc.GenericHandler)
+	go cache.RefreshInterfaces(resp)
+
 	return resp, nil
 }
 

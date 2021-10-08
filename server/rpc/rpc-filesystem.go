@@ -42,6 +42,11 @@ func (rpc *Server) Ls(ctx context.Context, req *sliverpb.LsReq) (*sliverpb.Ls, e
 	if err != nil {
 		return nil, err
 	}
+	// Update directory cache
+	hostUUID := getContextHost(req)
+	cache := Cache.GetSessionCache(hostUUID, rpc.GenericHandler)
+	go cache.AddDirectory(resp)
+
 	return resp, nil
 }
 
@@ -52,6 +57,11 @@ func (rpc *Server) Rm(ctx context.Context, req *sliverpb.RmReq) (*sliverpb.Rm, e
 	if err != nil {
 		return nil, err
 	}
+	// Update directory cache
+	hostUUID := getContextHost(req)
+	cache := Cache.GetSessionCache(hostUUID, rpc.GenericHandler)
+	go cache.RmDirectory(resp.Path)
+
 	return resp, nil
 }
 

@@ -19,15 +19,16 @@ package completion
 */
 
 import (
+	"context"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/maxlandon/readline"
 
 	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
@@ -112,18 +113,22 @@ func CompleteRemotePath(last string) (string, []*readline.CompletionGroup) {
 		lastPath = ""
 	}
 
+	// If the entire linePath is still empty, return the current working directory
+	if linePath == "" {
+		linePath = core.ActiveTarget.WorkingDirectory()
+	}
+
 	// 2) We take the absolute path we found, and get all dirs in it.
 	var dirs []string
 
-	// Get the session completions cache
-	id, _ := strconv.Atoi(core.ActiveTarget.ID())
-	sessCache := Cache.GetSessionCache(uint32(id))
-	if sessCache == nil {
+	// Get files either from the cache itself, or through it requesting the implant.
+	dirList, err := transport.RPC.CompleteSessionPath(context.Background(), &sliverpb.LsReq{
+		Request: core.ActiveTarget.Request(),
+		Path:    linePath,
+	})
+	if err != nil {
 		return lastPath, []*readline.CompletionGroup{completion}
 	}
-
-	// Get files either from the cache itself, or through it requesting the implant.
-	dirList := sessCache.GetDirectoryContents(linePath)
 	if dirList == nil {
 		return lastPath, []*readline.CompletionGroup{completion}
 	}
@@ -230,16 +235,17 @@ func CompleteRemotePathAndFiles(last string) (string, []*readline.CompletionGrou
 		lastPath = filepath.Base(rest)
 	}
 
-	// Get the session completions cache
-	id, _ := strconv.Atoi(core.ActiveTarget.ID())
-	sessCache := Cache.GetSessionCache(uint32(id))
-	if sessCache == nil {
-		return lastPath, []*readline.CompletionGroup{completion}
+	// If the entire linePath is still empty, return the current working directory
+	if linePath == "" {
+		linePath = core.ActiveTarget.WorkingDirectory()
 	}
 
 	// Get files either from the cache itself, or through it requesting the implant.
-	dirList := sessCache.GetDirectoryContents(linePath)
-	if dirList == nil {
+	dirList, err := transport.RPC.CompleteSessionPath(context.Background(), &sliverpb.LsReq{
+		Request: core.ActiveTarget.Request(),
+		Path:    linePath,
+	})
+	if err != nil {
 		return lastPath, []*readline.CompletionGroup{completion}
 	}
 	if dirList == nil {

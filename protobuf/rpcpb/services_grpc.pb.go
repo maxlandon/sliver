@@ -63,11 +63,12 @@ type SliverRPCClient interface {
 	DeleteTransport(ctx context.Context, in *clientpb.DeleteTransportReq, opts ...grpc.CallOption) (*clientpb.DeleteTransport, error)
 	SwitchTransport(ctx context.Context, in *clientpb.SwitchTransportReq, opts ...grpc.CallOption) (*clientpb.SwitchTransport, error)
 	GetTransports(ctx context.Context, in *clientpb.GetTransportsReq, opts ...grpc.CallOption) (*clientpb.GetTransports, error)
-	// *** Stager Listener ***
-	StartTCPStagerListener(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error)
-	StartHTTPStagerListener(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error)
-	// *** Server Adresses ***
-	GetServerInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error)
+	// *** Completions ****
+	CompleteServerInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error)
+	CompleteSessionPath(ctx context.Context, in *sliverpb.LsReq, opts ...grpc.CallOption) (*sliverpb.Ls, error)
+	CompleteSessionProcesses(ctx context.Context, in *sliverpb.PsReq, opts ...grpc.CallOption) (*sliverpb.Ps, error)
+	CompleteSessionInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error)
+	CompleteSessionEnv(ctx context.Context, in *sliverpb.EnvReq, opts ...grpc.CallOption) (*sliverpb.EnvInfo, error)
 	// *** Loot ***
 	LootAdd(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*clientpb.Loot, error)
 	LootRm(ctx context.Context, in *clientpb.Loot, opts ...grpc.CallOption) (*commonpb.Empty, error)
@@ -448,27 +449,45 @@ func (c *sliverRPCClient) GetTransports(ctx context.Context, in *clientpb.GetTra
 	return out, nil
 }
 
-func (c *sliverRPCClient) StartTCPStagerListener(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error) {
-	out := new(clientpb.HandlerStager)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartTCPStagerListener", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sliverRPCClient) StartHTTPStagerListener(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error) {
-	out := new(clientpb.HandlerStager)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/StartHTTPStagerListener", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sliverRPCClient) GetServerInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error) {
+func (c *sliverRPCClient) CompleteServerInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error) {
 	out := new(sliverpb.Ifconfig)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetServerInterfaces", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/CompleteServerInterfaces", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) CompleteSessionPath(ctx context.Context, in *sliverpb.LsReq, opts ...grpc.CallOption) (*sliverpb.Ls, error) {
+	out := new(sliverpb.Ls)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/CompleteSessionPath", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) CompleteSessionProcesses(ctx context.Context, in *sliverpb.PsReq, opts ...grpc.CallOption) (*sliverpb.Ps, error) {
+	out := new(sliverpb.Ps)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/CompleteSessionProcesses", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) CompleteSessionInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error) {
+	out := new(sliverpb.Ifconfig)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/CompleteSessionInterfaces", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) CompleteSessionEnv(ctx context.Context, in *sliverpb.EnvReq, opts ...grpc.CallOption) (*sliverpb.EnvInfo, error) {
+	out := new(sliverpb.EnvInfo)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/CompleteSessionEnv", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1376,11 +1395,12 @@ type SliverRPCServer interface {
 	DeleteTransport(context.Context, *clientpb.DeleteTransportReq) (*clientpb.DeleteTransport, error)
 	SwitchTransport(context.Context, *clientpb.SwitchTransportReq) (*clientpb.SwitchTransport, error)
 	GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error)
-	// *** Stager Listener ***
-	StartTCPStagerListener(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error)
-	StartHTTPStagerListener(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error)
-	// *** Server Adresses ***
-	GetServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error)
+	// *** Completions ****
+	CompleteServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error)
+	CompleteSessionPath(context.Context, *sliverpb.LsReq) (*sliverpb.Ls, error)
+	CompleteSessionProcesses(context.Context, *sliverpb.PsReq) (*sliverpb.Ps, error)
+	CompleteSessionInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error)
+	CompleteSessionEnv(context.Context, *sliverpb.EnvReq) (*sliverpb.EnvInfo, error)
 	// *** Loot ***
 	LootAdd(context.Context, *clientpb.Loot) (*clientpb.Loot, error)
 	LootRm(context.Context, *clientpb.Loot) (*commonpb.Empty, error)
@@ -1578,14 +1598,20 @@ func (UnimplementedSliverRPCServer) SwitchTransport(context.Context, *clientpb.S
 func (UnimplementedSliverRPCServer) GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransports not implemented")
 }
-func (UnimplementedSliverRPCServer) StartTCPStagerListener(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartTCPStagerListener not implemented")
+func (UnimplementedSliverRPCServer) CompleteServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CompleteServerInterfaces not implemented")
 }
-func (UnimplementedSliverRPCServer) StartHTTPStagerListener(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartHTTPStagerListener not implemented")
+func (UnimplementedSliverRPCServer) CompleteSessionPath(context.Context, *sliverpb.LsReq) (*sliverpb.Ls, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CompleteSessionPath not implemented")
 }
-func (UnimplementedSliverRPCServer) GetServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetServerInterfaces not implemented")
+func (UnimplementedSliverRPCServer) CompleteSessionProcesses(context.Context, *sliverpb.PsReq) (*sliverpb.Ps, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CompleteSessionProcesses not implemented")
+}
+func (UnimplementedSliverRPCServer) CompleteSessionInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CompleteSessionInterfaces not implemented")
+}
+func (UnimplementedSliverRPCServer) CompleteSessionEnv(context.Context, *sliverpb.EnvReq) (*sliverpb.EnvInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CompleteSessionEnv not implemented")
 }
 func (UnimplementedSliverRPCServer) LootAdd(context.Context, *clientpb.Loot) (*clientpb.Loot, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LootAdd not implemented")
@@ -2410,56 +2436,92 @@ func _SliverRPC_GetTransports_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SliverRPC_StartTCPStagerListener_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.HandlerStagerReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SliverRPCServer).StartTCPStagerListener(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/StartTCPStagerListener",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).StartTCPStagerListener(ctx, req.(*clientpb.HandlerStagerReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SliverRPC_StartHTTPStagerListener_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.HandlerStagerReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SliverRPCServer).StartHTTPStagerListener(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/StartHTTPStagerListener",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).StartHTTPStagerListener(ctx, req.(*clientpb.HandlerStagerReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SliverRPC_GetServerInterfaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SliverRPC_CompleteServerInterfaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(sliverpb.IfconfigReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SliverRPCServer).GetServerInterfaces(ctx, in)
+		return srv.(SliverRPCServer).CompleteServerInterfaces(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/GetServerInterfaces",
+		FullMethod: "/rpcpb.SliverRPC/CompleteServerInterfaces",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).GetServerInterfaces(ctx, req.(*sliverpb.IfconfigReq))
+		return srv.(SliverRPCServer).CompleteServerInterfaces(ctx, req.(*sliverpb.IfconfigReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_CompleteSessionPath_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.LsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).CompleteSessionPath(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/CompleteSessionPath",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).CompleteSessionPath(ctx, req.(*sliverpb.LsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_CompleteSessionProcesses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.PsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).CompleteSessionProcesses(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/CompleteSessionProcesses",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).CompleteSessionProcesses(ctx, req.(*sliverpb.PsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_CompleteSessionInterfaces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.IfconfigReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).CompleteSessionInterfaces(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/CompleteSessionInterfaces",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).CompleteSessionInterfaces(ctx, req.(*sliverpb.IfconfigReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_CompleteSessionEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.EnvReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).CompleteSessionEnv(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/CompleteSessionEnv",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).CompleteSessionEnv(ctx, req.(*sliverpb.EnvReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4223,16 +4285,24 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SliverRPC_GetTransports_Handler,
 		},
 		{
-			MethodName: "StartTCPStagerListener",
-			Handler:    _SliverRPC_StartTCPStagerListener_Handler,
+			MethodName: "CompleteServerInterfaces",
+			Handler:    _SliverRPC_CompleteServerInterfaces_Handler,
 		},
 		{
-			MethodName: "StartHTTPStagerListener",
-			Handler:    _SliverRPC_StartHTTPStagerListener_Handler,
+			MethodName: "CompleteSessionPath",
+			Handler:    _SliverRPC_CompleteSessionPath_Handler,
 		},
 		{
-			MethodName: "GetServerInterfaces",
-			Handler:    _SliverRPC_GetServerInterfaces_Handler,
+			MethodName: "CompleteSessionProcesses",
+			Handler:    _SliverRPC_CompleteSessionProcesses_Handler,
+		},
+		{
+			MethodName: "CompleteSessionInterfaces",
+			Handler:    _SliverRPC_CompleteSessionInterfaces_Handler,
+		},
+		{
+			MethodName: "CompleteSessionEnv",
+			Handler:    _SliverRPC_CompleteSessionEnv_Handler,
 		},
 		{
 			MethodName: "LootAdd",

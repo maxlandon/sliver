@@ -19,9 +19,12 @@ package completion
 */
 
 import (
+	"context"
 	"sort"
 
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/transport"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/maxlandon/readline"
 )
 
@@ -43,17 +46,15 @@ func CompleteSliverEnv() (completions []*readline.CompletionGroup) {
 		grp.PathSeparator = '/'
 	}
 
-	var clientEnv = map[string]string{}
-	sessCache := Cache.GetSessionCache(core.ActiveTarget.Session().ID)
-	if sessCache == nil {
-		return nil
-	}
-
-	envInfo := sessCache.GetEnvironmentVariables()
-	if envInfo == nil {
+	envInfo, err := transport.RPC.CompleteSessionEnv(context.Background(), &sliverpb.EnvReq{
+		Name:    "",
+		Request: core.ActiveTarget.Request(),
+	})
+	if err != nil || envInfo == nil {
 		return
 	}
 
+	var clientEnv = map[string]string{}
 	for _, pair := range envInfo.Variables {
 		clientEnv[pair.Key] = pair.Value
 	}

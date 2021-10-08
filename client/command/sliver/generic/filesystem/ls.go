@@ -24,49 +24,82 @@ import (
 	"path/filepath"
 
 	"github.com/maxlandon/readline"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// ListSessionDirectories - List directory contents
-type ListSessionDirectories struct {
+// ListDirectories - List directory contents
+type ListDirectories struct {
 	Positional struct {
 		Path []string `description:"session directory/file"`
 	} `positional-args:"yes"`
 }
 
-// Execute - Command
-func (ls *ListSessionDirectories) Execute(args []string) error {
+// Execute - List directory contents
+func (ls *ListDirectories) Execute(args []string) (err error) {
+	_, beacon := core.ActiveTarget.Targets()
 
 	if len(ls.Positional.Path) == 0 {
 		ls.Positional.Path = []string{"."}
 	}
 
-	// Other paths/files
 	for _, path := range ls.Positional.Path {
+		// Formatting
 		if (path == "~" || path == "~/") && core.ActiveTarget.OS() == "linux" {
 			path = filepath.Join("/home", core.ActiveTarget.Username())
 		}
+		// Make request
 		resp, err := transport.RPC.Ls(context.Background(), &sliverpb.LsReq{
 			Path:    path,
 			Request: core.ActiveTarget.Request(),
 		})
-		if err != nil {
-			err := log.Errorf("%s", err)
-			fmt.Printf(err.Error())
-		} else {
-			printDirList(resp)
-		}
-	}
 
+		if err != nil {
+			log.PrintErrorf(err.Error())
+			continue
+		}
+
+		// Beacon
+		if beacon != nil {
+			ls.executeAsync(resp)
+			continue
+		}
+
+		// Session
+		ls.executeSync(resp)
+	}
+	return
+}
+
+// ListDirectories - List directory contents (asynchronous/beacon)
+func (ls *ListDirectories) executeAsync(resp *sliverpb.Ls) (err error) {
+
+	if resp.Response != nil && resp.Response.Async {
+		core.AddBeaconCallback(resp.Response.TaskID, func(task *clientpb.BeaconTask) {
+			err := proto.Unmarshal(task.Response, resp)
+			if err != nil {
+				log.ErrorfAsync("Failed to decode response: %s", err)
+				return
+			}
+			log.PrintfAsync(printDirList(resp))
+		})
+	}
 	return nil
 }
 
-func printDirList(dirList *sliverpb.Ls) {
+// ListDirectories - List directory contents (synchronous/session)
+func (ls *ListDirectories) executeSync(resp *sliverpb.Ls) (err error) {
+	fmt.Printf(printDirList(resp))
+	return
+}
+
+func printDirList(dirList *sliverpb.Ls) string {
 	title := fmt.Sprintf("%s%s%s%s", readline.BOLD, readline.BLUE, dirList.Path, readline.RESET)
 
 	table := util.NewTable(title)
@@ -83,6 +116,5 @@ func printDirList(dirList *sliverpb.Ls) {
 		}
 		table.AppendRow(row)
 	}
-	table.Output()
-	fmt.Println()
+	return table.Output()
 }

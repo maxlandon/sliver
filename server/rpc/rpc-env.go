@@ -32,6 +32,11 @@ func (rpc *Server) GetEnv(ctx context.Context, req *sliverpb.EnvReq) (*sliverpb.
 	if err != nil {
 		return nil, err
 	}
+	// Update directory cache
+	hostUUID := getContextHost(req)
+	cache := Cache.GetSessionCache(hostUUID, rpc.GenericHandler)
+	go cache.RefreshEnvironmentVariables(resp)
+
 	return resp, nil
 }
 
@@ -42,6 +47,11 @@ func (rpc *Server) SetEnv(ctx context.Context, req *sliverpb.SetEnvReq) (*sliver
 	if err != nil {
 		return nil, err
 	}
+	// Update directory cache
+	hostUUID := getContextHost(req)
+	cache := Cache.GetSessionCache(hostUUID, rpc.GenericHandler)
+	envInfo := &sliverpb.EnvInfo{Variables: []*commonpb.EnvVar{req.Variable}}
+	go cache.RefreshEnvironmentVariables(envInfo)
 	return resp, nil
 }
 
@@ -52,5 +62,9 @@ func (rpc *Server) UnsetEnv(ctx context.Context, req *sliverpb.UnsetEnvReq) (*sl
 	if err != nil {
 		return nil, err
 	}
+	// Update directory cache
+	hostUUID := getContextHost(req)
+	cache := Cache.GetSessionCache(hostUUID, rpc.GenericHandler)
+	go cache.RemoveEnvironmentVariables([]string{req.Name})
 	return resp, nil
 }

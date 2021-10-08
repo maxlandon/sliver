@@ -19,12 +19,15 @@ package completion
 */
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
 	"github.com/maxlandon/readline"
 
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/transport"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // SessionProcesses - Gives a list of remote Session processes, along with their description.
@@ -36,21 +39,11 @@ func SessionProcesses() (comps []*readline.CompletionGroup) {
 		MaxLength:    20,
 	}
 
-	session := core.ActiveTarget.Session()
-	if session == nil {
-		return
-	}
-
-	// Get the session completions cache
-	id, _ := strconv.Atoi(core.ActiveTarget.ID())
-	sessCache := Cache.GetSessionCache(uint32(id))
-	if sessCache == nil {
-		return
-	}
-
 	// And get the processes
-	ps := sessCache.GetProcesses()
-	if ps == nil {
+	ps, err := transport.RPC.CompleteSessionProcesses(context.Background(), &sliverpb.PsReq{
+		Request: core.ActiveTarget.Request(),
+	})
+	if ps == nil || err != nil {
 		return
 	}
 
@@ -58,7 +51,7 @@ func SessionProcesses() (comps []*readline.CompletionGroup) {
 		pid := strconv.Itoa(int(proc.Pid))
 		comp.Suggestions = append(comp.Suggestions, pid)
 		var color string
-		if session != nil && proc.Pid == session.PID {
+		if proc.Pid == core.ActiveTarget.PID() {
 			color = readline.GREEN
 		}
 		desc := fmt.Sprintf("%s(%d - %s)  %s", color, proc.Ppid, proc.Owner, proc.Executable)
@@ -77,28 +70,18 @@ func SessionProcessNames() (comps []*readline.CompletionGroup) {
 		MaxLength:    20,
 	}
 
-	session := core.ActiveTarget.Session()
-	if session == nil {
-		return
-	}
-
-	// Get the session completions cache
-	id, _ := strconv.Atoi(core.ActiveTarget.ID())
-	sessCache := Cache.GetSessionCache(uint32(id))
-	if sessCache == nil {
-		return
-	}
-
 	// And get the processes
-	ps := sessCache.GetProcesses()
-	if ps == nil {
+	ps, err := transport.RPC.CompleteSessionProcesses(context.Background(), &sliverpb.PsReq{
+		Request: core.ActiveTarget.Request(),
+	})
+	if ps == nil || err != nil {
 		return
 	}
 
 	for _, proc := range ps.Processes {
 		comp.Suggestions = append(comp.Suggestions, proc.Executable)
 		var color string
-		if session != nil && proc.Pid == session.PID {
+		if proc.Pid == core.ActiveTarget.PID() {
 			color = readline.GREEN
 		}
 		desc := fmt.Sprintf("%s%d  (%d - %s)  ", color, proc.Pid, proc.Ppid, proc.Owner)

@@ -19,6 +19,7 @@ package completion
 */
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"strconv"
@@ -27,7 +28,10 @@ import (
 	"github.com/maxlandon/readline"
 
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // SessionIfacePublicNetworks - Get all non-loopback addresses for a session host.
@@ -39,13 +43,13 @@ func SessionIfacePublicNetworks(last string, sess *clientpb.Session, alone bool)
 	}
 	var suggestions []string
 
-	// Get the session completions cache
-	sessCache := Cache.GetSessionCache(sess.ID)
-	if sessCache == nil {
+	// Get interfaces
+	ifconfig, err := transport.RPC.CompleteSessionInterfaces(context.Background(), &sliverpb.IfconfigReq{
+		Request: core.ActiveTarget.Request(),
+	})
+	if err != nil {
 		return
 	}
-
-	ifconfig := sessCache.GetNetInterfaces()
 	if ifconfig == nil {
 		return
 	}
@@ -92,7 +96,7 @@ func SessionIfacePublicNetworks(last string, sess *clientpb.Session, alone bool)
 // ActiveSessionIfaceAddrs - Get all available addresses (including loopback) for an implant host
 func ActiveSessionIfaceAddrs() (comps []*readline.CompletionGroup) {
 	// Important, we never know from which menu we are called.
-	if core.ActiveTarget.Session == nil {
+	if core.ActiveTarget.Session() == nil {
 		return
 	}
 	_, comps = sessionIfaceAddrs("", core.ActiveTarget.Session())
@@ -112,13 +116,13 @@ func sessionIfaceAddrs(last string, sess *clientpb.Session) (prefix string, comp
 	}
 	var suggestions []string
 
-	// Get the session completions cache
-	sessCache := Cache.GetSessionCache(sess.ID)
-	if sessCache == nil {
+	// Get interfaces
+	ifconfig, err := transport.RPC.CompleteSessionInterfaces(context.Background(), &sliverpb.IfconfigReq{
+		Request: core.ActiveTarget.Request(),
+	})
+	if err != nil {
 		return
 	}
-
-	ifconfig := sessCache.GetNetInterfaces()
 	if ifconfig == nil {
 		return
 	}
@@ -190,4 +194,18 @@ func isLoopback(ip string) bool {
 		return true
 	}
 	return false
+}
+
+// getAllSessions - Get a map of all sessions
+func getAllSessions() (sessionsMap map[uint32]*clientpb.Session) {
+	sessions, err := transport.RPC.GetSessions(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		return
+	}
+	sessionsMap = map[uint32]*clientpb.Session{}
+	for _, session := range sessions.GetSessions() {
+		sessionsMap[session.ID] = session
+	}
+
+	return
 }
