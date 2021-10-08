@@ -19,9 +19,9 @@ package util
 */
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"sort"
 
 	"github.com/acarl005/stripansi"
@@ -35,6 +35,7 @@ type Table struct {
 	*tablewriter.Table
 	maxColumnWidth int
 	title          string
+	buffer         *bytes.Buffer
 
 	// Callback are used to match certain values and output them with colors.
 	headers   []string
@@ -44,12 +45,16 @@ type Table struct {
 // NewTable - Constructor method with default behavior
 func NewTable(title string) *Table {
 	t := &Table{
-		tablewriter.NewWriter(os.Stdout), // New table writer
-		0,                                // Max column width
-		title,                            // Table title
-		[]string{},                       // Empty table
+		nil,               // No table for now
+		0,                 // Max column width
+		title,             // Table title
+		new(bytes.Buffer), // Stores the output
+		[]string{},        // Empty table
 		map[string]func(string) tablewriter.Colors{}, // Callbacks
 	}
+
+	// Set the table with a buffer so that we display when we want
+	t.Table = tablewriter.NewWriter(t.buffer)
 
 	// Appearance
 	t.Table.SetCenterSeparator(fmt.Sprintf("%s|%s", tui.FOREBLACK, tui.RESET))
@@ -214,15 +219,13 @@ func (t *Table) AppendRow(items []string) error {
 }
 
 // Output - Render the table, and its title if non-nil
-func (t *Table) Output() {
+func (t *Table) Output() string {
 	if len(stripansi.Strip(t.title)) > 0 {
-		fmt.Println(" " + t.title)
+		t.buffer.Read([]byte(fmt.Sprintf(" " + t.title)))
 	}
-	// if t.title != "" {
-	//         fmt.Println(" " + t.title)
-	//         // fmt.Println(" " + t.title + "\n")
-	// }
-	t.Table.Render()
+
+	t.Table.Render()         // This populates the embedded table buffer
+	return t.buffer.String() // And we return its content
 }
 
 // SortMapInt - Sort a map with int keys

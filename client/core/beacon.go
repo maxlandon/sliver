@@ -55,7 +55,7 @@ func TriggerBeaconTaskCallback(data []byte) {
 		return
 	}
 
-	log.InfofAsync("Task completed: %s %s[%s]%s", task.ID, readline.DIM, ShortID(task.BeaconID))
+	log.SuccessfAsync("Task completed: %s %s[%s]%s", ShortID(task.ID), readline.DIM, ShortID(task.BeaconID), readline.RESET)
 
 	// If the callback is not in our map then we don't do anything, the beacon task
 	// was either issued by another operator in multiplayer mode or the client process
@@ -79,6 +79,7 @@ func TriggerBeaconTaskCallback(data []byte) {
 	}
 }
 
+// AddBeaconCallback - Map the command sent for identifying the response and displaying it.
 func AddBeaconCallback(taskID string, callback BeaconTaskCallback) {
 	log.Infof("Tasked beacon (%s)", taskID)
 	beacons.TaskCallbacksMutex.Lock()

@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/bishopfox/sliver/client/command/c2"
-	"github.com/bishopfox/sliver/client/completion"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	clientLog "github.com/bishopfox/sliver/client/log"
@@ -170,9 +169,6 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 	case clientpb.EventType_SessionOpened:
 		log = log.WithField("important", true) // Add empty lines around the news
 
-		// Create a new session data cache for completions
-		completion.Cache.AddSessionCache(session)
-
 		// Clear the screen
 		fmt.Print(seqClearScreenBelow)
 
@@ -217,9 +213,6 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 			session.Hostname, session.OS, session.Arch)
 		log.Warnf(lost)
 
-		// In any case, delete the completion data cache for the session, if any.
-		completion.Cache.RemoveSessionData(session)
-
 		if prelude.SessionMapper != nil {
 			err := prelude.SessionMapper.RemoveSession(session)
 			if err != nil {
@@ -248,7 +241,7 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 		proto.Unmarshal(event.Data, beacon)
 		currentTime := time.Now().Format(time.RFC1123)
 
-		news := fmt.Sprintf("Beacon #%s %s - %s (%s) - %s/%s - %v\n\n",
+		news := fmt.Sprintf("Beacon #%s %s - %s (%s) - %s/%s - %v",
 			c2.GetShortID(beacon.ID), beacon.Name, beacon.RemoteAddress,
 			beacon.Hostname, beacon.OS, beacon.Arch, currentTime)
 		log.Infof(news)

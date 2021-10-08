@@ -117,32 +117,38 @@ func SpinUntil(message string, ctrl chan bool) {
 
 // PrintfAsync - Print a generic message
 func PrintfAsync(format string, args ...interface{}) (n int, err error) {
-	return fmt.Printf(format, args...)
+	console.RefreshPromptLog(fmt.Sprintf(format+"\n", args...))
+	return
 }
 
 // DebugfAsync - Notify a debug message.
 func DebugfAsync(format string, args ...interface{}) (n int, err error) {
-	return fmt.Printf(debug+format, args...)
+	console.RefreshPromptLog(fmt.Sprintf(debug+format+"\n", args...))
+	return
 }
 
 // InfofAsync - Notify an info message.
 func InfofAsync(format string, args ...interface{}) (n int, err error) {
-	return fmt.Printf(info+format+"\n", args...)
+	console.RefreshPromptLog(fmt.Sprintf(info+format+"\n", args...))
+	return
 }
 
 // WarnfAsync - Notify a warning message.
 func WarnfAsync(format string, args ...interface{}) (n int, err error) {
-	return fmt.Printf(warn+format+"\n", args...)
+	console.RefreshPromptLog(fmt.Sprintf(warn+format+"\n", args...))
+	return
 }
 
 // ErrorfAsync - Notify an error message without returning the error itself.
 func ErrorfAsync(format string, args ...interface{}) (n int, err error) {
-	return fmt.Printf(errror+format+"\n", args...)
+	console.RefreshPromptLog(fmt.Sprintf(errror+format+"\n", args...))
+	return
 }
 
 // SuccessfAsync - Notify sucess message.
 func SuccessfAsync(format string, args ...interface{}) (n int, err error) {
-	return fmt.Printf(success+format, args...)
+	console.RefreshPromptLog(fmt.Sprintf(success+format+"\n", args...))
+	return
 }
 
 // Additional Message Types ------------------------------------------------
