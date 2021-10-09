@@ -25,7 +25,6 @@ import (
 
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/gofrs/uuid"
 )
 
 var (
@@ -65,7 +64,7 @@ func (g *GenerateBeacon) Execute(args []string) (err error) {
 	// the server and it might be an additional
 	// session transport included in the build.
 	for _, transport := range config.C2S {
-		if transport.ID == uuid.Nil.String() {
+		if transport.ID == "" {
 			transport.Type = sliverpb.C2Type_Beacon
 		}
 	}

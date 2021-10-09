@@ -63,8 +63,7 @@ func StartWireGuardDevInterface(profile *models.C2Profile, job *core.Job) (tNet 
 		1420,
 	)
 	if err != nil {
-		wgLog.Errorf("CreateNetTUN failed: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("CreateNetTUN failed: %v", err)
 	}
 
 	// Get existing server wg keys. TODO: change if profile specifies certain keys
@@ -107,8 +106,7 @@ func StartWireGuardDevInterface(profile *models.C2Profile, job *core.Job) (tNet 
 	// Start the device interface
 	err = dev.Up()
 	if err != nil {
-		wgLog.Errorf("Could not set up the device: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("Could not set up the device: %v", err)
 	}
 
 	// Register the cleanup function for closing the device interface
@@ -167,8 +165,7 @@ func ListenWireGuard(profile *models.C2Profile, job *core.Job, tNet *netstack.Ne
 	// Start listening for key exchange requests
 	keyExchangeListener, err := tNet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(profile.KeyExchangePort)})
 	if err != nil {
-		wgLog.Errorf("Failed to setup up wg key exchange listener: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to setup up key exchange listener: %v", err)
 	}
 	wgLog.Printf("Successfully setup up wg key exchange listener")
 	go serveKeyExchangeListener(keyExchangeListener)
@@ -184,8 +181,7 @@ func ListenWireGuard(profile *models.C2Profile, job *core.Job, tNet *netstack.Ne
 	// Start a listener waiting for session connections requests and return it
 	ln, err = tNet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(profile.ControlPort)})
 	if err != nil {
-		wgLog.Errorf("Failed to setup up wg sliver listener: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to start TCP listener: %v", err)
 	}
 
 	wgLog.Printf("Successfully setup up wg sliver listener")
