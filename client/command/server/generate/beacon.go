@@ -58,7 +58,6 @@ func (g *GenerateBeacon) Execute(args []string) (err error) {
 		return log.Errorf("An unknown error happened when parsing Stage options: no configuration returned")
 	}
 
-	config.IsBeacon = true
 	err = g.parseBeaconFlags(config)
 	if err != nil {
 		return log.Error(err)
@@ -72,14 +71,5 @@ func (g *GenerateBeacon) Execute(args []string) (err error) {
 }
 
 func (g *GenerateBeacon) parseBeaconFlags(config *clientpb.ImplantConfig) error {
-	interval := time.Duration(g.BeaconOptions.Days) * time.Hour * 24
-	interval += time.Duration(g.BeaconOptions.Hours) * time.Hour
-	interval += time.Duration(g.BeaconOptions.Minutes) * time.Minute
-	interval += time.Duration(g.BeaconOptions.Seconds) * time.Second
-	if interval < minBeaconInterval {
-		return ErrBeaconIntervalTooShort
-	}
-	config.BeaconInterval = int64(interval)
-	config.BeaconJitter = int64(time.Duration(g.BeaconOptions.Jitter) * time.Second)
 	return nil
 }

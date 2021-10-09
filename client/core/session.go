@@ -198,28 +198,17 @@ func RequestTimeout(timeOut int) *commonpb.Request {
 }
 
 func GetActiveSessionConfig() *clientpb.ImplantConfig {
-	// session := ActiveTarget.Session
-	// if session == nil {
-	//         return nil
-	// }
-	c2s := []*clientpb.ImplantC2{}
-	c2s = append(c2s, &clientpb.ImplantC2{
-		URL:      ActiveTarget.ActiveC2(),
-		Priority: uint32(0),
-	})
 	config := &clientpb.ImplantConfig{
-		Name:    ActiveTarget.Name(),
-		GOOS:    ActiveTarget.OS(),
-		GOARCH:  ActiveTarget.Arch(),
-		Debug:   true,
-		Evasion: ActiveTarget.Evasion(),
-
-		MaxConnectionErrors: uint32(1000),
-		ReconnectInterval:   int64(60),
-
+		// Core
+		Name: ActiveTarget.Name(),
+		// Build
+		GOOS:        ActiveTarget.OS(),
+		GOARCH:      ActiveTarget.Arch(),
 		Format:      clientpb.OutputFormat_SHELLCODE,
 		IsSharedLib: true,
-		C2:          c2s,
+		// Standard
+		Debug:   true,
+		Evasion: ActiveTarget.Evasion(),
 	}
 	return config
 }

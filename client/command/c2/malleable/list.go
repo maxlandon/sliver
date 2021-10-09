@@ -123,7 +123,7 @@ func printProfilesWithTitle(title string, profiles []*sliverpb.C2Profile) {
 		var jitInt string
 		if p.Type == sliverpb.C2Type_Beacon {
 			jitInt = fmt.Sprintf("%-3s / %3s", time.Duration(p.Jitter), time.Duration(p.Interval))
-			timeouts = fmt.Sprintf("%d / %ss", p.MaxConnectionErrors, time.Duration(p.Interval))
+			timeouts = fmt.Sprintf("%d / %s", p.MaxConnectionErrors, time.Duration(p.Interval))
 		} else {
 			timeouts = fmt.Sprintf("%-4d / %4s", p.MaxConnectionErrors, time.Duration(p.Interval))
 		}

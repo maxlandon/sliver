@@ -23,8 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -36,14 +34,11 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/maxlandon/readline"
 
-	"github.com/bishopfox/sliver/client/command/c2"
-	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 var (
@@ -210,298 +205,6 @@ func getTargets(targetOS string, targetArch string) (string, string) {
 	return targetOS, targetArch
 }
 
-func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) {
-
-	// Targets parsing in C2 Profiles ----------------------------------------------------------------
-	if len(g.TransportOptions.MTLS) > 0 {
-		for _, address := range g.TransportOptions.MTLS {
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_MTLS,      // A Channel using Mutual TLS
-				address,                      // Targeting the host:[port] argument of our command
-				sliverpb.C2Direction_Reverse, // A listener
-				c2.ProfileOptions{},          // This will automatically parse Profile options into the protobuf
-			)
-			cfg.C2S = append(cfg.C2S, profile)
-		}
-	}
-
-	if len(g.TransportOptions.WireGuard) > 0 {
-		for range g.TransportOptions.WireGuard {
-			// for _, address := range g.TransportOptions.WireGuard {
-
-			// Generate a new unique Tunnel IP per address for each string in WireGuard transports
-			var tunIP net.IP
-			if wg := g.TransportOptions.WireGuard; len(wg) > 0 {
-				uniqueWGIP, err := transport.RPC.GenerateUniqueIP(context.Background(), &commonpb.Empty{})
-				tunIP = net.ParseIP(uniqueWGIP.IP)
-				if err != nil {
-					return fmt.Errorf("Failed to generate unique ip for wg peer tun interface")
-				}
-				log.Infof("Generated unique IP for WireGuard peer tun interface: %s", readline.Yellow(tunIP.String()))
-			}
-
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_WG,
-				tunIP.String(),
-				sliverpb.C2Direction_Reverse,
-				c2.ProfileOptions{},
-			)
-
-			// Additional Wireguard options
-			if profile.Port == 0 { // Not specified sometimes, and no Wireguard options in this command to know it...
-				profile.Port = 53
-			}
-			profile.ControlPort = uint32(g.TransportOptions.TCPComms)
-			profile.KeyExchangePort = uint32(g.TransportOptions.KeyExchange)
-			cfg.C2S = append(cfg.C2S, profile)
-		}
-	}
-
-	if len(g.TransportOptions.DNS) > 0 {
-		for _, address := range g.TransportOptions.DNS {
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_DNS,
-				address,
-				sliverpb.C2Direction_Reverse,
-				c2.ProfileOptions{},
-			)
-			cfg.C2S = append(cfg.C2S, profile)
-		}
-	}
-
-	if len(g.TransportOptions.HTTP) > 0 {
-		for _, address := range g.TransportOptions.HTTP {
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_HTTP,
-				address,
-				sliverpb.C2Direction_Reverse,
-				c2.ProfileOptions{},
-			)
-			cfg.C2S = append(cfg.C2S, profile)
-		}
-
-	}
-
-	if len(g.TransportOptions.NamedPipe) > 0 {
-		for _, address := range g.TransportOptions.NamedPipe {
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_NamedPipe, // A Channel using Wireguard
-				address,                      // Targeting the host:[port] argument of our command
-				sliverpb.C2Direction_Reverse, // A listener
-				c2.ProfileOptions{},          // This will automatically parse Profile options into the protobuf
-			)
-			cfg.C2S = append(cfg.C2S, profile)
-		}
-	}
-
-	if len(g.TransportOptions.TCP) > 0 {
-		for _, address := range g.TransportOptions.TCP {
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_TCP,       // A Channel using Mutual TLS
-				address,                      // Targeting the host:[port] argument of our command
-				sliverpb.C2Direction_Reverse, // A listener
-				c2.ProfileOptions{},          // This will automatically parse Profile options into the protobuf
-			)
-			cfg.C2S = append(cfg.C2S, profile)
-		}
-	}
-
-	// Base Options -----------------------------------------------------------------------------------
-
-	// If connection settings have been specified, apply them to all profiles indiscriminatly.
-	for _, profile := range cfg.C2S {
-		profile.MaxConnectionErrors = int32(g.TransportOptions.MaxErrors)
-		profile.PollTimeout = int64(g.TransportOptions.PollTimeout) * int64(time.Second)
-		profile.Interval = int64(g.TransportOptions.Reconnect) * int64(time.Second)
-
-		// All profiles are fallback by default
-		profile.IsFallback = true
-		// And they might be forbidden to use SSH multiplexing
-		profile.CommDisabled = g.TransportOptions.DisableComm
-	}
-
-	// Malleable C2 Profiles ---------------------------------------------------------------------------
-
-	// If no C2 strings specified and C2 profiles IDs given, return
-	if len(cfg.C2S) == 0 && len(g.TransportOptions.C2Profiles) == 0 {
-		return fmt.Errorf(`Must specify at least: 
-                => one of --mtls, --http, --dns, --named-pipe, or --tcp-pivot 
-                => one or more C2 profiles with --malleables <malleableID>,<malleableID2>`)
-	}
-
-	// Else add the profiles
-	if len(g.TransportOptions.C2Profiles) > 0 {
-		profiles, err := transport.RPC.GetC2Profiles(context.Background(),
-			&clientpb.GetC2ProfilesReq{
-				Request: core.ActiveTarget.Request(),
-			})
-		if err != nil {
-			return fmt.Errorf("failed to fetch C2 profiles from server: %s", err)
-		}
-
-		// Each matching ID.
-		for _, raw := range g.TransportOptions.C2Profiles {
-			// Bug in split forces us to redo it here
-			var splitted = strings.Split(raw, ",")
-			for _, id := range splitted {
-				for _, prof := range profiles.Profiles {
-					if c2.GetShortID(prof.ID) == id {
-						cfg.C2S = append(cfg.C2S, prof)
-					}
-				}
-			}
-		}
-	}
-
-	// Compatibility verifications ---------------------------------------------------------------------
-	for _, c2 := range cfg.C2S {
-		if c2.C2 == sliverpb.C2Channel_NamedPipe {
-			if cfg.GOOS != "windows" {
-				return fmt.Errorf("Named pipe C2 transports can only be used in Windows")
-			}
-		}
-	}
-
-	return
-}
-
-func parseMTLSc2(args []string) []*clientpb.ImplantC2 {
-	c2s := []*clientpb.ImplantC2{}
-	if len(args) == 0 {
-		return c2s
-	}
-	for index, arg := range args {
-		uri := url.URL{Scheme: "mtls"}
-		uri.Host = arg
-		if uri.Port() == "" {
-			uri.Host = fmt.Sprintf("%s:%d", uri.Host, constants.DefaultMTLSLPort)
-		}
-		c2s = append(c2s, &clientpb.ImplantC2{
-			Priority: uint32(index),
-			URL:      uri.String(),
-		})
-	}
-	return c2s
-}
-
-func parseWGc2(args []string) []*clientpb.ImplantC2 {
-	c2s := []*clientpb.ImplantC2{}
-	if len(args) == 0 {
-		return c2s
-	}
-	for index, arg := range args {
-		arg = strings.ToLower(arg)
-		uri := url.URL{Scheme: "wg"}
-		uri.Host = arg
-		if uri.Port() == "" {
-			uri.Host = fmt.Sprintf("%s:%d", uri.Host, constants.DefaultWGLPort)
-		}
-		c2s = append(c2s, &clientpb.ImplantC2{
-			Priority: uint32(index),
-			URL:      uri.String(),
-		})
-	}
-	return c2s
-}
-
-func parseHTTPc2(args []string) []*clientpb.ImplantC2 {
-	c2s := []*clientpb.ImplantC2{}
-	if len(args) == 0 {
-		return c2s
-	}
-	for index, arg := range args {
-		arg = strings.ToLower(arg)
-		var uri *url.URL
-		var err error
-		if strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://") {
-			uri, err = url.Parse(arg)
-			if err != nil {
-				log.Printf("Failed to parse C2 URL %v", err)
-				continue
-			}
-		} else {
-			uri, err = url.Parse(fmt.Sprintf("https://%s", arg))
-			if err != nil {
-				log.Printf("Failed to parse C2 URL %s", err)
-				continue
-			}
-		}
-		c2s = append(c2s, &clientpb.ImplantC2{
-			Priority: uint32(index),
-			URL:      uri.String(),
-		})
-	}
-	return c2s
-}
-
-func parseDNSc2(args []string) []*clientpb.ImplantC2 {
-	c2s := []*clientpb.ImplantC2{}
-	if len(args) == 0 {
-		return c2s
-	}
-	for index, arg := range args {
-		uri := url.URL{Scheme: "dns"}
-		if len(arg) < 1 {
-			continue
-		}
-		// Make sure we have the FQDN
-		if !strings.HasSuffix(arg, ".") {
-			arg += "."
-		}
-		if strings.HasPrefix(arg, ".") {
-			arg = arg[1:]
-		}
-
-		uri.Host = arg
-		c2s = append(c2s, &clientpb.ImplantC2{
-			Priority: uint32(index),
-			URL:      uri.String(),
-		})
-	}
-	return c2s
-}
-
-func parseNamedPipec2(args []string) []*clientpb.ImplantC2 {
-	c2s := []*clientpb.ImplantC2{}
-	if len(args) == 0 {
-		return c2s
-	}
-	for index, arg := range args {
-		uri, err := url.Parse("namedpipe://" + arg)
-		if len(arg) < 1 {
-			continue
-		}
-		if err != nil {
-			return c2s
-		}
-		c2s = append(c2s, &clientpb.ImplantC2{
-			Priority: uint32(index),
-			URL:      uri.String(),
-		})
-	}
-	return c2s
-}
-
-func parseTCPPivotc2(args []string) []*clientpb.ImplantC2 {
-	c2s := []*clientpb.ImplantC2{}
-	if len(args) == 0 {
-		return c2s
-	}
-	for index, arg := range args {
-
-		uri := url.URL{Scheme: "tcppivot"}
-		uri.Host = arg
-		if uri.Port() == "" {
-			uri.Host = fmt.Sprintf("%s:%d", uri.Host, constants.DefaultTCPPivotPort)
-		}
-		c2s = append(c2s, &clientpb.ImplantC2{
-			Priority: uint32(index),
-			URL:      uri.String(),
-		})
-	}
-	return c2s
-}
-
 //
 // Compilation -------------------------------------------------------------------------------------------------
 //
@@ -509,12 +212,7 @@ func parseTCPPivotc2(args []string) []*clientpb.ImplantC2 {
 // Compile - Compile an implant based on a configuration
 func Compile(config *clientpb.ImplantConfig, save string) (*commonpb.File, error) {
 
-	if config.IsBeacon {
-		interval := time.Duration(config.BeaconInterval)
-		log.Infof("Generating new %s/%s beacon implant binary (%v)", config.GOOS, config.GOARCH, interval)
-	} else {
-		log.Infof("Generating new %s/%s implant binary", config.GOOS, config.GOARCH)
-	}
+	log.Infof("Generating new %s/%s implant binary", config.GOOS, config.GOARCH)
 
 	if config.ObfuscateSymbols {
 		log.Infof("Symbol obfuscation is enabled.")

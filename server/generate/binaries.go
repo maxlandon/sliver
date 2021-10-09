@@ -34,7 +34,6 @@ import (
 	"github.com/bishopfox/sliver/implant"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/assets"
-	c2Management "github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/gogo"
 	"github.com/bishopfox/sliver/server/log"
@@ -141,6 +140,7 @@ const (
 func ImplantConfigFromProtobuf(pbConfig *clientpb.ImplantConfig) (string, *models.ImplantConfig) {
 	cfg := &models.ImplantConfig{}
 
+	// [ Core ] -----------------------------------------------------------------------
 	// Name - Can be used for computing server fingerprints and CA certificates
 	// generation. If the whole C2 is closely authenticated, that might have its
 	// importance when deploying complex networks...
@@ -164,27 +164,19 @@ func ImplantConfigFromProtobuf(pbConfig *clientpb.ImplantConfig) (string, *model
 		cfg.FileName = path.Base(pbConfig.FileName)
 	}
 
+	// [ Platform & Build ] ----------------------------------------------------------------
 	cfg.GOOS = pbConfig.GOOS
 	cfg.GOARCH = pbConfig.GOARCH
-	cfg.CACert = pbConfig.CACert
-	cfg.Cert = pbConfig.Cert
-	cfg.Key = pbConfig.Key
-	cfg.Debug = pbConfig.Debug
-	cfg.Evasion = pbConfig.Evasion
-	cfg.ObfuscateSymbols = pbConfig.ObfuscateSymbols
-	// cfg.CanaryDomains = pbConfig.CanaryDomains
-
-	cfg.LimitDomainJoined = pbConfig.LimitDomainJoined
-	cfg.LimitDatetime = pbConfig.LimitDatetime
-	cfg.LimitUsername = pbConfig.LimitUsername
-	cfg.LimitHostname = pbConfig.LimitHostname
-	cfg.LimitFileExists = pbConfig.LimitFileExists
 
 	cfg.Format = pbConfig.Format
 	cfg.IsSharedLib = pbConfig.IsSharedLib
 	cfg.IsService = pbConfig.IsService
 	cfg.IsShellcode = pbConfig.IsShellcode
 
+	// [ Standard ] -----------------------------------------------------------------------
+	cfg.Debug = pbConfig.Debug
+	cfg.Evasion = pbConfig.Evasion
+	cfg.ObfuscateSymbols = pbConfig.ObfuscateSymbols
 	cfg.CanaryDomains = []models.CanaryDomain{}
 	for _, pbCanary := range pbConfig.CanaryDomains {
 		cfg.CanaryDomains = append(cfg.CanaryDomains, models.CanaryDomain{
@@ -192,33 +184,19 @@ func ImplantConfigFromProtobuf(pbConfig *clientpb.ImplantConfig) (string, *model
 		})
 	}
 
-	// cfg.WGImplantPrivKey = pbConfig.WGImplantPrivKey
-	// cfg.WGServerPubKey = pbConfig.WGServerPubKey
-	// cfg.WGPeerTunIP = pbConfig.WGPeerTunIP
-	// cfg.WGKeyExchangePort = pbConfig.WGKeyExchangePort
-	// cfg.WGTcpCommsPort = pbConfig.WGTcpCommsPort
-	// cfg.ReconnectInterval = pbConfig.ReconnectInterval
-	// cfg.MaxConnectionErrors = pbConfig.MaxConnectionErrors
-	// cfg.PollTimeout = pbConfig.PollTimeout
+	// [ Limits ] -----------------------------------------------------------------------
+	cfg.LimitDomainJoined = pbConfig.LimitDomainJoined
+	cfg.LimitDatetime = pbConfig.LimitDatetime
+	cfg.LimitUsername = pbConfig.LimitUsername
+	cfg.LimitHostname = pbConfig.LimitHostname
+	cfg.LimitFileExists = pbConfig.LimitFileExists
 
-	// cfg.IsBeacon = pbConfig.IsBeacon
-	// cfg.BeaconInterval = pbConfig.BeaconInterval
-	// cfg.BeaconJitter = pbConfig.BeaconJitter
-
+	// [ C2 Channels ] -----------------------------------------------------------------
 	// Generates templates for all C2 profiles found or that must be
 	err := InitImplantC2Profiles(pbConfig, cfg)
 	if err != nil {
 		return "", nil
 	}
-
-	// Copy C2
-	// cfg.C2 = copyC2List(pbConfig.C2)
-	// cfg.MTLSc2Enabled = isC2Enabled([]string{"mtls"}, cfg.C2)
-	// cfg.WGc2Enabled = isC2Enabled([]string{"wg"}, cfg.C2)
-	// cfg.HTTPc2Enabled = isC2Enabled([]string{"http", "https"}, cfg.C2)
-	// cfg.DNSc2Enabled = isC2Enabled([]string{"dns"}, cfg.C2)
-	// cfg.NamePipec2Enabled = isC2Enabled([]string{"namedpipe"}, cfg.C2)
-	// cfg.TCPPivotc2Enabled = isC2Enabled([]string{"tcppivot"}, cfg.C2)
 
 	return pbConfig.Name, cfg
 }
@@ -450,6 +428,7 @@ func SliverExecutable(name string, config *models.ImplantConfig, log *logrus.Ent
 // This function is a little too long, we should probably refactor it as some point
 func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gogo.GoConfig, log *logrus.Entry) (string, error) {
 
+	// [ Core Settings ] ---------------------------------------------------------------------
 	var err error
 	target := fmt.Sprintf("%s/%s", config.GOOS, config.GOARCH)
 	if _, ok := gogo.ValidCompilerTargets[target]; !ok {
@@ -466,40 +445,6 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 
 	goConfig.ProjectDir = projectGoPathDir
 
-	// config.MTLSc2Enabled = isC2Enabled([]string{"mtls"}, config.C2)
-	// config.WGc2Enabled = isC2Enabled([]string{"wg"}, config.C2)
-	// config.HTTPc2Enabled = isC2Enabled([]string{"http", "https"}, config.C2)
-	// config.DNSc2Enabled = isC2Enabled([]string{"dns"}, config.C2)
-	// config.NamePipec2Enabled = isC2Enabled([]string{"namedpipe"}, config.C2)
-	// config.TCPPivotc2Enabled = isC2Enabled([]string{"tcppivot"}, config.C2)
-
-	// Cert PEM encoded certificates
-	// serverCACert, _, _ := certs.GetCertificateAuthorityPEM(certs.C2ServerCA)
-	// sliverCert, sliverKey, err := certs.ImplantGenerateECCCertificate(name)
-	// if err != nil {
-	//         return "", err
-	// }
-	// config.CACert = string(serverCACert)
-	// config.Cert = string(sliverCert)
-	// config.Key = string(sliverKey)
-
-	// otpSecret, err := cryptography.TOTPServerSecret()
-	// if err != nil {
-	//         return "", err
-	// }
-
-	// Generate wg Keys as needed
-	// if config.WGc2Enabled {
-	//         implantPrivKey, _, err := certs.ImplantGenerateWGKeys(config.WGPeerTunIP)
-	//         _, serverPubKey, err := certs.GetWGServerKeys()
-	//
-	//         if err != nil {
-	//                 return "", fmt.Errorf("Failed to embed implant wg keys: %s", err)
-	//         }
-	//         config.WGImplantPrivKey = implantPrivKey
-	//         config.WGServerPubKey = serverPubKey
-	// }
-
 	// Saving the implant before we generate one-time things with it
 	log.Tracef("Saving build config before igniting C2 profiles")
 	err = ImplantConfigSave(config)
@@ -507,13 +452,15 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 		return "", err
 	}
 
+	// [ C2 Channels Ignition ] ----------------------------------------------------------------
+
 	// Init all last & one time security details on the profiles,
 	// and then we are almost ready to generate.
 	log.Debugf("Igniting build C2 profiles")
 	var Transports []string
 
 	for _, transport := range config.Transports {
-		ignited, err := c2Management.InitProfileSecurityCompilation(transport.Profile)
+		ignited, err := InitTransportCompilation(transport.Profile)
 		if err != nil {
 			return "", fmt.Errorf("Failed to init last security details for C2: %s", err)
 		}
@@ -533,6 +480,8 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 		Transports = append(Transports, string(transportBytes))
 	}
 	log.Tracef("Done igniting build C2 profiles")
+
+	// [ GOPATH Settings ] --------------------------------------------------------------------
 
 	// binDir - ~/.sliver/slivers/<os>/<arch>/<name>/bin
 	binDir := path.Join(projectGoPathDir, "bin")
@@ -554,6 +503,8 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 		return "", fmt.Errorf("failed to create GOPATH directories for build")
 	}
 
+	// [ Code Rendering ] ----------------------------------------------------------------------
+
 	log.Debugf("Rendering source files with build & C2 configuration")
 	err = fs.WalkDir(implant.FS, ".", func(fsPath string, f fs.DirEntry, err error) error {
 		if f.IsDir() {
@@ -561,6 +512,7 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 		}
 		buildLog.Debugf("Walking: %s %s %v", fsPath, f.Name(), err)
 
+		// **** 1 - Read & Write Source ****
 		sliverGoCodeRaw, err := implant.FS.ReadFile(fsPath)
 		if err != nil {
 			buildLog.Errorf("Failed to read %s: %s", fsPath, err)
@@ -596,16 +548,8 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 		buf := bytes.NewBuffer([]byte{})
 		buildLog.Infof("[render] %s -> %s", f.Name(), sliverCodePath)
 
-		// --------------
-		// Render Code
-		// --------------
+		// **** 2 - Template Rendering ****
 		sliverCodeTmpl := template.Must(template.New("sliver").Parse(sliverGoCode))
-		// sliverCodeTmpl := template.New("sliver")
-		// sliverCodeTmpl, err = sliverCodeTmpl.Funcs(template.FuncMap{
-		//         "GenerateUserAgent": func() string {
-		//                 return configs.GetHTTPC2Config().GenerateUserAgent(config.GOOS, config.GOARCH)
-		//         },
-		// }).Parse(sliverGoCode)
 		if err != nil {
 			buildLog.Errorf("Template parsing error %s", err)
 			return err
@@ -614,13 +558,10 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 			Name       string
 			Config     *models.ImplantConfig
 			Transports []string
-			// CompiledC2s []string
-			// HTTPC2ImplantConfig *configs.HTTPC2ImplantConfig
 		}{
 			name,
 			config,
 			Transports,
-			// configs.GetHTTPC2Config().RandomImplantConfig(),
 		})
 		if err != nil {
 			buildLog.Errorf("Template execution error %s", err)
@@ -651,7 +592,8 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 		return "", err
 	}
 
-	// Render GoMod
+	// [ Go Modules ] --------------------------------------------------------------------
+
 	log.Tracef("Rendering go.mod file ...")
 	goModPath := path.Join(sliverPkgDir, "go.mod")
 	err = ioutil.WriteFile(goModPath, []byte(implant.GoMod), 0600)

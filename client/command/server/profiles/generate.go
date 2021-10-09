@@ -49,7 +49,7 @@ func (p *ProfileGenerate) Execute(args []string) (err error) {
 	if err != nil {
 		return log.Error(err)
 	}
-	if profile, ok := (*profiles)[name]; ok {
+	if profile, ok := profiles[name]; ok {
 		implantFile, err := generate.Compile(profile.Config, save)
 		if err != nil {
 			return err

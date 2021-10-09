@@ -23,14 +23,17 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/maxlandon/readline"
 
+	c2Cmds "github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // Profiles - List saved implant profiles, and root command
@@ -42,59 +45,60 @@ func (p *Profiles) Execute(args []string) (err error) {
 	if err != nil {
 		return log.Error(err)
 	}
-	if len(*profiles) == 0 || profiles == nil {
+	if len(profiles) == 0 || profiles == nil {
 		log.Infof("No profiles, create one with `profiles new`")
 		return
 	}
 	table := util.NewTable(readline.Bold(readline.Yellow("Implant Profiles")))
 
-	headers := []string{"Name", "OS/Arch", "Format", "C2 Transports", "Debug/Obfsc/Evasion", "Limits", "Errs/Timeout"}
-	headLen := []int{0, 0, 0, 15, 20, 15, 0}
+	headers := []string{"Name", "OS/Arch", "Format", "Debug/Obfsc/Evasion", "Limits", "T - C2 Transport - errs/intvl/jit"}
+	headLen := []int{0, 0, 0, 20, 15, 25}
 	table.SetColumns(headers, headLen)
 
 	var keys []string
-	for k := range *profiles {
+	for k := range profiles {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
 	// Populate the table with builds
 	for _, k := range keys {
-		config := (*profiles)[k].Config
+		config := profiles[k].Config
 
+		// Core ---------------------------
 		osArch := fmt.Sprintf("%s/%s", config.GOOS, config.GOARCH)
-
-		// Get a formated C2s string
-		var c2s string
-		if 0 < len(config.C2) {
-			for index, c2 := range config.C2 {
-				// for index, c2 := range config.C2[0:] {
-				endpoint := fmt.Sprintf("[%d] %s \n", index+1, c2.URL)
-				c2s += endpoint
-			}
+		var format string
+		switch config.Format {
+		case clientpb.OutputFormat_EXECUTABLE:
+			format = "exe"
+		case clientpb.OutputFormat_SERVICE:
+			format = "svc"
+		case clientpb.OutputFormat_SHARED_LIB:
+			format = "dll"
+		case clientpb.OutputFormat_SHELLCODE:
+			format = "shellc"
 		}
-		c2s = strings.TrimSuffix(c2s, "\n")
 
-		// Security
+		// Security ---------------------------
 		var debug, obfs, evas string
 		if config.Debug {
-			debug = readline.Yellow(" yes ")
+			debug = readline.Yellow("yes/")
 		} else {
-			debug = readline.Dim(" no ")
+			debug = readline.Dim("no/")
 		}
 		if config.ObfuscateSymbols {
-			obfs = readline.Green(" yes ")
+			obfs = readline.Green("yes/")
 		} else {
-			obfs = readline.Yellow(" no ")
+			obfs = readline.Yellow("no/")
 		}
 		if config.Evasion {
-			evas = readline.Green("  yes ")
+			evas = readline.Green("yes")
 		} else {
-			evas = readline.Yellow("  no ")
+			evas = readline.Yellow("no")
 		}
-		sec := fmt.Sprintf("%s %s %s", debug, obfs, evas)
+		sec := fmt.Sprintf("%s%s%s", debug, obfs, evas)
 
-		// Limits
+		// Limits ---------------------------
 		var user, domainJoin, dateTime, hostname, file string
 		if config.LimitUsername != "" {
 			user = readline.Bold("User: ") + config.LimitUsername + "\n"
@@ -113,27 +117,59 @@ func (p *Profiles) Execute(args []string) (err error) {
 		}
 		limits := user + hostname + file + domainJoin + dateTime
 
-		// Timeouts
-		timeouts := fmt.Sprintf("%d / %ds", config.MaxConnectionErrors, config.ReconnectInterval)
+		// C2 Channels ---------------------------
+		var c2s string
+		for i, c2 := range config.C2S {
+			index := readline.Dim(fmt.Sprintf("[%d]", i))
+			var c2Type string
+			if c2.Type == sliverpb.C2Type_Beacon {
+				c2Type = readline.YELLOW + "B" + readline.RESET
+			} else {
+				c2Type = readline.GREEN + "S" + readline.RESET
+			}
+			var dir string
+			if c2.Direction == sliverpb.C2Direction_Bind {
+				dir = " => "
+			} else {
+				dir = " <= "
+			}
+			path := readline.Bold(readline.Blue(strings.ToLower(c2.C2.String()) + "://" + c2Cmds.FullTargetPath(c2)))
+
+			var timeouts string
+			var jitInt string
+			var settings string
+			if c2.Type == sliverpb.C2Type_Beacon {
+				timeouts = fmt.Sprintf(" %-3d / ", c2.MaxConnectionErrors)
+				jitInt = fmt.Sprintf(" %-3s/ %3s", time.Duration(c2.Interval), time.Duration(c2.Jitter))
+				settings = fmt.Sprintf("%10s%s", timeouts, jitInt)
+			} else {
+				timeouts = fmt.Sprintf("%6d / %s", c2.MaxConnectionErrors, time.Duration(c2.Interval))
+				settings = fmt.Sprintf("%14s", timeouts)
+			}
+
+			endpoint := index + c2Type + dir + path + settings + "\n"
+			c2s += endpoint
+		}
+		c2s = strings.TrimSuffix(c2s, "\n")
 
 		// Add row
-		table.AppendRow([]string{k, osArch, config.Format.String(), c2s, sec, limits, timeouts})
+		table.AppendRow([]string{k, osArch, format, sec, limits, c2s})
 	}
 
 	// Print table
-	table.Output()
+	fmt.Printf(table.Output())
 
 	return
 }
 
-func getSliverProfiles() (profiles *map[string]*clientpb.ImplantProfile, err error) {
+func getSliverProfiles() (profiles map[string]*clientpb.ImplantProfile, err error) {
 	pbProfiles, err := transport.RPC.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return nil, log.Error(err)
 	}
-	profiles = &map[string]*clientpb.ImplantProfile{}
+	profiles = map[string]*clientpb.ImplantProfile{}
 	for _, profile := range pbProfiles.Profiles {
-		(*profiles)[profile.Name] = profile
+		profiles[profile.Name] = profile
 	}
 	return profiles, nil
 }

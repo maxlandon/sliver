@@ -41,7 +41,7 @@ func ImplantProfiles() (comps []*readline.CompletionGroup) {
 	for _, profile := range *profiles {
 		conf := profile.Config
 		comp.Suggestions = append(comp.Suggestions, profile.Name)
-		desc := fmt.Sprintf(" %s [%s/%s] -> %d C2s%s", conf.Format.String(), conf.GOOS, conf.GOARCH, len(conf.GetC2()), readline.RESET)
+		desc := fmt.Sprintf(" %s [%s/%s] -> %d C2s%s", conf.Format.String(), conf.GOOS, conf.GOARCH, len(conf.C2S), readline.RESET)
 		comp.Descriptions[profile.Name] = readline.DIM + desc
 	}
 
@@ -76,7 +76,7 @@ func ImplantNames() (comps []*readline.CompletionGroup) {
 
 	for name, implant := range builds.Configs {
 		comp.Suggestions = append(comp.Suggestions, name)
-		desc := fmt.Sprintf(" %s [%s/%s] -> %d C2s%s", implant.Format.String(), implant.GOOS, implant.GOARCH, len(implant.GetC2()), readline.RESET)
+		desc := fmt.Sprintf(" %s [%s/%s] -> %d C2s%s", implant.Format.String(), implant.GOOS, implant.GOARCH, len(implant.C2S), readline.RESET)
 		comp.Descriptions[name] = readline.DIM + desc
 	}
 

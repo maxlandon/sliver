@@ -135,8 +135,15 @@ func ImplantBuilds() ([]*models.ImplantBuild, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Load the C2 both in the build and in the config
 	for _, build := range builds {
 		err = loadTransportsForBuild(build)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for _, build := range builds {
+		err = loadTransportsForConfig(&build.ImplantConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -156,6 +163,10 @@ func ImplantBuildByName(name string) (*models.ImplantBuild, error) {
 		return nil, err
 	}
 	err = loadTransportsForBuild(&build)
+	if err != nil {
+		return nil, err
+	}
+	err = loadTransportsForConfig(&build.ImplantConfig)
 	if err != nil {
 		return nil, err
 	}
