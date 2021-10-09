@@ -24,7 +24,8 @@ import (
 	"time"
 
 	"github.com/bishopfox/sliver/client/log"
-	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/gofrs/uuid"
 )
 
 var (
@@ -58,18 +59,21 @@ func (g *GenerateBeacon) Execute(args []string) (err error) {
 		return log.Errorf("An unknown error happened when parsing Stage options: no configuration returned")
 	}
 
-	err = g.parseBeaconFlags(config)
-	if err != nil {
-		return log.Error(err)
+	// Adapt C2 profiles for beacon type, only
+	// if they don't have an ID: if they have
+	// that means the profile was fetched from
+	// the server and it might be an additional
+	// session transport included in the build.
+	for _, transport := range config.C2S {
+		if transport.ID == uuid.Nil.String() {
+			transport.Type = sliverpb.C2Type_Beacon
+		}
 	}
+
 	save := g.CoreOptions.Save
 	if save == "" {
 		save, _ = os.Getwd()
 	}
 	_, err = Compile(config, save)
 	return
-}
-
-func (g *GenerateBeacon) parseBeaconFlags(config *clientpb.ImplantConfig) error {
-	return nil
 }
