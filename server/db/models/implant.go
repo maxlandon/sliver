@@ -19,12 +19,14 @@ package models
 */
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
 	"gorm.io/gorm"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // ImplantBuild - Represents an implant
@@ -61,21 +63,29 @@ func (ib *ImplantBuild) BeforeCreate(tx *gorm.DB) (err error) {
 
 // ImplantConfig - An implant build configuration
 type ImplantConfig struct {
-	// gorm.Model
-
 	ID               uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	ImplantBuildID   uuid.UUID
 	ImplantProfileID uuid.UUID
-
-	CreatedAt time.Time `gorm:"->;<-:create;"`
+	CreatedAt        time.Time `gorm:"->;<-:create;"`
 
 	// Go
 	GOOS   string
 	GOARCH string
 
-	IsBeacon       bool  //
-	BeaconInterval int64 //
-	BeaconJitter   int64 //
+	// Output Format
+	Format clientpb.OutputFormat
+	// For 	IsSharedLib bool
+	IsSharedLib bool
+	IsService   bool
+	IsShellcode bool
+
+	// Standard
+	Name             string
+	FileName         string
+	Debug            bool
+	Evasion          bool
+	ObfuscateSymbols bool
+	CanaryDomains    []CanaryDomain
 
 	// ECC
 	ECCPublicKey          string
@@ -84,26 +94,6 @@ type ImplantConfig struct {
 	ECCPublicKeySignature string
 	ECCServerPublicKey    string
 
-	// Standard
-	CACert              string //
-	Cert                string //
-	Key                 string //
-	Debug               bool
-	Evasion             bool
-	ObfuscateSymbols    bool
-	ReconnectInterval   int64  //
-	PollTimeout         int64  //
-	MaxConnectionErrors uint32 //
-	ConnectionStrategy  string
-
-	WGImplantPrivKey  string //
-	WGServerPubKey    string //
-	WGPeerTunIP       string //
-	WGKeyExchangePort uint32 //
-	WGTcpCommsPort    uint32 //
-
-	CanaryDomains []CanaryDomain
-
 	// Limits
 	LimitDomainJoined bool
 	LimitHostname     string
@@ -111,17 +101,10 @@ type ImplantConfig struct {
 	LimitDatetime     string
 	LimitFileExists   string
 
-	// Output Format
-	Format clientpb.OutputFormat
-
-	// For 	IsSharedLib bool
-	IsSharedLib bool
-	IsService   bool
-	IsShellcode bool
-
-	FileName string
-
-	C2 []ImplantC2 //
+	// C2 profiles
+	Transports         []*Transport `gorm:"-"`
+	ConnectionStrategy string
+	RuntimeC2s         string
 
 	MTLSc2Enabled     bool
 	WGc2Enabled       bool
@@ -129,10 +112,6 @@ type ImplantConfig struct {
 	DNSc2Enabled      bool
 	NamePipec2Enabled bool
 	TCPc2Enabled      bool
-
-	// C2 profiles
-	Transports []*Transport `gorm:"-"`
-	RuntimeC2s string
 
 	// Comm system
 	CommEnabled           bool // Explicitely forbid SSH multiplexing, overrides any C2-specific settings.
@@ -156,24 +135,19 @@ func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 	config := &clientpb.ImplantConfig{
 		ID: ic.ID.String(),
 
-		IsBeacon:       ic.IsBeacon,
-		BeaconInterval: ic.BeaconInterval,
-		BeaconJitter:   ic.BeaconJitter,
-
 		GOOS:   ic.GOOS,
 		GOARCH: ic.GOARCH,
 
-		CACert:           ic.CACert,
-		Cert:             ic.Cert,
-		Key:              ic.Key,
+		Format:      ic.Format,
+		IsSharedLib: ic.IsSharedLib,
+		IsService:   ic.IsService,
+		IsShellcode: ic.IsShellcode,
+
+		Name:             ic.Name,
+		FileName:         ic.FileName,
 		Debug:            ic.Debug,
 		Evasion:          ic.Evasion,
 		ObfuscateSymbols: ic.ObfuscateSymbols,
-
-		ReconnectInterval:   ic.ReconnectInterval,
-		PollTimeout:         ic.PollTimeout,
-		MaxConnectionErrors: ic.MaxConnectionErrors,
-		ConnectionStrategy:  ic.ConnectionStrategy,
 
 		LimitDatetime:     ic.LimitDatetime,
 		LimitDomainJoined: ic.LimitDomainJoined,
@@ -181,18 +155,7 @@ func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 		LimitUsername:     ic.LimitUsername,
 		LimitFileExists:   ic.LimitFileExists,
 
-		IsSharedLib:       ic.IsSharedLib,
-		IsService:         ic.IsService,
-		IsShellcode:       ic.IsShellcode,
-		Format:            ic.Format,
-		WGImplantPrivKey:  ic.WGImplantPrivKey,
-		WGServerPubKey:    ic.WGServerPubKey,
-		WGPeerTunIP:       ic.WGPeerTunIP,
-		WGKeyExchangePort: ic.WGKeyExchangePort,
-		WGTcpCommsPort:    ic.WGTcpCommsPort,
-		CommDisabled:      !ic.CommEnabled,
-
-		FileName: ic.FileName,
+		CommDisabled: !ic.CommEnabled,
 	}
 
 	// Copy Canary Domains
@@ -201,19 +164,14 @@ func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 		config.CanaryDomains = append(config.CanaryDomains, canaryDomain.Domain)
 	}
 
-	// Copy C2
-	config.C2 = []*clientpb.ImplantC2{}
-	for _, c2 := range ic.C2 {
-		config.C2 = append(config.C2, c2.ToProtobuf())
+	// Copy C2 Profiles for each transport, and runtime ones
+	config.ConnectionStrategy = ic.ConnectionStrategy
+	config.C2S = []*sliverpb.C2Profile{}
+	for _, c2 := range ic.Transports {
+		config.C2S = append(config.C2S, c2.Profile.ToProtobuf())
 	}
+	config.RuntimeC2S = strings.Split(ic.RuntimeC2s, ",")
 
-	// Copy C2 profiles
-	// config.C2S = []*sliverpb.C2Profile{}
-	// for _, c2 := range ic.C2s {
-	//         config.C2S = append(config.C2S, c2.ToProtobuf())
-	// }
-
-	// Runtime C2s,
 	return config
 }
 
@@ -243,42 +201,6 @@ func (c *CanaryDomain) BeforeCreate(tx *gorm.DB) (err error) {
 	}
 	c.CreatedAt = time.Now()
 	return nil
-}
-
-// ImplantC2 - C2 struct
-type ImplantC2 struct {
-	// gorm.Model
-
-	ID              uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
-	ImplantConfigID uuid.UUID
-	CreatedAt       time.Time `gorm:"->;<-:create;"`
-
-	Priority uint32
-	URL      string
-	Options  string
-}
-
-// BeforeCreate - GORM hook
-func (c2 *ImplantC2) BeforeCreate(tx *gorm.DB) (err error) {
-	c2.ID, err = uuid.NewV4()
-	if err != nil {
-		return err
-	}
-	c2.CreatedAt = time.Now()
-	return nil
-}
-
-// ToProtobuf - Convert to protobuf version
-func (c2 *ImplantC2) ToProtobuf() *clientpb.ImplantC2 {
-	return &clientpb.ImplantC2{
-		Priority: c2.Priority,
-		URL:      c2.URL,
-		Options:  c2.Options,
-	}
-}
-
-func (c2 *ImplantC2) String() string {
-	return c2.URL
 }
 
 // ImplantProfile - An implant build configuration

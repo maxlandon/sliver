@@ -117,6 +117,7 @@ message SaveSliverSettings {
 }
 
 // [ Core ] ----------------------------------------
+
 message Session {
   uint32 ID = 1;
   string Name = 2;
@@ -199,11 +200,7 @@ message BeaconTasks {
   repeated BeaconTask Tasks = 2;
 }
 
-message ImplantC2 {
-  uint32 Priority = 1;
-  string URL = 2;
-  string Options = 3; // Protocol specific options
-}
+// [ Implants ] --------------------------------------------------------
 
 enum OutputFormat {
   SHARED_LIB = 0;
@@ -212,53 +209,43 @@ enum OutputFormat {
   SERVICE = 3;
 }
 
+// ImplantConfig - Configuration necessary to build an implant.
+// Most of its is related to the build itself, but not about
+// its various C2 stacks. Those are stored in its list of C2Channel types.
 message ImplantConfig {
   string ID = 100;
-  bool IsBeacon = 200;
-  int64 BeaconInterval = 201;
-  int64 BeaconJitter = 202;
 
+  // Platform
   string GOOS = 1;
   string GOARCH = 2;
+
+  // Build type
+  OutputFormat Format = 25;
+  bool IsSharedLib = 26;
+  bool IsService = 28;
+  bool IsShellcode = 29;
+
+  // Standard
   string Name = 3;
-  string CACert = 4;
-  string Cert = 5;
-  string Key = 6;
+  string FileName = 27;
   bool Debug = 7;
   bool Evasion = 31;
   bool ObfuscateSymbols = 30;
-
-  string WGImplantPrivKey = 33;
-  string WGServerPubKey = 34;
-  string WGPeerTunIP = 35;
-  uint32 WGKeyExchangePort = 36;
-  uint32 WGTcpCommsPort = 37;
-
-  int64 ReconnectInterval = 8;
-  uint32 MaxConnectionErrors = 9;
-  int64 PollTimeout = 38;
-
-  // c2
-  repeated ImplantC2 C2 = 10;
   repeated string CanaryDomains = 11;
-  string ConnectionStrategy = 39;
 
+  // Limits
   bool LimitDomainJoined = 20;
   string LimitDatetime = 21;
   string LimitHostname = 22;
   string LimitUsername = 23;
   string LimitFileExists = 32;
 
-  OutputFormat Format = 25;
-  bool IsSharedLib = 26;
-
-  string FileName = 27;
-  bool IsService = 28;
-  bool IsShellcode = 29;
-
+  // C2 stacks
   repeated sliverpb.C2Profile C2s = 15;
-  repeated sliverpb.C2Channel RuntimeC2s = 16;
+  repeated string RuntimeC2s = 16;
+  string ConnectionStrategy = 39;
 
+  // SSH Comm system
   bool CommDisabled = 17;
   string CommServerCert = 40;
   string CommServerKey = 41;
@@ -394,7 +381,7 @@ message GetC2Profiles {
   repeated sliverpb.C2Profile Profiles = 1;
 }
 
-// [ C2 Handlers ] -----------------------------------------
+// [ C2 Handlers ] ---------------------------------------------
 
 // The server requests an implant/the server to start a handler.
 message HandlerStageReq {
@@ -485,88 +472,8 @@ message GetTransports {
   commonpb.Response Response = 9;
 }
 
-// [ Listeners ] ----------------------------------------
-// message MTLSListenerReq {
-//   string Host = 1;
-//   uint32 Port = 2;
-//   bool Persistent = 3;
-//   sliverpb.C2Profile Profile = 4;
-// }
-// 
-// message MTLSListener {
-//   uint32 JobID = 1;
-// }
-// 
-// message WGListenerReq {
-//   string Host = 6;
-//   uint32 Port = 1;
-//   string TunIP = 2;
-//   uint32 NPort = 3;
-//   uint32 KeyPort = 4;
-//   bool Persistent = 5;
-// }
-// 
-// message WGListener {
-//   uint32 JobID = 1;
-// }
-// 
-// message DNSListenerReq {
-//   repeated string Domains = 1;
-//   bool Canaries = 2;
-//   string Host = 3;
-//   uint32 Port = 4;
-//   bool Persistent = 5;
-// }
-// 
-// message DNSListener {
-//   uint32 JobID = 1;
-// }
-
-message HTTPListenerReq {
-  string Domain = 1;
-  string Host = 2;
-  uint32 Port = 3;
-  bool Secure = 4; // Enable HTTPS
-  string Website = 5;
-  bytes Cert = 6;
-  bytes Key = 7;
-  bool ACME = 8;
-  bool Persistent = 9;
-}
-
-// Named Pipes Messages for pivoting
-message NamedPipesReq {
-  string PipeName = 16;
-
-  commonpb.Request Request = 9;
-}
-
-message NamedPipes {
-  bool Success = 1;
-  string Err = 2;
-
-  commonpb.Response Response = 9;
-}
-
-// TCP Messages for pivoting
-message TCPPivotReq {
-  string Address = 16;
-
-  commonpb.Request Request = 9;
-}
-
-message TCPPivot {
-  bool Success = 1;
-  string Err = 2;
-
-  commonpb.Response Response = 9;
-}
-
-message HTTPListener {
-  uint32 JobID = 1;
-}
-
 // [ commands ] ----------------------------------------
+
 message Sessions {
   repeated Session Sessions = 1;
 }

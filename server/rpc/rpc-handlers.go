@@ -73,7 +73,7 @@ func (rpc *Server) StartHandlerStage(ctx context.Context, req *clientpb.HandlerS
 	// NOTE: No hostname is passed as argument, as this is a just a listener started,
 	// and that if any Cert/Key data is in the profile, this call below will not touch anything.
 	//
-	// As well, if there are nothing in it, it will just load the default
+	// As well, if there are missing elements in the profile, will populate with defaults.
 	err = c2.SetupHandlerSecurity(profile, profile.Hostname)
 	if err != nil {
 		return nil, err

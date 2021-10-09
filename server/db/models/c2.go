@@ -76,7 +76,7 @@ type C2Profile struct {
 	ImplantBuildID   uuid.UUID
 	ContextSessionID uuid.UUID
 	JobID            uuid.UUID
-	Transports       []*Transport `gorm:"many2many:profile_transports"` // Maybe not needed ?
+	// Transports       []*Transport `gorm:"many2many:profile_transports"` // Maybe not needed ?
 
 	// Core
 	Name            string
@@ -94,15 +94,11 @@ type C2Profile struct {
 	// Technicals
 	PollTimeout         int64
 	MaxConnectionErrors int32
-	IsFallback          bool
+	Interval            int64
+	Jitter              int64
 	Persistent          bool
 	Active              bool
 	CommDisabled        bool // Use the SSH-protocol based multiplexing on top of this C2 channel
-
-	// Beaconing
-	Beacon   bool
-	Interval int64
-	Jitter   int64
 
 	// HTTP related
 	HTTP     *C2ProfileHTTP // Needs to be unmarshaled to a sliverpb.C2ProfileHTTP
@@ -153,22 +149,20 @@ func (p *C2Profile) ToProtobuf() *sliverpb.C2Profile {
 		Port:             p.Port,
 		ControlPort:      p.ControlPort,
 		KeyExchangePort:  p.KeyExchangePort,
+		Path:             p.Path,
 		Domains:          strings.Split(p.Domains, ","),
 		Canaries:         p.Canaries,
 		// Technicals
 		PollTimeout:         p.PollTimeout,
 		MaxConnectionErrors: p.MaxConnectionErrors,
-		IsFallback:          p.IsFallback,
 		Persistent:          p.Persistent,
 		Active:              p.Active,
 		CommDisabled:        p.CommDisabled,
-		// Beaconing
-		Interval: p.Interval,
-		Jitter:   p.Jitter,
+		Interval:            p.Interval,
+		Jitter:              p.Jitter,
 		// HTTP:
-		ProxyURL:    p.ProxyURL,
-		Website:     p.Website,
-		LetsEncrypt: p.LetsEncrypt,
+		ProxyURL: p.ProxyURL,
+		Website:  p.Website,
 		// Security & Identity
 		Credentials: &sliverpb.Credentials{
 			CACertPEM:         []byte(p.CACertPEM),
@@ -178,6 +172,7 @@ func (p *C2Profile) ToProtobuf() *sliverpb.C2Profile {
 			ControlServerCert: []byte(p.ControlServerCert),
 			ControlClientKey:  []byte(p.ControlClientKey),
 		},
+		LetsEncrypt: p.LetsEncrypt,
 	}
 
 	if p.HTTP != nil {
@@ -194,26 +189,26 @@ func C2ProfileFromProtobuf(p *sliverpb.C2Profile) (profile *C2Profile) {
 		// Core
 		ID:               uuid.FromStringOrNil(p.ID),
 		ContextSessionID: uuid.FromStringOrNil(p.ContextSessionID),
-		Name:             p.Name,
 		Type:             p.Type,
 		Channel:          p.C2,
 		Direction:        p.Direction,
-		Hostname:         p.Hostname,
-		Port:             p.Port,
-		ControlPort:      p.ControlPort,
-		KeyExchangePort:  p.KeyExchangePort,
-		Domains:          strings.Join(p.Domains, ","),
-		Canaries:         p.Canaries,
+		Name:             p.Name,
+		// Target
+		Hostname:        p.Hostname,
+		Port:            p.Port,
+		ControlPort:     p.ControlPort,
+		KeyExchangePort: p.KeyExchangePort,
+		Path:            p.Path,
+		Domains:         strings.Join(p.Domains, ","),
+		Canaries:        p.Canaries,
+		Persistent:      p.Persistent,
 		// Technicals
 		PollTimeout:         p.PollTimeout,
 		MaxConnectionErrors: p.MaxConnectionErrors,
-		IsFallback:          p.IsFallback,
 		Active:              p.Active,
+		Interval:            p.Interval,
+		Jitter:              p.Jitter,
 		CommDisabled:        p.CommDisabled,
-		Persistent:          p.Persistent,
-		// Beaconing
-		Interval: p.Interval,
-		Jitter:   p.Jitter,
 		// HTTP:
 		ProxyURL: p.ProxyURL,
 		Website:  p.Website,
@@ -227,6 +222,7 @@ func C2ProfileFromProtobuf(p *sliverpb.C2Profile) (profile *C2Profile) {
 		profile.ServerFingerprint = []byte(p.Credentials.ServerFingerprint)
 		profile.ControlServerCert = []byte(p.Credentials.ControlServerCert)
 		profile.ControlClientKey = []byte(p.Credentials.ControlClientKey)
+		profile.LetsEncrypt = p.LetsEncrypt
 	}
 
 	if p.HTTP != nil {
@@ -242,6 +238,8 @@ func C2ProfileFromProtobuf(p *sliverpb.C2Profile) (profile *C2Profile) {
 	return profile
 }
 
+// C2ProfileHTTP - Contains a protobuf specification of an HTTP C2 communication
+// behaviour profile. This is used for storage and implant compilation purposes.
 type C2ProfileHTTP struct {
 	ID          uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	C2ProfileID uuid.UUID

@@ -240,8 +240,8 @@ func defaultC2Profile() *sliverpb.C2Profile {
 	profile := &sliverpb.C2Profile{
 		IsFallback:          false,
 		MaxConnectionErrors: 1000,
-		PollTimeout:         60,
-		Interval:            30,
+		PollTimeout:         int64(60 * time.Second),
+		Interval:            int64(30 * time.Second),
 		Credentials:         &sliverpb.Credentials{},
 	}
 	return profile
