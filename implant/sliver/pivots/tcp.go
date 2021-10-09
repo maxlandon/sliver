@@ -25,11 +25,6 @@ import (
 	"math/rand"
 	"net"
 	"time"
-
-	"github.com/bishopfox/sliver/implant/sliver/transports"
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
-	"google.golang.org/protobuf/proto"
 )
 
 // StartTCPListener - Start a TCP listener
@@ -75,67 +70,67 @@ func tcpPivotAcceptNewConnection(ln *net.Listener) {
 
 func tcpPivotConnectionHandler(conn *net.Conn, pivotID uint32) {
 
-	defer func() {
-		// {{if .Config.Debug}}
-		log.Printf("Cleaning up for pivot %d\n", pivotID)
-		// {{end}}
-		(*conn).Close()
-		pivotClose := &sliverpb.PivotClose{
-			PivotID: pivotID,
-		}
-		data, err := proto.Marshal(pivotClose)
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Println(err)
-			// {{end}}
-			return
-		}
-		connection := transports.GetActiveConnection()
-		if connection.IsOpen {
-			connection.Send <- &sliverpb.Envelope{
-				Type: sliverpb.MsgPivotClose,
-				Data: data,
-			}
-		}
-	}()
-
-	for {
-		envelope, err := PivotReadEnvelope(conn)
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Println(err)
-			// {{end}}
-			return
-		}
-
-		dataBuf, err1 := proto.Marshal(envelope)
-		if err1 != nil {
-			// {{if .Config.Debug}}
-			log.Println(err1)
-			// {{end}}
-			return
-		}
-		pivotData := &sliverpb.PivotData{
-			PivotID: pivotID,
-			Data:    dataBuf,
-		}
-		connection := transports.GetActiveConnection()
-		if envelope.Type == 1 {
-			SendPivotOpen(pivotID, dataBuf, connection)
-			continue
-		}
-		data2, err2 := proto.Marshal(pivotData)
-		if err2 != nil {
-			// {{if .Config.Debug}}
-			log.Println(err2)
-			// {{end}}
-			return
-		}
-		if connection.IsOpen {
-			connection.Send <- &sliverpb.Envelope{
-				Type: sliverpb.MsgPivotData,
-				Data: data2,
-			}
-		}
-	}
+	// defer func() {
+	//         // {{if .Config.Debug}}
+	//         log.Printf("Cleaning up for pivot %d\n", pivotID)
+	//         // {{end}}
+	//         (*conn).Close()
+	//         pivotClose := &sliverpb.PivotClose{
+	//                 PivotID: pivotID,
+	//         }
+	//         data, err := proto.Marshal(pivotClose)
+	//         if err != nil {
+	//                 // {{if .Config.Debug}}
+	//                 log.Println(err)
+	//                 // {{end}}
+	//                 return
+	//         }
+	//         connection := c2.GetActiveConnection()
+	//         if connection.IsOpen {
+	//                 connection.Send <- &sliverpb.Envelope{
+	//                         Type: sliverpb.MsgPivotClose,
+	//                         Data: data,
+	//                 }
+	//         }
+	// }()
+	//
+	// for {
+	//         envelope, err := PivotReadEnvelope(conn)
+	//         if err != nil {
+	//                 // {{if .Config.Debug}}
+	//                 log.Println(err)
+	//                 // {{end}}
+	//                 return
+	//         }
+	//
+	//         dataBuf, err1 := proto.Marshal(envelope)
+	//         if err1 != nil {
+	//                 // {{if .Config.Debug}}
+	//                 log.Println(err1)
+	//                 // {{end}}
+	//                 return
+	//         }
+	//         pivotData := &sliverpb.PivotData{
+	//                 PivotID: pivotID,
+	//                 Data:    dataBuf,
+	//         }
+	//         connection := transports.GetActiveConnection()
+	//         if envelope.Type == 1 {
+	//                 SendPivotOpen(pivotID, dataBuf, connection)
+	//                 continue
+	//         }
+	//         data2, err2 := proto.Marshal(pivotData)
+	//         if err2 != nil {
+	//                 // {{if .Config.Debug}}
+	//                 log.Println(err2)
+	//                 // {{end}}
+	//                 return
+	//         }
+	//         if connection.IsOpen {
+	//                 connection.Send <- &sliverpb.Envelope{
+	//                         Type: sliverpb.MsgPivotData,
+	//                         Data: data2,
+	//                 }
+	//         }
+	// }
 }

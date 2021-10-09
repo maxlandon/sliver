@@ -51,7 +51,7 @@ const (
 )
 
 var (
-	CACertPEM = `{{.Config.CACert}}`
+	CACertPEM string // Set at runtime by the transport
 
 	OTPSecret string // Set at runtime by the transport
 )

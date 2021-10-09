@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bishopfox/sliver/implant/sliver/transports/mtls"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/log"
@@ -96,7 +95,7 @@ func (s *Session) IsDead() bool {
 		return false
 	}
 	if s.Connection.Transport == consts.MtlsStr {
-		if time.Now().Sub(s.Connection.LastMessage) < mtls.PingInterval+padding {
+		if time.Now().Sub(s.Connection.LastMessage) < 2*time.Minute+padding {
 			sessionsLog.Debugf("Last message within ping interval with padding")
 			return false
 		}

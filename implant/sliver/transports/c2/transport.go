@@ -44,8 +44,6 @@ import (
 	// {{if .Config.MTLSc2Enabled}}
 	"github.com/bishopfox/sliver/implant/sliver/transports/mtls"
 	// {{end}}
-
-	"github.com/bishopfox/sliver/implant/sliver/transports"
 )
 
 // startReverse - The implant dials back a C2 server.
@@ -160,7 +158,7 @@ func (t *C2) startReverse() (err error) {
 		// In case of failure to initiate a session, sleep
 		// for the determined ReconnectInterval. This interval
 		// is shared both at the transport and at the Session layer.
-		time.Sleep(transports.GetReconnectInterval())
+		time.Sleep(time.Duration(t.Profile.Interval))
 	}
 
 	// {{if .Config.Debug}}
@@ -234,7 +232,7 @@ ConnLoop:
 		// In case of failure to initiate a session, sleep
 		// for the determined ReconnectInterval. This interval
 		// is shared both at the transport and at the Session layer.
-		time.Sleep(transports.GetReconnectInterval())
+		time.Sleep(time.Duration(t.Profile.Interval))
 	}
 
 	// {{if .Config.Debug}}

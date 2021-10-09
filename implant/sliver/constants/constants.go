@@ -30,5 +30,5 @@ type Message struct {
 	Command string `c2:"[[GenerateCanary]]"`
 }
 
-// never obfuscate the Message type
+// never obfuscate the Message type. Really unsafe though: TODO: change this !
 var _ = reflect.TypeOf(Message{})

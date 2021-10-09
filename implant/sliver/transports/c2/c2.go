@@ -43,6 +43,7 @@ import (
 
 	// {{if .Config.CommEnabled}}
 	"github.com/bishopfox/sliver/implant/sliver/comm"
+	"github.com/bishopfox/sliver/implant/sliver/transports/cryptography"
 	// {{end}}
 
 	consts "github.com/bishopfox/sliver/implant/sliver/constants"
@@ -171,6 +172,10 @@ func NewC2FromProfile(p *sliverpb.C2Profile) (t *C2, err error) {
 
 // Start the transport as it is currently configured and instantiated.
 func (t *C2) Start() (err error) {
+
+	// Basic security values that need to be set
+	cryptography.OTPSecret = string(t.Profile.Credentials.TOTPServerSecret)
+	cryptography.CACertPEM = string(t.Profile.Credentials.CACertPEM)
 
 	// The starting process happens in this order:
 	// 1 - A physical connection is established to

