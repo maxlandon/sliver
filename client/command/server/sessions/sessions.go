@@ -78,12 +78,7 @@ func printSessions(sessions map[uint32]*clientpb.Session) {
 		s := sessions[uint32(k)]
 		osArch := fmt.Sprintf("%s/%s", s.OS, s.Arch)
 
-		var status string
-		if s.IsDead {
-			status = "Dead"
-		} else {
-			status = "Alive"
-		}
+		var status = s.State.String()
 		burned := ""
 		if s.Burned {
 			burned = "🔥"

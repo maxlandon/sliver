@@ -69,6 +69,7 @@ type Session struct {
 	Extensions       []string
 	ConfigID         string
 	WorkingDirectory string
+	State            clientpb.State
 
 	// Transports
 	Connection        *ImplantConnection
@@ -84,7 +85,7 @@ func (s *Session) LastCheckin() time.Time {
 	return s.Connection.LastMessage
 }
 
-func (s *Session) IsDead() bool {
+func (s *Session) CurrentState() clientpb.State {
 	sessionsLog.Debugf("Last checkin was %v", s.Connection.LastMessage)
 	padding := time.Duration(10 * time.Second) // Arbitrary margin of error
 	timePassed := time.Now().Sub(s.LastCheckin())
@@ -92,15 +93,15 @@ func (s *Session) IsDead() bool {
 	pollTimeout := time.Duration(s.PollTimeout)
 	if timePassed < reconnect+padding && timePassed < pollTimeout+padding {
 		sessionsLog.Debugf("Last message within reconnect interval / poll timeout with padding")
-		return false
+		return clientpb.State_Alive
 	}
 	if s.Connection.Transport == consts.MtlsStr {
 		if time.Now().Sub(s.Connection.LastMessage) < 2*time.Minute+padding {
 			sessionsLog.Debugf("Last message within ping interval with padding")
-			return false
+			return clientpb.State_Alive
 		}
 	}
-	return true
+	return clientpb.State_Dead
 }
 
 // ToProtobuf - Get the protobuf version of the object
@@ -123,7 +124,7 @@ func (s *Session) ToProtobuf() *clientpb.Session {
 		Filename:          s.Filename,
 		LastCheckin:       s.LastCheckin().Unix(),
 		ActiveC2:          s.ActiveC2,
-		IsDead:            s.IsDead(),
+		State:             s.CurrentState(),
 		ReconnectInterval: s.ReconnectInterval,
 		ProxyURL:          s.ProxyURL,
 		PollTimeout:       s.PollTimeout,
@@ -186,6 +187,9 @@ func (s *sessions) All() []*Session {
 	for _, session := range s.sessions {
 		all = append(all, session)
 	}
+	for _, session := range s.switching {
+		all = append(all, session)
+	}
 	return all
 }
 
@@ -193,7 +197,13 @@ func (s *sessions) All() []*Session {
 func (s *sessions) Get(sessionID uint32) *Session {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	return s.sessions[sessionID]
+	if s, found := s.sessions[sessionID]; found {
+		return s
+	}
+	if s, found := s.switching[sessionID]; found {
+		return s
+	}
+	return nil
 }
 
 // Get - Get a session by UUID
@@ -205,6 +215,11 @@ func (s *sessions) GetByUUID(sessionUUID string) *Session {
 			return sess
 		}
 	}
+	for _, sess := range s.switching {
+		if sess.UUID == sessionUUID {
+			return sess
+		}
+	}
 	return nil
 }
 
@@ -212,7 +227,11 @@ func (s *sessions) GetByUUID(sessionUUID string) *Session {
 func (s *sessions) Add(session *Session) *Session {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	s.sessions[session.ID] = session
+	if session.State == clientpb.State_Switching {
+		s.switching[session.ID] = session
+	} else {
+		s.sessions[session.ID] = session
+	}
 	EventBroker.Publish(Event{
 		Type:    clientpb.EventType_SessionOpened,
 		Session: session,
@@ -282,7 +301,14 @@ func nextSessionID() uint32 {
 func (s *sessions) UpdateSession(session *Session) *Session {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	s.sessions[session.ID] = session
+
+	// If the transport is currently being switched
+	if session.State == clientpb.State_Switching {
+		s.switching[session.ID] = session
+	} else {
+		s.sessions[session.ID] = session
+	}
+
 	EventBroker.Publish(Event{
 		Type:    clientpb.EventType_SessionUpdated,
 		Session: session,

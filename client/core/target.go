@@ -19,6 +19,7 @@ package core
 */
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -33,9 +34,15 @@ var (
 // Target - An interface allowing us to transparently use the active
 // target, regardless of it being a Session or a Beacon.
 type Target interface {
-	// Common
+	// Base
 	ID() string
 	Name() string
+
+	// Type
+	IsSession() bool
+	IsBeacon() bool
+
+	// Info
 	Hostname() string
 	UUID() string
 	Username() string
@@ -44,27 +51,28 @@ type Target interface {
 	PID() int32
 	OS() string
 	Arch() string
-	Transport() string
-	RemoteAddress() string
 	Filename() string
-	LastCheckin() int64
-	ActiveC2() string
 	Version() string
 	Evasion() bool
-	IsDead() bool
-	ProxyURL() string
-	Burned() bool
 	WorkingDirectory() string
 
-	// Type
-	IsSession() bool
-	IsBeacon() bool
+	// State
+	State() clientpb.State
+	Unavailable() error
+	Burned() bool
 
 	// Underlying
 	Session() *clientpb.Session
 	SetSession(sess *clientpb.Session)
 	Beacon() *clientpb.Beacon
 	SetBeacon(beacon *clientpb.Beacon)
+
+	// Transport
+	ActiveC2() string
+	Transport() string
+	LastCheckin() int64
+	RemoteAddress() string
+	ProxyURL() string
 
 	// Session
 	ReconnectInterval() int64
@@ -273,14 +281,35 @@ func (t *activeTarget) Evasion() bool {
 	return t.beacon.Evasion
 }
 
-func (t *activeTarget) IsDead() bool {
+func (t *activeTarget) State() clientpb.State {
 	if t.session == nil && t.beacon == nil {
-		return true
+		return clientpb.State_Dead
 	}
 	if t.session != nil {
-		return t.session.IsDead
+		return t.session.State
 	}
-	return t.beacon.IsDead
+	return t.beacon.State
+}
+
+func (t *activeTarget) Unavailable() (err error) {
+	var state clientpb.State
+	if t.session != nil {
+		state = t.session.State
+	} else if t.beacon != nil {
+		state = t.beacon.State
+	}
+	if t.session != nil {
+		if state == clientpb.State_Dead {
+			return fmt.Errorf("Cannot use command: session is dead")
+		}
+		if state == clientpb.State_Sleep {
+			return fmt.Errorf("Cannot use command: session is sleeping")
+		}
+		if state == clientpb.State_Switching {
+			return fmt.Errorf("Cannot use command: session is switching its transport and currently disconnected")
+		}
+	}
+	return nil
 }
 
 func (t *activeTarget) ProxyURL() string {

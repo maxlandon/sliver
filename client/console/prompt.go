@@ -138,10 +138,7 @@ var (
 			return core.ActiveTarget.Arch()
 		},
 		"{status}": func() string {
-			if core.ActiveTarget.IsDead() {
-				return "DEAD"
-			}
-			return "up"
+			return core.ActiveTarget.State().String()
 		},
 		"{version}": func() string {
 			return core.ActiveTarget.Version()

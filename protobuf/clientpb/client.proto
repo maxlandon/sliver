@@ -136,7 +136,7 @@ message Session {
   string ActiveC2 = 15;
   string Version = 16;
   bool Evasion = 17;
-  bool IsDead = 18;
+  State State = 18;
   int64 ReconnectInterval = 19;
   string ProxyURL = 20;
   int64 PollTimeout = 21;
@@ -166,7 +166,7 @@ message Beacon {
   string ActiveC2 = 15;
   string Version = 16;
   bool Evasion = 17;
-  bool IsDead = 18;
+  State State = 18;
   string WorkingDirectory = 19;
 
   string ProxyURL = 20;
@@ -198,6 +198,14 @@ message BeaconTask {
 message BeaconTasks {
   string BeaconID = 1;
   repeated BeaconTask Tasks = 2;
+}
+
+// State - Current runtime &/or connectivity state of a session/beacon
+enum State {
+  Alive = 0;
+  Dead = 1;
+  Sleep = 2;
+  Switching = 3;
 }
 
 // [ Implants ] --------------------------------------------------------

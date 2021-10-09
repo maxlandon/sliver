@@ -43,6 +43,9 @@ type ListDirectories struct {
 
 // Execute - List directory contents
 func (ls *ListDirectories) Execute(args []string) (err error) {
+	if err := core.ActiveTarget.Unavailable(); err != nil {
+		return err
+	}
 	_, beacon := core.ActiveTarget.Targets()
 
 	if len(ls.Positional.Path) == 0 {

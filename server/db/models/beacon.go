@@ -53,6 +53,7 @@ type Beacon struct {
 	ProxyURL          string
 	PollTimeout       int64
 	WorkingDirectory  string
+	State             clientpb.State
 
 	ImplantBuildID uuid.UUID `gorm:"type:uuid;"`
 
@@ -86,6 +87,7 @@ func (b *Beacon) ToProtobuf() *clientpb.Beacon {
 		Filename:      b.Filename,
 		LastCheckin:   b.LastCheckin.Unix(),
 		Version:       b.Version,
+		State:         b.State,
 		// ReconnectInterval: b.ReconnectInterval,
 		ProxyURL: b.ProxyURL,
 		// PollTimeout: b.PollTimeout,

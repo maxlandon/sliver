@@ -80,6 +80,7 @@ func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *s
 	session.ProxyURL = register.ProxyURL
 	session.ConfigID = register.ConfigID
 	session.WorkingDirectory = register.WorkingDirectory
+	session.State = clientpb.State_Alive
 
 	core.Sessions.Add(session)
 	implantConn.Cleanup = func() {

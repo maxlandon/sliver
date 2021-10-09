@@ -25,6 +25,7 @@ import (
 
 	"github.com/gofrs/uuid"
 
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
@@ -83,10 +84,10 @@ func RegisterTransportSwitch(sess *Session) (err error) {
 		return fmt.Errorf("Session %d (%s) is already currently switching its transport", sess.ID, sess.HostUUID)
 	}
 
-	// Else add it to the map.
-	Sessions.mutex.RLock()
-	defer Sessions.mutex.RUnlock()
-	Sessions.switching[sess.ID] = sess
+	// Else update its state and publish
+	delete(Sessions.sessions, sess.ID)
+	sess.State = clientpb.State_Switching
+	Sessions.UpdateSession(sess)
 
 	return
 }
@@ -95,10 +96,13 @@ func RegisterTransportSwitch(sess *Session) (err error) {
 // the server that we're done with the process and that we can unmark the session.
 func ConfirmTransportSwitched(sess *Session) {
 	Sessions.mutex.Lock()
-	defer Sessions.mutex.Unlock()
 	session := Sessions.switching[sess.ID]
 	if session != nil {
 		delete(Sessions.switching, sess.ID)
+		Sessions.mutex.Unlock()
+
+		// And publish the updates
+		Sessions.UpdateSession(session)
 	}
 }
 

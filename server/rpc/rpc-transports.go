@@ -253,7 +253,6 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTran
 func (rpc *Server) GetTransports(ctx context.Context, req *clientpb.GetTransportsReq) (res *clientpb.GetTransports, err error) {
 
 	session := core.Sessions.GetByUUID(req.Request.SessionUUID)
-	// session := core.Sessions.Get(req.Request.SessionID)
 
 	transports, err := db.TransportsBySession(session.UUID, session.Name)
 	if err != nil {

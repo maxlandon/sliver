@@ -58,7 +58,7 @@ func (ka *SessionsClean) Execute(args []string) (err error) {
 			continue
 		}
 
-		if sess.IsDead {
+		if sess.State == clientpb.State_Dead {
 			// Kill session
 			err = killSession(sess, true, transport.RPC)
 			if err != nil {
