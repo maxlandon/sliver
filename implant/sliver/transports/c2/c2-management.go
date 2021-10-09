@@ -128,8 +128,13 @@ func (t *c2s) AddFromProfile(profile string) (err error) {
 // Add - Add a new active transport to the implant' transport map.
 func (t *c2s) Add(c2 *C2) (err error) {
 	t.mutex.Lock()
-	// index := c2.Priority
-	t.Available = append(t.Available, c2)
+	if c2.Priority > len(t.Available) {
+		c2.Priority = len(t.Available)
+		t.Available = append(t.Available, c2)
+	} else if c2.Priority < len(t.Available) && c2.Priority > 0 {
+		following := append([]*C2{c2}, t.Available[c2.Priority:]...)
+		t.Available = append(t.Available[:c2.Priority], following...)
+	}
 	t.mutex.Unlock()
 	return
 }

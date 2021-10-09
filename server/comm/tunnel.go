@@ -139,13 +139,13 @@ func (t *tunnel) RemoteAddr() (addr net.Addr) {
 	c2, _ := url.Parse(t.Sess.ActiveC2)
 	host, _ := url.Parse(t.Sess.RemoteAddress)
 	switch c2.Scheme {
-	case "dns", "named_pipe", "namedpipe":
+	case "dns":
 		port, _ := strconv.Atoi(host.Port())
 		addr = &net.UDPAddr{
 			IP:   net.ParseIP(host.Host),
 			Port: port,
 		}
-	case "mtls", "tcp", "http", "https":
+	case "mtls", "tcp", "http", "https", "named_pipe", "namedpipe":
 		port, _ := strconv.Atoi(host.Port())
 		addr = &net.TCPAddr{
 			IP:   net.ParseIP(host.Host),
@@ -159,13 +159,13 @@ func (t *tunnel) RemoteAddr() (addr net.Addr) {
 func (t *tunnel) LocalAddr() (addr net.Addr) {
 	c2, _ := url.Parse(t.Sess.ActiveC2)
 	switch c2.Scheme {
-	case "dns", "named_pipe", "namedpipe":
+	case "dns":
 		port, _ := strconv.Atoi(c2.Port())
 		addr = &net.UDPAddr{
 			IP:   net.ParseIP(c2.Host),
 			Port: port,
 		}
-	case "mtls", "tcp", "http", "https":
+	case "mtls", "tcp", "http", "https", "named_pipe", "namedpipe":
 		port, _ := strconv.Atoi(c2.Port())
 		addr = &net.TCPAddr{
 			IP:   net.ParseIP(c2.Host),

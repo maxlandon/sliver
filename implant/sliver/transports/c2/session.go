@@ -102,7 +102,14 @@ func (t *C2) StartSession() (err error) {
 
 		// {{if .Config.HTTPc2Enabled}}
 		case "https":
-			fallthrough
+			t.Connection, err = httpclient.SetupConnectionHTTPS(t.uri, t.Profile, t.cleanup)
+			if err != nil {
+				// {{if .Config.Debug}}
+				log.Printf("[%s] Connection failed: %s", t.uri.Scheme, err.Error())
+				// {{end}}
+				t.FailedAttempt()
+				continue
+			}
 		case "http":
 			t.Connection, err = httpclient.SetupConnectionHTTP(t.uri, t.Profile, t.cleanup)
 			if err != nil {
