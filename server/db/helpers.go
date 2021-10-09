@@ -186,7 +186,7 @@ func ImplantProfiles() ([]*models.ImplantProfile, error) {
 	}
 
 	for _, profile := range profiles {
-		err = loadC2s(profile.ImplantConfig)
+		err = loadTransportsForConfig(profile.ImplantConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +204,7 @@ func ImplantProfileByName(name string) (*models.ImplantProfile, error) {
 		return nil, err
 	}
 
-	err = loadC2s(profile.ImplantConfig)
+	err = loadTransportsForConfig(profile.ImplantConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -212,17 +212,16 @@ func ImplantProfileByName(name string) (*models.ImplantProfile, error) {
 	return &profile, err
 }
 
-// C2s are not eager-loaded, this will load them for a given ImplantConfig
-// I wasn't able to get GORM's nested loading to work, so I went with this.
-func loadC2s(config *models.ImplantConfig) error {
-	c2s := []models.ImplantC2{}
-	err := Session().Where(&models.ImplantC2{
-		ImplantConfigID: config.ID,
-	}).Find(&c2s).Error
+// loadTransportsForConfig - Load the C2Profiles that have been compiled into a build.
+func loadTransportsForConfig(config *models.ImplantConfig) error {
+	transports := []*models.Transport{}
+	err := Session().Where(&models.Transport{
+		ImplantBuildID: config.ImplantBuildID,
+	}).Find(&transports).Error
 	if err != nil {
 		return err
 	}
-	config.C2 = c2s
+	config.Transports = transports
 	return nil
 }
 

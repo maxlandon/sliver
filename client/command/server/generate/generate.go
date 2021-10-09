@@ -311,8 +311,8 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 	// If connection settings have been specified, apply them to all profiles indiscriminatly.
 	for _, profile := range cfg.C2S {
 		profile.MaxConnectionErrors = int32(g.TransportOptions.MaxErrors)
-		profile.PollTimeout = int64(g.TransportOptions.PollTimeout)
-		profile.Interval = int64(g.TransportOptions.Reconnect)
+		profile.PollTimeout = int64(g.TransportOptions.PollTimeout) * int64(time.Second)
+		profile.Interval = int64(g.TransportOptions.Reconnect) * int64(time.Second)
 
 		// All profiles are fallback by default
 		profile.IsFallback = true

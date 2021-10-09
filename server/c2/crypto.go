@@ -24,10 +24,30 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/certs"
-	"github.com/bishopfox/sliver/server/cryptography"
-	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
 )
+
+// SetupHandlerProfile - Root function where all profiles used by HANDLERS are validated and
+// optionally populated if some fields are missing. Covers everything: C2 target addresses,
+// default ports, connectivity, security details and more.
+//
+// You can add your own branching with a function checking
+// and populating fields specific to/needed by you C2 channel
+func SetupHandlerProfile(profile *models.C2Profile) (err error) {
+
+	// If the profile is an HTTP C2, verify the server has everything it needs
+	if profile.Channel == sliverpb.C2Channel_HTTP || profile.Channel == sliverpb.C2Channel_HTTPS {
+
+	}
+
+	// Check that all credentials needed by the handler are loaded
+	err = SetupHandlerSecurity(profile, profile.Hostname)
+	if err != nil {
+		return err
+	}
+
+	return
+}
 
 // SetupHandlerSecurity - Performs more or less the same job as SetupProfileSecurity, in that
 // it works on and validates a C2Profile. However, no certification creation is made by default
@@ -48,8 +68,6 @@ func SetupHandlerSecurity(p *models.C2Profile, hostname string) (err error) {
 // SetupProfileSecurity - The central point where all C2 Profiles go at some point, for validation of minimum safety levels, as
 // well as for more specialized authentication steps that you can add below, for more exotic C2 channels like Wireguard.
 func SetupProfileSecurity(p *models.C2Profile, certificateHostname string) (err error) {
-
-	// Always set up the basic security level:
 
 	// - TLS authenticated implants
 	if p.Channel == sliverpb.C2Channel_MTLS {
@@ -78,32 +96,6 @@ func SetupProfileSecurity(p *models.C2Profile, certificateHostname string) (err 
 	}
 
 	return nil
-}
-
-// InitProfileSecurityCompilation - Any one-time security details, (or last minute ones) that need to happen before
-// the C2 profile is used in compiling an implant, or to be sent accross the wire. This is also
-// because some elements might not be saved in the database for that matter.
-func InitProfileSecurityCompilation(p *models.C2Profile) (profile *sliverpb.C2Profile, err error) {
-
-	// Instantiate something that can go off the wire.
-	profile = p.ToProtobuf()
-
-	// Time-based One-Time Passwordzzzz.... or buzzwords ?
-	otpSecret, err := cryptography.TOTPServerSecret()
-	if err != nil {
-		return profile, err
-	}
-	profile.Credentials.TOTPServerSecret = []byte(otpSecret) // In doubt, use it anyway...
-
-	// Save the profile, which might be anonymous. Update it if not new
-	err = db.Session().Find(&p).Save(&p).Error
-	if err != nil {
-		return profile, err
-	}
-	profile.ID = p.ID.String()
-
-	// Fully ready to be used
-	return profile, nil
 }
 
 // setupSecurityMTLS - Most basic security details for all implant C2s leaving the server.

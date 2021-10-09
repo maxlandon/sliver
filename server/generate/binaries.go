@@ -206,7 +206,7 @@ func ImplantConfigFromProtobuf(pbConfig *clientpb.ImplantConfig) (string, *model
 	// cfg.BeaconJitter = pbConfig.BeaconJitter
 
 	// Generates templates for all C2 profiles found or that must be
-	err := InitImplantC2Configuration(pbConfig, cfg)
+	err := InitImplantC2Profiles(pbConfig, cfg)
 	if err != nil {
 		return "", nil
 	}

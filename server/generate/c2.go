@@ -21,6 +21,7 @@ package generate
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"strings"
 
 	"github.com/gofrs/uuid"
@@ -32,40 +33,145 @@ import (
 	"github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/configs"
+	"github.com/bishopfox/sliver/server/cryptography"
+	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
 )
 
-// C2ProfileFromConfig - Copy a C2 profile into a model, optionally validate somethings.
-func C2ProfileFromConfig(p *sliverpb.C2Profile, certificateHostname string) (*models.C2Profile, error) {
+// InitImplantC2Profiles - Given one ore more C2 profiles transmitted along an Implant configuration,
+// parse, validate, generate values for all C2s, make them ready for being compiled into a build.
+func InitImplantC2Profiles(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantConfig) error {
+
+	// For each C2 profile in the implant config, parse, validate and
+	// populate it with everything needed to be compiled into an implant.
+	for order, profile := range pbConfig.C2S {
+
+		transport, err := NewTransport(cfg, profile)
+		if err != nil {
+			return err
+		}
+		transport.Priority = order
+		cfg.Transports = append(cfg.Transports, transport)
+	}
+
+	// Analyze and set up the transports to be compiled in the build
+	// so as to be available at runtime, for dynamic C2 switching.
+	setRuntimeTransports(pbConfig, cfg)
+
+	// If the Comm system enabled, add necessary
+	// keys for SSH authentication & encryption.
+	configureCommSystem(pbConfig, cfg)
+
+	return nil
+}
+
+// NewTransport - Validates all fields for a given transport specified as Protobuf,
+// for any supported C2 protocols and targeting a precise implant build configuration.
+// You can add your own branching calling a function dealing with your own C2 details and configurations.
+func NewTransport(config *models.ImplantConfig, template *sliverpb.C2Profile) (transport *models.Transport, err error) {
+
+	// Base information parsing
+	profile, err := newProfileFromConfig(template, config.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Protocol-specific -----------------------------------------------------------------------
+
+	// HTTP protocols need to check their builtin configuration, as well as
+	// serializing those HTTP profiles in order to store them in the Database.
+	if profile.Channel == sliverpb.C2Channel_HTTP || profile.Channel == sliverpb.C2Channel_HTTPS {
+		err = setupProfileHTTP(template, config, profile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// The Wireguard protocol might need a generated IP address
+	if profile.Channel == sliverpb.C2Channel_WG {
+		err = setupC2ProfileClientWG(template, config, profile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Transport Security ----------------------------------------------------------------------
+
+	// Setup all certificates, keys and other credentials for the
+	// appropriate C2 stack and the direction of the connection,
+	// before passing this C2 back to compilation.
+	err = c2.SetupProfileSecurity(profile, config.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Once everything is ready, wrap the profile into a transport, ready to be compiled
+	return setTransport(profile), nil
+}
+
+// InitTransportCompilation - Any one-time security details, (or last minute ones) that need to happen before
+// the C2 profile is used in compiling an implant, or to be sent accross the wire. This is also
+// because some elements might not be saved in the database for that matter.
+func InitTransportCompilation(p *models.C2Profile) (profile *sliverpb.C2Profile, err error) {
+
+	// Instantiate something that can go off the wire.
+	profile = p.ToProtobuf()
+
+	// Time-based One-Time Passwordzzzz.... or buzzwords ?
+	otpSecret, err := cryptography.TOTPServerSecret()
+	if err != nil {
+		return profile, err
+	}
+	profile.Credentials.TOTPServerSecret = []byte(otpSecret) // In doubt, use it anyway...
+
+	// Save the profile, which might be anonymous. Update it if not new
+	err = db.Session().Find(&p).Save(&p).Error
+	if err != nil {
+		return profile, err
+	}
+	profile.ID = p.ID.String()
+
+	// Fully ready to be used
+	return profile, nil
+}
+
+// newProfileFromConfig - Copy a C2 profile into a model, optionally validate somethings.
+func newProfileFromConfig(p *sliverpb.C2Profile, certificateHostname string) (*models.C2Profile, error) {
 
 	id, _ := uuid.NewV4()
 
 	profile := &models.C2Profile{
 		// Core
-		ID:        id,
-		Name:      p.Name,
-		Hostname:  p.Hostname,
-		Port:      p.Port,
-		Type:      p.Type,
-		Channel:   p.C2,
-		Direction: p.Direction,
+		ID:               id,
+		ContextSessionID: uuid.FromStringOrNil(p.ContextSessionID),
+		Type:             p.Type,
+		Channel:          p.C2,
+		Direction:        p.Direction,
+		Name:             p.Name,
+		Hostname:         p.Hostname,
+		Port:             p.Port,
+		ControlPort:      p.ControlPort,
+		KeyExchangePort:  p.KeyExchangePort,
+		Path:             p.Path,
+		Domains:          strings.Join(p.Domains, ","),
 		// Technicals
 		PollTimeout:         p.PollTimeout,
 		MaxConnectionErrors: p.MaxConnectionErrors,
-		IsFallback:          p.IsFallback,
 		Active:              p.Active,
-		ControlPort:         p.ControlPort,
 		CommDisabled:        p.CommDisabled,
-		// Beaconing
-		Interval: p.Interval,
-		Jitter:   p.Jitter,
+		Interval:            p.Interval,
+		Jitter:              p.Jitter,
 		// HTTP
 		ProxyURL: p.ProxyURL,
+		Website:  p.Website,
 		// Security & Indentity
 		CACertPEM:         p.Credentials.CACertPEM,
 		CertPEM:           p.Credentials.CertPEM,
 		KeyPEM:            p.Credentials.KeyPEM,
+		ControlServerCert: p.Credentials.ControlServerCert,
+		ControlClientKey:  p.Credentials.ControlClientKey,
 		ServerFingerprint: p.Credentials.ServerFingerprint, // REMOVE
+		LetsEncrypt:       p.LetsEncrypt,
 	}
 
 	// If this profile has no ID and no name, this means it is a buffer profile
@@ -78,73 +184,18 @@ func C2ProfileFromConfig(p *sliverpb.C2Profile, certificateHostname string) (*mo
 		profile.Anonymous = true
 	}
 
-	// Setup all certificates, keys and other credentials
-	// before passing this C2 back to compilation.
-	err := c2.SetupProfileSecurity(profile, certificateHostname)
-	if err != nil {
-		return profile, err
-	}
+	// HTTP configuration
 
 	return profile, nil
 }
 
-// InitImplantC2Configuration - Given one ore more C2 profiles transmitted along an Implant configuration,
-// parse, validate, generate values for all C2s, make them ready for being compiled into a build.
-func InitImplantC2Configuration(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantConfig) error {
-
-	// Setup and copy all available C2 profiles. This takes care of basic security also.
-	for order, profile := range pbConfig.C2S {
-
-		// Base, validated profile
-		validated, err := C2ProfileFromConfig(profile, pbConfig.Name)
-		if err != nil {
-			return err
-		}
-
-		// HTTP protocols need to check their builtin configuration, as well as
-		// serializing those HTTP profiles in order to store them in the Database.
-		if validated.Channel == sliverpb.C2Channel_HTTP || validated.Channel == sliverpb.C2Channel_HTTPS {
-			validated.HTTP.Data = setupC2ProfileClientHTTP(profile, cfg)
-		}
-
-		// Finally, add the C2 profile as a transport to the configuration
-		transport := setTransport(validated)
-		transport.Priority = order
-		cfg.Transports = append(cfg.Transports, transport)
-	}
-
-	// Analyze and set up the transports to be compiled so as to be available
-	// at runtime, for dynamic C2 switching.
-	setRuntimeTransports(pbConfig, cfg)
-
-	// If the Comm system enabled, add necessary keys for SSH authentication & encryption.
-	if cfg.CommEnabled {
-		// Make a fingerprint of the implant's private key, for SSH-layer authentication
-		_, serverCAKey, err := certs.GetECCCertificate(certs.CommCA, "server")
-		if err != nil {
-			_, serverCAKey, _ = certs.CommGenerateECCCertificate("server")
-		}
-		signer, _ := ssh.ParsePrivateKey(serverCAKey)
-		keyBytes := sha256.Sum256(signer.PublicKey().Marshal())
-		fingerprint := base64.StdEncoding.EncodeToString(keyBytes[:])
-		cfg.CommServerFingerprint = fingerprint
-
-		// And generate the SSH keypair
-		clientCert, clientKey, _ := certs.CommGenerateECCCertificate(pbConfig.Name)
-		cfg.CommServerCert = string(clientCert)
-		cfg.CommServerKey = string(clientKey)
-	}
-
-	return nil
-}
-
-// setupC2ProfileClientHTTP - Validates and/or populates any required HTTP C2 Profile stuff.
-func setupC2ProfileClientHTTP(p *sliverpb.C2Profile, config *models.ImplantConfig) (httpProfileData []byte) {
+// setupProfileHTTP - Validates and/or populates any required HTTP C2 Profile stuff.
+func setupProfileHTTP(p *sliverpb.C2Profile, config *models.ImplantConfig, profile *models.C2Profile) error {
 
 	// If there are any miningful values set up, don't touch anything
 	// and pass along, we assume the guy throwing the config has set it up already.
-	if len(p.HTTP.SessionFiles) > 0 && len(p.HTTP.KeyExchangeFiles) > 0 {
-		return
+	if p.HTTP != nil && len(p.HTTP.SessionFiles) > 0 && len(p.HTTP.KeyExchangeFiles) > 0 {
+		return nil
 	}
 
 	// Load default HTTP configuration, either compiled in server or in server config path
@@ -158,11 +209,41 @@ func setupC2ProfileClientHTTP(p *sliverpb.C2Profile, config *models.ImplantConfi
 
 	data, err := proto.Marshal(p.HTTP)
 	if err != nil {
-		return []byte{}
+		return fmt.Errorf("marshalling error: %s", err)
 	}
 
-	return data
+	profile.HTTP = &models.C2ProfileHTTP{
+		C2ProfileID: profile.ID,
+		UserAgent:   p.HTTP.UserAgent,
+		Data:        data,
+	}
+
+	return nil
 }
+
+// setupC2ProfileClientWG - Validates and/or populates any required Wireguard C2 Profile stuff.
+func setupC2ProfileClientWG(p *sliverpb.C2Profile, config *models.ImplantConfig, profile *models.C2Profile) error {
+
+	// If the profile already contains a Wireguard tunnel IP address, it is in the hostname.
+	// Do not change it, and return the profile as is.
+	// TODO: check valid IP
+	if len(p.Domains) == 1 {
+		return nil
+	}
+
+	// Else, generate a unique IP Address and return it
+	tunIP, err := c2.GenerateUniqueIP()
+	if err != nil {
+		return err
+	}
+	profile.Domains = tunIP.String()
+
+	return nil
+}
+
+//
+// --- COMPILATION HELPERS  ------------------------------------------------------------------------------------------
+//
 
 func setRuntimeTransports(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantConfig) {
 
@@ -215,13 +296,12 @@ func setRuntimeTransports(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantC
 		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_TCP.String()))
 	}
 
+	// Save the list of compiled C2 stacks in the config
+	cfg.RuntimeC2s = strings.Join(runtimeC2s, ",")
+
 	// Determine if SSH comm is enabled and needs to be compiled
 	cfg.CommEnabled = isCommEnabled(pbConfig, cfg.Transports)
 
-	cfg.IsBeacon = isBeaconEnabled(pbConfig, cfg.Transports)
-
-	// Save the list of compiled C2 stacks in the config
-	cfg.RuntimeC2s = strings.Join(runtimeC2s, ",")
 }
 
 func c2Enabled(schemes []string, transports []*models.Transport) bool {
@@ -233,20 +313,6 @@ func c2Enabled(schemes []string, transports []*models.Transport) bool {
 		}
 	}
 	return false
-}
-
-func isCommEnabled(cfg *clientpb.ImplantConfig, transports []*models.Transport) (enabled bool) {
-	// If there is at least one protocol that does not
-	// explicitely denies it we set it true by default.
-	for _, transport := range transports {
-		if !transport.Profile.CommDisabled {
-			enabled = true
-		}
-	}
-
-	// BUT the user can choose to override all per-C2 settings
-	// and either disable it entirely (--no-comms) or leave it on by default
-	return !cfg.CommDisabled
 }
 
 func isBeaconEnabled(cfg *clientpb.ImplantConfig, transport []*models.Transport) (enabled bool) {
@@ -267,4 +333,40 @@ func setTransport(c2 *models.C2Profile) (transport *models.Transport) {
 	c2.Anonymous = true
 
 	return
+}
+
+// Comm System -------------------------------------------------------------------------------
+
+func isCommEnabled(cfg *clientpb.ImplantConfig, transports []*models.Transport) (enabled bool) {
+	// If there is at least one protocol that does not
+	// explicitely denies it we set it true by default.
+	for _, transport := range transports {
+		if !transport.Profile.CommDisabled {
+			enabled = true
+		}
+	}
+
+	// BUT the user can choose to override all per-C2 settings
+	// and either disable it entirely (--no-comms) or leave it on by default
+	return !cfg.CommDisabled
+}
+
+// configureCommSystem - Populate the certificates and keys needed by the SSH Comm system
+func configureCommSystem(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantConfig) {
+	if cfg.CommEnabled {
+		// Make a fingerprint of the implant's private key, for SSH-layer authentication
+		_, serverCAKey, err := certs.GetECCCertificate(certs.CommCA, "server")
+		if err != nil {
+			_, serverCAKey, _ = certs.CommGenerateECCCertificate("server")
+		}
+		signer, _ := ssh.ParsePrivateKey(serverCAKey)
+		keyBytes := sha256.Sum256(signer.PublicKey().Marshal())
+		fingerprint := base64.StdEncoding.EncodeToString(keyBytes[:])
+		cfg.CommServerFingerprint = fingerprint
+
+		// And generate the SSH keypair
+		clientCert, clientKey, _ := certs.CommGenerateECCCertificate(pbConfig.Name)
+		cfg.CommServerCert = string(clientCert)
+		cfg.CommServerKey = string(clientKey)
+	}
 }
