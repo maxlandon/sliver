@@ -121,8 +121,6 @@ func NewServerFromProfile(profile *models.C2Profile) (srv *SliverHTTPC2, err err
 		// Advanced C2 Profile setup
 		profile:  profile,
 		c2Config: httpConfig,
-		// Security
-		tlsConfig: cryptography.TLSConfigFromProfile(profile),
 	}
 
 	// Create the underlying HTTP server
@@ -145,21 +143,18 @@ func NewServerFromProfile(profile *models.C2Profile) (srv *SliverHTTPC2, err err
 		srv.LongPollJitter = int64(DefaultLongPollJitter)
 	}
 
-	// Security
-	if profile.LetsEncrypt {
-		// Either provision a config that will be wired to ACME servers
+	// Security: Always populate a complete TLS configuration by default.
+	// It will not be used if the server is asked to serve HTTP and not HTTPS
+	srv.tlsConfig = cryptography.TLSConfigFromProfile(profile)
+
+	// Override the configuration if Let's Encrypt provisioning is asked.
+	if profile.Channel == sliverpb.C2Channel_HTTPS && profile.LetsEncrypt {
 		acmeManager := certs.GetACMEManager(srv.getServerDomain())
 		srv.tlsConfig = &tls.Config{
 			GetCertificate: acmeManager.GetCertificate,
 		}
-	} else {
-		// Or either :
-		// - fill with mutual authentication certificates if HTTPS
-		// - fill in an insecure tls.Config if HTTP.
-		srv.tlsConfig = cryptography.TLSConfigFromProfile(profile)
 	}
 
-	// HTTP specific TLS settings
 	if srv.tlsConfig.NextProtos == nil {
 		srv.tlsConfig.NextProtos = []string{"http/1.1"}
 	}

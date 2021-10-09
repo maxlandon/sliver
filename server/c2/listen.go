@@ -107,6 +107,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job 
 
 		// Start the HTTP Server, handing its control to the job.
 		// (No listener, Sliver connections are handled from within the HTTP server implementation.)
+		// This will automatically either serve HTTP, or HTTPS with optional LetsEncrypt certs.
 		err = server.Serve(job)
 		if err != nil {
 			return err
