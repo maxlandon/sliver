@@ -62,7 +62,7 @@ func (rpc *Server) KillSession(ctx context.Context, kill *sliverpb.KillSessionRe
 	if session == nil {
 		return &commonpb.Empty{}, ErrInvalidSessionID
 	}
-	core.Sessions.Remove(session.ID, true)
+	core.Sessions.Remove(session.ID)
 	data, err := proto.Marshal(kill)
 	if err != nil {
 		return nil, err

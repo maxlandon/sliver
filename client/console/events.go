@@ -62,7 +62,7 @@ func eventLoop(rpc rpcpb.SliverRPCClient) {
 	for !isDone(events.Context()) {
 		event, err := events.Recv()
 		if err != nil {
-			fmt.Printf(Warning + "It seems that the Sliver Server disconnected, falling back...\n")
+			logger.Errorf("It seems that the Sliver Server disconnected, falling back...")
 			return
 		}
 
@@ -218,12 +218,18 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 			return
 		}
 
-		// If the session is our current session, we notify the console
+		// If the session was closed because of a transport switch, but we did not yet
+		// receive the resulting new beacon/session (events don't guarantee the order)
+		// We keep the session anyway. Will be changed later.
+		if id == session.ID && session.State == clientpb.State_Switching {
+			log.Infof("Closed switched session %d", session.ID)
+			return
+		}
+
+		// Else, if the session is our current session, we notify the console
 		if id == session.ID {
 			core.UnsetActiveSession()
 		}
-
-		// We print a message here if its not about a session we killed ourselves, and adapt prompt
 		lost := fmt.Sprintf("Lost session #%d %s - %s (%s) - %s/%s",
 			session.ID, session.Name, session.RemoteAddress,
 			session.Hostname, session.OS, session.Arch)
@@ -269,6 +275,7 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 	case clientpb.EventType_BeaconRegistered:
 
 		// If we are a session that is about to be closed, drop it before receiving the event
+		// if active.IsSession() && session.UUID == active.UUID() {
 		if active.IsSession() && session != nil && session.UUID == active.UUID() {
 			if session.State != clientpb.State_Switching {
 				return

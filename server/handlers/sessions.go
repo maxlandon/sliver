@@ -87,7 +87,7 @@ func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *s
 
 	core.Sessions.Add(session)
 	implantConn.Cleanup = func() {
-		core.Sessions.Remove(session.ID, true)
+		core.Sessions.Remove(session.ID)
 	}
 	go auditLogSession(session, register)
 
@@ -267,13 +267,6 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 	// Get this new transport and implant build
 	build, err := db.ImplantBuildByName(buildName)
 	transport, err := db.TransportByID(register.TransportID)
-	fmt.Println(register.TransportID)
-	fmt.Println(register.Beacon)
-	fmt.Println(transport.ID)
-	fmt.Println(transport.Profile.Channel.String())
-	fmt.Println(transport.Profile.Type.String())
-	fmt.Println(transport.Profile.Hostname)
-	fmt.Println(transport.Profile.Port)
 	if transport == nil || err != nil {
 		sessionHandlerLog.Errorf("(Transport switch) Failed to find transport %s", register.TransportID)
 		return nil
@@ -366,7 +359,7 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.RegisterTrans
 	if !sessionExists {
 		core.Sessions.Add(s)
 		c.Cleanup = func() {
-			core.Sessions.Remove(s.ID, true)
+			core.Sessions.Remove(s.ID)
 		}
 		go auditLogSession(s, r.Session)
 
@@ -493,7 +486,7 @@ func switchBeacon(s *core.Session, reg *sliverpb.RegisterTransportSwitch, conn *
 		if session == nil {
 			return nil
 		}
-		core.Sessions.Remove(session.ID, false)
+		core.Sessions.RemoveSwitched(session.ID)
 	}
 
 	return nil

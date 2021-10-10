@@ -113,7 +113,7 @@ func RegisterTransportSwitch(sess *Session, beacon *models.Beacon) (err error) {
 // switch, the session/beacon has provided the ID of its old transport, which should
 // be unique among all sessions/beacons. Find it and return it for update.
 func GetTargetSwitching(oldTransportID string) (sess *Session, beacon *models.Beacon) {
-	for _, s := range Sessions.sessions {
+	for _, s := range Sessions.All() {
 		if s.State == clientpb.State_Switching && s.TransportID == oldTransportID {
 			return s, nil
 		}

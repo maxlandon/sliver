@@ -68,7 +68,7 @@ func SetActiveTarget(sess *clientpb.Session, beacon *clientpb.Beacon) {
 		ActiveTarget.SetSession(nil)
 
 		// Start the prompt check in spin in the background
-		go refreshBeaconPrompt(ActiveTarget.done)
+		// go refreshBeaconPrompt(ActiveTarget.done)
 	}
 
 	// Then switch the console context

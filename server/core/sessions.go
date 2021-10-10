@@ -89,6 +89,19 @@ func (s *Session) LastCheckin() time.Time {
 }
 
 func (s *Session) CurrentState() clientpb.State {
+	// If we are marked switching, there is a good reason:
+	if s.State == clientpb.State_Switching {
+		return s.State
+	}
+	// As well, for the disconnect, but should only be used for beacons
+	if s.State == clientpb.State_Disconnect {
+		return s.State
+	}
+	// Sleeping might also be set by a command
+	if s.State == clientpb.State_Sleep {
+		return s.State
+	}
+
 	sessionsLog.Debugf("Last checkin was %v", s.Connection.LastMessage)
 	padding := time.Duration(10 * time.Second) // Arbitrary margin of error
 	timePassed := time.Now().Sub(s.LastCheckin())
@@ -246,9 +259,7 @@ func (s *sessions) Add(session *Session) *Session {
 
 // Remove - Remove a sliver from the hive (atomically), or just update
 // it if the session was just updating its transport mechanism.
-func (s *sessions) Remove(sessionID uint32, cleanup bool) {
-
-	// Else remove the session:
+func (s *sessions) Remove(sessionID uint32) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	session, found := s.sessions[sessionID]
@@ -256,16 +267,40 @@ func (s *sessions) Remove(sessionID uint32, cleanup bool) {
 		return
 	}
 
+	// If the session is currenly switching, don't return delete:
+	// we will clean it later
+	if session.State == clientpb.State_Switching {
+		sessionsLog.Infof("Did not delete session marked switching")
+		return
+	}
+
 	// Delete the transports set at runtime if this was a kill call
-	if cleanup {
-		err := CleanupSessionTransports(session)
-		if err != nil {
-			sessionsLog.Errorf("Failed to cleanup session transports: %s", err)
-		}
+	err := CleanupSessionTransports(session)
+	if err != nil {
+		sessionsLog.Errorf("Failed to cleanup session transports: %s", err)
 	}
 
 	// And notify the clients
 	delete(s.sessions, sessionID)
+	EventBroker.Publish(Event{
+		Type:    clientpb.EventType_SessionClosed,
+		Session: session,
+	})
+}
+
+// RemoveSwitched - Remove a session and publish the event only if the session
+// was marked switching: the switch is now complete, we must clean up.
+func (s *sessions) RemoveSwitched(sessionID uint32) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	session, found := s.sessions[sessionID]
+	if !found || session == nil || session.State != clientpb.State_Switching {
+		return
+	}
+
+	delete(s.sessions, sessionID)
+
+	// Simply notify the clients, do not clean runtime transports
 	EventBroker.Publish(Event{
 		Type:    clientpb.EventType_SessionClosed,
 		Session: session,

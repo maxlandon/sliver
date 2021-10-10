@@ -328,6 +328,9 @@ func TransportByID(ID string) (transport *models.Transport, err error) {
 	err = Session().Where(&models.Transport{
 		ID: uuid.FromStringOrNil(ID),
 	}).Find(&transport).Error
+	if err != nil {
+		return
+	}
 
 	err = loadC2ProfileForTransport(transport)
 	return
