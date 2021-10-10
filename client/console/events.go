@@ -24,6 +24,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/desertbit/go-shlex"
+	"github.com/maxlandon/readline"
+	"github.com/sirupsen/logrus"
+
 	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
@@ -33,16 +37,14 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
-	"github.com/desertbit/go-shlex"
-	"github.com/maxlandon/readline"
-	"github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/proto"
+)
+
+var (
+	active = core.ActiveTarget
 )
 
 // eventLoop - Print events coming from the server
 func eventLoop(rpc rpcpb.SliverRPCClient) {
-
-	// console := core.Console
 
 	// Call the server events stream.
 	events, err := rpc.Events(context.Background(), &commonpb.Request{
@@ -99,11 +101,16 @@ func handleEvent(event *clientpb.Event, log *logrus.Entry, autoLog func(format s
 		handleEventOpsec(event, log, autoLog)
 
 	// Session Events
-	case clientpb.EventType_SessionOpened, clientpb.EventType_SessionUpdated, clientpb.EventType_SessionClosed:
+	case clientpb.EventType_SessionOpened,
+		clientpb.EventType_SessionUpdated,
+		clientpb.EventType_SessionClosed:
 		handleEventSession(event, log, autoLog)
 
 	// Beacon Events
-	case clientpb.EventType_BeaconRegistered, clientpb.EventType_BeaconTaskResult:
+	case clientpb.EventType_BeaconRegistered,
+		clientpb.EventType_BeaconUpdated,
+		clientpb.EventType_BeaconRemoved,
+		clientpb.EventType_BeaconTaskResult:
 		handleEventBeacon(event, log, autoLog)
 	}
 
@@ -111,7 +118,7 @@ func handleEvent(event *clientpb.Event, log *logrus.Entry, autoLog func(format s
 	//                         job := event.Job
 	//                         line := fmt.Sprintf(Info+"Job #%s stopped (%s %s)\n", c2.GetShortID(job.ID), job.Profile.C2.String(), job.Profile.Hostname)
 	//                         console.RefreshPromptLog(line)
-	//
+
 	// For all events, trigger reactions. These will not happen
 	// if none have been registered for the event we just processed here.
 	triggerReactions(event)
@@ -164,43 +171,52 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 	currentTime := time.Now().Format(time.RFC1123)
 	log = log.WithField("name", "sessions")
 
+	var id uint32
+	if active.IsSession() {
+		sid, _ := strconv.Atoi(active.ID())
+		id = uint32(sid)
+	}
+
 	switch event.Type {
 
 	case clientpb.EventType_SessionOpened:
+
+		// If we have an active beacon marked switching, and this session is the resulting session
+		if active.IsBeacon() && active.ID() == session.BeaconID && active.State() == clientpb.State_Switching {
+			log = log.WithField("success", true)
+			news := fmt.Sprintf("Switching transports: Beacon %s (%s) => Session %d (%s)",
+				active.ShortID(), active.Transport(), session.ID, session.Transport)
+			log.Infof(news)
+
+			// Set the new beacon as the active target
+			core.SetActiveTarget(session, nil)
+			return
+		}
+
+		// Else, notify the registered session.
 		log = log.WithField("important", true) // Add empty lines around the news
-
-		// Clear the screen
+		log = log.WithField("success", true)
 		fmt.Print(seqClearScreenBelow)
-
-		// And print the event to the console
 		news := fmt.Sprintf("Session #%d %s - %s (%s) - %s/%s - %v",
 			session.ID, session.Name, session.RemoteAddress,
 			session.Hostname, session.OS, session.Arch, currentTime)
-
-		// Finally, update the console
 		log.Infof(news)
 
 		// Prelude Operator
 		if prelude.SessionMapper != nil {
 			err := prelude.SessionMapper.AddSession(session)
 			if err != nil {
-				failed := fmt.Sprintf("Could not add session to Operator: %s", err)
-				core.Console.RefreshPromptLog(failed)
+				log.Errorf("Could not add session to Operator: %s", err)
 			}
 		}
 
 	case clientpb.EventType_SessionClosed:
 
-		var lost string
-		var id uint32
-		if core.ActiveTarget.IsSession() {
-			sid, _ := strconv.Atoi(core.ActiveTarget.ID())
-			id = uint32(sid)
+		// If the session is the one closed following a transport switch of our active target
+		if active.IsBeacon() && active.ParentID() == session.UUID && session.State == clientpb.State_Switching {
+			log.Infof("Closed switched session %d", session.ID)
+			return
 		}
-		// if core.ActiveTarget.Beacon != nil {
-		//         bid, _ := strconv.Atoi(core.ActiveTarget.Beacon.ID)
-		//         id = core.GetShortID()
-		// }
 
 		// If the session is our current session, we notify the console
 		if id == session.ID {
@@ -208,7 +224,7 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 		}
 
 		// We print a message here if its not about a session we killed ourselves, and adapt prompt
-		lost += fmt.Sprintf("Lost session #%d %s - %s (%s) - %s/%s",
+		lost := fmt.Sprintf("Lost session #%d %s - %s (%s) - %s/%s",
 			session.ID, session.Name, session.RemoteAddress,
 			session.Hostname, session.OS, session.Arch)
 		log.Warnf(lost)
@@ -218,10 +234,23 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 			if err != nil {
 				log.Errorf("Could not remove session from Operator: %s", err)
 			}
-			log.Infof("Removed session %s from Operator\n", session.Name)
+			log.Infof("Removed session %s from Operator", session.Name)
 		}
 
 	case clientpb.EventType_SessionUpdated:
+
+		// If our active session is switching its transport
+		if active.IsSession() && session.ID == id && session.State == clientpb.State_Switching {
+			log = log.WithField("success", true)
+			news := fmt.Sprintf("Switching transports: Updated session %d (%s)",
+				session.ID, session.Transport)
+			log.Infof(news)
+
+			// Set the new beacon as the active target
+			core.SetActiveTarget(session, nil)
+			return
+		}
+
 		updated := fmt.Sprintf("Session #%d has been updated - %v", session.ID, currentTime)
 		log.Infof(updated)
 
@@ -232,19 +261,79 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(format string, args ...interface{})) {
 
 	log = log.WithField("name", "beacons")
+	beacon := event.Beacon
+	session := event.Session
 
 	switch event.Type {
 
 	case clientpb.EventType_BeaconRegistered:
-		log = log.WithField("important", true) // Add empty lines around the news
-		beacon := &clientpb.Beacon{}
-		proto.Unmarshal(event.Data, beacon)
-		currentTime := time.Now().Format(time.RFC1123)
 
+		// If we are a session that is about to be closed, drop it before receiving the event
+		if active.IsSession() && session != nil && session.UUID == active.UUID() {
+			if session.State != clientpb.State_Switching {
+				return
+			}
+			log = log.WithField("success", true)
+			news := fmt.Sprintf("Switching transports: Session %s (%s) => Beacon %s (%s)",
+				active.ID(), active.Transport(), c2.GetShortID(beacon.ID), beacon.Transport)
+			log.Infof(news)
+
+			// Set the new beacon as the active target
+			core.SetActiveTarget(nil, beacon)
+			return
+		}
+
+		// Else, notify the registering
+		log = log.WithField("important", true) // Add empty lines around the news
+		log = log.WithField("success", true)
+		currentTime := time.Now().Format(time.RFC1123)
 		news := fmt.Sprintf("Beacon #%s %s - %s (%s) - %s/%s - %v",
 			c2.GetShortID(beacon.ID), beacon.Name, beacon.RemoteAddress,
 			beacon.Hostname, beacon.OS, beacon.Arch, currentTime)
 		log.Infof(news)
+
+	case clientpb.EventType_BeaconUpdated:
+
+		// If our active beacon is switching its transport
+		if active.IsBeacon() && active.ID() == beacon.ID && beacon.State == clientpb.State_Switching {
+			log = log.WithField("success", true)
+			news := fmt.Sprintf("Switching transports: Updated beacon %s (%s)",
+				c2.GetShortID(beacon.ID), beacon.ActiveC2)
+			log.Infof(news)
+
+			// Set the new beacon as the active target
+			core.SetActiveTarget(nil, beacon)
+			return
+		}
+
+		// If our active beacon is now disconnected
+		if active.IsBeacon() && active.ID() == beacon.ID && beacon.State == clientpb.State_Disconnect {
+			log.Infof("Closed switched Beacon %s", c2.GetShortID(beacon.ID))
+			return
+		}
+
+		// If we are a session that is about to be closed, drop it before receiving the event
+		if active.IsSession() && session != nil && session.UUID == active.ID() {
+			if session.State != clientpb.State_Switching {
+				return
+			}
+			log = log.WithField("success", true)
+			news := fmt.Sprintf("Switching transports: Session %s (%s) => Beacon %s (%s)",
+				active.ID(), active.Transport(), c2.GetShortID(beacon.ID), beacon.Transport)
+			log.Infof(news)
+			core.SetActiveTarget(nil, beacon)
+		}
+
+	case clientpb.EventType_BeaconRemoved:
+
+		// If our active beacon is this one, drop the context
+		if active.IsBeacon() && active.ID() == beacon.ID {
+			lost := fmt.Sprintf("Removed beacon %s %s - %s (%s) - %s/%s",
+				c2.GetShortID(beacon.ID), beacon.Name, beacon.RemoteAddress,
+				beacon.Hostname, beacon.OS, beacon.Arch)
+			log.Warnf(lost)
+			core.UnsetActiveSession()
+		}
 
 	case clientpb.EventType_BeaconTaskResult:
 		core.TriggerBeaconTaskCallback(event.Data)
@@ -259,16 +348,16 @@ func triggerReactions(event *clientpb.Event) {
 
 	// We need some special handling for SessionOpenedEvent to
 	// set the new session as the active session
-	currentActiveSession := core.ActiveTarget.Session()
+	currentActiveSession := active.Session()
 	if currentActiveSession != nil {
-		defer core.ActiveTarget.SetSession(currentActiveSession) // No need to update menus
+		defer active.SetSession(currentActiveSession) // No need to update menus
 	}
 
 	// Set the newly registered session as active, without modifying the menus and such
-	core.ActiveTarget.SetSession(nil) // Unload them first
-	// core.ActiveTarget.SetBeacon(nil) // Unload them first
+	active.SetSession(nil) // Unload them first
+	// active.SetBeacon(nil) // Unload them first
 	if event.Type == clientpb.EventType_SessionOpened {
-		core.ActiveTarget.SetSession(event.Session)
+		active.SetSession(event.Session)
 	}
 
 	// Execute each reaction

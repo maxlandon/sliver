@@ -54,6 +54,9 @@ func InitImplantC2Profiles(pbConfig *clientpb.ImplantConfig, cfg *models.Implant
 		cfg.Transports = append(cfg.Transports, transport)
 	}
 
+	// Set the connection strategy (how transports are chosen when failed)
+	cfg.ConnectionStrategy = pbConfig.ConnectionStrategy
+
 	// Analyze and set up the transports to be compiled in the build
 	// so as to be available at runtime, for dynamic C2 switching.
 	setRuntimeTransports(pbConfig, cfg)

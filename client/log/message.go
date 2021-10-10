@@ -110,7 +110,7 @@ func Successf(format string, args ...interface{}) (n int, err error) {
 
 // SpinUntil - Start a spinner with an embedded message.
 func SpinUntil(message string, ctrl chan bool) {
-	go spin.Until(os.Stdout, info+message, ctrl)
+	go spin.Until(os.Stdout, message, ctrl)
 }
 
 // Beacon Async Tasks ------------------------------------------------------

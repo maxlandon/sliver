@@ -31,7 +31,7 @@ func (b *Background) Execute(args []string) (err error) {
 
 	// Takes care of menu switching, unregistering session refreshing history, etc...
 	core.UnsetActiveSession()
-	log.Infof("Background ...\n")
+	log.Infof("Background ...")
 
 	return
 }

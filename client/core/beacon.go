@@ -55,8 +55,6 @@ func TriggerBeaconTaskCallback(data []byte) {
 		return
 	}
 
-	log.SuccessfAsync("Task completed: %s %s[%s]%s", ShortID(task.ID), readline.DIM, ShortID(task.BeaconID), readline.RESET)
-
 	// If the callback is not in our map then we don't do anything, the beacon task
 	// was either issued by another operator in multiplayer mode or the client process
 	// was restarted between the time the task was created and the server go the result
@@ -64,6 +62,11 @@ func TriggerBeaconTaskCallback(data []byte) {
 	defer beacons.TaskCallbacksMutex.Unlock()
 
 	if callback, ok := beacons.TaskCallbacks[task.ID]; ok {
+
+		// Notify the client
+		log.SuccessfAsync("Task completed: %s %s[%s]%s", ShortID(task.ID),
+			readline.DIM, ShortID(task.BeaconID), readline.RESET)
+
 		if assets.UserClientSettings.BeaconAutoResults {
 			// TODO: The background context could block forever and deadlock the mutex
 			task, err = transport.RPC.GetBeaconTaskContent(context.Background(), &clientpb.BeaconTask{

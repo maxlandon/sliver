@@ -50,18 +50,35 @@ var (
 // pulls out all informations needed by the console.
 func SetActiveTarget(sess *clientpb.Session, beacon *clientpb.Beacon) {
 
+	// Core Setup -----------------------------------------------------------
+
+	// Notify all refreshing routines to stop
+	ActiveTarget.done <- true
+	ActiveTarget.done = make(chan bool, 1)
+
 	// We set the session as active...
 	if sess != nil {
-		ActiveTarget.session = sess
+		ActiveTarget.SetSession(sess)
+		ActiveTarget.SetBeacon(nil)
 	}
 
 	// Or the beacon.
 	if beacon != nil {
-		ActiveTarget.beacon = beacon
+		ActiveTarget.SetBeacon(beacon)
+		ActiveTarget.SetSession(nil)
+
+		// Start the prompt check in spin in the background
+		go refreshBeaconPrompt(ActiveTarget.done)
 	}
 
 	// Then switch the console context
 	Console.SwitchMenu(constants.SliverMenu)
+
+	// Then we get the history
+	sessionHistory := GetActiveSessionHistory()
+	SessionHistoryFunc(sessionHistory)
+
+	// Command Filters ----------------------------------------------------
 
 	// Hide Windows commands if this implant is not Windows-based
 	if ActiveTarget.OS() != "windows" {
@@ -77,9 +94,20 @@ func SetActiveTarget(sess *clientpb.Session, beacon *clientpb.Beacon) {
 		Console.ShowCommands(constants.WireGuardGroup)
 	}
 
-	// Then we get the history
-	sessionHistory := GetActiveSessionHistory()
-	SessionHistoryFunc(sessionHistory)
+	// If the target is a beacon, hide non-beacon commands
+	if ActiveTarget.IsBeacon() {
+		Console.HideCommands(constants.SessionOnlyCommand)
+	} else {
+		Console.ShowCommands(constants.SessionOnlyCommand)
+	}
+
+	// Finally, and overriding any precedent command setup:
+	// Hide most commands if session is disconnected/dead/switching
+	if err := ActiveTarget.Unavailable(); err != nil {
+		Console.HideCommands(constants.TargetAvailableCommand)
+	} else {
+		Console.ShowCommands(constants.TargetAvailableCommand)
+	}
 }
 
 // UnsetActiveSession - We have backgrounded from a Sliver session, or it died.
@@ -90,6 +118,9 @@ func UnsetActiveSession() {
 
 	// Switch the console context
 	Console.SwitchMenu(constants.ServerMenu)
+
+	ActiveTarget.done <- true // Stop prompt refresh
+	ActiveTarget.done = make(chan bool, 1)
 
 	// We don't have a working Sliver object anymore.
 	if ActiveTarget.Session() != nil {
@@ -248,4 +279,33 @@ func GetCommandTimeout() int64 {
 		}
 	}
 	return 60
+}
+
+// refreshBeaconPrompt - Continuously refreshes the prompt
+// for updating beacon tasks and next checkin time.
+func refreshBeaconPrompt(done chan bool) {
+
+	ticker := time.NewTicker(1 * time.Second)
+	for {
+		select {
+		case <-done:
+			return
+		case <-ticker.C:
+			// Fetch & update the current beacon
+			beacons, err := transport.RPC.GetBeacons(context.Background(), &commonpb.Empty{})
+			if err != nil {
+				break
+			}
+			for _, beacon := range beacons.Beacons {
+				if beacon.ID == ActiveTarget.ID() {
+					ActiveTarget.SetBeacon(beacon)
+					break
+				}
+			}
+
+			// And refresh the prompt
+			prompt := Console.GetMenu(constants.SliverMenu).Prompt
+			Console.RefreshPromptInPlace(prompt.Render())
+		}
+	}
 }

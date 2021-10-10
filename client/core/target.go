@@ -28,7 +28,9 @@ import (
 var (
 
 	// ActiveTarget - Either the active session or the active beacon
-	ActiveTarget = &activeTarget{}
+	ActiveTarget = &activeTarget{
+		done: make(chan bool, 1),
+	}
 )
 
 // Target - An interface allowing us to transparently use the active
@@ -37,6 +39,7 @@ type Target interface {
 	// Base
 	ID() string
 	Name() string
+	ParentID() string
 
 	// Type
 	IsSession() bool
@@ -70,7 +73,6 @@ type Target interface {
 	// Transport
 	ActiveC2() string
 	Transport() string
-	LastCheckin() int64
 	RemoteAddress() string
 	ProxyURL() string
 
@@ -82,6 +84,7 @@ type Target interface {
 	// Beacon
 	Interval() int64
 	Jitter() int64
+	LastCheckin() int64
 	NextCheckin() int64
 	TasksCount() int64
 	TasksCountCompleted() int64
@@ -92,6 +95,7 @@ type Target interface {
 type activeTarget struct {
 	session *clientpb.Session
 	beacon  *clientpb.Beacon
+	done    chan bool
 }
 
 // Common -----------------------------------------------
@@ -129,6 +133,16 @@ func (t *activeTarget) Name() string {
 		return t.session.Name
 	}
 	return t.beacon.Name
+}
+
+func (t *activeTarget) ParentID() string {
+	if t.session == nil && t.beacon == nil {
+		return ""
+	}
+	if t.session != nil {
+		return t.session.BeaconID
+	}
+	return t.beacon.SessionID
 }
 
 func (t *activeTarget) Hostname() string {
@@ -307,6 +321,9 @@ func (t *activeTarget) Unavailable() (err error) {
 		}
 		if state == clientpb.State_Switching {
 			return fmt.Errorf("Cannot use command: session is switching its transport and currently disconnected")
+		}
+		if state == clientpb.State_Disconnect {
+			return fmt.Errorf("Cannot use command: beacon is currently disconnected")
 		}
 	}
 	return nil

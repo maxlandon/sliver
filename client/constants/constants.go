@@ -259,7 +259,7 @@ const (
 )
 
 // Groups
-const (
+var (
 	GenericHelpGroup     = "Generic:"
 	SliverHelpGroup      = "Sliver:"
 	SliverWinHelpGroup   = "Sliver - Windows:"
@@ -270,27 +270,34 @@ const (
 	WireGuardGroup = "WireGuard"
 )
 
+// Core command filters
+var (
+	CoreFilters            = []string{TargetAvailableCommand}
+	TargetAvailableCommand = "core"
+	SessionOnlyCommand     = "session-command"
+)
+
 // Command categories
-const (
-	AdminGroup        = "admin"
-	CoreServerGroup   = "core (server)"
-	BuildsGroup       = "implants"
-	TransportsGroup   = "transports"
-	SessionsGroup     = "sessions"
-	DataGroup         = "data"
-	CommGroup         = "comm"
-	NetworkToolsGroup = "network tools"
-	ThreatMonGroup    = "threat management"
+var (
+	AdminGroup      = "admin"
+	CoreServerGroup = "core (server)"
+	BuildsGroup     = "implants"
+	TransportsGroup = "transports"
+	SessionsGroup   = "sessions"
+	DataGroup       = "data"
+	CommGroup       = "comm"
+	ThreatMonGroup  = "threat management"
 
 	// Session only
-	CoreSessionGroup = "core (session)"
-	FilesystemGroup  = "filesystem"
-	InfoGroup        = "information"
-	ProcGroup        = "process"
-	PrivGroup        = "priv"
-	ExecuteGroup     = "execution"
-	PersistenceGroup = "persistence"
-	ExtensionsGroup  = "extensions"
+	CoreSessionGroup  = "core (session)"
+	InfoGroup         = "information"
+	FilesystemGroup   = "filesystem"
+	ProcGroup         = "process"
+	PrivGroup         = "priv"
+	ExecuteGroup      = "execution"
+	PersistenceGroup  = "persistence"
+	ExtensionsGroup   = "extensions"
+	NetworkToolsGroup = "network tools"
 )
 
 // C2 default values

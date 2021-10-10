@@ -29,7 +29,6 @@ import (
 	"github.com/maxlandon/readline"
 	"google.golang.org/grpc"
 
-	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
@@ -105,52 +104,83 @@ var (
 
 var (
 	sliverCallbacks = map[string]func() string{
-		"{beacon}": func() string {
-			if core.ActiveTarget.IsBeacon() {
-				return "beacon"
+		// Base / Common
+		"{type}": func() string {
+			if active.IsBeacon() {
+				return "[B]"
 			}
-			return ""
+			return "[S]"
 		},
-		"{session_name}": func() string {
-			return core.ActiveTarget.Name()
+		"{name}": func() string {
+			return active.Name()
 		},
 		"{wd}": func() string {
-			return core.ActiveTarget.WorkingDirectory()
+			return active.WorkingDirectory()
 		},
 		"{user}": func() string {
-			return core.ActiveTarget.Username()
+			return active.Username()
 		},
 		"{host}": func() string {
-			return core.ActiveTarget.Hostname()
-		},
-		"{address}": func() string {
-			return core.ActiveTarget.RemoteAddress()
+			return active.Hostname()
 		},
 		"{platform}": func() string {
-			os := core.ActiveTarget.OS()
-			arch := core.ActiveTarget.Arch()
+			os := active.OS()
+			arch := active.Arch()
 			return fmt.Sprintf("%s/%s", os, arch)
 		},
 		"{os}": func() string {
-			return core.ActiveTarget.OS()
+			return active.OS()
 		},
 		"{arch}": func() string {
-			return core.ActiveTarget.Arch()
+			return active.Arch()
 		},
 		"{status}": func() string {
-			return core.ActiveTarget.State().String()
+			// TODO: color per status:
+			return active.State().String()
 		},
 		"{version}": func() string {
-			return core.ActiveTarget.Version()
+			return active.Version()
 		},
 		"{uid}": func() string {
-			return core.ActiveTarget.UID()
+			return active.UID()
 		},
 		"{gid}": func() string {
-			return core.ActiveTarget.GID()
+			return active.GID()
 		},
 		"{pid}": func() string {
-			return strconv.Itoa(int(core.ActiveTarget.PID()))
+			return strconv.Itoa(int(active.PID()))
+		},
+
+		// Transport
+		"{address}": func() string {
+			return active.RemoteAddress()
+		},
+
+		// Beacon
+		"{next_checkin}": func() string {
+			if active.IsSession() { // No checkins for sessions
+				return ""
+			}
+			nextCheckin := time.Unix(active.NextCheckin(), 0)
+			var next string
+			if time.Unix(active.NextCheckin(), 0).Before(time.Now()) {
+				past := time.Now().Sub(nextCheckin)
+				next = fmt.Sprintf("-%s", readline.Bold(readline.Red(fmt.Sprintf("%s", past))))
+			} else {
+				eta := nextCheckin.Sub(time.Now())
+				next = readline.Bold(readline.Green(fmt.Sprintf("%s", eta)))
+			}
+			return next
+		},
+		"{last_checkin}": func() string {
+			lastCheckin := time.Now().Sub(time.Unix(active.LastCheckin(), 0))
+			return fmt.Sprintf("%s", lastCheckin)
+		},
+		"{tasks}": func() string {
+			if active.IsSession() {
+				return ""
+			}
+			return fmt.Sprintf("%d/%d", active.TasksCountCompleted(), active.TasksCount())
 		},
 	}
 

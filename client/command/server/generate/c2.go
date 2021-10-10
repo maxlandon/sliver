@@ -143,6 +143,9 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 		profile.CommDisabled = g.TransportOptions.DisableComm
 	}
 
+	// Connection strategy
+	cfg.ConnectionStrategy = g.TransportOptions.ConnectionStrategy
+
 	// Malleable C2 Profiles ---------------------------------------------------------------------------
 
 	// If no C2 strings specified and C2 profiles IDs given, return
