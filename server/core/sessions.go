@@ -24,7 +24,10 @@ import (
 	"time"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
 
 	consts "github.com/bishopfox/sliver/client/constants"
@@ -35,9 +38,8 @@ var (
 
 	// Sessions - Manages implant connections
 	Sessions = &sessions{
-		sessions:  map[uint32]*Session{},
-		switching: map[uint32]*Session{},
-		mutex:     &sync.RWMutex{},
+		sessions: map[uint32]*Session{},
+		mutex:    &sync.RWMutex{},
 	}
 	rollingSessionID = uint32(0)
 
@@ -53,6 +55,7 @@ var (
 type Session struct {
 	// Base
 	ID               uint32
+	BeaconID         string // Associated runtime beacon, if any
 	UUID             string
 	Name             string
 	Hostname         string
@@ -109,6 +112,7 @@ func (s *Session) ToProtobuf() *clientpb.Session {
 	return &clientpb.Session{
 		ID:                uint32(s.ID),
 		UUID:              s.UUID,
+		BeaconID:          s.BeaconID,
 		Name:              s.Name,
 		Hostname:          s.Hostname,
 		Username:          s.Username,
@@ -174,9 +178,8 @@ func (s *Session) UpdateWorkingDirectory(path string) {
 
 // sessions - Manages the slivers, provides atomic access
 type sessions struct {
-	mutex     *sync.RWMutex
-	sessions  map[uint32]*Session
-	switching map[uint32]*Session
+	mutex    *sync.RWMutex
+	sessions map[uint32]*Session
 }
 
 // All - Return a list of all sessions
@@ -187,9 +190,6 @@ func (s *sessions) All() []*Session {
 	for _, session := range s.sessions {
 		all = append(all, session)
 	}
-	for _, session := range s.switching {
-		all = append(all, session)
-	}
 	return all
 }
 
@@ -198,9 +198,6 @@ func (s *sessions) Get(sessionID uint32) *Session {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	if s, found := s.sessions[sessionID]; found {
-		return s
-	}
-	if s, found := s.switching[sessionID]; found {
 		return s
 	}
 	return nil
@@ -215,23 +212,31 @@ func (s *sessions) GetByUUID(sessionUUID string) *Session {
 			return sess
 		}
 	}
-	for _, sess := range s.switching {
-		if sess.UUID == sessionUUID {
-			return sess
+	return nil
+}
+
+// GetTargetContext - Get either active beacon or active session for the current request
+func GetTargetContext(req *commonpb.Request) (sess *Session, beacon *models.Beacon) {
+	sess = Sessions.GetByUUID(req.SessionUUID)
+	beacons, _ := db.ListBeacons()
+	for _, b := range beacons {
+		if b.ID.String() == req.BeaconID {
+			beacon = b
 		}
 	}
-	return nil
+	return
+}
+
+// GetSessionContext - Get the active session for a request
+func GetSessionContext(req *commonpb.Request) *Session {
+	return Sessions.GetByUUID(req.SessionUUID)
 }
 
 // Add - Add a sliver to the hive (atomically)
 func (s *sessions) Add(session *Session) *Session {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if session.State == clientpb.State_Switching {
-		s.switching[session.ID] = session
-	} else {
-		s.sessions[session.ID] = session
-	}
+	s.sessions[session.ID] = session
 	EventBroker.Publish(Event{
 		Type:    clientpb.EventType_SessionOpened,
 		Session: session,
@@ -241,33 +246,30 @@ func (s *sessions) Add(session *Session) *Session {
 
 // Remove - Remove a sliver from the hive (atomically), or just update
 // it if the session was just updating its transport mechanism.
-func (s *sessions) Remove(sessionID uint32) {
-
-	// If session is marked switching its transport, just return
-	// without deregistering it. The server will soon receive a new
-	// connection and will update its transport status details.
-	if _, found := s.switching[sessionID]; found {
-		return
-	}
+func (s *sessions) Remove(sessionID uint32, cleanup bool) {
 
 	// Else remove the session:
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	session := s.sessions[sessionID]
-	if session != nil {
-		// Delete the transports set at runtime
+	session, found := s.sessions[sessionID]
+	if !found || session == nil {
+		return
+	}
+
+	// Delete the transports set at runtime if this was a kill call
+	if cleanup {
 		err := CleanupSessionTransports(session)
 		if err != nil {
 			sessionsLog.Errorf("Failed to cleanup session transports: %s", err)
 		}
-
-		// And notify the clients
-		delete(s.sessions, sessionID)
-		EventBroker.Publish(Event{
-			Type:    clientpb.EventType_SessionClosed,
-			Session: session,
-		})
 	}
+
+	// And notify the clients
+	delete(s.sessions, sessionID)
+	EventBroker.Publish(Event{
+		Type:    clientpb.EventType_SessionClosed,
+		Session: session,
+	})
 }
 
 // NewSession - Create a session on top on a logical implant connection.
@@ -303,11 +305,7 @@ func (s *sessions) UpdateSession(session *Session) *Session {
 	defer s.mutex.Unlock()
 
 	// If the transport is currently being switched
-	if session.State == clientpb.State_Switching {
-		s.switching[session.ID] = session
-	} else {
-		s.sessions[session.ID] = session
-	}
+	s.sessions[session.ID] = session
 
 	EventBroker.Publish(Event{
 		Type:    clientpb.EventType_SessionUpdated,

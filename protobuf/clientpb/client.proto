@@ -120,6 +120,7 @@ message SaveSliverSettings {
 
 message Session {
   uint32 ID = 1;
+  string BeaconID = 200; // Associated runtime beacon, if any
   string Name = 2;
   string Hostname = 3;
   string HostUUID = 4;
@@ -150,6 +151,7 @@ message Session {
 
 message Beacon {
   string ID = 1;
+  string SessionID = 200;  // Associated runtime session, if any
   string Name = 2;
   string Hostname = 3;
   string UUID = 4;
@@ -168,15 +170,18 @@ message Beacon {
   bool Evasion = 17;
   State State = 18;
   string WorkingDirectory = 19;
+  int64 ReconnectInterval = 30;
+  int64 PollTimeout = 31;
 
   string ProxyURL = 20;
   int64 Interval = 21;
   int64 Jitter = 22;
   bool Burned = 23;
   int64 NextCheckin = 24;
+  string TransportID = 25;
 
-  int64 TasksCount = 25;
-  int64 TasksCountCompleted = 26;
+  int64 TasksCount = 26;
+  int64 TasksCountCompleted = 27;
 }
 
 message Beacons {
@@ -206,6 +211,7 @@ enum State {
   Dead = 1;
   Sleep = 2;
   Switching = 3;
+  Disconnect = 4;
 }
 
 // [ Implants ] --------------------------------------------------------
@@ -607,9 +613,10 @@ message Event {
   bytes Data = 5;
   string Err = 6; // Can't trigger normal gRPC error
 
-  Session Session = 10;
-  Job Job = 11;
-  Client Client = 12;
+  Client Client = 10;
+  Job Job = 12;
+  Session Session = 13;
+  Beacon Beacon = 14;
 }
 
 // EventType - All major types of events 
@@ -639,7 +646,9 @@ enum EventType {
 
   // Beacons
   BeaconRegistered = 31;
-  BeaconTaskResult = 32;
+  BeaconUpdated = 32;
+  BeaconRemoved = 33;
+  BeaconTaskResult = 34;
 
   // Loot
   LootAdded = 40;

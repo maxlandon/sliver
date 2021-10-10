@@ -90,10 +90,8 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 		beaconHandlerLog.Errorf("Database write %s", err)
 	}
 
-	eventData, _ := proto.Marshal(beacon.ToProtobuf())
 	core.EventBroker.Publish(core.Event{
 		Type:   clientpb.EventType_BeaconRegistered,
-		Data:   eventData,
 		Beacon: beacon,
 	})
 

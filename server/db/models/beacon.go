@@ -33,8 +33,9 @@ import (
 // Beacon - Represents a host machine
 type Beacon struct {
 	CreatedAt time.Time `gorm:"->;<-:create;"`
-
+	// Base
 	ID                uuid.UUID `gorm:"type:uuid;"`
+	SessionID         string    // Associated runtime session, if any
 	Name              string
 	Hostname          string
 	HostUUID          uuid.UUID `gorm:"type:uuid;"` // Host UUID
@@ -57,11 +58,13 @@ type Beacon struct {
 
 	ImplantBuildID uuid.UUID `gorm:"type:uuid;"`
 
+	Tasks []BeaconTask
+
+	// Transports
+	TransportID string
 	Interval    int64
 	Jitter      int64
 	NextCheckin int64
-
-	Tasks []BeaconTask
 }
 
 // BeforeCreate - GORM hook
@@ -72,30 +75,32 @@ func (b *Beacon) BeforeCreate(tx *gorm.DB) (err error) {
 
 func (b *Beacon) ToProtobuf() *clientpb.Beacon {
 	return &clientpb.Beacon{
-		ID:            b.ID.String(),
-		Name:          b.Name,
-		Hostname:      b.Hostname,
-		UUID:          b.HostUUID.String(),
-		Username:      b.Username,
-		UID:           b.UID,
-		GID:           b.GID,
-		OS:            b.OS,
-		Arch:          b.Arch,
-		Transport:     b.Transport,
-		RemoteAddress: b.RemoteAddress,
-		PID:           b.PID,
-		Filename:      b.Filename,
-		LastCheckin:   b.LastCheckin.Unix(),
-		Version:       b.Version,
-		State:         b.State,
-		// ReconnectInterval: b.ReconnectInterval,
-		ProxyURL: b.ProxyURL,
-		// PollTimeout: b.PollTimeout,
+		ID:                b.ID.String(),
+		SessionID:         b.SessionID,
+		Name:              b.Name,
+		Hostname:          b.Hostname,
+		UUID:              b.HostUUID.String(),
+		Username:          b.Username,
+		UID:               b.UID,
+		GID:               b.GID,
+		OS:                b.OS,
+		Arch:              b.Arch,
+		Transport:         b.Transport,
+		RemoteAddress:     b.RemoteAddress,
+		PID:               b.PID,
+		Filename:          b.Filename,
+		LastCheckin:       b.LastCheckin.Unix(),
+		Version:           b.Version,
+		State:             b.State,
+		ReconnectInterval: b.ReconnectInterval,
+		ProxyURL:          b.ProxyURL,
+		PollTimeout:       b.PollTimeout,
 		// ImplantBuildID: b.ImplantBuildID.String(),
 		Interval:         b.Interval,
 		Jitter:           b.Jitter,
 		NextCheckin:      b.NextCheckin,
 		WorkingDirectory: b.WorkingDirectory,
+		TransportID:      b.TransportID,
 	}
 }
 

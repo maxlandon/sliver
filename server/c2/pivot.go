@@ -166,7 +166,7 @@ func HandlePivotClose(session *core.Session, data []byte) {
 	sliverPivoted := Pivots.Session(pivotClose.GetPivotID())
 	if sliverPivoted != nil {
 		pivotLog.Debugf("Cleaning up for %s", sliverPivoted.Name)
-		core.Sessions.Remove(sliverPivoted.ID)
+		// core.Sessions.Remove(sliverPivoted.ID)
 	}
 	Pivots.RemoveSession(pivotClose.GetPivotID())
 	/*core.EventBroker.Publish(core.Event{

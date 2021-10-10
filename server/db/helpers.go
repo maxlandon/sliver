@@ -351,14 +351,8 @@ func TransportByShortID(ID string) (transport *models.Transport, err error) {
 	return nil, fmt.Errorf("Could not find Transport with short ID %s", ID)
 }
 
-// TransportsBySession - Loads all the transports currently available to (loaded on) an implant.
-// These will be either those compiled in, or a partially/fully different set if they have been changed at runtime.
-func TransportsBySession(ID string, name string) (transports []*models.Transport, err error) {
-
-	// Runtime/active transports
-	err = Session().Where(&models.Transport{
-		SessionID: uuid.FromStringOrNil(ID),
-	}).Find(&transports).Error
+// TransportsForBuild - Loads all the transports compiled into an implant build, not fetching those set at runtime.
+func TransportsForBuild(name string) (transports []*models.Transport, err error) {
 
 	// Compiled transports
 	build, err := ImplantBuildByName(name)
@@ -381,6 +375,26 @@ func TransportsBySession(ID string, name string) (transports []*models.Transport
 
 	// Add those compiled transports to the list
 	transports = append(transports, compiled...)
+
+	// Load profiles for all
+	for _, transport := range transports {
+		err = loadC2ProfileForTransport(transport)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return
+}
+
+// TransportsBySession - Loads all the transports currently available to (loaded on) an implant.
+// These will be either those compiled in, or a partially/fully different set if they have been changed at runtime.
+func TransportsBySession(ID string) (transports []*models.Transport, err error) {
+
+	// Runtime/active transports
+	err = Session().Where(&models.Transport{
+		SessionID: uuid.FromStringOrNil(ID),
+	}).Find(&transports).Error
 
 	// Load profiles for all
 	for _, transport := range transports {

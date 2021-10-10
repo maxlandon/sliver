@@ -27,14 +27,16 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/db/models"
 )
 
 var (
-	// CleanupSessionTransports - When a session is killed or dies,
-	// we automatically clean up (delete from DB) the transports that
-	// have been set at runtime. This function is passed from the C2
-	// package when the server is started.
-	CleanupSessionTransports func(session *Session) error
+// CleanupSessionTransports - When a session is killed or dies,
+// we automatically clean up (delete from DB) the transports that
+// have been set at runtime. This function is passed from the C2
+// package when the server is started.
+// CleanupSessionTransports func(session *Session) error
 )
 
 // ImplantConnection - Implementation of a logical connection system around
@@ -76,44 +78,166 @@ func generateImplantConnectionID() string {
 
 // RegisterTransportSwitch - A session wants to switch its current transport, mark it
 // accordingly so that the session is not deregistered upon connection closing.
-func RegisterTransportSwitch(sess *Session) (err error) {
+func RegisterTransportSwitch(sess *Session, beacon *models.Beacon) (err error) {
 
-	// If the session is already marked switching (which should
-	// not happen), notify the caller it's not possible to do it now.
-	if _, found := Sessions.switching[sess.ID]; found {
-		return fmt.Errorf("Session %d (%s) is already currently switching its transport", sess.ID, sess.HostUUID)
+	if sess != nil {
+		if sess.State == clientpb.State_Switching {
+			return fmt.Errorf("Session %d (%s) is currently switching its transport",
+				sess.ID, sess.HostUUID)
+		}
+
+		// Else update its state and publish
+		delete(Sessions.sessions, sess.ID)
+		sess.State = clientpb.State_Switching
+		Sessions.UpdateSession(sess)
 	}
 
-	// Else update its state and publish
-	delete(Sessions.sessions, sess.ID)
-	sess.State = clientpb.State_Switching
-	Sessions.UpdateSession(sess)
+	if beacon != nil {
+		if beacon.State == clientpb.State_Switching {
+			return fmt.Errorf("Beacon %s (%s) is currently switching its transport",
+				GetShortID(beacon.ID.String()), sess.HostUUID)
+		}
+
+		beacon.State = clientpb.State_Switching
+		db.Session().Save(&beacon)
+		EventBroker.Publish(Event{
+			Type:   clientpb.EventType_BeaconUpdated,
+			Beacon: beacon,
+		})
+	}
 
 	return
 }
 
-// ConfirmTransportSwitched - Once the transport has been successfully changed, notify
-// the server that we're done with the process and that we can unmark the session.
-func ConfirmTransportSwitched(sess *Session) {
-	Sessions.mutex.Lock()
-	session := Sessions.switching[sess.ID]
-	if session != nil {
-		delete(Sessions.switching, sess.ID)
-		Sessions.mutex.Unlock()
-
-		// And publish the updates
-		Sessions.UpdateSession(session)
-	}
-}
-
-// GetSessionSwitching - When sending the registration message following the transport
-// switch, the session has provided the ID of its old transport, which should be unique
-// among all sessions. Find it and return it for update.
-func GetSessionSwitching(oldTransportID string) (sess *Session) {
-	for _, s := range Sessions.switching {
-		if s.TransportID == oldTransportID {
-			return s
+// GetTargetSwitching - When sending the registration message following the transport
+// switch, the session/beacon has provided the ID of its old transport, which should
+// be unique among all sessions/beacons. Find it and return it for update.
+func GetTargetSwitching(oldTransportID string) (sess *Session, beacon *models.Beacon) {
+	for _, s := range Sessions.sessions {
+		if s.State == clientpb.State_Switching && s.TransportID == oldTransportID {
+			return s, nil
 		}
 	}
+	beacons, _ := db.ListBeacons()
+	for _, b := range beacons {
+		if b.State == clientpb.State_Switching && b.TransportID == oldTransportID {
+			return nil, b
+		}
+	}
+
+	return
+}
+
+// TransportsByTarget - Get all the transports, compiled or set at runtime, for the entire lifetime of an implant run.
+// Runtime transports are queried for the SessionUUID, the beaconID if the session is coming from a transport switch.
+func TransportsByTarget(session *Session, beacon *models.Beacon) (transports []*models.Transport, err error) {
+
+	var buildName string
+
+	if beacon != nil {
+		buildName = beacon.Name
+		compiled, _ := db.TransportsForBuild(buildName)
+		transports = append(transports, compiled...)
+
+		// Get any runtime transports set when we were a session, if we were
+		if beacon.SessionID != "" {
+			runtime, err := db.TransportsBySession(beacon.SessionID)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to get transports for beacon: %s", err)
+			}
+			for _, t := range runtime {
+				if t.ImplantBuildID == uuid.Nil {
+					transports = append(transports, t)
+				}
+			}
+		} else {
+			runtime, err := db.TransportsBySession(beacon.ID.String())
+			if err != nil {
+				return nil, fmt.Errorf("Failed to get transports for beacon: %s", err)
+			}
+			for _, t := range runtime {
+				if t.ImplantBuildID == uuid.Nil {
+					transports = append(transports, t)
+				}
+			}
+		}
+
+		return transports, nil
+	}
+
+	if session != nil {
+		buildName = session.Name
+		compiled, _ := db.TransportsForBuild(buildName)
+		transports = append(transports, compiled...)
+
+		// Get any runtime transports set when we were a beacon, if we were
+		if session.BeaconID != "" {
+			runtime, err := db.TransportsBySession(session.BeaconID)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to get transports for session: %s", err)
+			}
+			for _, t := range runtime {
+				if t.ImplantBuildID == uuid.Nil {
+					transports = append(transports, t)
+				}
+			}
+		}
+
+		// Get any runtime transports set by sessions with the same UUID
+		// (that is, sessions spawned during the lifetime of this implant run)
+		runtime, err := db.TransportsBySession(session.UUID)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get transports for session: %s", err)
+		}
+		for _, t := range runtime {
+			if t.ImplantBuildID == uuid.Nil {
+				transports = append(transports, t)
+			}
+		}
+
+		return transports, nil
+	}
+
+	return
+}
+
+// CleanupSessionTransports - Once a session has been killed (and not merely disconnected)
+// delete all the transports that have been set at runtime, so that they don't pile up at
+// each new session reconnection/restart.
+func CleanupSessionTransports(sess *Session) (err error) {
+
+	// Get the transports (runtime and build) for the session
+	transports, err := TransportsByTarget(sess, nil)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve session transports: %s", err)
+	}
+	build, err := db.ImplantBuildByName(sess.Name)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve session implant build: %s", err)
+	}
+
+	// Diff both lists of transports
+	var toDelete = []*models.Transport{}
+	for _, transport := range transports {
+		found := false
+		for _, buildTransport := range build.Transports {
+			if buildTransport.ID == transport.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			toDelete = append(toDelete, transport)
+		}
+	}
+
+	// And delete those that have been set at runtime
+	for _, transport := range toDelete {
+		err = db.Session().Delete(transport).Error
+		if err != nil {
+			sessionsLog.Errorf("Failed to delete transport from DB: %s", err)
+		}
+	}
+
 	return
 }

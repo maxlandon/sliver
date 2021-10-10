@@ -49,7 +49,7 @@ func init() {
 	// For the same reason of avoiding circular imports, we assign
 	// a function that automatically cleans up the transports set at
 	// runtime for a session. Called when the session is killed or dies (only).
-	core.CleanupSessionTransports = CleanupSessionTransports
+	// core.CleanupSessionTransports = CleanupSessionTransports
 }
 
 // NewHandlerJob - Create a new handler job based on the current C2 profile and the session context.

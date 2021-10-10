@@ -38,7 +38,7 @@ import (
 // AddTransport - Add a new transport to an implant session
 func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportReq) (res *clientpb.AddTransport, err error) {
 
-	session := core.Sessions.GetByUUID(req.Request.SessionUUID)
+	session, beacon := core.GetTargetContext(req.Request)
 
 	// Get the profile matching the requested profile ID
 	// Return if not found.
@@ -52,7 +52,14 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 	}
 
 	// Check if this transport is compatible with compiled C2 stacks on the implant
-	isEnabled, err := isSessionTransportEnabled(session, profile)
+	var buildName string
+	if beacon != nil {
+		buildName = beacon.Name
+	}
+	if session != nil {
+		buildName = session.Name
+	}
+	isEnabled, err := isSessionTransportEnabled(buildName, profile)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +85,7 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 	}
 
 	// Update the priority based on the currently loaded transports
-	transport.Priority = setTransportPriority(transport, session)
+	transport.Priority = setTransportPriority(transport, session, beacon)
 
 	// The ID is also passed to the profile to be sent. Not overwritten in DB
 	// This will retrieve the transport (and the profile) upon registration
@@ -113,9 +120,9 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 }
 
 // isSessionTransportEnabled - Check that the requested C2 protocol is compiled in the targeted implant session.
-func isSessionTransportEnabled(sess *core.Session, profile *models.C2Profile) (enabled bool, err error) {
+func isSessionTransportEnabled(name string, profile *models.C2Profile) (enabled bool, err error) {
 
-	build, err := db.ImplantBuildByName(sess.Name)
+	build, err := db.ImplantBuildByName(name)
 	if err != nil {
 		return false, fmt.Errorf("Failed to retrieve session implant build: %s", err)
 	}
@@ -138,10 +145,10 @@ func isSessionTransportEnabled(sess *core.Session, profile *models.C2Profile) (e
 }
 
 // setTransportPriority - Reconciles the user-requested priority with the transports currently loaded by the session.
-func setTransportPriority(transport *models.Transport, session *core.Session) (order int) {
+func setTransportPriority(transport *models.Transport, session *core.Session, beacon *models.Beacon) (order int) {
 
-	// Get the transports for the session.
-	transports, err := db.TransportsBySession(session.UUID, session.Name)
+	// Get the transports for the target
+	transports, err := core.TransportsByTarget(session, beacon)
 	if err != nil {
 		return 0
 	}
@@ -206,6 +213,8 @@ func (rpc *Server) DeleteTransport(ctx context.Context, req *clientpb.DeleteTran
 // SwitchTransport - Requests the active session to switch to a different C2 transport
 func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTransportReq) (res *clientpb.SwitchTransport, err error) {
 
+	session, beacon := core.GetTargetContext(req.Request)
+
 	// Get the profile matching the requested transport ID
 	// Return if not found.
 	transport, err := db.TransportByShortID(req.ID)
@@ -221,9 +230,7 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTran
 	// is about to switch transports, so no need to delete the session
 	// altogether, just keep it so that we can update it when the new
 	// transport is established.
-	session := core.Sessions.GetByUUID(req.Request.SessionUUID)
-	// session := core.Sessions.Get(req.Request.SessionID)
-	err = core.RegisterTransportSwitch(session)
+	err = core.RegisterTransportSwitch(session, beacon)
 	if err != nil {
 		return nil, err
 	}
@@ -251,12 +258,12 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTran
 
 // GetTransports - Get all transports loaded and available to a session.
 func (rpc *Server) GetTransports(ctx context.Context, req *clientpb.GetTransportsReq) (res *clientpb.GetTransports, err error) {
+	session, beacon := core.GetTargetContext(req.Request)
 
-	session := core.Sessions.GetByUUID(req.Request.SessionUUID)
-
-	transports, err := db.TransportsBySession(session.UUID, session.Name)
+	var transports []*models.Transport
+	transports, err = core.TransportsByTarget(session, beacon)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get transports: %s", err)
+		return nil, err
 	}
 
 	res = &clientpb.GetTransports{Response: &commonpb.Response{}}

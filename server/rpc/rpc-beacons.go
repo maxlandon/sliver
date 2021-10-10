@@ -23,6 +23,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
@@ -71,6 +72,12 @@ func (rpc *Server) RmBeacon(ctx context.Context, req *clientpb.Beacon) (*commonp
 		beaconRpcLog.Errorf("Database error: %s", err)
 		return nil, ErrDatabaseFailure
 	}
+	// Else, notify clients a beacon has been removed: they might be using it
+	core.EventBroker.Publish(core.Event{
+		Type:   clientpb.EventType_BeaconRemoved,
+		Beacon: beacon,
+	})
+
 	return &commonpb.Empty{}, nil
 }
 

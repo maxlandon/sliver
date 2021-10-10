@@ -32,8 +32,6 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
-	"github.com/bishopfox/sliver/server/db"
-	"github.com/bishopfox/sliver/server/db/models"
 	serverHandlers "github.com/bishopfox/sliver/server/handlers"
 	"github.com/bishopfox/sliver/server/log"
 )
@@ -166,59 +164,59 @@ Loop:
 	}
 }
 
-// func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
-//         // func writeEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
-//         data, err := proto.Marshal(envelope)
-//         if err != nil {
-//                 // {{if .Config.Debug}}
-//                 // log.Print("[namedpipe] Marshaling error: ", err)
-//                 // {{end}}
-//                 return err
-//         }
-//         dataLengthBuf := new(bytes.Buffer)
-//         binary.Write(dataLengthBuf, binary.LittleEndian, uint32(len(data)))
-//         _, err = conn.Write(dataLengthBuf.Bytes())
-//         if err != nil {
-//                 // {{if .Config.Debug}}
-//                 // log.Printf("[namedpipe] Error %s and %d\n", err, dataLengthBuf)
-//                 // {{end}}
-//         }
-//         totalWritten := 0
-//         for totalWritten < len(data)-readBufSize {
-//                 n, err2 := conn.Write(data[totalWritten : totalWritten+readBufSize])
-//                 totalWritten += n
-//                 if err2 != nil {
-//                         // {{if .Config.Debug}}
-//                         // log.Printf("[namedpipe] Error %s\n", err)
-//                         // {{end}}
-//                 }
-//         }
-//         if totalWritten < len(data) {
-//                 missing := len(data) - totalWritten
-//                 _, err := conn.Write(data[totalWritten : totalWritten+missing])
-//                 if err != nil {
-//                         // {{if .Config.Debug}}
-//                         // log.Printf("[namedpipe] Error %s", err)
-//                         // {{end}}
-//                 }
-//         }
-//         return nil
-// }
-
-// streamWriteEnvelope - Writes a message to the stream using length prefix framing
-// which is a fancy way of saying we write the length of the message then the message
-// e.g. [uint32 length|message] so the receiver can delimit messages properly
-func streamWriteEnvelope(connection io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
+func streamWriteEnvelope(conn io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
+	// func writeEnvelope(conn *net.Conn, envelope *sliverpb.Envelope) error {
 	data, err := proto.Marshal(envelope)
 	if err != nil {
+		// {{if .Config.Debug}}
+		// log.Print("[namedpipe] Marshaling error: ", err)
+		// {{end}}
 		return err
 	}
 	dataLengthBuf := new(bytes.Buffer)
 	binary.Write(dataLengthBuf, binary.LittleEndian, uint32(len(data)))
-	connection.Write(dataLengthBuf.Bytes())
-	connection.Write(data)
+	_, err = conn.Write(dataLengthBuf.Bytes())
+	if err != nil {
+		// {{if .Config.Debug}}
+		// log.Printf("[namedpipe] Error %s and %d\n", err, dataLengthBuf)
+		// {{end}}
+	}
+	totalWritten := 0
+	for totalWritten < len(data)-readBufSize {
+		n, err2 := conn.Write(data[totalWritten : totalWritten+readBufSize])
+		totalWritten += n
+		if err2 != nil {
+			// {{if .Config.Debug}}
+			// log.Printf("[namedpipe] Error %s\n", err)
+			// {{end}}
+		}
+	}
+	if totalWritten < len(data) {
+		missing := len(data) - totalWritten
+		_, err := conn.Write(data[totalWritten : totalWritten+missing])
+		if err != nil {
+			// {{if .Config.Debug}}
+			// log.Printf("[namedpipe] Error %s", err)
+			// {{end}}
+		}
+	}
 	return nil
 }
+
+// streamWriteEnvelope - Writes a message to the stream using length prefix framing
+// which is a fancy way of saying we write the length of the message then the message
+// e.g. [uint32 length|message] so the receiver can delimit messages properly
+// func streamWriteEnvelope(connection io.ReadWriteCloser, envelope *sliverpb.Envelope) error {
+//         data, err := proto.Marshal(envelope)
+//         if err != nil {
+//                 return err
+//         }
+//         dataLengthBuf := new(bytes.Buffer)
+//         binary.Write(dataLengthBuf, binary.LittleEndian, uint32(len(data)))
+//         connection.Write(dataLengthBuf.Bytes())
+//         connection.Write(data)
+//         return nil
+// }
 
 // streamReadEnvelope - Reads a message from the stream using length prefix framing
 // returns messageType, message, and error
@@ -271,45 +269,4 @@ func streamReadEnvelope(connection io.ReadWriteCloser) (env *sliverpb.Envelope, 
 		return nil, fmt.Errorf("unmarshaling envelope error: %v", err)
 	}
 	return envelope, nil
-}
-
-// CleanupSessionTransports - Once a session has been killed (and not merely disconnected)
-// delete all the transports that have been set at runtime, so that they don't pile up at
-// each new session reconnection/restart.
-func CleanupSessionTransports(sess *core.Session) (err error) {
-
-	// Get the transports (runtime and build) for the session
-	transports, err := db.TransportsBySession(sess.UUID, sess.Name)
-	if err != nil {
-		return fmt.Errorf("Failed to retrieve session transports: %s", err)
-	}
-	build, err := db.ImplantBuildByName(sess.Name)
-	if err != nil {
-		return fmt.Errorf("Failed to retrieve session implant build: %s", err)
-	}
-
-	// Diff both lists of transports
-	var toDelete = []*models.Transport{}
-	for _, transport := range transports {
-		found := false
-		for _, buildTransport := range build.Transports {
-			if buildTransport.ID == transport.ID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			toDelete = append(toDelete, transport)
-		}
-	}
-
-	// And delete those that have been set at runtime
-	for _, transport := range toDelete {
-		err = db.Session().Delete(transport).Error
-		if err != nil {
-			mtlsLog.Errorf("Failed to delete transport from DB: %s", err)
-		}
-	}
-
-	return
 }

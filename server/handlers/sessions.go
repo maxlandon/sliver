@@ -24,12 +24,14 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 
 	gofrsUuid "github.com/gofrs/uuid"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
+	"gorm.io/gorm"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commpb"
@@ -37,6 +39,7 @@ import (
 	"github.com/bishopfox/sliver/server/comm"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
 )
 
@@ -84,7 +87,7 @@ func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *s
 
 	core.Sessions.Add(session)
 	implantConn.Cleanup = func() {
-		core.Sessions.Remove(session.ID)
+		core.Sessions.Remove(session.ID, true)
 	}
 	go auditLogSession(session, register)
 
@@ -248,29 +251,31 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 		return nil
 	}
 
-	// Instead of creating a new session around the implant connection,
-	// find the session matching the details sent in the request.
-	session := core.GetSessionSwitching(register.OldTransportID)
-	if session == nil {
+	// Find the session/beacon matching the details sent in the request.
+	session, beacon := core.GetTargetSwitching(register.OldTransportID)
+	if session == nil && beacon == nil {
 		sessionHandlerLog.Errorf("(Transport switch) Failed to find session for transport %s", register.OldTransportID)
 		return nil
 	}
-
-	// Get this new transport and implant build
-	build, err := db.ImplantBuildByName(session.Name)
-	transport, err := db.TransportByID(register.TransportID)
-	if transport == nil || err != nil {
-		sessionHandlerLog.Errorf("(Transport switch) Failed to find transport %s", register.TransportID)
-		return nil
+	var buildName string
+	if session != nil {
+		buildName = session.Name
+	} else {
+		buildName = beacon.Name
 	}
 
-	// Update the transport and connection details for the session
-	session.TransportID = transport.ID.String()
-	transport.Running = true
-	transport.SessionID = gofrsUuid.FromStringOrNil(session.UUID)
-	err = db.Session().Save(&transport).Error
-	if err != nil {
-		sessionHandlerLog.Errorf("Failed to update Transport: %s", err)
+	// Get this new transport and implant build
+	build, err := db.ImplantBuildByName(buildName)
+	transport, err := db.TransportByID(register.TransportID)
+	fmt.Println(register.TransportID)
+	fmt.Println(register.Beacon)
+	fmt.Println(transport.ID)
+	fmt.Println(transport.Profile.Channel.String())
+	fmt.Println(transport.Profile.Type.String())
+	fmt.Println(transport.Profile.Hostname)
+	fmt.Println(transport.Profile.Port)
+	if transport == nil || err != nil {
+		sessionHandlerLog.Errorf("(Transport switch) Failed to find transport %s", register.TransportID)
 		return nil
 	}
 
@@ -283,25 +288,212 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 	err = db.Session().Save(&oldTransport).Error
 	if err != nil {
 		sessionHandlerLog.Errorf("Failed to update Transport status: %s", err)
+	}
+
+	// Switch to Session if the current C2 transport is a session
+	if transport.Profile.Type == sliverpb.C2Type_Session {
+		err = switchSession(session, beacon, register, implantConn, transport, build)
+		if err != nil {
+			sessionHandlerLog.Errorf("(Transport switch => session) Failed with error: %s", err)
+		}
+	}
+
+	// Or to a beacon otherwise
+	if transport.Profile.Type == sliverpb.C2Type_Beacon {
+		err = switchBeacon(session, register, implantConn, transport)
+		if err != nil {
+			sessionHandlerLog.Errorf("(Transport switch => beacon) Failed with error: %s", err)
+		}
+	}
+
+	return nil
+}
+
+// switchSession - Create a session if the current target was a beacon, or update the session if it was already one.
+func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.RegisterTransportSwitch, c *core.ImplantConnection, t *models.Transport, b *models.ImplantBuild) error {
+
+	var sessionExists = false
+	if s != nil {
+		s = core.NewSession(c)
+	} else {
+		sessionExists = true
+	}
+
+	// Parse Register UUID
+	hostUUID, err := uuid.Parse(r.Session.HostUUID)
+	if err != nil {
+		hostUUID = uuid.New() // Generate Random UUID
+	}
+	s.UUID = r.Session.UUID
+	s.Name = r.Session.Name
+	s.Hostname = r.Session.Hostname
+	s.HostUUID = hostUUID.String()
+	s.Username = r.Session.Username
+	s.UID = r.Session.Uid
+	s.GID = r.Session.Gid
+	s.Os = r.Session.Os
+	s.Arch = r.Session.Arch
+	s.PID = r.Session.Pid
+	s.Filename = r.Session.Filename
+	s.ActiveC2 = r.Session.ActiveC2
+	s.Version = r.Session.Version
+	s.ReconnectInterval = r.Session.ReconnectInterval
+	s.PollTimeout = r.Session.PollTimeout
+	s.ProxyURL = r.Session.ProxyURL
+	s.ConfigID = r.Session.ConfigID
+	s.WorkingDirectory = r.Session.WorkingDirectory
+	s.State = clientpb.State_Alive
+	if bc != nil {
+		s.BeaconID = bc.ID.String() // Switching from a beacon
+	}
+
+	// Add protocol, network and route-adjusted address fields
+	uri, _ := url.Parse(s.ActiveC2)       // TODO: change this, might be wrong with pivot sessions
+	s.RemoteAddress = uri.Host + uri.Path // Set the non-resolved routed address first
+	s.RemoteAddress = comm.SetCommString(s)
+
+	// Update the transport and connection details for the session
+	s.TransportID = t.ID.String()
+	t.Running = true
+	t.SessionID = gofrsUuid.FromStringOrNil(s.UUID)
+	err = db.Session().Save(&t).Error
+	if err != nil {
+		sessionHandlerLog.Errorf("Failed to update Transport: %s", err)
 		return nil
 	}
 
-	// Update the session itself, and confirm we successfully switched the transport
-	session.Connection = implantConn // If we don't update this, will deadlock on next request
-	core.Sessions.UpdateSession(session)
-	core.ConfirmTransportSwitched(session)
+	// If we were a beacon: add session and update beacon
+	if !sessionExists {
+		core.Sessions.Add(s)
+		c.Cleanup = func() {
+			core.Sessions.Remove(s.ID, true)
+		}
+		go auditLogSession(s, r.Session)
+
+		// We were a beacon: mark it inactive, so it doesn't
+		// show up in some completions, cannot be used, etc
+		bc.State = clientpb.State_Disconnect
+		db.Session().Save(&bc)
+		core.EventBroker.Publish(core.Event{
+			Type:   clientpb.EventType_BeaconUpdated,
+			Beacon: bc,
+		})
+	}
+
+	// If we were already a session: just update it
+	if sessionExists {
+		core.Sessions.UpdateSession(s)
+	}
 
 	// If this transport specifically asks not to be Comm wired, or if the
 	// implant build forbids it anyway, just return, we have nothing to restart.
-	if transport.Profile.CommDisabled || !build.ImplantConfig.CommEnabled {
+	if t.Profile.CommDisabled || !b.ImplantConfig.CommEnabled {
 		return nil
 	}
 
 	// Restart the Comms if required. TODO: restart active portforwarders/proxies
-	err = comm.InitSession(session)
+	err = comm.InitSession(s)
 	if err != nil {
 		sessionHandlerLog.Errorf("Comm init failed: %v", err)
 		return nil
+	}
+
+	// Start any persistent jobs that might exist for this precise session
+	// err = core.StartPersistentSessionJobs(session)
+	// if err != nil {
+	//         sessionHandlerLog.Errorf("failed to start persistent jobs: %s", err)
+	// }
+
+	return nil
+}
+
+// switchBeacon - Create or update a beacon with the registration, and if the previous target was a session, remove it.
+func switchBeacon(s *core.Session, reg *sliverpb.RegisterTransportSwitch, conn *core.ImplantConnection, t *models.Transport) error {
+
+	beaconHandlerLog.Infof("[Switching] Beacon registration from %s", reg.Beacon.ID)
+
+	// Get beacon if existing
+	beacon, err := db.BeaconByID(reg.Beacon.ID)
+	beaconHandlerLog.Debugf("Found %v err = %s", beacon, err)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		beaconHandlerLog.Errorf("Database query error %s", err)
+		return nil
+	}
+
+	// Prepare an event, either a registration if new beacon...
+	var event core.Event
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// New beacon
+		beacon = &models.Beacon{
+			ID: gofrsUuid.FromStringOrNil(reg.Beacon.ID),
+		}
+		event = core.Event{
+			Type:    clientpb.EventType_BeaconRegistered,
+			Beacon:  beacon,
+			Session: s,
+		}
+	} else {
+		// ... Of if we have found the beacon, update it
+		event = core.Event{
+			Type:    clientpb.EventType_BeaconUpdated,
+			Beacon:  beacon,
+			Session: s,
+		}
+	}
+
+	beacon.Name = reg.Beacon.Register.Name
+	beacon.Hostname = reg.Beacon.Register.Hostname
+	beacon.HostUUID = gofrsUuid.FromStringOrNil(reg.Beacon.Register.HostUUID)
+	beacon.Username = reg.Beacon.Register.Username
+	beacon.UID = reg.Beacon.Register.Uid
+	beacon.GID = reg.Beacon.Register.Gid
+	beacon.OS = reg.Beacon.Register.Os
+	beacon.Arch = reg.Beacon.Register.Arch
+	beacon.Transport = conn.Transport
+	beacon.RemoteAddress = conn.RemoteAddress
+	beacon.PID = reg.Beacon.Register.Pid
+	beacon.Filename = reg.Beacon.Register.Filename
+	beacon.LastCheckin = conn.LastMessage
+	beacon.Version = reg.Beacon.Register.Version
+	beacon.ReconnectInterval = reg.Beacon.Register.ReconnectInterval
+	beacon.ProxyURL = reg.Beacon.Register.ProxyURL
+	beacon.PollTimeout = reg.Beacon.Register.PollTimeout
+	// beacon.ConfigID = uuid.FromStringOrNil(reg.Beacon.Register.ConfigID)
+	beacon.WorkingDirectory = reg.Beacon.Register.WorkingDirectory
+	beacon.State = clientpb.State_Alive
+
+	beacon.Interval = reg.Beacon.Interval
+	beacon.Jitter = reg.Beacon.Jitter
+	beacon.NextCheckin = reg.Beacon.NextCheckin
+
+	if s != nil {
+		beacon.SessionID = s.UUID
+	}
+
+	err = db.Session().Save(beacon).Error
+	if err != nil {
+		beaconHandlerLog.Errorf("Database write %s", err)
+	}
+
+	// Update the transport and connection details for the session
+	beacon.TransportID = t.ID.String()
+	t.Running = true
+	t.SessionID = gofrsUuid.FromStringOrNil(beacon.ID.String())
+	err = db.Session().Save(&t).Error
+	if err != nil {
+		sessionHandlerLog.Errorf("Failed to update Transport: %s", err)
+	}
+
+	// Publish the corresponding type of event for this switch
+	core.EventBroker.Publish(event)
+
+	// If we were a session, close the session and publish
+	if s != nil {
+		session := core.Sessions.Get(s.ID)
+		if session == nil {
+			return nil
+		}
+		core.Sessions.Remove(session.ID, false)
 	}
 
 	return nil

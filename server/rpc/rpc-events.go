@@ -47,6 +47,9 @@ func (s *Server) Events(req *commonpb.Request, stream rpcpb.SliverRPC_EventsServ
 			if event.Session != nil {
 				pbEvent.Session = event.Session.ToProtobuf()
 			}
+			if event.Beacon != nil {
+				pbEvent.Beacon = event.Beacon.ToProtobuf()
+			}
 			if event.Err != nil {
 				pbEvent.Err = event.Err.Error()
 			}
