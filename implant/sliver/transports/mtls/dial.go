@@ -30,7 +30,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/bishopfox/sliver/implant/sliver/transports/cryptography"
+	"github.com/bishopfox/sliver/implant/sliver/cryptography"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 

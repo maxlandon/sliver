@@ -30,7 +30,7 @@ import (
 
 	"strconv"
 
-	"github.com/bishopfox/sliver/implant/sliver/transports/cryptography"
+	"github.com/bishopfox/sliver/implant/sliver/cryptography"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
@@ -52,6 +52,9 @@ func Listen(uri *url.URL, p *sliverpb.C2Profile) (c net.Conn, err error) {
 
 	// Start listening for incoming TLS connections
 	ln, err := tls.Listen("tcp", fmt.Sprintf("%s:%d", uri.Hostname(), lport), tlsConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	for {
 		conn, err := ln.Accept()

