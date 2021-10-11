@@ -103,7 +103,7 @@ func printPivots(session *clientpb.Session, timeout int64, rpc rpcpb.SliverRPCCl
 	for _, entry := range pivotList.Entries {
 		table.Append([]string{entry.Type, entry.Remote})
 	}
-	table.Output()
+	fmt.Printf(table.Output())
 
 	return nil
 }

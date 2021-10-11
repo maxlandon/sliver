@@ -47,6 +47,10 @@ func (l *List) Execute(args []string) (err error) {
 	if err != nil {
 		return log.Error(err)
 	}
+	if len(profiles.Profiles) == 0 {
+		log.Infof("No Malleable profiles. Create one with `malleable dialer|listener <c2> <addr> --options`")
+		return
+	}
 	var filtered []*sliverpb.Malleable
 	for _, id := range l.Args.ProfileID {
 		for _, p := range profiles.Profiles {
@@ -106,6 +110,7 @@ func printMalleables(profiles []*sliverpb.Malleable) {
 func printProfilesWithTitle(title string, profiles []*sliverpb.Malleable) {
 
 	table := util.NewTable(readline.Yellow(title))
+	// TODO: add Credentials  with "user/pass" or "api/pass" or "type" indication => devise
 	headers := []string{"ID", "Channel", "Direction", "Address", "Name", "Errs/Reconnect", "Jit/Interval", "SSH Comms"}
 	headLen := []int{0, 0, 0, 0, 0, 0, 0, 0}
 	table.SetColumns(headers, headLen)
@@ -140,5 +145,5 @@ func printProfilesWithTitle(title string, profiles []*sliverpb.Malleable) {
 		table.AppendRow([]string{id, channel, dir, address, name, timeouts, jitInt, comms})
 	}
 
-	table.Output()
+	fmt.Printf(table.Output())
 }

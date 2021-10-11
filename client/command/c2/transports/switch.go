@@ -25,27 +25,69 @@ import (
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"google.golang.org/protobuf/proto"
 )
 
-// Switch - Switch transports for the current session or context one
+// Switch - Switch the active transport of the current target
 type Switch struct {
 	Args struct {
 		TransportID string `description:"ID of the transport you want to use" required:"1-1"`
 	} `positional-args:"yes" required:"yes"`
 }
 
-// Execute - Switch transports for the current session or context one
+// Execute - Switch the active transport of the current target
 func (s *Switch) Execute(args []string) (err error) {
+	_, beacon := core.ActiveTarget.Targets()
 
-	_, err = transport.RPC.SwitchTransport(context.Background(), &clientpb.SwitchTransportReq{
+	// Make request
+	resp, err := transport.RPC.SwitchTransport(context.Background(), &sliverpb.TransportSwitchReq{
 		ID:      s.Args.TransportID,
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
 		return log.Errorf("Failed to switch transport: %s", err)
 	}
-	log.Infof("Switching session transport... (%s)", s.Args.TransportID)
-	log.Infof("The session should update itself soon.")
 
+	// Beacon
+	if beacon != nil {
+		return s.executeAsync(resp)
+	}
+
+	// Session
+	return s.executeSync(resp)
+}
+
+// Switch - Switch the active transport of the current target (asynchronous/beacon)
+func (s *Switch) executeAsync(resp *sliverpb.TransportSwitch) (err error) {
+
+	if resp.Response != nil && resp.Response.Async {
+		core.AddBeaconCallback(resp.Response.TaskID, func(task *clientpb.BeaconTask) {
+			err := proto.Unmarshal(task.Response, resp)
+			if err != nil {
+				log.ErrorfAsync("Failed to decode response: %s", err)
+				return
+			}
+			if resp.Response.Err != "" {
+				log.ErrorfAsync("Failed to switch transport: %s", resp.Response.Err)
+				return
+			}
+
+			log.Infof("Switching current transport... (%s)", s.Args.TransportID)
+			log.Infof("The session/beacon and connectivity status should update itself soon.")
+		})
+	}
+	return nil // Always return nil from just a task assignment
+}
+
+// Switch - Switch the active transport of the current target (synchronous/session)
+func (s *Switch) executeSync(resp *sliverpb.TransportSwitch) (err error) {
+	if resp.Response.Err != "" {
+		log.ErrorfAsync("Failed to switch transport: %s", resp.Response.Err)
+		return
+	}
+
+	log.Infof("Switching current transport... (%s)", s.Args.TransportID)
+	log.Infof("The session/beacon and connectivity status should update itself soon.")
 	return
 }

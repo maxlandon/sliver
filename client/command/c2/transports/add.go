@@ -25,9 +25,11 @@ import (
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"google.golang.org/protobuf/proto"
 )
 
-// Add - Add a C2 profile to a session as an available transport
+// Add - Add a C2 profile to a session/beacon as an available transport
 type Add struct {
 	Args struct {
 		ProfileID string `description:"ID of the C2 Profile to load" required:"1-1"`
@@ -39,19 +41,57 @@ type Add struct {
 	} `group:"add options"`
 }
 
-// Execute - Add a C2 profile to a session as an available transport
+// Execute - Add a C2 profile to a session/beacon as an available transport
 func (a *Add) Execute(args []string) (err error) {
+	_, beacon := core.ActiveTarget.Targets()
 
-	_, err = transport.RPC.AddTransport(context.Background(), &clientpb.AddTransportReq{
+	// Make request
+	resp, err := transport.RPC.AddTransport(context.Background(), &sliverpb.TransportAddReq{
 		ID:       a.Args.ProfileID,
 		Switch:   a.Options.Switch,
 		Priority: int32(a.Options.Priority),
 		Request:  core.ActiveTarget.Request(),
 	})
 	if err != nil {
-		return log.Errorf("Failed to add transport: %s", err)
+		return log.Error(err)
 	}
-	log.Infof("Added transport %s to session", a.Args.ProfileID)
 
+	// Beacon
+	if beacon != nil {
+		return a.executeAsync(resp)
+	}
+
+	// Session
+	return a.executeSync(resp)
+}
+
+// Add - Add a C2 profile to a session/beacon as an available transport (asynchronous/beacon)
+func (a *Add) executeAsync(resp *sliverpb.TransportAdd) (err error) {
+
+	if resp.Response != nil && resp.Response.Async {
+		core.AddBeaconCallback(resp.Response.TaskID, func(task *clientpb.BeaconTask) {
+			err := proto.Unmarshal(task.Response, resp)
+			if err != nil {
+				log.ErrorfAsync("Failed to decode response: %s", err)
+				return
+			}
+			if resp.Response.Err != "" {
+				log.ErrorfAsync("Failed to add transport: %s", resp.Response.Err)
+			} else {
+				log.InfofAsync("Added transport %s to beacon", a.Args.ProfileID)
+			}
+		})
+	}
+	return nil // Always return nil from just a task assignment
+}
+
+// Add - Add a C2 profile to a session/beacon as an available transport (synchronous/session)
+func (a *Add) executeSync(resp *sliverpb.TransportAdd) (err error) {
+
+	if resp.Response.Err != "" {
+		return log.Errorf("Failed to add transport: %s", resp.Response.Err)
+	}
+
+	log.Infof("Added transport %s to session", a.Args.ProfileID)
 	return
 }

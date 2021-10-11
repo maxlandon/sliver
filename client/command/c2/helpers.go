@@ -26,8 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maxlandon/readline"
+	rl "github.com/maxlandon/readline"
 
+	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
@@ -48,31 +49,31 @@ const (
 func PrintProfileSummaryLong(profile *sliverpb.Malleable) {
 
 	// Test for reference distances
-	// ----dir := fmt.Sprintf(readline.YELLOW+"             ID: %s%s\n", readline.RESET, profile.ID)
+	// ----dir := fmt.Sprintf(rl.YELLOW+"             ID: %s%s\n", rl.RESET, profile.ID)
 
 	// Left hand
-	id := fmt.Sprintf(readline.YELLOW+"            ID: %s%s", readline.RESET, profile.ID)
-	name := fmt.Sprintf(readline.YELLOW+"          Name: %s%s", readline.RESET, profile.Name)
-	dir := fmt.Sprintf(readline.YELLOW+"     Direction: %s%s", readline.RESET, profile.Direction.String())
-	path := fmt.Sprintf(readline.YELLOW+"     Full Path: %s%s", readline.RESET, readline.Bold(FullTargetPath(profile)))
+	id := fmt.Sprintf(rl.YELLOW+"            ID: %s%s", rl.RESET, profile.ID)
+	name := fmt.Sprintf(rl.YELLOW+"          Name: %s%s", rl.RESET, profile.Name)
+	dir := fmt.Sprintf(rl.YELLOW+"     Direction: %s%s", rl.RESET, profile.Direction.String())
+	path := fmt.Sprintf(rl.YELLOW+"     Full Path: %s%s", rl.RESET, rl.Bold(FullTargetPath(profile)))
 	var comms string
 	if profile.CommDisabled {
-		comms = readline.YELLOW + "no" + readline.RESET
+		comms = rl.YELLOW + "no" + rl.RESET
 	} else {
-		comms = readline.GREEN + "yes" + readline.RESET
+		comms = rl.GREEN + "yes" + rl.RESET
 	}
-	comm := fmt.Sprintf(readline.YELLOW+"          Comm: %s%s", readline.RESET, comms)
+	comm := fmt.Sprintf(rl.YELLOW+"          Comm: %s%s", rl.RESET, comms)
 
 	// Right hand
-	c2Type := fmt.Sprintf(readline.YELLOW+"          Type: %s%s", readline.RESET, profile.Type.String())
-	errs := fmt.Sprintf(readline.YELLOW+"     Max errors: %s%d", readline.RESET, profile.MaxConnectionErrors)
-	timeout := fmt.Sprintf(readline.YELLOW+" (Poll) Timeout: %s%s", readline.RESET, time.Duration(profile.PollTimeout))
+	c2Type := fmt.Sprintf(rl.YELLOW+"          Type: %s%s", rl.RESET, profile.Type.String())
+	errs := fmt.Sprintf(rl.YELLOW+"     Max errors: %s%d", rl.RESET, profile.MaxConnectionErrors)
+	timeout := fmt.Sprintf(rl.YELLOW+" (Poll) Timeout: %s%s", rl.RESET, time.Duration(profile.PollTimeout))
 
 	jitIntVal := fmt.Sprintf("%-3s / %3s", time.Duration(profile.Jitter), time.Duration(profile.Interval))
-	jitInt := fmt.Sprintf(readline.YELLOW+"Jitter/Interval: %s%s", readline.RESET, jitIntVal)
+	jitInt := fmt.Sprintf(rl.YELLOW+"Jitter/Interval: %s%s", rl.RESET, jitIntVal)
 
 	// Print the first part of the summary
-	sWidth := readline.GetTermWidth()
+	sWidth := rl.GetTermWidth()
 
 	pad := getPromptPad(sWidth-20, len(id), len(c2Type))
 	fmt.Println(id + pad + c2Type)
@@ -94,13 +95,13 @@ func PrintProfileSummaryLong(profile *sliverpb.Malleable) {
 		fmt.Println()
 		// TODO: derive hostnames from public key
 		certSig := sha256.Sum256(profile.Credentials.CertPEM)
-		fmt.Printf(readline.YELLOW+"    Public Key: %s%s\n", readline.RESET, certSig)
+		fmt.Printf(rl.YELLOW+"    Public Key: %s%s\n", rl.RESET, certSig)
 	} else {
 		fmt.Println()
-		login := readline.Dim("<implant name>")
-		fmt.Printf(readline.YELLOW+"         Login: %s%s\n", readline.RESET, login)
-		certSig := readline.Dim("<server key sig>")
-		fmt.Printf(readline.YELLOW+"    Public Key: %s%s\n", readline.RESET, certSig)
+		login := rl.Dim("<implant name>")
+		fmt.Printf(rl.YELLOW+"         Login: %s%s\n", rl.RESET, login)
+		certSig := rl.Dim("<server key sig>")
+		fmt.Printf(rl.YELLOW+"    Public Key: %s%s\n", rl.RESET, certSig)
 	}
 
 	// Protocol specific
@@ -127,10 +128,10 @@ func getPromptPad(total, base, menu int) (pad string) {
 // here so that this is kinda context/malleable sensitive, you will have what you'll need each time.
 func PrintProfileSummary(profile *sliverpb.Malleable) {
 
-	fmt.Printf(readline.YELLOW+"            ID: %s%s\n", readline.RESET, profile.ID)
-	fmt.Printf(readline.YELLOW+"          Name: %s%s\n", readline.RESET, profile.Name)
-	fmt.Printf(readline.YELLOW+"          Type: %s%s\n", readline.RESET, profile.Direction.String())
-	fmt.Printf(readline.YELLOW+"     Full Path: %s%s\n", readline.RESET, readline.Bold(FullTargetPath(profile)))
+	fmt.Printf(rl.YELLOW+"            ID: %s%s\n", rl.RESET, profile.ID)
+	fmt.Printf(rl.YELLOW+"          Name: %s%s\n", rl.RESET, profile.Name)
+	fmt.Printf(rl.YELLOW+"          Type: %s%s\n", rl.RESET, profile.Direction.String())
+	fmt.Printf(rl.YELLOW+"     Full Path: %s%s\n", rl.RESET, rl.Bold(FullTargetPath(profile)))
 
 	// TODO: Session Context ID on the right with ID/Name
 
@@ -148,13 +149,13 @@ func PrintProfileSummary(profile *sliverpb.Malleable) {
 		fmt.Println()
 		// TODO: derive hostnames from public key
 		certSig := sha256.Sum256(profile.Credentials.CertPEM)
-		fmt.Printf(readline.YELLOW+"    Public Key: %s%s\n", readline.RESET, certSig)
+		fmt.Printf(rl.YELLOW+"    Public Key: %s%s\n", rl.RESET, certSig)
 	} else {
 		fmt.Println()
-		login := readline.Dim("<implant name>")
-		fmt.Printf(readline.YELLOW+"         Login: %s%s\n", readline.RESET, login)
-		certSig := readline.Dim("<server key sig>")
-		fmt.Printf(readline.YELLOW+"    Public Key: %s%s\n", readline.RESET, certSig)
+		login := rl.Dim("<implant name>")
+		fmt.Printf(rl.YELLOW+"         Login: %s%s\n", rl.RESET, login)
+		certSig := rl.Dim("<server key sig>")
+		fmt.Printf(rl.YELLOW+"    Public Key: %s%s\n", rl.RESET, certSig)
 	}
 }
 
@@ -242,6 +243,7 @@ func defaultC2Profile() *sliverpb.Malleable {
 		PollTimeout:         int64(60 * time.Second),
 		Interval:            int64(30 * time.Second),
 		Credentials:         &sliverpb.Credentials{},
+		ContextSessionID:    core.ActiveTarget.UUID(), // Always give the current target
 	}
 	return profile
 }

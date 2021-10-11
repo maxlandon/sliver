@@ -84,5 +84,5 @@ func displayWebsite(web *clientpb.Website) {
 		path := readline.Bold(content.Path)
 		table.AppendRow([]string{path, content.ContentType, size})
 	}
-	table.Output()
+	fmt.Printf(table.Output())
 }

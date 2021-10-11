@@ -29,7 +29,6 @@ import (
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
-	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/maxlandon/readline"
 )
@@ -44,13 +43,13 @@ type List struct {
 // Execute - List all or some C2 transports
 func (l *List) Execute(args []string) (err error) {
 
-	transports, err := transport.RPC.GetTransports(context.Background(), &clientpb.GetTransportsReq{
+	transports, err := transport.RPC.GetTransports(context.Background(), &sliverpb.TransportsReq{
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
 		return log.Error(err)
 	}
-	var filtered []*clientpb.Transport
+	var filtered []*sliverpb.Transport
 	for _, id := range l.Args.TransportID {
 		for _, transport := range transports.Transports {
 			if c2.GetShortID(transport.ID) == id {
@@ -59,7 +58,7 @@ func (l *List) Execute(args []string) (err error) {
 		}
 	}
 
-	var list = []*clientpb.Transport{}
+	var list = []*sliverpb.Transport{}
 	if len(filtered) > 0 {
 		list = filtered
 	} else {
@@ -71,7 +70,7 @@ func (l *List) Execute(args []string) (err error) {
 	return
 }
 
-func printTransports(transports []*clientpb.Transport) {
+func printTransports(transports []*sliverpb.Transport) {
 
 	table := util.NewTable("")
 	headers := []string{"State", "Order", "ID", "Channel", "Direction", "Address", "Errs/Reconnect", "Jit/Interval", "SSH Comms"}
@@ -82,9 +81,9 @@ func printTransports(transports []*clientpb.Transport) {
 
 		var state string
 		if t.Running {
-			state = readline.Green("Running")
+			state = readline.Green("Active")
 		} else {
-			state = readline.Dim("Available")
+			state = readline.Dim("Loaded")
 		}
 		order := readline.Dim(strconv.Itoa(int(t.Order)))
 		id := c2.GetShortID(t.ID)
@@ -114,5 +113,5 @@ func printTransports(transports []*clientpb.Transport) {
 		table.AppendRow([]string{state, order, id, channel, dir, address, timeouts, jitInt, comms})
 	}
 
-	table.Output()
+	fmt.Printf(table.Output())
 }
