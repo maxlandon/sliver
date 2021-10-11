@@ -60,7 +60,7 @@ func newDBClient() *gorm.DB {
 		&models.IOC{},
 		&models.ExtensionData{},
 		&models.Malleable{},
-		&models.C2ProfileHTTP{},
+		&models.MalleableHTTP{},
 		&models.Job{},
 		&models.Transport{},
 		&models.ImplantConfig{},

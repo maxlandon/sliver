@@ -215,8 +215,8 @@ func setupTransportHTTP(p *sliverpb.Malleable, config *models.ImplantConfig, pro
 		return fmt.Errorf("marshalling error: %s", err)
 	}
 
-	profile.HTTP = &models.C2ProfileHTTP{
-		C2ProfileID: profile.ID,
+	profile.HTTP = &models.MalleableHTTP{
+		MalleableID: profile.ID,
 		UserAgent:   p.HTTP.UserAgent,
 		Data:        data,
 	}

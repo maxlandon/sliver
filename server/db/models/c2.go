@@ -101,7 +101,7 @@ type Malleable struct {
 	CommDisabled        bool // Use the SSH-protocol based multiplexing on top of this C2 channel
 
 	// HTTP related
-	HTTP     *C2ProfileHTTP // Needs to be unmarshaled to a sliverpb.C2ProfileHTTP
+	HTTP     *MalleableHTTP // Needs to be unmarshaled to a sliverpb.C2ProfileHTTP
 	ProxyURL string
 	Website  string
 
@@ -227,7 +227,7 @@ func C2ProfileFromProtobuf(p *sliverpb.Malleable) (profile *Malleable) {
 
 	if p.HTTP != nil {
 		httpProfileData, _ := proto.Marshal(p.HTTP)
-		profile.HTTP = &C2ProfileHTTP{
+		profile.HTTP = &MalleableHTTP{
 			ID:   uuid.FromStringOrNil(p.HTTP.ID),
 			Data: httpProfileData,
 		}
@@ -238,11 +238,11 @@ func C2ProfileFromProtobuf(p *sliverpb.Malleable) (profile *Malleable) {
 	return profile
 }
 
-// C2ProfileHTTP - Contains a protobuf specification of an HTTP C2 communication
+// MalleableHTTP - Contains a protobuf specification of an HTTP C2 communication
 // behaviour profile. This is used for storage and implant compilation purposes.
-type C2ProfileHTTP struct {
+type MalleableHTTP struct {
 	ID          uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
-	C2ProfileID uuid.UUID
+	MalleableID uuid.UUID
 
 	UserAgent string // For search purposes and quick access
 	Data      []byte // Needs to be unmarshaled to a sliverpb.C2ProfileHTTP
@@ -250,7 +250,7 @@ type C2ProfileHTTP struct {
 
 // ToProtobuf - Get a protobuf version  of this HTTP profile,
 // so that we can compile it more easily, or send it on the wire
-func (h *C2ProfileHTTP) ToProtobuf() *sliverpb.MalleableHTTP {
+func (h *MalleableHTTP) ToProtobuf() *sliverpb.MalleableHTTP {
 	p := &sliverpb.MalleableHTTP{
 		ID:        h.ID.String(),
 		UserAgent: h.UserAgent,
@@ -264,7 +264,7 @@ func (h *C2ProfileHTTP) ToProtobuf() *sliverpb.MalleableHTTP {
 }
 
 // BeforeCreate - GORM hook
-func (h *C2ProfileHTTP) BeforeCreate(tx *gorm.DB) (err error) {
+func (h *MalleableHTTP) BeforeCreate(tx *gorm.DB) (err error) {
 	h.ID, err = uuid.NewV4()
 	if err != nil {
 		return err
