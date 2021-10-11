@@ -193,7 +193,7 @@ func ImplantConfigFromProtobuf(pbConfig *clientpb.ImplantConfig) (string, *model
 
 	// [ C2 Channels ] -----------------------------------------------------------------
 	// Generates templates for all C2 profiles found or that must be
-	err := InitImplantC2Profiles(pbConfig, cfg)
+	err := InitImplantTransports(pbConfig, cfg)
 	if err != nil {
 		return "", nil
 	}

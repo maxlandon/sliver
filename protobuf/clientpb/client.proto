@@ -255,7 +255,7 @@ message ImplantConfig {
   string LimitFileExists = 32;
 
   // C2 stacks
-  repeated sliverpb.C2Profile C2s = 15;
+  repeated sliverpb.Malleable C2s = 15;
   repeated string RuntimeC2s = 16;
   string ConnectionStrategy = 39;
 
@@ -338,7 +338,7 @@ message Job {
   string Description = 6;
   int32 Order = 7;
 
-  sliverpb.C2Profile Profile = 8;
+  sliverpb.Malleable Profile = 8;
   string StageImplant = 9;
 }
 
@@ -359,47 +359,47 @@ message KillJob {
 
 // [ C2 Profiles ] ----------------------------------------
 
-message CreateC2ProfileReq {
-  sliverpb.C2Profile Profile = 1;
+message CreateMalleableReq {
+  sliverpb.Malleable Profile = 1;
   commonpb.Request Request = 9;
 }
 
-message CreateC2Profile {
-  sliverpb.C2Profile Profile = 1;
+message CreateMalleable {
+  sliverpb.Malleable Profile = 1;
   commonpb.Response Response = 9;
 }
 
-message DeleteC2ProfileReq {
-  sliverpb.C2Profile Profile = 1;
+message DeleteMalleableReq {
+  sliverpb.Malleable Profile = 1;
   commonpb.Request Request = 9;
 }
 
-message DeleteC2Profile {
+message DeleteMalleable {
   commonpb.Response Response = 9;
 }
 
-message UpdateC2ProfileReq {
-  sliverpb.C2Profile Profile = 1;
+message UpdateMalleableReq {
+  sliverpb.Malleable Profile = 1;
   commonpb.Request Request = 9;
 }
-message UpdateC2Profile {
-  sliverpb.C2Profile Updated = 1;
+message UpdateMalleable {
+  sliverpb.Malleable Updated = 1;
   commonpb.Response Response = 9;
 }
 
-message GetC2ProfilesReq {
+message GetMalleablesReq {
   commonpb.Request Request = 9;
 }
 
-message GetC2Profiles {
-  repeated sliverpb.C2Profile Profiles = 1;
+message GetMalleables {
+  repeated sliverpb.Malleable Profiles = 1;
 }
 
 // [ C2 Handlers ] ---------------------------------------------
 
 // The server requests an implant/the server to start a handler.
 message HandlerStageReq {
-  sliverpb.C2Profile Profile = 1;
+  sliverpb.Malleable Profile = 1;
   commonpb.Request Request = 9;
 }
 
@@ -418,7 +418,7 @@ message HandlerStagerReq {
   StagerProtocol Protocol = 1;
   string StageImplant = 2;
   bytes StageBytes = 3;
-  sliverpb.C2Profile Profile = 5;
+  sliverpb.Malleable Profile = 5;
   commonpb.Request Request = 9;
 }
 
@@ -429,7 +429,7 @@ message HandlerStager {
 
 // The server requests an implant/the server to stop a handler.
 message HandlerCloseReq {
-  sliverpb.C2Profile Profile = 1;
+  sliverpb.Malleable Profile = 1;
   commonpb.Request Request = 9;
 }
 
@@ -445,7 +445,7 @@ message Transport {
   string SessionID = 2;
   int32 Order = 3;
   bool Running = 4;
-  sliverpb.C2Profile Profile = 5;
+  sliverpb.Malleable Profile = 5;
 }
 
 message AddTransportReq {

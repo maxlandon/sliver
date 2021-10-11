@@ -29,11 +29,11 @@ import (
 )
 
 // Dial - Dial a target destination with a named pipe
-func Dial(uri *url.URL, p *sliverpb.C2Profile) (c net.Conn, err error) {
+func Dial(uri *url.URL, p *sliverpb.Malleable) (c net.Conn, err error) {
 	return nil, errors.New("{{if .Config.Debug}}namedpipe.Dial not implemented on this platform{{end}}")
 }
 
 // Listen - Listen for incoming named pipe connections
-func Listen(uri *url.URL, p *sliverpb.C2Profile) (c net.Conn, err error) {
+func Listen(uri *url.URL, p *sliverpb.Malleable) (c net.Conn, err error) {
 	return nil, errors.New("{{if .Config.Debug}}namedpipe.Listen not implemented on this platform{{end}}")
 }

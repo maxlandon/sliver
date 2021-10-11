@@ -62,10 +62,10 @@ type AdvancedOptions struct {
 	} `group:"advanced http options"`
 }
 
-func PopulateProfileHTTP(profile *sliverpb.C2Profile, options AdvancedOptions) {
+func PopulateProfileHTTP(profile *sliverpb.Malleable, options AdvancedOptions) {
 	opts := options.Core
 
-	profile.HTTP = &sliverpb.C2ProfileHTTP{
+	profile.HTTP = &sliverpb.MalleableHTTP{
 		// Stager File Extension
 		// StagerFileExt : opts.S
 

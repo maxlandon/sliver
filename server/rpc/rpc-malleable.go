@@ -30,8 +30,8 @@ import (
 	"github.com/bishopfox/sliver/server/db/models"
 )
 
-// CreateC2Profile - Create a new C2 profile
-func (rpc *Server) CreateC2Profile(ctx context.Context, req *clientpb.CreateC2ProfileReq) (*clientpb.CreateC2Profile, error) {
+// CreateMalleable - Create a new C2 profile
+func (rpc *Server) CreateMalleable(ctx context.Context, req *clientpb.CreateMalleableReq) (*clientpb.CreateMalleable, error) {
 
 	// Parse Protobuf profile into a DB suited one
 	profile := models.C2ProfileFromProtobuf(req.Profile)
@@ -59,7 +59,7 @@ func (rpc *Server) CreateC2Profile(ctx context.Context, req *clientpb.CreateC2Pr
 		return nil, err
 	}
 
-	res := &clientpb.CreateC2Profile{
+	res := &clientpb.CreateMalleable{
 		Profile:  profile.ToProtobuf(),
 		Response: &commonpb.Response{},
 	}
@@ -67,8 +67,8 @@ func (rpc *Server) CreateC2Profile(ctx context.Context, req *clientpb.CreateC2Pr
 	return res, nil
 }
 
-// DeleteC2Profile - Delete a Malleable C2 profile
-func (rpc *Server) DeleteC2Profile(ctx context.Context, req *clientpb.DeleteC2ProfileReq) (res *clientpb.DeleteC2Profile, err error) {
+// DeleteMalleable - Delete a Malleable C2 profile
+func (rpc *Server) DeleteMalleable(ctx context.Context, req *clientpb.DeleteMalleableReq) (res *clientpb.DeleteMalleable, err error) {
 
 	profile, err := db.C2ProfileByID(req.Profile.ID)
 	if err != nil {
@@ -79,11 +79,11 @@ func (rpc *Server) DeleteC2Profile(ctx context.Context, req *clientpb.DeleteC2Pr
 		return nil, fmt.Errorf("failed to delete profile: %s", err)
 	}
 
-	return &clientpb.DeleteC2Profile{Response: &commonpb.Response{}}, nil
+	return &clientpb.DeleteMalleable{Response: &commonpb.Response{}}, nil
 }
 
-// UpdateC2Profile - Update a C2 profile with new values
-func (rpc *Server) UpdateC2Profile(ctx context.Context, req *clientpb.UpdateC2ProfileReq) (res *clientpb.UpdateC2Profile, err error) {
+// UpdateMalleable - Update a C2 profile with new values
+func (rpc *Server) UpdateMalleable(ctx context.Context, req *clientpb.UpdateMalleableReq) (res *clientpb.UpdateMalleable, err error) {
 
 	profile := models.C2ProfileFromProtobuf(req.Profile)
 	if err != nil {
@@ -96,14 +96,14 @@ func (rpc *Server) UpdateC2Profile(ctx context.Context, req *clientpb.UpdateC2Pr
 		return nil, fmt.Errorf("failed to update profile: %s", result.Error)
 	}
 
-	return &clientpb.UpdateC2Profile{Response: &commonpb.Response{}, Updated: profile.ToProtobuf()}, nil
+	return &clientpb.UpdateMalleable{Response: &commonpb.Response{}, Updated: profile.ToProtobuf()}, nil
 }
 
-// GetC2Profiles - Get either all of some C2 profiles based on filters/context provided in the request
-func (rpc *Server) GetC2Profiles(context.Context, *clientpb.GetC2ProfilesReq) (*clientpb.GetC2Profiles, error) {
-	res := &clientpb.GetC2Profiles{}
+// GetMalleables - Get either all of some C2 profiles based on filters/context provided in the request
+func (rpc *Server) GetMalleables(context.Context, *clientpb.GetMalleablesReq) (*clientpb.GetMalleables, error) {
+	res := &clientpb.GetMalleables{}
 
-	profiles := []*models.C2Profile{}
+	profiles := []*models.Malleable{}
 	err := db.Session().Find(&profiles).Error
 	if err != nil {
 		return nil, err

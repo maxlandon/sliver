@@ -239,7 +239,7 @@ func jobStartClientListener(host string, port uint16) (string, error) {
 		Name:        "grpc",
 		Description: "client listener",
 		JobCtrl:     make(chan bool),
-		Profile:     &sliverpb.C2Profile{Port: uint32(port)},
+		Profile:     &sliverpb.Malleable{Port: uint32(port)},
 	}
 
 	go func() {

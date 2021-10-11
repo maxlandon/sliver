@@ -63,7 +63,7 @@ func init() {
 // - The handler job should, normally/in most cases, rest on a net.Listener running somewhere either on the session
 //   or on the server. This listener is automatically closed on job kill. You are free to use it or not: it won't have
 //   an impact on the overall C2 setup/usage workflow.
-func NewHandlerJob(profile *models.C2Profile, session *core.Session) (job *core.Job, ln net.Listener) {
+func NewHandlerJob(profile *models.Malleable, session *core.Session) (job *core.Job, ln net.Listener) {
 
 	// Base elements applying for all jobs, no matter where they run
 	var host string

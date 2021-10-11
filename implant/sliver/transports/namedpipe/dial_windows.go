@@ -42,7 +42,7 @@ const (
 )
 
 // Dial - Dial Named Pipe implant transport.
-func Dial(uri *url.URL, p *sliverpb.C2Profile) (conn net.Conn, err error) {
+func Dial(uri *url.URL, p *sliverpb.Malleable) (conn net.Conn, err error) {
 
 	address := uri.String()
 	address = strings.ReplaceAll(address, "namedpipe://", "")

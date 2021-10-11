@@ -35,7 +35,7 @@ import (
 // MalleableIDs - Returns IDs of all Malleable C2 profiles, along with a description
 func MalleableIDs() (comps []*readline.CompletionGroup) {
 
-	profiles, err := transport.RPC.GetC2Profiles(context.Background(), &clientpb.GetC2ProfilesReq{
+	profiles, err := transport.RPC.GetMalleables(context.Background(), &clientpb.GetMalleablesReq{
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {
@@ -61,9 +61,9 @@ func MalleableIDs() (comps []*readline.CompletionGroup) {
 }
 
 // ContextSessionMalleableIDs - All C2 profiles linked to the current Session context, if any.
-func ContextSessionMalleableIDs(profiles []*sliverpb.C2Profile) (contextC2s *readline.CompletionGroup) {
+func ContextSessionMalleableIDs(profiles []*sliverpb.Malleable) (contextC2s *readline.CompletionGroup) {
 
-	var contextProfiles = []*sliverpb.C2Profile{}
+	var contextProfiles = []*sliverpb.Malleable{}
 	for _, prof := range profiles {
 		if prof.ContextSessionID == core.ActiveTarget.ID() {
 			contextProfiles = append(contextProfiles, prof)
@@ -96,9 +96,9 @@ func ContextSessionMalleableIDs(profiles []*sliverpb.C2Profile) (contextC2s *rea
 }
 
 // OutOfContextMalleableIDs - All Malleable profiles that are not linked to the current Session, if any
-func OutOfContextMalleableIDs(profiles []*sliverpb.C2Profile) (otherC2s *readline.CompletionGroup) {
+func OutOfContextMalleableIDs(profiles []*sliverpb.Malleable) (otherC2s *readline.CompletionGroup) {
 
-	var otherProfiles = []*sliverpb.C2Profile{}
+	var otherProfiles = []*sliverpb.Malleable{}
 	for _, prof := range profiles {
 		if prof.ContextSessionID != core.ActiveTarget.ID() {
 			otherProfiles = append(otherProfiles, prof)
@@ -128,7 +128,7 @@ func OutOfContextMalleableIDs(profiles []*sliverpb.C2Profile) (otherC2s *readlin
 	return
 }
 
-func getSessionProfiles(profiles []*sliverpb.C2Profile) (sessions []*sliverpb.C2Profile) {
+func getSessionProfiles(profiles []*sliverpb.Malleable) (sessions []*sliverpb.Malleable) {
 	for _, p := range profiles {
 		if p.Type == sliverpb.C2Type_Session {
 			sessions = append(sessions, p)
@@ -137,7 +137,7 @@ func getSessionProfiles(profiles []*sliverpb.C2Profile) (sessions []*sliverpb.C2
 	return
 }
 
-func getBeaconProfiles(profiles []*sliverpb.C2Profile) (beacons []*sliverpb.C2Profile) {
+func getBeaconProfiles(profiles []*sliverpb.Malleable) (beacons []*sliverpb.Malleable) {
 	for _, p := range profiles {
 		if p.Type == sliverpb.C2Type_Beacon {
 			beacons = append(beacons, p)
@@ -146,7 +146,7 @@ func getBeaconProfiles(profiles []*sliverpb.C2Profile) (beacons []*sliverpb.C2Pr
 	return
 }
 
-func getSessionDescriptions(sessions []*sliverpb.C2Profile) (descriptions map[string]string) {
+func getSessionDescriptions(sessions []*sliverpb.Malleable) (descriptions map[string]string) {
 	descriptions = map[string]string{}
 	for _, c2 := range sessions {
 		// Left hand side
@@ -177,7 +177,7 @@ func getSessionDescriptions(sessions []*sliverpb.C2Profile) (descriptions map[st
 	return
 }
 
-func getBeaconDescriptions(beacons []*sliverpb.C2Profile) (descriptions map[string]string) {
+func getBeaconDescriptions(beacons []*sliverpb.Malleable) (descriptions map[string]string) {
 	descriptions = map[string]string{}
 	for _, c2 := range beacons {
 		// Left hand side
@@ -209,7 +209,7 @@ func getBeaconDescriptions(beacons []*sliverpb.C2Profile) (descriptions map[stri
 	return
 }
 
-func sortMalleableProfilesByType(profiles []*sliverpb.C2Profile) (sorted []*sliverpb.C2Profile) {
+func sortMalleableProfilesByType(profiles []*sliverpb.Malleable) (sorted []*sliverpb.Malleable) {
 	for _, p := range profiles {
 		if p.Type == sliverpb.C2Type_Session {
 			sorted = append(sorted, p)
@@ -224,7 +224,7 @@ func sortMalleableProfilesByType(profiles []*sliverpb.C2Profile) (sorted []*sliv
 	return
 }
 
-func sortMalleableProfilesByDirection(profiles []*sliverpb.C2Profile) (sorted []*sliverpb.C2Profile) {
+func sortMalleableProfilesByDirection(profiles []*sliverpb.Malleable) (sorted []*sliverpb.Malleable) {
 	for _, p := range profiles {
 		if p.Direction == sliverpb.C2Direction_Bind {
 			sorted = append(sorted, p)

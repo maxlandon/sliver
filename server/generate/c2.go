@@ -38,9 +38,9 @@ import (
 	"github.com/bishopfox/sliver/server/db/models"
 )
 
-// InitImplantC2Profiles - Given one ore more C2 profiles transmitted along an Implant configuration,
+// InitImplantTransports - Given one ore more C2 profiles transmitted along an Implant configuration,
 // parse, validate, generate values for all C2s, make them ready for being compiled into a build.
-func InitImplantC2Profiles(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantConfig) error {
+func InitImplantTransports(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantConfig) error {
 
 	// For each C2 profile in the implant config, parse, validate and
 	// populate it with everything needed to be compiled into an implant.
@@ -59,7 +59,7 @@ func InitImplantC2Profiles(pbConfig *clientpb.ImplantConfig, cfg *models.Implant
 
 	// Analyze and set up the transports to be compiled in the build
 	// so as to be available at runtime, for dynamic C2 switching.
-	setRuntimeTransports(pbConfig, cfg)
+	setTransportRuntime(pbConfig, cfg)
 
 	// If the Comm system enabled, add necessary
 	// keys for SSH authentication & encryption.
@@ -71,7 +71,7 @@ func InitImplantC2Profiles(pbConfig *clientpb.ImplantConfig, cfg *models.Implant
 // NewTransport - Validates all fields for a given transport specified as Protobuf,
 // for any supported C2 protocols and targeting a precise implant build configuration.
 // You can add your own branching calling a function dealing with your own C2 details and configurations.
-func NewTransport(config *models.ImplantConfig, template *sliverpb.C2Profile) (transport *models.Transport, err error) {
+func NewTransport(config *models.ImplantConfig, template *sliverpb.Malleable) (transport *models.Transport, err error) {
 
 	// Base information parsing
 	profile, err := newProfileFromConfig(template, config.Name)
@@ -83,16 +83,16 @@ func NewTransport(config *models.ImplantConfig, template *sliverpb.C2Profile) (t
 
 	// HTTP protocols need to check their builtin configuration, as well as
 	// serializing those HTTP profiles in order to store them in the Database.
-	if profile.Channel == sliverpb.C2Channel_HTTP || profile.Channel == sliverpb.C2Channel_HTTPS {
-		err = setupProfileHTTP(template, config, profile)
+	if profile.Channel == sliverpb.C2_HTTP || profile.Channel == sliverpb.C2_HTTPS {
+		err = setupTransportHTTP(template, config, profile)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// The Wireguard protocol might need a generated IP address
-	if profile.Channel == sliverpb.C2Channel_WG {
-		err = setupC2ProfileClientWG(template, config, profile)
+	if profile.Channel == sliverpb.C2_WG {
+		err = setupTransportWG(template, config, profile)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,7 @@ func NewTransport(config *models.ImplantConfig, template *sliverpb.C2Profile) (t
 // InitTransportCompilation - Any one-time security details, (or last minute ones) that need to happen before
 // the C2 profile is used in compiling an implant, or to be sent accross the wire. This is also
 // because some elements might not be saved in the database for that matter.
-func InitTransportCompilation(p *models.C2Profile) (profile *sliverpb.C2Profile, err error) {
+func InitTransportCompilation(p *models.Malleable) (profile *sliverpb.Malleable, err error) {
 
 	// Instantiate something that can go off the wire.
 	profile = p.ToProtobuf()
@@ -139,11 +139,11 @@ func InitTransportCompilation(p *models.C2Profile) (profile *sliverpb.C2Profile,
 }
 
 // newProfileFromConfig - Copy a C2 profile into a model, optionally validate somethings.
-func newProfileFromConfig(p *sliverpb.C2Profile, certificateHostname string) (*models.C2Profile, error) {
+func newProfileFromConfig(p *sliverpb.Malleable, certificateHostname string) (*models.Malleable, error) {
 
 	id, _ := uuid.NewV4()
 
-	profile := &models.C2Profile{
+	profile := &models.Malleable{
 		// Core
 		ID:               id,
 		ContextSessionID: uuid.FromStringOrNil(p.ContextSessionID),
@@ -192,8 +192,8 @@ func newProfileFromConfig(p *sliverpb.C2Profile, certificateHostname string) (*m
 	return profile, nil
 }
 
-// setupProfileHTTP - Validates and/or populates any required HTTP C2 Profile stuff.
-func setupProfileHTTP(p *sliverpb.C2Profile, config *models.ImplantConfig, profile *models.C2Profile) error {
+// setupTransportHTTP - Validates and/or populates any required HTTP C2 Profile stuff.
+func setupTransportHTTP(p *sliverpb.Malleable, config *models.ImplantConfig, profile *models.Malleable) error {
 
 	// If there are any miningful values set up, don't touch anything
 	// and pass along, we assume the guy throwing the config has set it up already.
@@ -204,7 +204,7 @@ func setupProfileHTTP(p *sliverpb.C2Profile, config *models.ImplantConfig, profi
 	// Load default HTTP configuration, either compiled in server or in server config path
 	if p.HTTP == nil {
 		httpConfig := configs.GetHTTPC2Config().RandomImplantConfig()
-		p.HTTP = httpConfig.C2ProfileHTTP // DOES NOT LOAD ANY SERVER VALUES
+		p.HTTP = httpConfig.MalleableHTTP // DOES NOT LOAD ANY SERVER VALUES
 	}
 
 	// Generate User agent for the implant
@@ -224,8 +224,8 @@ func setupProfileHTTP(p *sliverpb.C2Profile, config *models.ImplantConfig, profi
 	return nil
 }
 
-// setupC2ProfileClientWG - Validates and/or populates any required Wireguard C2 Profile stuff.
-func setupC2ProfileClientWG(p *sliverpb.C2Profile, config *models.ImplantConfig, profile *models.C2Profile) error {
+// setupTransportWG - Validates and/or populates any required Wireguard C2 Profile stuff.
+func setupTransportWG(p *sliverpb.Malleable, config *models.ImplantConfig, profile *models.Malleable) error {
 
 	// If the profile already contains a Wireguard tunnel IP address, it is in the hostname.
 	// Do not change it, and return the profile as is.
@@ -248,7 +248,7 @@ func setupC2ProfileClientWG(p *sliverpb.C2Profile, config *models.ImplantConfig,
 // --- COMPILATION HELPERS  ------------------------------------------------------------------------------------------
 //
 
-func setRuntimeTransports(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantConfig) {
+func setTransportRuntime(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantConfig) {
 
 	// Determine which C2 stacks must be compiled, including those to be only available at runtime.
 	var compiledC2s []string
@@ -268,35 +268,35 @@ func setRuntimeTransports(pbConfig *clientpb.ImplantConfig, cfg *models.ImplantC
 		}
 	}
 
-	mtls := append([]string{sliverpb.C2Channel_MTLS.String()}, compiledC2s...)
+	mtls := append([]string{sliverpb.C2_MTLS.String()}, compiledC2s...)
 	if cfg.MTLSc2Enabled = c2Enabled(mtls, cfg.Transports); cfg.MTLSc2Enabled {
-		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_MTLS.String()))
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2_MTLS.String()))
 	}
 
-	wg := append([]string{sliverpb.C2Channel_WG.String()}, compiledC2s...)
+	wg := append([]string{sliverpb.C2_WG.String()}, compiledC2s...)
 	if cfg.WGc2Enabled = c2Enabled(wg, cfg.Transports); cfg.WGc2Enabled {
-		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_WG.String()))
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2_WG.String()))
 	}
 
-	http := append([]string{sliverpb.C2Channel_HTTP.String(), sliverpb.C2Channel_HTTPS.String()}, compiledC2s...)
+	http := append([]string{sliverpb.C2_HTTP.String(), sliverpb.C2_HTTPS.String()}, compiledC2s...)
 	if cfg.HTTPc2Enabled = c2Enabled(http, cfg.Transports); cfg.HTTPc2Enabled {
-		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_HTTP.String()))
-		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_HTTPS.String()))
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2_HTTP.String()))
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2_HTTPS.String()))
 	}
 
-	dns := append([]string{sliverpb.C2Channel_DNS.String()}, compiledC2s...)
+	dns := append([]string{sliverpb.C2_DNS.String()}, compiledC2s...)
 	if cfg.DNSc2Enabled = c2Enabled(dns, cfg.Transports); cfg.DNSc2Enabled {
-		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_DNS.String()))
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2_DNS.String()))
 	}
 
-	namedpipe := append([]string{sliverpb.C2Channel_NamedPipe.String()}, compiledC2s...)
+	namedpipe := append([]string{sliverpb.C2_NamedPipe.String()}, compiledC2s...)
 	if cfg.NamePipec2Enabled = c2Enabled(namedpipe, cfg.Transports); cfg.NamePipec2Enabled {
-		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_NamedPipe.String()))
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2_NamedPipe.String()))
 	}
 
-	tcp := append([]string{sliverpb.C2Channel_TCP.String()}, compiledC2s...)
+	tcp := append([]string{sliverpb.C2_TCP.String()}, compiledC2s...)
 	if cfg.TCPc2Enabled = c2Enabled(tcp, cfg.Transports); cfg.TCPc2Enabled {
-		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2Channel_TCP.String()))
+		runtimeC2s = append(runtimeC2s, strings.ToLower(sliverpb.C2_TCP.String()))
 	}
 
 	// Save the list of compiled C2 stacks in the config
@@ -323,7 +323,7 @@ func isBeaconEnabled(cfg *clientpb.ImplantConfig, transport []*models.Transport)
 }
 
 // setTransport - wrap a C2 profile into a transport, ready to be used for compilation
-func setTransport(c2 *models.C2Profile) (transport *models.Transport) {
+func setTransport(c2 *models.Malleable) (transport *models.Transport) {
 	id, _ := uuid.NewV4()
 	transport = &models.Transport{
 		ID:        id,

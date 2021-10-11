@@ -146,7 +146,7 @@ func ReadEnvelope(connection net.Conn) (*pb.Envelope, error) {
 }
 
 // WGConnect - Get a wg connection or die trying
-func WGConnect(address string, profile *sliverpb.C2Profile) (net.Conn, *device.Device, error) {
+func WGConnect(address string, profile *sliverpb.Malleable) (net.Conn, *device.Device, error) {
 
 	port := uint16(profile.Port)
 	pub := profile.Credentials.ControlClientKey

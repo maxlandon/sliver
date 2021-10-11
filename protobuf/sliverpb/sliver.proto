@@ -71,13 +71,13 @@ message BeaconRegister {
 
 // C2 Profiles -------------------------------------------------
 
-message C2Profile {
+message Malleable {
   // Base
   string ID = 1;
   string ContextSessionID = 50;
   string Name = 2;
   C2Type Type = 3;
-  C2Channel C2 = 4;
+  C2 C2 = 4;
   C2Direction Direction = 5;
   string Hostname = 6;
   uint32 Port = 7;
@@ -101,7 +101,7 @@ message C2Profile {
   int64 Jitter = 21;
 
   // HTTP-related
-  C2ProfileHTTP HTTP = 30;
+  MalleableHTTP HTTP = 30;
   string ProxyURL = 31;
   string Website = 32;
   bool LetsEncrypt = 33;
@@ -116,7 +116,7 @@ enum C2Type {
   // Could be lower-level, like plain ReadWriteCloser ?
 }
 
-enum C2Channel {
+enum C2 {
   TCP = 0;
   MTLS = 1;
   HTTP = 2;
@@ -144,8 +144,8 @@ message Credentials {
   bytes TOTPServerSecret = 12;
 }
 
-// C2ProfileHTTP - HTTP-specific C2 profile
-message C2ProfileHTTP {
+// MalleableHTTP - HTTP-specific C2 profile
+message MalleableHTTP {
   string ID = 1;
   string UserAgent = 2;
   repeated string URLParameters = 3;
@@ -188,12 +188,12 @@ message TransportsReq {
 }
 
 message Transports {
-  repeated C2Profile Available = 1;
+  repeated Malleable Available = 1;
   commonpb.Response Response = 9;
 }
 
 message TransportAddReq {
-  C2Profile Profile = 1;
+  Malleable Profile = 1;
   int32 Priority = 2;
   bool Switch = 3;
   commonpb.Request Request = 9;

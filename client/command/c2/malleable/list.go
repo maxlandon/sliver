@@ -43,11 +43,11 @@ type List struct {
 // Execute - List all or some C2 profiles
 func (l *List) Execute(args []string) (err error) {
 
-	profiles, err := transport.RPC.GetC2Profiles(context.Background(), &clientpb.GetC2ProfilesReq{})
+	profiles, err := transport.RPC.GetMalleables(context.Background(), &clientpb.GetMalleablesReq{})
 	if err != nil {
 		return log.Error(err)
 	}
-	var filtered []*sliverpb.C2Profile
+	var filtered []*sliverpb.Malleable
 	for _, id := range l.Args.ProfileID {
 		for _, p := range profiles.Profiles {
 			if c2.GetShortID(p.ID) == id {
@@ -56,19 +56,19 @@ func (l *List) Execute(args []string) (err error) {
 		}
 	}
 
-	var list = []*sliverpb.C2Profile{}
+	var list = []*sliverpb.Malleable{}
 	if len(filtered) > 0 {
 		list = filtered
 	} else {
 		list = profiles.Profiles
 	}
 
-	printC2Profiles(list)
+	printMalleables(list)
 
 	return
 }
 
-func printC2Profiles(profiles []*sliverpb.C2Profile) {
+func printMalleables(profiles []*sliverpb.Malleable) {
 
 	// If we are in the server context, print all of them as once
 	if core.ActiveTarget.ID() == "" {
@@ -78,8 +78,8 @@ func printC2Profiles(profiles []*sliverpb.C2Profile) {
 
 	// If we are in a session, try a separate, first table for
 	// profiles that belong to this session context only.
-	var sessionProfiles = []*sliverpb.C2Profile{}
-	var otherProfiles = []*sliverpb.C2Profile{}
+	var sessionProfiles = []*sliverpb.Malleable{}
+	var otherProfiles = []*sliverpb.Malleable{}
 	for _, p := range profiles {
 		if p.ContextSessionID == core.ActiveTarget.UUID() {
 			sessionProfiles = append(sessionProfiles, p)
@@ -103,7 +103,7 @@ func printC2Profiles(profiles []*sliverpb.C2Profile) {
 	}
 }
 
-func printProfilesWithTitle(title string, profiles []*sliverpb.C2Profile) {
+func printProfilesWithTitle(title string, profiles []*sliverpb.Malleable) {
 
 	table := util.NewTable(readline.Yellow(title))
 	headers := []string{"ID", "Channel", "Direction", "Address", "Name", "Errs/Reconnect", "Jit/Interval", "SSH Comms"}

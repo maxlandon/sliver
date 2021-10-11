@@ -59,7 +59,7 @@ type Job struct {
 	Ticker  *time.Ticker
 
 	// C2
-	Profile      *sliverpb.C2Profile // All handler details
+	Profile      *sliverpb.Malleable // All handler details
 	StageImplant string
 	StageBytes   []byte
 	cleanups     []func() error // All cleanup functions that have been registered with this job

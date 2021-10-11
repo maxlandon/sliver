@@ -42,8 +42,8 @@ type Listen struct {
 func (l *Listen) Execute(args []string) (err error) {
 
 	// Declare profile
-	profile := c2.ParseActionProfile(
-		sliverpb.C2Channel_NamedPipe, // A Channel using Named Pipe
+	profile := c2.NewHandlerC2(
+		sliverpb.C2_NamedPipe,        // A Channel using Named Pipe
 		l.Args.LocalAddr,             // Targeting the host:[port] argument of our command
 		sliverpb.C2Direction_Reverse, // A listener
 	)

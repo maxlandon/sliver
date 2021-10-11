@@ -19,7 +19,7 @@ package core
 */
 
 import (
-	"fmt"
+	"errors"
 	"strconv"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -30,6 +30,13 @@ var (
 	// ActiveTarget - Either the active session or the active beacon
 	ActiveTarget = &activeTarget{
 		done: make(chan bool, 1),
+	}
+
+	StateErrors = map[clientpb.State]error{
+		clientpb.State_Dead:       errors.New("Cannot use command: session is dead"),
+		clientpb.State_Sleep:      errors.New("Cannot use command: session is sleeping"),
+		clientpb.State_Switching:  errors.New("Cannot use command: currently switching to a bind transport: dial first"),
+		clientpb.State_Disconnect: errors.New("Cannot use command: beacon is currently disconnected"),
 	}
 )
 
@@ -312,21 +319,7 @@ func (t *activeTarget) Unavailable() (err error) {
 	} else if t.beacon != nil {
 		state = t.beacon.State
 	}
-	if t.session != nil {
-		if state == clientpb.State_Dead {
-			return fmt.Errorf("Cannot use command: session is dead")
-		}
-		if state == clientpb.State_Sleep {
-			return fmt.Errorf("Cannot use command: session is sleeping")
-		}
-		if state == clientpb.State_Switching {
-			return fmt.Errorf("Cannot use command: session is switching its transport and currently disconnected")
-		}
-		if state == clientpb.State_Disconnect {
-			return fmt.Errorf("Cannot use command: beacon is currently disconnected")
-		}
-	}
-	return nil
+	return StateErrors[state]
 }
 
 func (t *activeTarget) ProxyURL() string {

@@ -43,7 +43,7 @@ type tlsConfig struct {
 
 // TLSConfigFromProfile - Given a C2 profile needing TLS set up, this function
 // loads either the certificates & keys it contains, or puts default ones into it.
-func TLSConfigFromProfile(p *models.C2Profile) (creds *tls.Config) {
+func TLSConfigFromProfile(p *models.Malleable) (creds *tls.Config) {
 
 	// If certificates are in the profile, just use them without questions.
 	// The caller is supposed to know what he does with profiles having custom certificates.
@@ -65,7 +65,7 @@ func TLSConfigFromProfile(p *models.C2Profile) (creds *tls.Config) {
 	// base on the C2 Protocol used: HTTP Profiles have the notion of domains that MTLS don't.
 	var hostname string
 	switch p.Channel {
-	case sliverpb.C2Channel_HTTPS:
+	case sliverpb.C2_HTTPS:
 		if len(strings.Split(p.Domains, ",")) == 0 {
 			hostname = p.Hostname
 		} else {

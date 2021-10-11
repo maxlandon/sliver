@@ -90,7 +90,7 @@ func (h *HTTPC2Config) ChromeVer() string {
 // RandomImplantConfig - Randomly generate a config
 func (h *HTTPC2Config) RandomImplantConfig() *HTTPC2ImplantConfig {
 	config := &HTTPC2ImplantConfig{
-		C2ProfileHTTP: &sliverpb.C2ProfileHTTP{},
+		MalleableHTTP: &sliverpb.MalleableHTTP{},
 	}
 	*config = *h.ImplantConfig
 
@@ -166,13 +166,13 @@ type HTTPC2ServerConfig struct {
 // }
 
 type HTTPC2ImplantConfig struct {
-	*sliverpb.C2ProfileHTTP
+	*sliverpb.MalleableHTTP
 }
 
 // ToProtobuf - Get a protobuf version  of this HTTP profile,
 // so that we can compile it more easily, or send it on the wire
-// func (h *HTTPC2ImplantConfig) ToProtobuf() *sliverpb.C2ProfileHTTP {
-//         p := &sliverpb.C2ProfileHTTP{
+// func (h *HTTPC2ImplantConfig) ToProtobuf() *sliverpb.MalleableHTTP {
+//         p := &sliverpb.MalleableHTTP{
 //                 // Core
 //                 UserAgent:     h.UserAgent,
 //                 URLParameters: h.URLParameters,
@@ -278,7 +278,7 @@ var (
 				{"Cache-Control", "no-store, no-cache, must-revalidate"},
 			},
 		},
-		ImplantConfig: &HTTPC2ImplantConfig{&sliverpb.C2ProfileHTTP{
+		ImplantConfig: &HTTPC2ImplantConfig{&sliverpb.MalleableHTTP{
 			UserAgent: "", // Blank string is rendered as randomized platform user-agent
 			MaxFiles:  8,
 			MinFiles:  2,
@@ -328,7 +328,7 @@ var (
 		}}
 )
 
-func GetHTTPC2ConfigFromProfile(profile *sliverpb.C2ProfileHTTP) (config *HTTPC2Config) {
+func GetHTTPC2ConfigFromProfile(profile *sliverpb.MalleableHTTP) (config *HTTPC2Config) {
 	if profile == nil {
 		return &defaultHTTPC2Config
 	}
@@ -339,7 +339,7 @@ func GetHTTPC2ConfigFromProfile(profile *sliverpb.C2ProfileHTTP) (config *HTTPC2
 	config.ImplantConfig = &HTTPC2ImplantConfig{profile}
 	config.ServerConfig = defaultHTTPC2Config.ServerConfig // TODO: change this options and profile
 
-	// Test the validity of the C2ProfileHTTP
+	// Test the validity of the MalleableHTTP
 	err := CheckHTTPC2Config(config)
 	if err != nil {
 		httpC2ConfigLog.Errorf("Invalid http c2 config: %s", err)

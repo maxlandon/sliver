@@ -24,6 +24,7 @@ import (
 
 	"github.com/maxlandon/readline"
 
+	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
@@ -42,9 +43,9 @@ func BeaconIDs() (comps []*readline.CompletionGroup) {
 		return
 	}
 	for _, b := range beacons.Beacons {
-		comp.Suggestions = append(comp.Suggestions, b.ID)
+		comp.Suggestions = append(comp.Suggestions, c2.GetShortID(b.ID))
 		desc := fmt.Sprintf("[%s] - %s@%s - %s", b.Name, b.Username, b.Hostname, b.RemoteAddress)
-		comp.Descriptions[b.ID] = readline.DIM + desc + readline.RESET
+		comp.Descriptions[c2.GetShortID(b.ID)] = readline.DIM + desc + readline.RESET
 	}
 
 	return []*readline.CompletionGroup{comp}

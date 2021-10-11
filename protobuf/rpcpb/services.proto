@@ -47,10 +47,10 @@ service SliverRPC {
     rpc KillJob(clientpb.KillJobReq) returns (clientpb.KillJob);
 
     // *** Profiles ****
-    rpc CreateC2Profile(clientpb.CreateC2ProfileReq) returns (clientpb.CreateC2Profile);
-    rpc DeleteC2Profile(clientpb.DeleteC2ProfileReq) returns (clientpb.DeleteC2Profile);
-    rpc UpdateC2Profile(clientpb.UpdateC2ProfileReq) returns (clientpb.UpdateC2Profile);
-    rpc GetC2Profiles(clientpb.GetC2ProfilesReq) returns (clientpb.GetC2Profiles);
+    rpc CreateMalleable(clientpb.CreateMalleableReq) returns (clientpb.CreateMalleable);
+    rpc DeleteMalleable(clientpb.DeleteMalleableReq) returns (clientpb.DeleteMalleable);
+    rpc UpdateMalleable(clientpb.UpdateMalleableReq) returns (clientpb.UpdateMalleable);
+    rpc GetMalleables(clientpb.GetMalleablesReq) returns (clientpb.GetMalleables);
 
     // *** C2 Handlers ***
     rpc StartHandlerStage(clientpb.HandlerStageReq) returns (clientpb.HandlerStage);

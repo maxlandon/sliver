@@ -33,7 +33,7 @@ import (
 )
 
 // NewSessionHTTP - Wraps an HTTP client session into a logical Connection stream
-func NewSessionHTTP(c2URI *url.URL, c2 *sliverpb.C2Profile, connection *transports.Connection) error {
+func NewSessionHTTP(c2URI *url.URL, c2 *sliverpb.Malleable, connection *transports.Connection) error {
 
 	// {{if .Config.Debug}}
 	log.Printf("Connecting -> http://%s", c2URI.Host)
@@ -59,7 +59,7 @@ func NewSessionHTTP(c2URI *url.URL, c2 *sliverpb.C2Profile, connection *transpor
 }
 
 // NewSessionHTTPS - Creates a new Mutually authenticated HTTPS (or HTTPS unsecured/let's encrypt) session
-func NewSessionHTTPS(c2URI *url.URL, c2 *sliverpb.C2Profile, connection *transports.Connection) error {
+func NewSessionHTTPS(c2URI *url.URL, c2 *sliverpb.Malleable, connection *transports.Connection) error {
 	// {{if .Config.Debug}}
 	log.Printf("Connecting -> http://%s", c2URI.Host)
 	// {{end}}
@@ -84,7 +84,7 @@ func NewSessionHTTPS(c2URI *url.URL, c2 *sliverpb.C2Profile, connection *transpo
 }
 
 // handleConnectionHTTP - Concurrently read and write envelopes coming from / going to the server through the HTTP client.
-func handleConnectionHTTP(c2 *sliverpb.C2Profile, client *SliverHTTPClient, connection *transports.Connection) {
+func handleConnectionHTTP(c2 *sliverpb.Malleable, client *SliverHTTPClient, connection *transports.Connection) {
 
 	go func() {
 		defer connection.Close()

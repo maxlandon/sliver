@@ -90,7 +90,7 @@ var (
 )
 
 // ServeDNS - Start a DNS listener and integrate its control into a Job.
-func ServeDNS(profile *models.C2Profile, job *core.Job) (err error) {
+func ServeDNS(profile *models.Malleable, job *core.Job) (err error) {
 
 	// Create and start the DNS server
 	server := StartDNSListener(profile.Hostname,

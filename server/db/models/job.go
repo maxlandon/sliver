@@ -41,7 +41,7 @@ type Job struct {
 	Order       int
 
 	// C2 & Payload related
-	Profile      *C2Profile
+	Profile      *Malleable
 	StageImplant string // If the implant name is given, do not use the bytes
 	StageBytes   []byte // If the stage is a custom stage from a client's file
 }

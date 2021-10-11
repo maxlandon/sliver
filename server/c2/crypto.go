@@ -33,10 +33,10 @@ import (
 //
 // You can add your own branching with a function checking
 // and populating fields specific to/needed by you C2 channel
-func SetupHandlerProfile(profile *models.C2Profile) (err error) {
+func SetupHandlerProfile(profile *models.Malleable) (err error) {
 
 	// If the profile is an HTTP C2, verify the server has everything it needs
-	if profile.Channel == sliverpb.C2Channel_HTTP || profile.Channel == sliverpb.C2Channel_HTTPS {
+	if profile.Channel == sliverpb.C2_HTTP || profile.Channel == sliverpb.C2_HTTPS {
 
 	}
 
@@ -53,10 +53,10 @@ func SetupHandlerProfile(profile *models.C2Profile) (err error) {
 // it works on and validates a C2Profile. However, no certification creation is made by default
 // here, as handlers are either based on profiles linked to implant builds, or profiles that
 // don't need specialized credentials, outside of the base Sliver security features.
-func SetupHandlerSecurity(p *models.C2Profile, hostname string) (err error) {
+func SetupHandlerSecurity(p *models.Malleable, hostname string) (err error) {
 
 	// MTLS requires a set of TLS certificates
-	if p.Channel == sliverpb.C2Channel_MTLS {
+	if p.Channel == sliverpb.C2_MTLS {
 	}
 
 	// Parse any user names / logins / key fingerprints,
@@ -67,10 +67,10 @@ func SetupHandlerSecurity(p *models.C2Profile, hostname string) (err error) {
 
 // SetupProfileSecurity - The central point where all C2 Profiles go at some point, for validation of minimum safety levels, as
 // well as for more specialized authentication steps that you can add below, for more exotic C2 channels like Wireguard.
-func SetupProfileSecurity(p *models.C2Profile, certificateHostname string) (err error) {
+func SetupProfileSecurity(p *models.Malleable, certificateHostname string) (err error) {
 
 	// - TLS authenticated implants
-	if p.Channel == sliverpb.C2Channel_MTLS {
+	if p.Channel == sliverpb.C2_MTLS {
 		err = setupSecurityMTLS(p, certificateHostname)
 		if err != nil {
 			return
@@ -78,7 +78,7 @@ func SetupProfileSecurity(p *models.C2Profile, certificateHostname string) (err 
 	}
 
 	// Wireguard implants
-	if p.Channel == sliverpb.C2Channel_WG {
+	if p.Channel == sliverpb.C2_WG {
 		err = setupWireGuardAuth(p)
 		if err != nil {
 			return
@@ -88,7 +88,7 @@ func SetupProfileSecurity(p *models.C2Profile, certificateHostname string) (err 
 	// HTTP implants
 	// The difference here is that instead of generating certificates
 	// with implant names as hostnames, we use the domain used by the C2 profile.
-	if p.Channel == sliverpb.C2Channel_HTTPS {
+	if p.Channel == sliverpb.C2_HTTPS {
 		err = setupSecurityHTTPS(p)
 		if err != nil {
 			return
@@ -99,7 +99,7 @@ func SetupProfileSecurity(p *models.C2Profile, certificateHostname string) (err 
 }
 
 // setupSecurityMTLS - Most basic security details for all implant C2s leaving the server.
-func setupSecurityMTLS(p *models.C2Profile, certificateHostname string) (err error) {
+func setupSecurityMTLS(p *models.Malleable, certificateHostname string) (err error) {
 
 	// If no credentials whatsoever, this means we need basic certificate setup,
 	// but if anything was set before, assume that whoever populated them knew
@@ -134,7 +134,7 @@ func setupSecurityMTLS(p *models.C2Profile, certificateHostname string) (err err
 
 // setupSecurityHTTPS - HTTPS cert providing has strictly the same functionning as MTLS, except
 // that the name of the implant is not passed as host, but the very C2 domain to be targeted.
-func setupSecurityHTTPS(p *models.C2Profile) (err error) {
+func setupSecurityHTTPS(p *models.Malleable) (err error) {
 
 	// If no credentials whatsoever, this means we need basic certificate setup,
 	// but if anything was set before, assume that whoever populated them knew
@@ -176,7 +176,7 @@ func setupSecurityHTTPS(p *models.C2Profile) (err error) {
 }
 
 // setupWireGuardAuth - Adds an additional public private key pair for layer 3 (IP) encryption.
-func setupWireGuardAuth(p *models.C2Profile) (err error) {
+func setupWireGuardAuth(p *models.Malleable) (err error) {
 
 	implantPrivKey, _, err := certs.ImplantGenerateWGKeys(p.Hostname)
 	_, serverPubKey, err := certs.GetWGServerKeys()

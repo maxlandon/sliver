@@ -30,7 +30,7 @@ import (
 
 // Deliver - Delive a stage payload through a dial connection (bind handler). Most of the implementation
 // is the same as for Dial(), except that we just write the payload to the connection and exit.
-func Deliver(log *logrus.Entry, profile *models.C2Profile, network comm.Net, payload []byte) (err error) {
+func Deliver(log *logrus.Entry, profile *models.Malleable, network comm.Net, payload []byte) (err error) {
 
 	// conn - If your C2 channel yields a net.Conn compliant connection, use this
 	// conn so that the server can transparently handle session handling, RPC setup
@@ -40,7 +40,7 @@ func Deliver(log *logrus.Entry, profile *models.C2Profile, network comm.Net, pay
 
 	switch profile.Channel {
 
-	case sliverpb.C2Channel_TCP:
+	case sliverpb.C2_TCP:
 
 		// Use the Comm system network to automatically dispatch dial through
 		// the right interface (either the server's, or the active session)
@@ -50,7 +50,7 @@ func Deliver(log *logrus.Entry, profile *models.C2Profile, network comm.Net, pay
 			return
 		}
 
-	case sliverpb.C2Channel_NamedPipe:
+	case sliverpb.C2_NamedPipe:
 
 		// Dial on a pipe accessible to the current active session.
 		conn, err = network.Dial("pipe", profile.Hostname)

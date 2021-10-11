@@ -247,7 +247,7 @@ func setupStage(implantName string, implantBytes []byte, job *core.Job, log *log
 }
 
 // savePersistentJob - Save a job marked persistent, either for the server or on a session.
-func savePersistentJob(profile *models.C2Profile, job *core.Job, session *core.Session) (err error) {
+func savePersistentJob(profile *models.Malleable, job *core.Job, session *core.Session) (err error) {
 	if !profile.Persistent {
 		return nil
 	}

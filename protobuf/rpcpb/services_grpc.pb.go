@@ -50,10 +50,10 @@ type SliverRPCClient interface {
 	GetJobs(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Jobs, error)
 	KillJob(ctx context.Context, in *clientpb.KillJobReq, opts ...grpc.CallOption) (*clientpb.KillJob, error)
 	// *** Profiles ****
-	CreateC2Profile(ctx context.Context, in *clientpb.CreateC2ProfileReq, opts ...grpc.CallOption) (*clientpb.CreateC2Profile, error)
-	DeleteC2Profile(ctx context.Context, in *clientpb.DeleteC2ProfileReq, opts ...grpc.CallOption) (*clientpb.DeleteC2Profile, error)
-	UpdateC2Profile(ctx context.Context, in *clientpb.UpdateC2ProfileReq, opts ...grpc.CallOption) (*clientpb.UpdateC2Profile, error)
-	GetC2Profiles(ctx context.Context, in *clientpb.GetC2ProfilesReq, opts ...grpc.CallOption) (*clientpb.GetC2Profiles, error)
+	CreateMalleable(ctx context.Context, in *clientpb.CreateMalleableReq, opts ...grpc.CallOption) (*clientpb.CreateMalleable, error)
+	DeleteMalleable(ctx context.Context, in *clientpb.DeleteMalleableReq, opts ...grpc.CallOption) (*clientpb.DeleteMalleable, error)
+	UpdateMalleable(ctx context.Context, in *clientpb.UpdateMalleableReq, opts ...grpc.CallOption) (*clientpb.UpdateMalleable, error)
+	GetMalleables(ctx context.Context, in *clientpb.GetMalleablesReq, opts ...grpc.CallOption) (*clientpb.GetMalleables, error)
 	// *** C2 Handlers ***
 	StartHandlerStage(ctx context.Context, in *clientpb.HandlerStageReq, opts ...grpc.CallOption) (*clientpb.HandlerStage, error)
 	StartHandlerStager(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error)
@@ -350,36 +350,36 @@ func (c *sliverRPCClient) KillJob(ctx context.Context, in *clientpb.KillJobReq, 
 	return out, nil
 }
 
-func (c *sliverRPCClient) CreateC2Profile(ctx context.Context, in *clientpb.CreateC2ProfileReq, opts ...grpc.CallOption) (*clientpb.CreateC2Profile, error) {
-	out := new(clientpb.CreateC2Profile)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/CreateC2Profile", in, out, opts...)
+func (c *sliverRPCClient) CreateMalleable(ctx context.Context, in *clientpb.CreateMalleableReq, opts ...grpc.CallOption) (*clientpb.CreateMalleable, error) {
+	out := new(clientpb.CreateMalleable)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/CreateMalleable", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sliverRPCClient) DeleteC2Profile(ctx context.Context, in *clientpb.DeleteC2ProfileReq, opts ...grpc.CallOption) (*clientpb.DeleteC2Profile, error) {
-	out := new(clientpb.DeleteC2Profile)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/DeleteC2Profile", in, out, opts...)
+func (c *sliverRPCClient) DeleteMalleable(ctx context.Context, in *clientpb.DeleteMalleableReq, opts ...grpc.CallOption) (*clientpb.DeleteMalleable, error) {
+	out := new(clientpb.DeleteMalleable)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/DeleteMalleable", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sliverRPCClient) UpdateC2Profile(ctx context.Context, in *clientpb.UpdateC2ProfileReq, opts ...grpc.CallOption) (*clientpb.UpdateC2Profile, error) {
-	out := new(clientpb.UpdateC2Profile)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/UpdateC2Profile", in, out, opts...)
+func (c *sliverRPCClient) UpdateMalleable(ctx context.Context, in *clientpb.UpdateMalleableReq, opts ...grpc.CallOption) (*clientpb.UpdateMalleable, error) {
+	out := new(clientpb.UpdateMalleable)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/UpdateMalleable", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *sliverRPCClient) GetC2Profiles(ctx context.Context, in *clientpb.GetC2ProfilesReq, opts ...grpc.CallOption) (*clientpb.GetC2Profiles, error) {
-	out := new(clientpb.GetC2Profiles)
-	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetC2Profiles", in, out, opts...)
+func (c *sliverRPCClient) GetMalleables(ctx context.Context, in *clientpb.GetMalleablesReq, opts ...grpc.CallOption) (*clientpb.GetMalleables, error) {
+	out := new(clientpb.GetMalleables)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetMalleables", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1382,10 +1382,10 @@ type SliverRPCServer interface {
 	GetJobs(context.Context, *commonpb.Empty) (*clientpb.Jobs, error)
 	KillJob(context.Context, *clientpb.KillJobReq) (*clientpb.KillJob, error)
 	// *** Profiles ****
-	CreateC2Profile(context.Context, *clientpb.CreateC2ProfileReq) (*clientpb.CreateC2Profile, error)
-	DeleteC2Profile(context.Context, *clientpb.DeleteC2ProfileReq) (*clientpb.DeleteC2Profile, error)
-	UpdateC2Profile(context.Context, *clientpb.UpdateC2ProfileReq) (*clientpb.UpdateC2Profile, error)
-	GetC2Profiles(context.Context, *clientpb.GetC2ProfilesReq) (*clientpb.GetC2Profiles, error)
+	CreateMalleable(context.Context, *clientpb.CreateMalleableReq) (*clientpb.CreateMalleable, error)
+	DeleteMalleable(context.Context, *clientpb.DeleteMalleableReq) (*clientpb.DeleteMalleable, error)
+	UpdateMalleable(context.Context, *clientpb.UpdateMalleableReq) (*clientpb.UpdateMalleable, error)
+	GetMalleables(context.Context, *clientpb.GetMalleablesReq) (*clientpb.GetMalleables, error)
 	// *** C2 Handlers ***
 	StartHandlerStage(context.Context, *clientpb.HandlerStageReq) (*clientpb.HandlerStage, error)
 	StartHandlerStager(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error)
@@ -1565,17 +1565,17 @@ func (UnimplementedSliverRPCServer) GetJobs(context.Context, *commonpb.Empty) (*
 func (UnimplementedSliverRPCServer) KillJob(context.Context, *clientpb.KillJobReq) (*clientpb.KillJob, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method KillJob not implemented")
 }
-func (UnimplementedSliverRPCServer) CreateC2Profile(context.Context, *clientpb.CreateC2ProfileReq) (*clientpb.CreateC2Profile, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateC2Profile not implemented")
+func (UnimplementedSliverRPCServer) CreateMalleable(context.Context, *clientpb.CreateMalleableReq) (*clientpb.CreateMalleable, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateMalleable not implemented")
 }
-func (UnimplementedSliverRPCServer) DeleteC2Profile(context.Context, *clientpb.DeleteC2ProfileReq) (*clientpb.DeleteC2Profile, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteC2Profile not implemented")
+func (UnimplementedSliverRPCServer) DeleteMalleable(context.Context, *clientpb.DeleteMalleableReq) (*clientpb.DeleteMalleable, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteMalleable not implemented")
 }
-func (UnimplementedSliverRPCServer) UpdateC2Profile(context.Context, *clientpb.UpdateC2ProfileReq) (*clientpb.UpdateC2Profile, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateC2Profile not implemented")
+func (UnimplementedSliverRPCServer) UpdateMalleable(context.Context, *clientpb.UpdateMalleableReq) (*clientpb.UpdateMalleable, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateMalleable not implemented")
 }
-func (UnimplementedSliverRPCServer) GetC2Profiles(context.Context, *clientpb.GetC2ProfilesReq) (*clientpb.GetC2Profiles, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetC2Profiles not implemented")
+func (UnimplementedSliverRPCServer) GetMalleables(context.Context, *clientpb.GetMalleablesReq) (*clientpb.GetMalleables, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMalleables not implemented")
 }
 func (UnimplementedSliverRPCServer) StartHandlerStage(context.Context, *clientpb.HandlerStageReq) (*clientpb.HandlerStage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartHandlerStage not implemented")
@@ -2238,74 +2238,74 @@ func _SliverRPC_KillJob_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SliverRPC_CreateC2Profile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.CreateC2ProfileReq)
+func _SliverRPC_CreateMalleable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.CreateMalleableReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SliverRPCServer).CreateC2Profile(ctx, in)
+		return srv.(SliverRPCServer).CreateMalleable(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/CreateC2Profile",
+		FullMethod: "/rpcpb.SliverRPC/CreateMalleable",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).CreateC2Profile(ctx, req.(*clientpb.CreateC2ProfileReq))
+		return srv.(SliverRPCServer).CreateMalleable(ctx, req.(*clientpb.CreateMalleableReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SliverRPC_DeleteC2Profile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.DeleteC2ProfileReq)
+func _SliverRPC_DeleteMalleable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.DeleteMalleableReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SliverRPCServer).DeleteC2Profile(ctx, in)
+		return srv.(SliverRPCServer).DeleteMalleable(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/DeleteC2Profile",
+		FullMethod: "/rpcpb.SliverRPC/DeleteMalleable",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).DeleteC2Profile(ctx, req.(*clientpb.DeleteC2ProfileReq))
+		return srv.(SliverRPCServer).DeleteMalleable(ctx, req.(*clientpb.DeleteMalleableReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SliverRPC_UpdateC2Profile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.UpdateC2ProfileReq)
+func _SliverRPC_UpdateMalleable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.UpdateMalleableReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SliverRPCServer).UpdateC2Profile(ctx, in)
+		return srv.(SliverRPCServer).UpdateMalleable(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/UpdateC2Profile",
+		FullMethod: "/rpcpb.SliverRPC/UpdateMalleable",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).UpdateC2Profile(ctx, req.(*clientpb.UpdateC2ProfileReq))
+		return srv.(SliverRPCServer).UpdateMalleable(ctx, req.(*clientpb.UpdateMalleableReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SliverRPC_GetC2Profiles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.GetC2ProfilesReq)
+func _SliverRPC_GetMalleables_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.GetMalleablesReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SliverRPCServer).GetC2Profiles(ctx, in)
+		return srv.(SliverRPCServer).GetMalleables(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcpb.SliverRPC/GetC2Profiles",
+		FullMethod: "/rpcpb.SliverRPC/GetMalleables",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).GetC2Profiles(ctx, req.(*clientpb.GetC2ProfilesReq))
+		return srv.(SliverRPCServer).GetMalleables(ctx, req.(*clientpb.GetMalleablesReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4241,20 +4241,20 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SliverRPC_KillJob_Handler,
 		},
 		{
-			MethodName: "CreateC2Profile",
-			Handler:    _SliverRPC_CreateC2Profile_Handler,
+			MethodName: "CreateMalleable",
+			Handler:    _SliverRPC_CreateMalleable_Handler,
 		},
 		{
-			MethodName: "DeleteC2Profile",
-			Handler:    _SliverRPC_DeleteC2Profile_Handler,
+			MethodName: "DeleteMalleable",
+			Handler:    _SliverRPC_DeleteMalleable_Handler,
 		},
 		{
-			MethodName: "UpdateC2Profile",
-			Handler:    _SliverRPC_UpdateC2Profile_Handler,
+			MethodName: "UpdateMalleable",
+			Handler:    _SliverRPC_UpdateMalleable_Handler,
 		},
 		{
-			MethodName: "GetC2Profiles",
-			Handler:    _SliverRPC_GetC2Profiles_Handler,
+			MethodName: "GetMalleables",
+			Handler:    _SliverRPC_GetMalleables_Handler,
 		},
 		{
 			MethodName: "StartHandlerStage",

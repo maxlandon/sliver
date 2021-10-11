@@ -53,7 +53,7 @@ var (
 // - An inet.af network stack.
 // - An interface device through which key-exchange & session connections will pass.
 // This function also starts monitoring new device interface peers in the background.
-func StartWireGuardDevInterface(profile *models.C2Profile, job *core.Job) (tNet *netstack.Net, err error) {
+func StartWireGuardDevInterface(profile *models.Malleable, job *core.Job) (tNet *netstack.Net, err error) {
 
 	wgLog.Infof("Starting Wireguard listener on port: %d", profile.Port)
 
@@ -160,7 +160,7 @@ func serveDeviceInterfacePeers(dev *device.Device, config *bytes.Buffer, done ch
 
 // ListenWireGuard - Start a TCP listener that handles incoming WireGuard implant session requests.
 // The listener returned is compliant with the generic RPC setup/usage mechanism, because it yields net.Conns
-func ListenWireGuard(profile *models.C2Profile, job *core.Job, tNet *netstack.Net) (ln net.Listener, err error) {
+func ListenWireGuard(profile *models.Malleable, job *core.Job, tNet *netstack.Net) (ln net.Listener, err error) {
 
 	// Start listening for key exchange requests
 	keyExchangeListener, err := tNet.ListenTCP(&net.TCPAddr{IP: net.ParseIP(tunIP), Port: int(profile.KeyExchangePort)})

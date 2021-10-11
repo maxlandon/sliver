@@ -54,8 +54,8 @@ type Listener struct {
 func (l *Listener) Execute(args []string) (err error) {
 
 	// Base profile
-	profile := c2.ParseProfile(
-		sliverpb.C2Channel_WG,        // A Channel using Mutual TLS
+	profile := c2.NewMalleable(
+		sliverpb.C2_WG,               // A Channel using Mutual TLS
 		l.Args.LocalAddr,             // Targeting the host:[port] argument of our command
 		sliverpb.C2Direction_Reverse, // A listener
 		l.ProfileOptions,             // This will automatically parse Profile options into the protobuf
@@ -69,11 +69,11 @@ func (l *Listener) Execute(args []string) (err error) {
 	profile.Credentials.ControlClientKey = []byte(l.Options.WGPrivateKey)
 
 	// Send this profile to the server
-	req := &clientpb.CreateC2ProfileReq{
+	req := &clientpb.CreateMalleableReq{
 		Profile: profile,
 		Request: core.ActiveTarget.Request(),
 	}
-	res, err := transport.RPC.CreateC2Profile(context.Background(), req)
+	res, err := transport.RPC.CreateMalleable(context.Background(), req)
 	if err != nil {
 		if res.Response.Err != "" {
 			log.PrintErrorf(err.Error())

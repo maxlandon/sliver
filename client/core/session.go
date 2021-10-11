@@ -30,6 +30,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 var (
@@ -104,7 +105,20 @@ func SetActiveTarget(sess *clientpb.Session, beacon *clientpb.Beacon) {
 	// Finally, and overriding any precedent command setup:
 	// Hide most commands if session is disconnected/dead/switching
 	if err := ActiveTarget.Unavailable(); err != nil {
-		Console.HideCommands(constants.TargetAvailableCommand)
+		transport := GetActiveTargetC2()
+
+		// If the error is a switching transport that is a bind handler
+		// (you need to dial the session yourself), you can't have the commands.
+		if err == StateErrors[clientpb.State_Switching] {
+			if transport.Direction == sliverpb.C2Direction_Bind {
+				Console.HideCommands(constants.TargetAvailableCommand)
+			}
+		}
+
+		// Apart from that, always hide commands when target is unavailable.
+		if err != StateErrors[clientpb.State_Switching] {
+			Console.HideCommands(constants.TargetAvailableCommand)
+		}
 	} else {
 		Console.ShowCommands(constants.TargetAvailableCommand)
 	}
@@ -242,6 +256,25 @@ func GetActiveSessionConfig() *clientpb.ImplantConfig {
 		Evasion: ActiveTarget.Evasion(),
 	}
 	return config
+}
+
+// GetActiveTargetC2 - Returns the current C2 for the active target
+func GetActiveTargetC2() *sliverpb.Malleable {
+
+	// Get the transports for the current target
+	transports, err := transport.RPC.GetTransports(context.Background(), &clientpb.GetTransportsReq{
+		Request: ActiveTarget.Request(),
+	})
+	if err != nil {
+		return nil
+	}
+	for _, transport := range transports.Transports {
+		if transport.Running && transport.SessionID == ActiveTarget.UUID() {
+			return transport.Profile
+		}
+	}
+
+	return nil
 }
 
 // GetActiveSessionHistory - Get the command history that matches all occurences for the user_UUID session.

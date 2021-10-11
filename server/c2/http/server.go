@@ -85,7 +85,7 @@ type SliverHTTPC2 struct {
 	Cleanup      func()
 
 	// C2 profile & configuration
-	profile  *models.C2Profile     // All information for the targeted C2 channel
+	profile  *models.Malleable     // All information for the targeted C2 channel
 	c2Config *configs.HTTPC2Config // C2 config loaded from C2 profile
 
 	// Operating parameters
@@ -105,7 +105,7 @@ type SliverHTTPC2 struct {
 //
 // Profile should be ignited since it passed through the root C2Handler driver function.
 // It should thus be filled with appropriate certificates based on HTTP C2 protocol used.
-func NewServerFromProfile(profile *models.C2Profile) (srv *SliverHTTPC2, err error) {
+func NewServerFromProfile(profile *models.Malleable) (srv *SliverHTTPC2, err error) {
 
 	// Unmarshal or generate the HTTP C2 configuration for usage.
 	// If the HTTP profile is nil, a default one is returned by this function.
@@ -148,7 +148,7 @@ func NewServerFromProfile(profile *models.C2Profile) (srv *SliverHTTPC2, err err
 	srv.tlsConfig = cryptography.TLSConfigFromProfile(profile)
 
 	// Override the configuration if Let's Encrypt provisioning is asked.
-	if profile.Channel == sliverpb.C2Channel_HTTPS && profile.LetsEncrypt {
+	if profile.Channel == sliverpb.C2_HTTPS && profile.LetsEncrypt {
 		acmeManager := certs.GetACMEManager(srv.getServerDomain())
 		srv.tlsConfig = &tls.Config{
 			GetCertificate: acmeManager.GetCertificate,
@@ -195,12 +195,12 @@ func (s *SliverHTTPC2) InitServer(job *core.Job) (err error) {
 func (s *SliverHTTPC2) Serve(job *core.Job) (err error) {
 
 	// If the protocol is HTTP, serve without any TLS.
-	if s.profile.Channel == sliverpb.C2Channel_HTTP {
+	if s.profile.Channel == sliverpb.C2_HTTP {
 		go s.ServeHTTP(job)
 	}
 
 	// If the protocol is HTTPS, serve with TLS from ACME or Sliver config
-	if s.profile.Channel == sliverpb.C2Channel_HTTPS {
+	if s.profile.Channel == sliverpb.C2_HTTPS {
 		go s.ServeHTTPS(job)
 	}
 

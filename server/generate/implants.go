@@ -60,7 +60,7 @@ func getBuildsDir() (string, error) {
 }
 
 // C2ProfileSave - Save a C2 Profile to the database
-func C2ProfileSave(profile *models.C2Profile) error {
+func C2ProfileSave(profile *models.Malleable) error {
 	dbSession := db.Session()
 	result := dbSession.Clauses(clause.OnConflict{
 		UpdateAll: true,
@@ -72,7 +72,7 @@ func C2ProfileSave(profile *models.C2Profile) error {
 }
 
 // C2ProfileCreateOrUpdate - Create or update a C2 Profile to the database
-func C2ProfileCreateOrUpdate(profile *models.C2Profile) error {
+func C2ProfileCreateOrUpdate(profile *models.Malleable) error {
 	dbSession := db.Session()
 	result := dbSession.Clauses(clause.OnConflict{
 		UpdateAll: true,

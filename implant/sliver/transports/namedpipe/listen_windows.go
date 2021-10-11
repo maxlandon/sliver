@@ -36,7 +36,7 @@ import (
 )
 
 // Listen - Listen on the target for incoming Named pipe connections.
-func Listen(uri *url.URL, p *sliverpb.C2Profile) (c net.Conn, err error) {
+func Listen(uri *url.URL, p *sliverpb.Malleable) (c net.Conn, err error) {
 
 	address := uri.String()
 	address = strings.ReplaceAll(address, "namedpipe://", "")

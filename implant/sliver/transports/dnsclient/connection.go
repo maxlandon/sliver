@@ -31,7 +31,7 @@ import (
 )
 
 // NewSessionDNS - Wraps a DNS client session into a logical Connection stream
-func NewSessionDNS(uri *url.URL, c2 *sliverpb.C2Profile, connection *transports.Connection) error {
+func NewSessionDNS(uri *url.URL, c2 *sliverpb.Malleable, connection *transports.Connection) error {
 	dnsParent := uri.Hostname()
 	// {{if .Config.Debug}}
 	log.Printf("Attempting to connect via DNS via parent: %s\n", dnsParent)

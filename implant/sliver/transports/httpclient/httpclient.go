@@ -60,7 +60,7 @@ var (
 )
 
 // StartSessionHTTP - Attempts to start a session with a given address
-func StartSessionHTTP(c2URI *url.URL, profile *sliverpb.C2Profile) (*SliverHTTPClient, error) {
+func StartSessionHTTP(c2URI *url.URL, profile *sliverpb.Malleable) (*SliverHTTPClient, error) {
 
 	address := c2URI.Host
 	pathPrefix := c2URI.Path
@@ -84,7 +84,7 @@ func StartSessionHTTP(c2URI *url.URL, profile *sliverpb.C2Profile) (*SliverHTTPC
 }
 
 // StartSessionHTTPS - Start an HTTP Session with mutual TLS authentication
-func StartSessionHTTPS(c2URI *url.URL, profile *sliverpb.C2Profile) (*SliverHTTPClient, error) {
+func StartSessionHTTPS(c2URI *url.URL, profile *sliverpb.Malleable) (*SliverHTTPClient, error) {
 
 	address := c2URI.Host
 	pathPrefix := c2URI.Path
@@ -139,7 +139,7 @@ type SliverHTTPClient struct {
 
 	// Operating parameters
 	uri     *url.URL
-	profile *sliverpb.C2ProfileHTTP // We can use on-demand HTTP profiles
+	profile *sliverpb.MalleableHTTP // We can use on-demand HTTP profiles
 }
 
 // SessionInit - Initialize the session

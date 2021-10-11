@@ -32,7 +32,7 @@ import (
 // Dial - Root function where all dialers for all C2 channels are called.
 // Please add a branch case for your C2 profile, where you should normally
 // just have to imitate the above lines.
-func Dial(log *logrus.Entry, profile *models.C2Profile, network comm.Net, session *core.Session) (err error) {
+func Dial(log *logrus.Entry, profile *models.Malleable, network comm.Net, session *core.Session) (err error) {
 
 	// conn - If your C2 channel yields a net.Conn compliant connection, use this
 	// conn so that the server can transparently handle session handling, RPC setup
@@ -42,7 +42,7 @@ func Dial(log *logrus.Entry, profile *models.C2Profile, network comm.Net, sessio
 
 	switch profile.Channel {
 
-	case sliverpb.C2Channel_MTLS:
+	case sliverpb.C2_MTLS:
 
 		// Dial and yield a MutualTLS authenticated/encrypted connection,
 		// either pivoted through an implant comm or on the server interfaces.
@@ -51,7 +51,7 @@ func Dial(log *logrus.Entry, profile *models.C2Profile, network comm.Net, sessio
 			return
 		}
 
-	case sliverpb.C2Channel_TCP:
+	case sliverpb.C2_TCP:
 
 		// Use the Comm system network to automatically dispatch dial through
 		// the right interface (either the server's, or the active session)
@@ -61,7 +61,7 @@ func Dial(log *logrus.Entry, profile *models.C2Profile, network comm.Net, sessio
 			return
 		}
 
-	case sliverpb.C2Channel_NamedPipe:
+	case sliverpb.C2_NamedPipe:
 
 		// Dial on a pipe accessible to the current active session.
 		conn, err = network.Dial("pipe", profile.Hostname)

@@ -41,12 +41,12 @@ import (
 //
 // The listener is nil: you can optionally assign it to a listener that you started  within
 // your C2 channel implementation. The listener is then transparently handled by the job system.
-func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job *core.Job, ln net.Listener) (err error) {
+func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job *core.Job, ln net.Listener) (err error) {
 
 	// C2 Protocols Implementations -----------------------------------------------------------
 	switch profile.Channel {
 
-	case sliverpb.C2Channel_TCP:
+	case sliverpb.C2_TCP:
 
 		// Use the Comm system network to automatically dispatch dial/listen
 		// to the right interface (either the server's, or the active session)
@@ -56,7 +56,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job 
 			return err
 		}
 
-	case sliverpb.C2Channel_MTLS:
+	case sliverpb.C2_MTLS:
 
 		// Start an mTLS listener on the current active session or the server interfaces.
 		// The latter's cleanup is registered in InitHandlerJob()
@@ -65,7 +65,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job 
 			return err
 		}
 
-	case sliverpb.C2Channel_WG:
+	case sliverpb.C2_WG:
 
 		// Setup and start the device interface, and monitor new peers in the background
 		// Specifies additional control listeners & device cleanup tasks for the job.
@@ -82,7 +82,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job 
 			return err
 		}
 
-	case sliverpb.C2Channel_DNS:
+	case sliverpb.C2_DNS:
 
 		// Start the DNS server and integrate its control/stop functions into the job
 		// (No listener, Sliver connections are handled from within the DNS server implementation.)
@@ -91,7 +91,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job 
 			return err
 		}
 
-	case sliverpb.C2Channel_HTTPS, sliverpb.C2Channel_HTTP:
+	case sliverpb.C2_HTTPS, sliverpb.C2_HTTP:
 
 		// Instantiate a new HTTP(S) Server configured with the target C2 profile
 		server, err := http.NewServerFromProfile(profile)
@@ -113,7 +113,7 @@ func Listen(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job 
 			return err
 		}
 
-	case sliverpb.C2Channel_NamedPipe:
+	case sliverpb.C2_NamedPipe:
 
 		// Listen on a pipe routed to the current active session.
 		ln, err = network.Listen("pipe", profile.Hostname)

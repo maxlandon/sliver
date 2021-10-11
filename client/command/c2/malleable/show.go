@@ -38,7 +38,7 @@ type Show struct {
 // Execute - Show one or more C2 profiles in detailed output
 func (s *Show) Execute(args []string) (err error) {
 
-	profiles, err := transport.RPC.GetC2Profiles(context.Background(), &clientpb.GetC2ProfilesReq{})
+	profiles, err := transport.RPC.GetMalleables(context.Background(), &clientpb.GetMalleablesReq{})
 	if err != nil {
 		return log.Error(err)
 	}

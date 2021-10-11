@@ -166,7 +166,7 @@ func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 
 	// Copy C2 Profiles for each transport, and runtime ones
 	config.ConnectionStrategy = ic.ConnectionStrategy
-	config.C2S = []*sliverpb.C2Profile{}
+	config.C2S = []*sliverpb.Malleable{}
 	for _, c2 := range ic.Transports {
 		config.C2S = append(config.C2S, c2.Profile.ToProtobuf())
 	}

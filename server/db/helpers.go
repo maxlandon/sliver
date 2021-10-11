@@ -251,8 +251,8 @@ func loadTransportsForBuild(build *models.ImplantBuild) error {
 
 // loadC2ProfilesForJob - Load the C2 Profile used to spawn a job an a session
 func loadC2ProfileForJob(job *models.Job) error {
-	c2 := &models.C2Profile{}
-	err := Session().Where(&models.C2Profile{
+	c2 := &models.Malleable{}
+	err := Session().Where(&models.Malleable{
 		JobID: job.ID,
 	}).Find(&c2).Error
 	if err != nil {
@@ -264,8 +264,8 @@ func loadC2ProfileForJob(job *models.Job) error {
 
 // loadC2ProfileForTransport - Load the C2 Profile used to run a transport on a Session
 func loadC2ProfileForTransport(transport *models.Transport) error {
-	c2 := &models.C2Profile{}
-	err := Session().Where(&models.C2Profile{
+	c2 := &models.Malleable{}
+	err := Session().Where(&models.Malleable{
 		ID: transport.ProfileID,
 	}).Find(&c2).Error
 	if err != nil {
@@ -276,8 +276,8 @@ func loadC2ProfileForTransport(transport *models.Transport) error {
 }
 
 // C2ProfileByHostPortNameSession - Fetch a Malleable C2 profile by host, port and name, generally for confirmation purposes
-func C2ProfileByHostPortNameSession(host string, port uint32, name, sessionID string) (profile *models.C2Profile, err error) {
-	err = Session().Where(&models.C2Profile{
+func C2ProfileByHostPortNameSession(host string, port uint32, name, sessionID string) (profile *models.Malleable, err error) {
+	err = Session().Where(&models.Malleable{
 		ContextSessionID: uuid.FromStringOrNil(sessionID),
 		Hostname:         host,
 		Port:             port,
@@ -288,17 +288,17 @@ func C2ProfileByHostPortNameSession(host string, port uint32, name, sessionID st
 }
 
 // C2ProfileByID - Fetch a Malleable C2 profile by ID
-func C2ProfileByID(ID string) (c2 *models.C2Profile, err error) {
-	c2 = &models.C2Profile{}
-	err = Session().Where(&models.C2Profile{
+func C2ProfileByID(ID string) (c2 *models.Malleable, err error) {
+	c2 = &models.Malleable{}
+	err = Session().Where(&models.Malleable{
 		ID: uuid.FromStringOrNil(ID),
 	}).Find(&c2).Error
 	return c2, nil
 }
 
 // C2ProfilesByContextSessionID - Get all C2 Profiles that have been created within a given session context.
-func C2ProfilesByContextSessionID(sessionID string) (profiles []*models.C2Profile, err error) {
-	err = Session().Where(&models.C2Profile{
+func C2ProfilesByContextSessionID(sessionID string) (profiles []*models.Malleable, err error) {
+	err = Session().Where(&models.Malleable{
 		ContextSessionID: uuid.FromStringOrNil(sessionID),
 		Persistent:       false, // always return non persistent profiles, because those are only meant for listeners
 	}).Find(&profiles).Error
@@ -306,9 +306,9 @@ func C2ProfilesByContextSessionID(sessionID string) (profiles []*models.C2Profil
 }
 
 // C2ProfileByShortID - Fetch a Malleable C2 profile by a short ID used by commands/completions
-func C2ProfileByShortID(ID string) (c2 *models.C2Profile, err error) {
+func C2ProfileByShortID(ID string) (c2 *models.Malleable, err error) {
 
-	profiles := []*models.C2Profile{}
+	profiles := []*models.Malleable{}
 	err = Session().Find(&profiles).Error
 	if err != nil {
 		return nil, err

@@ -42,10 +42,10 @@ type Dial struct {
 func (d *Dial) Execute(args []string) (err error) {
 
 	// Declare profile
-	profile := c2.ParseActionProfile(
-		sliverpb.C2Channel_NamedPipe, // A Channel using Named Pipe
-		d.Args.RemoteAddr,            // Targeting the host:[port] argument of our command
-		sliverpb.C2Direction_Bind,    // A dialer
+	profile := c2.NewHandlerC2(
+		sliverpb.C2_NamedPipe,     // A Channel using Named Pipe
+		d.Args.RemoteAddr,         // Targeting the host:[port] argument of our command
+		sliverpb.C2Direction_Bind, // A dialer
 	)
 
 	// Override hostname, just in doubt: it's just a pipe name/path

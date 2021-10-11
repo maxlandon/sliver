@@ -34,11 +34,11 @@ import (
 // Serve - Listen and serve a stage payload over a specific protocol or C2 stack.
 // The listener parameter is a placeholder, which you can use if you intend to use (at least one).
 // This listener is already registered for cleanup when the stager handler job will be killed
-func Serve(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job *core.Job, ln net.Listener) (err error) {
+func Serve(log *logrus.Entry, profile *models.Malleable, network comm.Net, job *core.Job, ln net.Listener) (err error) {
 
 	switch profile.Channel {
 
-	case sliverpb.C2Channel_TCP:
+	case sliverpb.C2_TCP:
 
 		// Use the Comm system network to automatically dispatch dial/listen
 		// to the right interface (either the server's, or the active session)
@@ -48,7 +48,7 @@ func Serve(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job *
 			return err
 		}
 
-	case sliverpb.C2Channel_HTTP, sliverpb.C2Channel_HTTPS:
+	case sliverpb.C2_HTTP, sliverpb.C2_HTTPS:
 
 		// Instantiate a new HTTP(S) Server configured with the target C2 profile
 		server, err := http.NewServerFromProfile(profile)
@@ -72,7 +72,7 @@ func Serve(log *logrus.Entry, profile *models.C2Profile, network comm.Net, job *
 			return err
 		}
 
-	case sliverpb.C2Channel_NamedPipe:
+	case sliverpb.C2_NamedPipe:
 
 		// Listen on a pipe routed to the current active session.
 		ln, err = network.Listen("pipe", profile.Hostname)

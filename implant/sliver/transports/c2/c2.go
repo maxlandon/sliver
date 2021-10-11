@@ -64,7 +64,7 @@ type C2 struct {
 
 	// Profile - This holds the entirety of the information that pertains to this
 	// transport. This profile can be embedded at compile time, or loaded on the fly.
-	Profile *sliverpb.C2Profile
+	Profile *sliverpb.Malleable
 
 	// For some C2 libraries and models it's useful to have
 	// correctly loaded URL object, like for everything HTTP-based
@@ -109,7 +109,7 @@ func NewC2FromBytes(profileData string) (t *C2, err error) {
 		mutex:      &sync.RWMutex{},
 		failures:   0,
 		attempts:   0,
-		Profile:    &sliverpb.C2Profile{},
+		Profile:    &sliverpb.Malleable{},
 		Connection: transports.NewConnection(),
 	}
 	t.Connection.ErrClosed = Transports.transportErrors
@@ -140,7 +140,7 @@ func NewC2FromBytes(profileData string) (t *C2, err error) {
 }
 
 // NewC2FromProfile - Generate a kinda ready C2 channel driver, from a profile.
-func NewC2FromProfile(p *sliverpb.C2Profile) (t *C2, err error) {
+func NewC2FromProfile(p *sliverpb.Malleable) (t *C2, err error) {
 
 	// Base transport settings
 	t = &C2{

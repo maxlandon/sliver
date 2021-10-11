@@ -48,8 +48,8 @@ type Serve struct {
 func (s *Serve) Execute(args []string) (err error) {
 
 	//Base profile
-	profile := c2.ParseActionProfile(
-		sliverpb.C2Channel_HTTP,
+	profile := c2.NewHandlerC2(
+		sliverpb.C2_HTTP,
 		s.Args.LocalAddr,
 		sliverpb.C2Direction_Reverse,
 	)

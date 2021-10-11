@@ -44,9 +44,8 @@ const (
 	defaultTimeout = 60
 )
 
-// PrintProfileSummary - Get a quick overview of a profile upon modification or creation, with analysis made
-// here so that this is kinda context/malleable sensitive, you will have what you'll need each time.
-func PrintProfileSummaryLong(profile *sliverpb.C2Profile) {
+// PrintProfileSummaryLong - Get a detailed overview of a profile
+func PrintProfileSummaryLong(profile *sliverpb.Malleable) {
 
 	// Test for reference distances
 	// ----dir := fmt.Sprintf(readline.YELLOW+"             ID: %s%s\n", readline.RESET, profile.ID)
@@ -106,12 +105,12 @@ func PrintProfileSummaryLong(profile *sliverpb.C2Profile) {
 
 	// Protocol specific
 	switch profile.C2 {
-	case sliverpb.C2Channel_MTLS:
-	case sliverpb.C2Channel_WG:
-	case sliverpb.C2Channel_DNS:
-	case sliverpb.C2Channel_HTTP:
-	case sliverpb.C2Channel_HTTPS:
-	case sliverpb.C2Channel_NamedPipe:
+	case sliverpb.C2_MTLS:
+	case sliverpb.C2_WG:
+	case sliverpb.C2_DNS:
+	case sliverpb.C2_HTTP:
+	case sliverpb.C2_HTTPS:
+	case sliverpb.C2_NamedPipe:
 	}
 
 }
@@ -126,7 +125,7 @@ func getPromptPad(total, base, menu int) (pad string) {
 
 // PrintProfileSummary - Get a quick overview of a profile upon modification or creation, with analysis made
 // here so that this is kinda context/malleable sensitive, you will have what you'll need each time.
-func PrintProfileSummary(profile *sliverpb.C2Profile) {
+func PrintProfileSummary(profile *sliverpb.Malleable) {
 
 	fmt.Printf(readline.YELLOW+"            ID: %s%s\n", readline.RESET, profile.ID)
 	fmt.Printf(readline.YELLOW+"          Name: %s%s\n", readline.RESET, profile.Name)
@@ -136,12 +135,12 @@ func PrintProfileSummary(profile *sliverpb.C2Profile) {
 	// TODO: Session Context ID on the right with ID/Name
 
 	switch profile.C2 {
-	case sliverpb.C2Channel_MTLS:
-	case sliverpb.C2Channel_WG:
-	case sliverpb.C2Channel_DNS:
-	case sliverpb.C2Channel_HTTP:
-	case sliverpb.C2Channel_HTTPS:
-	case sliverpb.C2Channel_NamedPipe:
+	case sliverpb.C2_MTLS:
+	case sliverpb.C2_WG:
+	case sliverpb.C2_DNS:
+	case sliverpb.C2_HTTP:
+	case sliverpb.C2_HTTPS:
+	case sliverpb.C2_NamedPipe:
 	}
 
 	// Security Options
@@ -159,7 +158,7 @@ func PrintProfileSummary(profile *sliverpb.C2Profile) {
 	}
 }
 
-func FullTargetPath(profile *sliverpb.C2Profile) (path string) {
+func FullTargetPath(profile *sliverpb.Malleable) (path string) {
 	path = profile.Hostname
 	if profile.Port > 0 {
 		path = path + ":" + strconv.Itoa(int(profile.Port))
@@ -170,11 +169,11 @@ func FullTargetPath(profile *sliverpb.C2Profile) (path string) {
 	return
 }
 
-// ParseProfile - A generic function that C2 channel writers can use in order to automatically parse
+// NewMalleable - A generic function that C2 channel writers can use in order to automatically parse
 // most of the options needed by a basic C2 Malleable Profile. A few indications on parameters:
 // @target:     Can be host, host:port or host:port/path combination.
 //              No need for scheme: we derive it internally from the c2Type parameter.
-func ParseProfile(c2Type sliverpb.C2Channel, target string, direction sliverpb.C2Direction, opts ProfileOptions) (profile *sliverpb.C2Profile) {
+func NewMalleable(c2Type sliverpb.C2, target string, direction sliverpb.C2Direction, opts ProfileOptions) (profile *sliverpb.Malleable) {
 
 	// Base, with default timeouts, max conn errors, etc
 	profile = defaultC2Profile()
@@ -202,9 +201,9 @@ func ParseProfile(c2Type sliverpb.C2Channel, target string, direction sliverpb.C
 	return
 }
 
-// ParseActionProfile - Similar to when you want to save a profile, parse your immediate Listen/Dial option into a profile,
+// NewHandlerC2 - Similar to when you want to save a profile, parse your immediate Listen/Dial option into a profile,
 // so the server has a standardized way of dealing with all C2 listeners/dialers at one. The only difference is no profile options.
-func ParseActionProfile(c2Type sliverpb.C2Channel, target string, direction sliverpb.C2Direction) (profile *sliverpb.C2Profile) {
+func NewHandlerC2(c2Type sliverpb.C2, target string, direction sliverpb.C2Direction) (profile *sliverpb.Malleable) {
 
 	// Base, with default timeouts, max conn errors, etc
 	profile = defaultC2Profile()
@@ -236,8 +235,8 @@ func GetShortID(ID string) (short string) {
 }
 
 // defaultC2Profile - A C2 profile with default values into it, such as timeouts and pollers
-func defaultC2Profile() *sliverpb.C2Profile {
-	profile := &sliverpb.C2Profile{
+func defaultC2Profile() *sliverpb.Malleable {
+	profile := &sliverpb.Malleable{
 		IsFallback:          false,
 		MaxConnectionErrors: 1000,
 		PollTimeout:         int64(60 * time.Second),
@@ -247,7 +246,7 @@ func defaultC2Profile() *sliverpb.C2Profile {
 	return profile
 }
 
-func getProfileSheme(c2Type sliverpb.C2Channel, profile *sliverpb.C2Profile) (scheme string, port uint32) {
+func getProfileSheme(c2Type sliverpb.C2, profile *sliverpb.Malleable) (scheme string, port uint32) {
 
 	// Never override a port that has been set
 	if profile.Port != 0 {
@@ -256,27 +255,27 @@ func getProfileSheme(c2Type sliverpb.C2Channel, profile *sliverpb.C2Profile) (sc
 	}
 
 	switch profile.C2 {
-	case sliverpb.C2Channel_MTLS:
-		profile.C2 = sliverpb.C2Channel_MTLS
+	case sliverpb.C2_MTLS:
+		profile.C2 = sliverpb.C2_MTLS
 		profile.Port = defaultMTLSLPort
-	case sliverpb.C2Channel_WG:
-		profile.C2 = sliverpb.C2Channel_WG
+	case sliverpb.C2_WG:
+		profile.C2 = sliverpb.C2_WG
 		profile.Port = 53
 		profile.ControlPort = 8888
 		profile.KeyExchangePort = 1337
-	case sliverpb.C2Channel_DNS:
-		profile.C2 = sliverpb.C2Channel_DNS
+	case sliverpb.C2_DNS:
+		profile.C2 = sliverpb.C2_DNS
 		profile.Port = defaultDNSLPort
-	case sliverpb.C2Channel_HTTP:
-		profile.C2 = sliverpb.C2Channel_HTTP
+	case sliverpb.C2_HTTP:
+		profile.C2 = sliverpb.C2_HTTP
 		profile.Port = defaultHTTPLPort
-	case sliverpb.C2Channel_HTTPS:
-		profile.C2 = sliverpb.C2Channel_HTTPS
+	case sliverpb.C2_HTTPS:
+		profile.C2 = sliverpb.C2_HTTPS
 		profile.Port = defaultHTTPSLPort
-	case sliverpb.C2Channel_NamedPipe:
-		profile.C2 = sliverpb.C2Channel_NamedPipe
-	case sliverpb.C2Channel_TCP:
-		profile.C2 = sliverpb.C2Channel_TCP
+	case sliverpb.C2_NamedPipe:
+		profile.C2 = sliverpb.C2_NamedPipe
+	case sliverpb.C2_TCP:
+		profile.C2 = sliverpb.C2_TCP
 		profile.Port = defaultTCPPort
 	default:
 		// We don't care, it's just for being able to
@@ -307,7 +306,7 @@ func getHostPortFromURL(hostport string) (host string, hostYes bool, port uint32
 
 // configureConnectionSettings - Overrides connection settings defaults if some or all
 // have been specified by the user as command options.
-func configureConnectionSettings(opts ProfileOptions, profile *sliverpb.C2Profile) {
+func configureConnectionSettings(opts ProfileOptions, profile *sliverpb.Malleable) {
 
 	if opts.Profile.MaxConnectionErrors != profile.MaxConnectionErrors {
 		profile.MaxConnectionErrors = opts.Profile.MaxConnectionErrors
@@ -321,7 +320,7 @@ func configureConnectionSettings(opts ProfileOptions, profile *sliverpb.C2Profil
 }
 
 // configureBeaconing - Sets the Beacon relevant parts of a C2 Profile
-func configureBeaconing(opts ProfileOptions, profile *sliverpb.C2Profile) (yes bool) {
+func configureBeaconing(opts ProfileOptions, profile *sliverpb.Malleable) (yes bool) {
 	if opts.Beacon.IsBeacon {
 		profile.Type = sliverpb.C2Type_Beacon
 		profile.Jitter = int64(opts.Beacon.Jitter) * int64(time.Second)

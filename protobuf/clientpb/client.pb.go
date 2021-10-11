@@ -2120,7 +2120,7 @@ type ImplantConfig struct {
 	LimitUsername     string `protobuf:"bytes,23,opt,name=LimitUsername,proto3" json:"LimitUsername,omitempty"`
 	LimitFileExists   string `protobuf:"bytes,32,opt,name=LimitFileExists,proto3" json:"LimitFileExists,omitempty"`
 	// C2 stacks
-	C2S                []*sliverpb.C2Profile `protobuf:"bytes,15,rep,name=C2s,proto3" json:"C2s,omitempty"`
+	C2S                []*sliverpb.Malleable `protobuf:"bytes,15,rep,name=C2s,proto3" json:"C2s,omitempty"`
 	RuntimeC2S         []string              `protobuf:"bytes,16,rep,name=RuntimeC2s,proto3" json:"RuntimeC2s,omitempty"`
 	ConnectionStrategy string                `protobuf:"bytes,39,opt,name=ConnectionStrategy,proto3" json:"ConnectionStrategy,omitempty"`
 	// SSH Comm system
@@ -2288,7 +2288,7 @@ func (x *ImplantConfig) GetLimitFileExists() string {
 	return ""
 }
 
-func (x *ImplantConfig) GetC2S() []*sliverpb.C2Profile {
+func (x *ImplantConfig) GetC2S() []*sliverpb.Malleable {
 	if x != nil {
 		return x.C2S
 	}
@@ -2989,7 +2989,7 @@ type Job struct {
 	Name            string              `protobuf:"bytes,5,opt,name=Name,proto3" json:"Name,omitempty"`
 	Description     string              `protobuf:"bytes,6,opt,name=Description,proto3" json:"Description,omitempty"`
 	Order           int32               `protobuf:"varint,7,opt,name=Order,proto3" json:"Order,omitempty"`
-	Profile         *sliverpb.C2Profile `protobuf:"bytes,8,opt,name=Profile,proto3" json:"Profile,omitempty"`
+	Profile         *sliverpb.Malleable `protobuf:"bytes,8,opt,name=Profile,proto3" json:"Profile,omitempty"`
 	StageImplant    string              `protobuf:"bytes,9,opt,name=StageImplant,proto3" json:"StageImplant,omitempty"`
 }
 
@@ -3074,7 +3074,7 @@ func (x *Job) GetOrder() int32 {
 	return 0
 }
 
-func (x *Job) GetProfile() *sliverpb.C2Profile {
+func (x *Job) GetProfile() *sliverpb.Malleable {
 	if x != nil {
 		return x.Profile
 	}
@@ -3238,17 +3238,17 @@ func (x *KillJob) GetSuccess() bool {
 	return false
 }
 
-type CreateC2ProfileReq struct {
+type CreateMalleableReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Profile *sliverpb.C2Profile `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
+	Profile *sliverpb.Malleable `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
 	Request *commonpb.Request   `protobuf:"bytes,9,opt,name=Request,proto3" json:"Request,omitempty"`
 }
 
-func (x *CreateC2ProfileReq) Reset() {
-	*x = CreateC2ProfileReq{}
+func (x *CreateMalleableReq) Reset() {
+	*x = CreateMalleableReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_clientpb_client_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3256,13 +3256,13 @@ func (x *CreateC2ProfileReq) Reset() {
 	}
 }
 
-func (x *CreateC2ProfileReq) String() string {
+func (x *CreateMalleableReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateC2ProfileReq) ProtoMessage() {}
+func (*CreateMalleableReq) ProtoMessage() {}
 
-func (x *CreateC2ProfileReq) ProtoReflect() protoreflect.Message {
+func (x *CreateMalleableReq) ProtoReflect() protoreflect.Message {
 	mi := &file_clientpb_client_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3274,36 +3274,36 @@ func (x *CreateC2ProfileReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateC2ProfileReq.ProtoReflect.Descriptor instead.
-func (*CreateC2ProfileReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateMalleableReq.ProtoReflect.Descriptor instead.
+func (*CreateMalleableReq) Descriptor() ([]byte, []int) {
 	return file_clientpb_client_proto_rawDescGZIP(), []int{34}
 }
 
-func (x *CreateC2ProfileReq) GetProfile() *sliverpb.C2Profile {
+func (x *CreateMalleableReq) GetProfile() *sliverpb.Malleable {
 	if x != nil {
 		return x.Profile
 	}
 	return nil
 }
 
-func (x *CreateC2ProfileReq) GetRequest() *commonpb.Request {
+func (x *CreateMalleableReq) GetRequest() *commonpb.Request {
 	if x != nil {
 		return x.Request
 	}
 	return nil
 }
 
-type CreateC2Profile struct {
+type CreateMalleable struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Profile  *sliverpb.C2Profile `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
+	Profile  *sliverpb.Malleable `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
 	Response *commonpb.Response  `protobuf:"bytes,9,opt,name=Response,proto3" json:"Response,omitempty"`
 }
 
-func (x *CreateC2Profile) Reset() {
-	*x = CreateC2Profile{}
+func (x *CreateMalleable) Reset() {
+	*x = CreateMalleable{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_clientpb_client_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3311,13 +3311,13 @@ func (x *CreateC2Profile) Reset() {
 	}
 }
 
-func (x *CreateC2Profile) String() string {
+func (x *CreateMalleable) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateC2Profile) ProtoMessage() {}
+func (*CreateMalleable) ProtoMessage() {}
 
-func (x *CreateC2Profile) ProtoReflect() protoreflect.Message {
+func (x *CreateMalleable) ProtoReflect() protoreflect.Message {
 	mi := &file_clientpb_client_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3329,36 +3329,36 @@ func (x *CreateC2Profile) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateC2Profile.ProtoReflect.Descriptor instead.
-func (*CreateC2Profile) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateMalleable.ProtoReflect.Descriptor instead.
+func (*CreateMalleable) Descriptor() ([]byte, []int) {
 	return file_clientpb_client_proto_rawDescGZIP(), []int{35}
 }
 
-func (x *CreateC2Profile) GetProfile() *sliverpb.C2Profile {
+func (x *CreateMalleable) GetProfile() *sliverpb.Malleable {
 	if x != nil {
 		return x.Profile
 	}
 	return nil
 }
 
-func (x *CreateC2Profile) GetResponse() *commonpb.Response {
+func (x *CreateMalleable) GetResponse() *commonpb.Response {
 	if x != nil {
 		return x.Response
 	}
 	return nil
 }
 
-type DeleteC2ProfileReq struct {
+type DeleteMalleableReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Profile *sliverpb.C2Profile `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
+	Profile *sliverpb.Malleable `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
 	Request *commonpb.Request   `protobuf:"bytes,9,opt,name=Request,proto3" json:"Request,omitempty"`
 }
 
-func (x *DeleteC2ProfileReq) Reset() {
-	*x = DeleteC2ProfileReq{}
+func (x *DeleteMalleableReq) Reset() {
+	*x = DeleteMalleableReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_clientpb_client_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3366,13 +3366,13 @@ func (x *DeleteC2ProfileReq) Reset() {
 	}
 }
 
-func (x *DeleteC2ProfileReq) String() string {
+func (x *DeleteMalleableReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeleteC2ProfileReq) ProtoMessage() {}
+func (*DeleteMalleableReq) ProtoMessage() {}
 
-func (x *DeleteC2ProfileReq) ProtoReflect() protoreflect.Message {
+func (x *DeleteMalleableReq) ProtoReflect() protoreflect.Message {
 	mi := &file_clientpb_client_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3384,26 +3384,26 @@ func (x *DeleteC2ProfileReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteC2ProfileReq.ProtoReflect.Descriptor instead.
-func (*DeleteC2ProfileReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeleteMalleableReq.ProtoReflect.Descriptor instead.
+func (*DeleteMalleableReq) Descriptor() ([]byte, []int) {
 	return file_clientpb_client_proto_rawDescGZIP(), []int{36}
 }
 
-func (x *DeleteC2ProfileReq) GetProfile() *sliverpb.C2Profile {
+func (x *DeleteMalleableReq) GetProfile() *sliverpb.Malleable {
 	if x != nil {
 		return x.Profile
 	}
 	return nil
 }
 
-func (x *DeleteC2ProfileReq) GetRequest() *commonpb.Request {
+func (x *DeleteMalleableReq) GetRequest() *commonpb.Request {
 	if x != nil {
 		return x.Request
 	}
 	return nil
 }
 
-type DeleteC2Profile struct {
+type DeleteMalleable struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -3411,8 +3411,8 @@ type DeleteC2Profile struct {
 	Response *commonpb.Response `protobuf:"bytes,9,opt,name=Response,proto3" json:"Response,omitempty"`
 }
 
-func (x *DeleteC2Profile) Reset() {
-	*x = DeleteC2Profile{}
+func (x *DeleteMalleable) Reset() {
+	*x = DeleteMalleable{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_clientpb_client_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3420,13 +3420,13 @@ func (x *DeleteC2Profile) Reset() {
 	}
 }
 
-func (x *DeleteC2Profile) String() string {
+func (x *DeleteMalleable) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeleteC2Profile) ProtoMessage() {}
+func (*DeleteMalleable) ProtoMessage() {}
 
-func (x *DeleteC2Profile) ProtoReflect() protoreflect.Message {
+func (x *DeleteMalleable) ProtoReflect() protoreflect.Message {
 	mi := &file_clientpb_client_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3438,29 +3438,29 @@ func (x *DeleteC2Profile) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteC2Profile.ProtoReflect.Descriptor instead.
-func (*DeleteC2Profile) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeleteMalleable.ProtoReflect.Descriptor instead.
+func (*DeleteMalleable) Descriptor() ([]byte, []int) {
 	return file_clientpb_client_proto_rawDescGZIP(), []int{37}
 }
 
-func (x *DeleteC2Profile) GetResponse() *commonpb.Response {
+func (x *DeleteMalleable) GetResponse() *commonpb.Response {
 	if x != nil {
 		return x.Response
 	}
 	return nil
 }
 
-type UpdateC2ProfileReq struct {
+type UpdateMalleableReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Profile *sliverpb.C2Profile `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
+	Profile *sliverpb.Malleable `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
 	Request *commonpb.Request   `protobuf:"bytes,9,opt,name=Request,proto3" json:"Request,omitempty"`
 }
 
-func (x *UpdateC2ProfileReq) Reset() {
-	*x = UpdateC2ProfileReq{}
+func (x *UpdateMalleableReq) Reset() {
+	*x = UpdateMalleableReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_clientpb_client_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3468,13 +3468,13 @@ func (x *UpdateC2ProfileReq) Reset() {
 	}
 }
 
-func (x *UpdateC2ProfileReq) String() string {
+func (x *UpdateMalleableReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateC2ProfileReq) ProtoMessage() {}
+func (*UpdateMalleableReq) ProtoMessage() {}
 
-func (x *UpdateC2ProfileReq) ProtoReflect() protoreflect.Message {
+func (x *UpdateMalleableReq) ProtoReflect() protoreflect.Message {
 	mi := &file_clientpb_client_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3486,36 +3486,36 @@ func (x *UpdateC2ProfileReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateC2ProfileReq.ProtoReflect.Descriptor instead.
-func (*UpdateC2ProfileReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateMalleableReq.ProtoReflect.Descriptor instead.
+func (*UpdateMalleableReq) Descriptor() ([]byte, []int) {
 	return file_clientpb_client_proto_rawDescGZIP(), []int{38}
 }
 
-func (x *UpdateC2ProfileReq) GetProfile() *sliverpb.C2Profile {
+func (x *UpdateMalleableReq) GetProfile() *sliverpb.Malleable {
 	if x != nil {
 		return x.Profile
 	}
 	return nil
 }
 
-func (x *UpdateC2ProfileReq) GetRequest() *commonpb.Request {
+func (x *UpdateMalleableReq) GetRequest() *commonpb.Request {
 	if x != nil {
 		return x.Request
 	}
 	return nil
 }
 
-type UpdateC2Profile struct {
+type UpdateMalleable struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Updated  *sliverpb.C2Profile `protobuf:"bytes,1,opt,name=Updated,proto3" json:"Updated,omitempty"`
+	Updated  *sliverpb.Malleable `protobuf:"bytes,1,opt,name=Updated,proto3" json:"Updated,omitempty"`
 	Response *commonpb.Response  `protobuf:"bytes,9,opt,name=Response,proto3" json:"Response,omitempty"`
 }
 
-func (x *UpdateC2Profile) Reset() {
-	*x = UpdateC2Profile{}
+func (x *UpdateMalleable) Reset() {
+	*x = UpdateMalleable{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_clientpb_client_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3523,13 +3523,13 @@ func (x *UpdateC2Profile) Reset() {
 	}
 }
 
-func (x *UpdateC2Profile) String() string {
+func (x *UpdateMalleable) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateC2Profile) ProtoMessage() {}
+func (*UpdateMalleable) ProtoMessage() {}
 
-func (x *UpdateC2Profile) ProtoReflect() protoreflect.Message {
+func (x *UpdateMalleable) ProtoReflect() protoreflect.Message {
 	mi := &file_clientpb_client_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3541,26 +3541,26 @@ func (x *UpdateC2Profile) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateC2Profile.ProtoReflect.Descriptor instead.
-func (*UpdateC2Profile) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateMalleable.ProtoReflect.Descriptor instead.
+func (*UpdateMalleable) Descriptor() ([]byte, []int) {
 	return file_clientpb_client_proto_rawDescGZIP(), []int{39}
 }
 
-func (x *UpdateC2Profile) GetUpdated() *sliverpb.C2Profile {
+func (x *UpdateMalleable) GetUpdated() *sliverpb.Malleable {
 	if x != nil {
 		return x.Updated
 	}
 	return nil
 }
 
-func (x *UpdateC2Profile) GetResponse() *commonpb.Response {
+func (x *UpdateMalleable) GetResponse() *commonpb.Response {
 	if x != nil {
 		return x.Response
 	}
 	return nil
 }
 
-type GetC2ProfilesReq struct {
+type GetMalleablesReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -3568,8 +3568,8 @@ type GetC2ProfilesReq struct {
 	Request *commonpb.Request `protobuf:"bytes,9,opt,name=Request,proto3" json:"Request,omitempty"`
 }
 
-func (x *GetC2ProfilesReq) Reset() {
-	*x = GetC2ProfilesReq{}
+func (x *GetMalleablesReq) Reset() {
+	*x = GetMalleablesReq{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_clientpb_client_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3577,13 +3577,13 @@ func (x *GetC2ProfilesReq) Reset() {
 	}
 }
 
-func (x *GetC2ProfilesReq) String() string {
+func (x *GetMalleablesReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetC2ProfilesReq) ProtoMessage() {}
+func (*GetMalleablesReq) ProtoMessage() {}
 
-func (x *GetC2ProfilesReq) ProtoReflect() protoreflect.Message {
+func (x *GetMalleablesReq) ProtoReflect() protoreflect.Message {
 	mi := &file_clientpb_client_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3595,28 +3595,28 @@ func (x *GetC2ProfilesReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetC2ProfilesReq.ProtoReflect.Descriptor instead.
-func (*GetC2ProfilesReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetMalleablesReq.ProtoReflect.Descriptor instead.
+func (*GetMalleablesReq) Descriptor() ([]byte, []int) {
 	return file_clientpb_client_proto_rawDescGZIP(), []int{40}
 }
 
-func (x *GetC2ProfilesReq) GetRequest() *commonpb.Request {
+func (x *GetMalleablesReq) GetRequest() *commonpb.Request {
 	if x != nil {
 		return x.Request
 	}
 	return nil
 }
 
-type GetC2Profiles struct {
+type GetMalleables struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Profiles []*sliverpb.C2Profile `protobuf:"bytes,1,rep,name=Profiles,proto3" json:"Profiles,omitempty"`
+	Profiles []*sliverpb.Malleable `protobuf:"bytes,1,rep,name=Profiles,proto3" json:"Profiles,omitempty"`
 }
 
-func (x *GetC2Profiles) Reset() {
-	*x = GetC2Profiles{}
+func (x *GetMalleables) Reset() {
+	*x = GetMalleables{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_clientpb_client_proto_msgTypes[41]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3624,13 +3624,13 @@ func (x *GetC2Profiles) Reset() {
 	}
 }
 
-func (x *GetC2Profiles) String() string {
+func (x *GetMalleables) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetC2Profiles) ProtoMessage() {}
+func (*GetMalleables) ProtoMessage() {}
 
-func (x *GetC2Profiles) ProtoReflect() protoreflect.Message {
+func (x *GetMalleables) ProtoReflect() protoreflect.Message {
 	mi := &file_clientpb_client_proto_msgTypes[41]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3642,12 +3642,12 @@ func (x *GetC2Profiles) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetC2Profiles.ProtoReflect.Descriptor instead.
-func (*GetC2Profiles) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetMalleables.ProtoReflect.Descriptor instead.
+func (*GetMalleables) Descriptor() ([]byte, []int) {
 	return file_clientpb_client_proto_rawDescGZIP(), []int{41}
 }
 
-func (x *GetC2Profiles) GetProfiles() []*sliverpb.C2Profile {
+func (x *GetMalleables) GetProfiles() []*sliverpb.Malleable {
 	if x != nil {
 		return x.Profiles
 	}
@@ -3660,7 +3660,7 @@ type HandlerStageReq struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Profile *sliverpb.C2Profile `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
+	Profile *sliverpb.Malleable `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
 	Request *commonpb.Request   `protobuf:"bytes,9,opt,name=Request,proto3" json:"Request,omitempty"`
 }
 
@@ -3696,7 +3696,7 @@ func (*HandlerStageReq) Descriptor() ([]byte, []int) {
 	return file_clientpb_client_proto_rawDescGZIP(), []int{42}
 }
 
-func (x *HandlerStageReq) GetProfile() *sliverpb.C2Profile {
+func (x *HandlerStageReq) GetProfile() *sliverpb.Malleable {
 	if x != nil {
 		return x.Profile
 	}
@@ -3773,7 +3773,7 @@ type HandlerStagerReq struct {
 	Protocol     StagerProtocol      `protobuf:"varint,1,opt,name=Protocol,proto3,enum=clientpb.StagerProtocol" json:"Protocol,omitempty"`
 	StageImplant string              `protobuf:"bytes,2,opt,name=StageImplant,proto3" json:"StageImplant,omitempty"`
 	StageBytes   []byte              `protobuf:"bytes,3,opt,name=StageBytes,proto3" json:"StageBytes,omitempty"`
-	Profile      *sliverpb.C2Profile `protobuf:"bytes,5,opt,name=Profile,proto3" json:"Profile,omitempty"`
+	Profile      *sliverpb.Malleable `protobuf:"bytes,5,opt,name=Profile,proto3" json:"Profile,omitempty"`
 	Request      *commonpb.Request   `protobuf:"bytes,9,opt,name=Request,proto3" json:"Request,omitempty"`
 }
 
@@ -3830,7 +3830,7 @@ func (x *HandlerStagerReq) GetStageBytes() []byte {
 	return nil
 }
 
-func (x *HandlerStagerReq) GetProfile() *sliverpb.C2Profile {
+func (x *HandlerStagerReq) GetProfile() *sliverpb.Malleable {
 	if x != nil {
 		return x.Profile
 	}
@@ -3905,7 +3905,7 @@ type HandlerCloseReq struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Profile *sliverpb.C2Profile `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
+	Profile *sliverpb.Malleable `protobuf:"bytes,1,opt,name=Profile,proto3" json:"Profile,omitempty"`
 	Request *commonpb.Request   `protobuf:"bytes,9,opt,name=Request,proto3" json:"Request,omitempty"`
 }
 
@@ -3941,7 +3941,7 @@ func (*HandlerCloseReq) Descriptor() ([]byte, []int) {
 	return file_clientpb_client_proto_rawDescGZIP(), []int{46}
 }
 
-func (x *HandlerCloseReq) GetProfile() *sliverpb.C2Profile {
+func (x *HandlerCloseReq) GetProfile() *sliverpb.Malleable {
 	if x != nil {
 		return x.Profile
 	}
@@ -4019,7 +4019,7 @@ type Transport struct {
 	SessionID string              `protobuf:"bytes,2,opt,name=SessionID,proto3" json:"SessionID,omitempty"`
 	Order     int32               `protobuf:"varint,3,opt,name=Order,proto3" json:"Order,omitempty"`
 	Running   bool                `protobuf:"varint,4,opt,name=Running,proto3" json:"Running,omitempty"`
-	Profile   *sliverpb.C2Profile `protobuf:"bytes,5,opt,name=Profile,proto3" json:"Profile,omitempty"`
+	Profile   *sliverpb.Malleable `protobuf:"bytes,5,opt,name=Profile,proto3" json:"Profile,omitempty"`
 }
 
 func (x *Transport) Reset() {
@@ -4082,7 +4082,7 @@ func (x *Transport) GetRunning() bool {
 	return false
 }
 
-func (x *Transport) GetProfile() *sliverpb.C2Profile {
+func (x *Transport) GetProfile() *sliverpb.Malleable {
 	if x != nil {
 		return x.Profile
 	}
@@ -6981,7 +6981,7 @@ var file_clientpb_client_proto_rawDesc = []byte{
 	0x18, 0x20, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x46, 0x69, 0x6c,
 	0x65, 0x45, 0x78, 0x69, 0x73, 0x74, 0x73, 0x12, 0x25, 0x0a, 0x03, 0x43, 0x32, 0x73, 0x18, 0x0f,
 	0x20, 0x03, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e,
-	0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x03, 0x43, 0x32, 0x73, 0x12, 0x1e,
+	0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x03, 0x43, 0x32, 0x73, 0x12, 0x1e,
 	0x0a, 0x0a, 0x52, 0x75, 0x6e, 0x74, 0x69, 0x6d, 0x65, 0x43, 0x32, 0x73, 0x18, 0x10, 0x20, 0x03,
 	0x28, 0x09, 0x52, 0x0a, 0x52, 0x75, 0x6e, 0x74, 0x69, 0x6d, 0x65, 0x43, 0x32, 0x73, 0x12, 0x2e,
 	0x0a, 0x12, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x74, 0x72, 0x61,
@@ -7086,8 +7086,8 @@ var file_clientpb_client_proto_rawDesc = []byte{
 	0x0b, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x14, 0x0a, 0x05,
 	0x4f, 0x72, 0x64, 0x65, 0x72, 0x18, 0x07, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x4f, 0x72, 0x64,
 	0x65, 0x72, 0x12, 0x2d, 0x0a, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x18, 0x08, 0x20,
-	0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x43,
-	0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c,
+	0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x4d,
+	0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c,
 	0x65, 0x12, 0x22, 0x0a, 0x0c, 0x53, 0x74, 0x61, 0x67, 0x65, 0x49, 0x6d, 0x70, 0x6c, 0x61, 0x6e,
 	0x74, 0x18, 0x09, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x53, 0x74, 0x61, 0x67, 0x65, 0x49, 0x6d,
 	0x70, 0x6c, 0x61, 0x6e, 0x74, 0x22, 0x2d, 0x0a, 0x04, 0x4a, 0x6f, 0x62, 0x73, 0x12, 0x25, 0x0a,
@@ -7099,57 +7099,57 @@ var file_clientpb_client_proto_rawDesc = []byte{
 	0x02, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x44, 0x12, 0x18, 0x0a,
 	0x07, 0x53, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07,
 	0x53, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x22, 0x70, 0x0a, 0x12, 0x43, 0x72, 0x65, 0x61, 0x74,
-	0x65, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x12, 0x2d, 0x0a,
+	0x65, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x12, 0x2d, 0x0a,
 	0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13,
-	0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66,
-	0x69, 0x6c, 0x65, 0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2b, 0x0a, 0x07,
+	0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61,
+	0x62, 0x6c, 0x65, 0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2b, 0x0a, 0x07,
 	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11, 0x2e,
 	0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x52, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x70, 0x0a, 0x0f, 0x43, 0x72, 0x65,
-	0x61, 0x74, 0x65, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2d, 0x0a, 0x07,
+	0x61, 0x74, 0x65, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65, 0x12, 0x2d, 0x0a, 0x07,
 	0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e,
-	0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69,
+	0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62,
 	0x6c, 0x65, 0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2e, 0x0a, 0x08, 0x52,
 	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e,
 	0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
 	0x65, 0x52, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x70, 0x0a, 0x12, 0x44,
-	0x65, 0x6c, 0x65, 0x74, 0x65, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x65,
+	0x65, 0x6c, 0x65, 0x74, 0x65, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x65,
 	0x71, 0x12, 0x2d, 0x0a, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x43, 0x32,
-	0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65,
+	0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x4d, 0x61,
+	0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65,
 	0x12, 0x2b, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x18, 0x09, 0x20, 0x01, 0x28,
 	0x0b, 0x32, 0x11, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x52, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x41, 0x0a,
-	0x0f, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65,
+	0x0f, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65,
 	0x12, 0x2e, 0x0a, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x18, 0x09, 0x20, 0x01,
 	0x28, 0x0b, 0x32, 0x12, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x52, 0x65,
 	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x22, 0x70, 0x0a, 0x12, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66,
-	0x69, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x12, 0x2d, 0x0a, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c,
+	0x22, 0x70, 0x0a, 0x12, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61,
+	0x62, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x12, 0x2d, 0x0a, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c,
 	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72,
-	0x70, 0x62, 0x2e, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x07, 0x50, 0x72,
+	0x70, 0x62, 0x2e, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x07, 0x50, 0x72,
 	0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2b, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x70,
 	0x62, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x22, 0x70, 0x0a, 0x0f, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x32, 0x50, 0x72,
-	0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2d, 0x0a, 0x07, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64,
+	0x73, 0x74, 0x22, 0x70, 0x0a, 0x0f, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4d, 0x61, 0x6c, 0x6c,
+	0x65, 0x61, 0x62, 0x6c, 0x65, 0x12, 0x2d, 0x0a, 0x07, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70,
-	0x62, 0x2e, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x07, 0x55, 0x70, 0x64,
+	0x62, 0x2e, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x07, 0x55, 0x70, 0x64,
 	0x61, 0x74, 0x65, 0x64, 0x12, 0x2e, 0x0a, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
 	0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x70,
 	0x62, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x08, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x3f, 0x0a, 0x10, 0x47, 0x65, 0x74, 0x43, 0x32, 0x50, 0x72, 0x6f,
-	0x66, 0x69, 0x6c, 0x65, 0x73, 0x52, 0x65, 0x71, 0x12, 0x2b, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75,
+	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x3f, 0x0a, 0x10, 0x47, 0x65, 0x74, 0x4d, 0x61, 0x6c, 0x6c, 0x65,
+	0x61, 0x62, 0x6c, 0x65, 0x73, 0x52, 0x65, 0x71, 0x12, 0x2b, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75,
 	0x65, 0x73, 0x74, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x63, 0x6f, 0x6d, 0x6d,
 	0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x07, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x40, 0x0a, 0x0d, 0x47, 0x65, 0x74, 0x43, 0x32, 0x50, 0x72,
-	0x6f, 0x66, 0x69, 0x6c, 0x65, 0x73, 0x12, 0x2f, 0x0a, 0x08, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x40, 0x0a, 0x0d, 0x47, 0x65, 0x74, 0x4d, 0x61, 0x6c, 0x6c,
+	0x65, 0x61, 0x62, 0x6c, 0x65, 0x73, 0x12, 0x2f, 0x0a, 0x08, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c,
 	0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65,
-	0x72, 0x70, 0x62, 0x2e, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x08, 0x50,
+	0x72, 0x70, 0x62, 0x2e, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x08, 0x50,
 	0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x73, 0x22, 0x6d, 0x0a, 0x0f, 0x48, 0x61, 0x6e, 0x64, 0x6c,
 	0x65, 0x72, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x71, 0x12, 0x2d, 0x0a, 0x07, 0x50, 0x72,
 	0x6f, 0x66, 0x69, 0x6c, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73, 0x6c,
-	0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65,
+	0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65,
 	0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2b, 0x0a, 0x07, 0x52, 0x65, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x63, 0x6f, 0x6d,
 	0x6d, 0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x07, 0x52,
@@ -7169,8 +7169,8 @@ var file_clientpb_client_proto_rawDesc = []byte{
 	0x1e, 0x0a, 0x0a, 0x53, 0x74, 0x61, 0x67, 0x65, 0x42, 0x79, 0x74, 0x65, 0x73, 0x18, 0x03, 0x20,
 	0x01, 0x28, 0x0c, 0x52, 0x0a, 0x53, 0x74, 0x61, 0x67, 0x65, 0x42, 0x79, 0x74, 0x65, 0x73, 0x12,
 	0x2d, 0x0a, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b,
-	0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x43, 0x32, 0x50, 0x72,
-	0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2b,
+	0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x4d, 0x61, 0x6c, 0x6c,
+	0x65, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2b,
 	0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32,
 	0x11, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65,
 	0x73, 0x74, 0x52, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x59, 0x0a, 0x0d, 0x48,
@@ -7182,7 +7182,7 @@ var file_clientpb_client_proto_rawDesc = []byte{
 	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x6d, 0x0a, 0x0f, 0x48, 0x61, 0x6e, 0x64, 0x6c, 0x65,
 	0x72, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x52, 0x65, 0x71, 0x12, 0x2d, 0x0a, 0x07, 0x50, 0x72, 0x6f,
 	0x66, 0x69, 0x6c, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73, 0x6c, 0x69,
-	0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52,
+	0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c, 0x65, 0x52,
 	0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x2b, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75,
 	0x65, 0x73, 0x74, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x63, 0x6f, 0x6d, 0x6d,
 	0x6f, 0x6e, 0x70, 0x62, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x07, 0x52, 0x65,
@@ -7200,7 +7200,7 @@ var file_clientpb_client_proto_rawDesc = []byte{
 	0x72, 0x12, 0x18, 0x0a, 0x07, 0x52, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x18, 0x04, 0x20, 0x01,
 	0x28, 0x08, 0x52, 0x07, 0x52, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x12, 0x2d, 0x0a, 0x07, 0x50,
 	0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x73,
-	0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x43, 0x32, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c,
+	0x6c, 0x69, 0x76, 0x65, 0x72, 0x70, 0x62, 0x2e, 0x4d, 0x61, 0x6c, 0x6c, 0x65, 0x61, 0x62, 0x6c,
 	0x65, 0x52, 0x07, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x22, 0x82, 0x01, 0x0a, 0x0f, 0x41,
 	0x64, 0x64, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x70, 0x6f, 0x72, 0x74, 0x52, 0x65, 0x71, 0x12, 0x0e,
 	0x0a, 0x02, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x44, 0x12, 0x16,
@@ -7631,14 +7631,14 @@ var file_clientpb_client_proto_goTypes = []interface{}{
 	(*Jobs)(nil),                  // 39: clientpb.Jobs
 	(*KillJobReq)(nil),            // 40: clientpb.KillJobReq
 	(*KillJob)(nil),               // 41: clientpb.KillJob
-	(*CreateC2ProfileReq)(nil),    // 42: clientpb.CreateC2ProfileReq
-	(*CreateC2Profile)(nil),       // 43: clientpb.CreateC2Profile
-	(*DeleteC2ProfileReq)(nil),    // 44: clientpb.DeleteC2ProfileReq
-	(*DeleteC2Profile)(nil),       // 45: clientpb.DeleteC2Profile
-	(*UpdateC2ProfileReq)(nil),    // 46: clientpb.UpdateC2ProfileReq
-	(*UpdateC2Profile)(nil),       // 47: clientpb.UpdateC2Profile
-	(*GetC2ProfilesReq)(nil),      // 48: clientpb.GetC2ProfilesReq
-	(*GetC2Profiles)(nil),         // 49: clientpb.GetC2Profiles
+	(*CreateMalleableReq)(nil),    // 42: clientpb.CreateMalleableReq
+	(*CreateMalleable)(nil),       // 43: clientpb.CreateMalleable
+	(*DeleteMalleableReq)(nil),    // 44: clientpb.DeleteMalleableReq
+	(*DeleteMalleable)(nil),       // 45: clientpb.DeleteMalleable
+	(*UpdateMalleableReq)(nil),    // 46: clientpb.UpdateMalleableReq
+	(*UpdateMalleable)(nil),       // 47: clientpb.UpdateMalleable
+	(*GetMalleablesReq)(nil),      // 48: clientpb.GetMalleablesReq
+	(*GetMalleables)(nil),         // 49: clientpb.GetMalleables
 	(*HandlerStageReq)(nil),       // 50: clientpb.HandlerStageReq
 	(*HandlerStage)(nil),          // 51: clientpb.HandlerStage
 	(*HandlerStagerReq)(nil),      // 52: clientpb.HandlerStagerReq
@@ -7694,7 +7694,7 @@ var file_clientpb_client_proto_goTypes = []interface{}{
 	nil,                           // 102: clientpb.Host.ExtensionDataEntry
 	(*commonpb.Request)(nil),      // 103: commonpb.Request
 	(*commonpb.Response)(nil),     // 104: commonpb.Response
-	(*sliverpb.C2Profile)(nil),    // 105: sliverpb.C2Profile
+	(*sliverpb.Malleable)(nil),    // 105: sliverpb.Malleable
 	(*commonpb.File)(nil),         // 106: commonpb.File
 }
 var file_clientpb_client_proto_depIdxs = []int32{
@@ -7719,7 +7719,7 @@ var file_clientpb_client_proto_depIdxs = []int32{
 	22,  // 18: clientpb.Beacons.Beacons:type_name -> clientpb.Beacon
 	24,  // 19: clientpb.BeaconTasks.Tasks:type_name -> clientpb.BeaconTask
 	1,   // 20: clientpb.ImplantConfig.Format:type_name -> clientpb.OutputFormat
-	105, // 21: clientpb.ImplantConfig.C2s:type_name -> sliverpb.C2Profile
+	105, // 21: clientpb.ImplantConfig.C2s:type_name -> sliverpb.Malleable
 	99,  // 22: clientpb.ImplantBuilds.Configs:type_name -> clientpb.ImplantBuilds.ConfigsEntry
 	1,   // 23: clientpb.CompilerTarget.Format:type_name -> clientpb.OutputFormat
 	28,  // 24: clientpb.Compiler.Targets:type_name -> clientpb.CompilerTarget
@@ -7728,32 +7728,32 @@ var file_clientpb_client_proto_depIdxs = []int32{
 	32,  // 27: clientpb.Canaries.Canaries:type_name -> clientpb.DNSCanary
 	26,  // 28: clientpb.ImplantProfile.Config:type_name -> clientpb.ImplantConfig
 	35,  // 29: clientpb.ImplantProfiles.Profiles:type_name -> clientpb.ImplantProfile
-	105, // 30: clientpb.Job.Profile:type_name -> sliverpb.C2Profile
+	105, // 30: clientpb.Job.Profile:type_name -> sliverpb.Malleable
 	38,  // 31: clientpb.Jobs.Active:type_name -> clientpb.Job
-	105, // 32: clientpb.CreateC2ProfileReq.Profile:type_name -> sliverpb.C2Profile
-	103, // 33: clientpb.CreateC2ProfileReq.Request:type_name -> commonpb.Request
-	105, // 34: clientpb.CreateC2Profile.Profile:type_name -> sliverpb.C2Profile
-	104, // 35: clientpb.CreateC2Profile.Response:type_name -> commonpb.Response
-	105, // 36: clientpb.DeleteC2ProfileReq.Profile:type_name -> sliverpb.C2Profile
-	103, // 37: clientpb.DeleteC2ProfileReq.Request:type_name -> commonpb.Request
-	104, // 38: clientpb.DeleteC2Profile.Response:type_name -> commonpb.Response
-	105, // 39: clientpb.UpdateC2ProfileReq.Profile:type_name -> sliverpb.C2Profile
-	103, // 40: clientpb.UpdateC2ProfileReq.Request:type_name -> commonpb.Request
-	105, // 41: clientpb.UpdateC2Profile.Updated:type_name -> sliverpb.C2Profile
-	104, // 42: clientpb.UpdateC2Profile.Response:type_name -> commonpb.Response
-	103, // 43: clientpb.GetC2ProfilesReq.Request:type_name -> commonpb.Request
-	105, // 44: clientpb.GetC2Profiles.Profiles:type_name -> sliverpb.C2Profile
-	105, // 45: clientpb.HandlerStageReq.Profile:type_name -> sliverpb.C2Profile
+	105, // 32: clientpb.CreateMalleableReq.Profile:type_name -> sliverpb.Malleable
+	103, // 33: clientpb.CreateMalleableReq.Request:type_name -> commonpb.Request
+	105, // 34: clientpb.CreateMalleable.Profile:type_name -> sliverpb.Malleable
+	104, // 35: clientpb.CreateMalleable.Response:type_name -> commonpb.Response
+	105, // 36: clientpb.DeleteMalleableReq.Profile:type_name -> sliverpb.Malleable
+	103, // 37: clientpb.DeleteMalleableReq.Request:type_name -> commonpb.Request
+	104, // 38: clientpb.DeleteMalleable.Response:type_name -> commonpb.Response
+	105, // 39: clientpb.UpdateMalleableReq.Profile:type_name -> sliverpb.Malleable
+	103, // 40: clientpb.UpdateMalleableReq.Request:type_name -> commonpb.Request
+	105, // 41: clientpb.UpdateMalleable.Updated:type_name -> sliverpb.Malleable
+	104, // 42: clientpb.UpdateMalleable.Response:type_name -> commonpb.Response
+	103, // 43: clientpb.GetMalleablesReq.Request:type_name -> commonpb.Request
+	105, // 44: clientpb.GetMalleables.Profiles:type_name -> sliverpb.Malleable
+	105, // 45: clientpb.HandlerStageReq.Profile:type_name -> sliverpb.Malleable
 	103, // 46: clientpb.HandlerStageReq.Request:type_name -> commonpb.Request
 	104, // 47: clientpb.HandlerStage.Response:type_name -> commonpb.Response
 	2,   // 48: clientpb.HandlerStagerReq.Protocol:type_name -> clientpb.StagerProtocol
-	105, // 49: clientpb.HandlerStagerReq.Profile:type_name -> sliverpb.C2Profile
+	105, // 49: clientpb.HandlerStagerReq.Profile:type_name -> sliverpb.Malleable
 	103, // 50: clientpb.HandlerStagerReq.Request:type_name -> commonpb.Request
 	104, // 51: clientpb.HandlerStager.Response:type_name -> commonpb.Response
-	105, // 52: clientpb.HandlerCloseReq.Profile:type_name -> sliverpb.C2Profile
+	105, // 52: clientpb.HandlerCloseReq.Profile:type_name -> sliverpb.Malleable
 	103, // 53: clientpb.HandlerCloseReq.Request:type_name -> commonpb.Request
 	104, // 54: clientpb.HandlerClose.Response:type_name -> commonpb.Response
-	105, // 55: clientpb.Transport.Profile:type_name -> sliverpb.C2Profile
+	105, // 55: clientpb.Transport.Profile:type_name -> sliverpb.Malleable
 	103, // 56: clientpb.AddTransportReq.Request:type_name -> commonpb.Request
 	104, // 57: clientpb.AddTransport.Response:type_name -> commonpb.Response
 	103, // 58: clientpb.SwitchTransportReq.Request:type_name -> commonpb.Request
@@ -8228,7 +8228,7 @@ func file_clientpb_client_proto_init() {
 			}
 		}
 		file_clientpb_client_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateC2ProfileReq); i {
+			switch v := v.(*CreateMalleableReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -8240,7 +8240,7 @@ func file_clientpb_client_proto_init() {
 			}
 		}
 		file_clientpb_client_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateC2Profile); i {
+			switch v := v.(*CreateMalleable); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -8252,7 +8252,7 @@ func file_clientpb_client_proto_init() {
 			}
 		}
 		file_clientpb_client_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteC2ProfileReq); i {
+			switch v := v.(*DeleteMalleableReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -8264,7 +8264,7 @@ func file_clientpb_client_proto_init() {
 			}
 		}
 		file_clientpb_client_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteC2Profile); i {
+			switch v := v.(*DeleteMalleable); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -8276,7 +8276,7 @@ func file_clientpb_client_proto_init() {
 			}
 		}
 		file_clientpb_client_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateC2ProfileReq); i {
+			switch v := v.(*UpdateMalleableReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -8288,7 +8288,7 @@ func file_clientpb_client_proto_init() {
 			}
 		}
 		file_clientpb_client_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateC2Profile); i {
+			switch v := v.(*UpdateMalleable); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -8300,7 +8300,7 @@ func file_clientpb_client_proto_init() {
 			}
 		}
 		file_clientpb_client_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetC2ProfilesReq); i {
+			switch v := v.(*GetMalleablesReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -8312,7 +8312,7 @@ func file_clientpb_client_proto_init() {
 			}
 		}
 		file_clientpb_client_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetC2Profiles); i {
+			switch v := v.(*GetMalleables); i {
 			case 0:
 				return &v.state
 			case 1:

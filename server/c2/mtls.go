@@ -30,7 +30,7 @@ import (
 )
 
 // DialMutualTLS - Dial an implant listening for incoming MutualTLS connections
-func DialMutualTLS(profile *models.C2Profile, network comm.Net) (tlsConn net.Conn, err error) {
+func DialMutualTLS(profile *models.Malleable, network comm.Net) (tlsConn net.Conn, err error) {
 
 	// Fetch a TLS configuration from the values in the profile
 	tlsConfig := cryptography.TLSConfigFromProfile(profile)
@@ -51,7 +51,7 @@ func DialMutualTLS(profile *models.C2Profile, network comm.Net) (tlsConn net.Con
 }
 
 // ListenMutualTLS - Start a MutualTLS listener on the server or the active session
-func ListenMutualTLS(profile *models.C2Profile, network comm.Net) (ln net.Listener, err error) {
+func ListenMutualTLS(profile *models.Malleable, network comm.Net) (ln net.Listener, err error) {
 
 	// Fetch a TLS configuration from the values in the profile
 	tlsConfig := cryptography.TLSConfigFromProfile(profile)

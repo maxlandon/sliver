@@ -39,11 +39,11 @@ type Remove struct {
 // Execute - Remove one or more C2 profiles
 func (l *Remove) Execute(args []string) (err error) {
 
-	profiles, err := transport.RPC.GetC2Profiles(context.Background(), &clientpb.GetC2ProfilesReq{})
+	profiles, err := transport.RPC.GetMalleables(context.Background(), &clientpb.GetMalleablesReq{})
 	if err != nil {
 		return log.Error(err)
 	}
-	var toDelete []*sliverpb.C2Profile
+	var toDelete []*sliverpb.Malleable
 	for _, p := range profiles.Profiles {
 		for _, id := range l.Args.ProfileID {
 			if c2.GetShortID(p.ID) == id {
@@ -53,7 +53,7 @@ func (l *Remove) Execute(args []string) (err error) {
 	}
 
 	for _, p := range toDelete {
-		_, err := transport.RPC.DeleteC2Profile(context.Background(), &clientpb.DeleteC2ProfileReq{
+		_, err := transport.RPC.DeleteMalleable(context.Background(), &clientpb.DeleteMalleableReq{
 			Profile: p,
 			Request: core.ActiveTarget.Request(),
 		})

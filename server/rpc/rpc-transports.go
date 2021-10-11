@@ -120,7 +120,7 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 }
 
 // isSessionTransportEnabled - Check that the requested C2 protocol is compiled in the targeted implant session.
-func isSessionTransportEnabled(name string, profile *models.C2Profile) (enabled bool, err error) {
+func isSessionTransportEnabled(name string, profile *models.Malleable) (enabled bool, err error) {
 
 	build, err := db.ImplantBuildByName(name)
 	if err != nil {

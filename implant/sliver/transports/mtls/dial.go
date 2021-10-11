@@ -35,7 +35,7 @@ import (
 )
 
 // Dial - Dial Mutual TLS implant transport.
-func Dial(uri *url.URL, p *sliverpb.C2Profile) (conn net.Conn, err error) {
+func Dial(uri *url.URL, p *sliverpb.Malleable) (conn net.Conn, err error) {
 	// {{if .Config.Debug}}
 	log.Printf("Connecting -> %s", uri.Host)
 	// {{end}}

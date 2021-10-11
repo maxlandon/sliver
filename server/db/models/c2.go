@@ -40,7 +40,7 @@ type Transport struct {
 	Priority  int
 	Running   bool
 	ProfileID uuid.UUID
-	Profile   *C2Profile
+	Profile   *Malleable
 }
 
 // ToProtobuf - The transport needs to be sent to a client console
@@ -68,8 +68,8 @@ func (t *Transport) BeforeCreate(tx *gorm.DB) (err error) {
 	return nil
 }
 
-// C2Profile - A complete C2 profile to be compiled into/ loaded by an implant.
-type C2Profile struct {
+// Malleable - A complete C2 profile to be compiled into/ loaded by an implant.
+type Malleable struct {
 	// Identification
 	ID               uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	CreatedAt        time.Time `gorm:"->;<-:create;"`
@@ -81,7 +81,7 @@ type C2Profile struct {
 	// Core
 	Name            string
 	Type            sliverpb.C2Type
-	Channel         sliverpb.C2Channel
+	Channel         sliverpb.C2
 	Direction       sliverpb.C2Direction
 	Hostname        string
 	Port            uint32
@@ -123,7 +123,7 @@ type C2Profile struct {
 }
 
 // BeforeCreate - GORM hook
-func (p *C2Profile) BeforeCreate(tx *gorm.DB) (err error) {
+func (p *Malleable) BeforeCreate(tx *gorm.DB) (err error) {
 	// Only create a new UUID if there isn't one already.
 	if p.ID == uuid.Nil {
 		p.ID, err = uuid.NewV4()
@@ -136,8 +136,8 @@ func (p *C2Profile) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 // ToProtobuf - Convert ImplantConfig to protobuf equiv
-func (p *C2Profile) ToProtobuf() *sliverpb.C2Profile {
-	profile := &sliverpb.C2Profile{
+func (p *Malleable) ToProtobuf() *sliverpb.Malleable {
+	profile := &sliverpb.Malleable{
 		// Core
 		ID:               p.ID.String(),
 		ContextSessionID: p.ContextSessionID.String(),
@@ -184,8 +184,8 @@ func (p *C2Profile) ToProtobuf() *sliverpb.C2Profile {
 }
 
 // C2ProfileFromProtobuf - Convert C2 profile into Protobuf
-func C2ProfileFromProtobuf(p *sliverpb.C2Profile) (profile *C2Profile) {
-	profile = &C2Profile{
+func C2ProfileFromProtobuf(p *sliverpb.Malleable) (profile *Malleable) {
+	profile = &Malleable{
 		// Core
 		ID:               uuid.FromStringOrNil(p.ID),
 		ContextSessionID: uuid.FromStringOrNil(p.ContextSessionID),
@@ -232,7 +232,7 @@ func C2ProfileFromProtobuf(p *sliverpb.C2Profile) (profile *C2Profile) {
 			Data: httpProfileData,
 		}
 	} else {
-		p.HTTP = &sliverpb.C2ProfileHTTP{}
+		p.HTTP = &sliverpb.MalleableHTTP{}
 	}
 
 	return profile
@@ -250,8 +250,8 @@ type C2ProfileHTTP struct {
 
 // ToProtobuf - Get a protobuf version  of this HTTP profile,
 // so that we can compile it more easily, or send it on the wire
-func (h *C2ProfileHTTP) ToProtobuf() *sliverpb.C2ProfileHTTP {
-	p := &sliverpb.C2ProfileHTTP{
+func (h *C2ProfileHTTP) ToProtobuf() *sliverpb.MalleableHTTP {
+	p := &sliverpb.MalleableHTTP{
 		ID:        h.ID.String(),
 		UserAgent: h.UserAgent,
 	}

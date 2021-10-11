@@ -41,8 +41,8 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 	// Targets parsing in C2 Profiles ----------------------------------------------------------------
 	if len(g.TransportOptions.MTLS) > 0 {
 		for _, address := range g.TransportOptions.MTLS {
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_MTLS,      // A Channel using Mutual TLS
+			profile := c2.NewMalleable(
+				sliverpb.C2_MTLS,             // A Channel using Mutual TLS
 				address,                      // Targeting the host:[port] argument of our command
 				sliverpb.C2Direction_Reverse, // A listener
 				c2.ProfileOptions{},          // This will automatically parse Profile options into the protobuf
@@ -66,8 +66,8 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 				log.Infof("Generated unique IP for WireGuard peer tun interface: %s", readline.Yellow(tunIP.String()))
 			}
 
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_WG,
+			profile := c2.NewMalleable(
+				sliverpb.C2_WG,
 				tunIP.String(),
 				sliverpb.C2Direction_Reverse,
 				c2.ProfileOptions{},
@@ -82,8 +82,8 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 
 	if len(g.TransportOptions.DNS) > 0 {
 		for _, address := range g.TransportOptions.DNS {
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_DNS,
+			profile := c2.NewMalleable(
+				sliverpb.C2_DNS,
 				address,
 				sliverpb.C2Direction_Reverse,
 				c2.ProfileOptions{},
@@ -94,8 +94,8 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 
 	if len(g.TransportOptions.HTTP) > 0 {
 		for _, address := range g.TransportOptions.HTTP {
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_HTTP,
+			profile := c2.NewMalleable(
+				sliverpb.C2_HTTP,
 				address,
 				sliverpb.C2Direction_Reverse,
 				c2.ProfileOptions{},
@@ -107,8 +107,8 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 
 	if len(g.TransportOptions.NamedPipe) > 0 {
 		for _, address := range g.TransportOptions.NamedPipe {
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_NamedPipe,
+			profile := c2.NewMalleable(
+				sliverpb.C2_NamedPipe,
 				address,
 				sliverpb.C2Direction_Reverse,
 				c2.ProfileOptions{},
@@ -119,8 +119,8 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 
 	if len(g.TransportOptions.TCP) > 0 {
 		for _, address := range g.TransportOptions.TCP {
-			profile := c2.ParseProfile(
-				sliverpb.C2Channel_TCP,
+			profile := c2.NewMalleable(
+				sliverpb.C2_TCP,
 				address,
 				sliverpb.C2Direction_Reverse,
 				c2.ProfileOptions{},
@@ -149,16 +149,16 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 	// Malleable C2 Profiles ---------------------------------------------------------------------------
 
 	// If no C2 strings specified and C2 profiles IDs given, return
-	if len(cfg.C2S) == 0 && len(g.TransportOptions.C2Profiles) == 0 {
+	if len(cfg.C2S) == 0 && len(g.TransportOptions.Malleables) == 0 {
 		return fmt.Errorf(`Must specify at least: 
-                => one of --mtls, --http, --dns, --named-pipe, or --tcp-pivot 
+                => one of --mtls, --http, --https, --dns, --named-pipe, or --tcp ...
                 => one or more C2 profiles with --malleables <malleableID>,<malleableID2>`)
 	}
 
 	// Else add the profiles
-	if len(g.TransportOptions.C2Profiles) > 0 {
-		profiles, err := transport.RPC.GetC2Profiles(context.Background(),
-			&clientpb.GetC2ProfilesReq{
+	if len(g.TransportOptions.Malleables) > 0 {
+		profiles, err := transport.RPC.GetMalleables(context.Background(),
+			&clientpb.GetMalleablesReq{
 				Request: core.ActiveTarget.Request(),
 			})
 		if err != nil {
@@ -166,7 +166,7 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 		}
 
 		// Each matching ID.
-		for _, raw := range g.TransportOptions.C2Profiles {
+		for _, raw := range g.TransportOptions.Malleables {
 			// Bug in split forces us to redo it here
 			var splitted = strings.Split(raw, ",")
 			for _, id := range splitted {
@@ -181,7 +181,7 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 
 	// Compatibility verifications ---------------------------------------------------------------------
 	for _, c2 := range cfg.C2S {
-		if c2.C2 == sliverpb.C2Channel_NamedPipe {
+		if c2.C2 == sliverpb.C2_NamedPipe {
 			if cfg.GOOS != "windows" {
 				return fmt.Errorf("Named pipe C2 transports can only be used in Windows")
 			}
