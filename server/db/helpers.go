@@ -287,8 +287,8 @@ func C2ProfileByHostPortNameSession(host string, port uint32, name, sessionID st
 	return
 }
 
-// C2ProfileByID - Fetch a Malleable C2 profile by ID
-func C2ProfileByID(ID string) (c2 *models.Malleable, err error) {
+// MalleableByID - Fetch a Malleable C2 profile by ID
+func MalleableByID(ID string) (c2 *models.Malleable, err error) {
 	c2 = &models.Malleable{}
 	err = Session().Where(&models.Malleable{
 		ID: uuid.FromStringOrNil(ID),
@@ -305,8 +305,8 @@ func C2ProfilesByContextSessionID(sessionID string) (profiles []*models.Malleabl
 	return
 }
 
-// C2ProfileByShortID - Fetch a Malleable C2 profile by a short ID used by commands/completions
-func C2ProfileByShortID(ID string) (c2 *models.Malleable, err error) {
+// MalleableByShortID - Fetch a Malleable C2 profile by a short ID used by commands/completions
+func MalleableByShortID(ID string) (c2 *models.Malleable, err error) {
 
 	profiles := []*models.Malleable{}
 	err = Session().Find(&profiles).Error
@@ -517,6 +517,23 @@ func BeaconByID(id string) (*models.Beacon, error) {
 		&models.Beacon{ID: uuid.FromStringOrNil(id)},
 	).First(beacon).Error
 	return beacon, err
+}
+
+// BeaconByShortID - Select a Beacon by ID given by user
+func BeaconByShortID(id string) (*models.Beacon, error) {
+	beacons := []*models.Beacon{}
+	err := Session().Find(&beacons).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, beacon := range beacons {
+		if GetShortID(beacon.ID.String()) == id {
+			return beacon, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Could not find beacon with ID %s", id)
 }
 
 // BeaconTasksByBeaconID - Get all tasks for a specific beacon

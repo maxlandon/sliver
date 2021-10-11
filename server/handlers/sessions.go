@@ -426,7 +426,7 @@ func switchBeacon(s *core.Session, reg *sliverpb.RegisterTransportSwitch, conn *
 			Session: s,
 		}
 	} else {
-		// ... Of if we have found the beacon, update it
+		// ... Or if we have found the beacon, update it
 		event = core.Event{
 			Type:    clientpb.EventType_BeaconUpdated,
 			Beacon:  beacon,

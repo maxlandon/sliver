@@ -31,13 +31,11 @@ import (
 	"github.com/bishopfox/sliver/server/db/models"
 )
 
-var (
-// CleanupSessionTransports - When a session is killed or dies,
-// we automatically clean up (delete from DB) the transports that
-// have been set at runtime. This function is passed from the C2
-// package when the server is started.
-// CleanupSessionTransports func(session *Session) error
-)
+func init() {
+	// Always cleanup all transports that are not compiled in a build
+	// and do not have a valid beacon ID (the beacon might be rolling still)
+	CleanupOrphanedTransports()
+}
 
 // ImplantConnection - Implementation of a logical connection system around
 // a C2 channel (whether net.Conn based or not). This object is neither a
@@ -95,7 +93,7 @@ func RegisterTransportSwitch(sess *Session, beacon *models.Beacon) (err error) {
 	if beacon != nil {
 		if beacon.State == clientpb.State_Switching {
 			return fmt.Errorf("Beacon %s (%s) is currently switching its transport",
-				GetShortID(beacon.ID.String()), sess.HostUUID)
+				GetShortID(beacon.ID.String()), beacon.HostUUID)
 		}
 
 		beacon.State = clientpb.State_Switching
@@ -236,6 +234,48 @@ func CleanupSessionTransports(sess *Session) (err error) {
 		err = db.Session().Delete(transport).Error
 		if err != nil {
 			sessionsLog.Errorf("Failed to delete transport from DB: %s", err)
+		}
+	}
+
+	return
+}
+
+// CleanupOrphanedTransports - This function is ran at every server startup:
+// It deletes all transports that:
+// - Have no implant build ID, thus are not runtime one, except those for which
+// the session ID is a valid beacon ID (the beacon might still be alive).
+func CleanupOrphanedTransports() (err error) {
+
+	allTransports := []*models.Transport{}
+	err = db.Session().Find(&allTransports).Error
+	if err != nil {
+		return fmt.Errorf("failed to get all transports: %s", err)
+	}
+
+	// For each of them
+	for _, transport := range allTransports {
+
+		// If there is an implant build, it's compiled, we keep it and
+		// reset the running value to false: will be reset when connecting.
+		if transport.ImplantBuildID != uuid.Nil {
+			transport.Running = false
+			err = db.Session().Save(transport).Error
+			if err != nil {
+				sessionsLog.Errorf("failed to update transport running status")
+			}
+			continue
+		}
+
+		// If the session ID is a valid beacon ID, keep it as well
+		beacon, err := db.BeaconByID(transport.SessionID.String())
+		if err == nil && beacon.ID != uuid.Nil {
+			continue
+		}
+
+		// Else we delete the transport
+		err = db.Session().Delete(transport).Error
+		if err != nil {
+			sessionsLog.Errorf("failed to delete transport %s", transport.ID)
 		}
 	}
 

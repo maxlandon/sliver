@@ -26,7 +26,6 @@ import (
 
 	"github.com/gofrs/uuid"
 
-	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/c2"
@@ -36,36 +35,31 @@ import (
 )
 
 // AddTransport - Add a new transport to an implant session
-func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportReq) (res *clientpb.AddTransport, err error) {
+func (rpc *Server) AddTransport(ctx context.Context, req *sliverpb.TransportAddReq) (res *sliverpb.TransportAdd, err error) {
 
-	session, beacon := core.GetTargetContext(req.Request)
+	session, beacon := core.GetActiveTarget(req.Request)
+	var targetID string
+	if session != nil {
+		targetID = session.UUID
+	} else {
+		targetID = beacon.ID.String()
+	}
 
 	// Get the profile matching the requested profile ID
 	// Return if not found.
-	profile, err := db.C2ProfileByShortID(req.ID)
+	profile, err := db.MalleableByShortID(req.ID)
 	if err != nil || profile == nil {
 		// Try with long ID, just in case
-		profile, err = db.C2ProfileByID(req.ID)
+		profile, err = db.MalleableByID(req.ID)
 		if err != nil || profile == nil {
 			return nil, err
 		}
 	}
 
 	// Check if this transport is compatible with compiled C2 stacks on the implant
-	var buildName string
-	if beacon != nil {
-		buildName = beacon.Name
-	}
-	if session != nil {
-		buildName = session.Name
-	}
-	isEnabled, err := isSessionTransportEnabled(buildName, profile)
+	err = isSessionTransportEnabled(session, beacon, profile)
 	if err != nil {
 		return nil, err
-	}
-	if !isEnabled {
-		return nil, fmt.Errorf("Requested protocol (%s) is not compiled into the session implant build",
-			profile.Channel.String())
 	}
 
 	// Setup the Transport Profile security details
@@ -78,13 +72,11 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 	tid, _ := uuid.NewV4()
 	transport := &models.Transport{
 		ID:        tid,
-		SessionID: uuid.FromStringOrNil(session.UUID),
+		SessionID: uuid.FromStringOrNil(targetID),
 		Priority:  int(req.Priority), // By default assign the requested priority
 		ProfileID: profile.ID,
 		Profile:   profile,
 	}
-
-	// Update the priority based on the currently loaded transports
 	transport.Priority = setTransportPriority(transport, session, beacon)
 
 	// The ID is also passed to the profile to be sent. Not overwritten in DB
@@ -94,12 +86,20 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 
 	// Make the request and the response
 	sliverReq := &sliverpb.TransportAddReq{
-		Priority: int32(transport.Priority), // Set the computed/adjusted priority
+		Priority: int32(transport.Priority),
 		Switch:   req.Switch,
 		Profile:  profile.ToProtobuf(),
 		Request:  req.Request,
 	}
 	sliverRes := &sliverpb.TransportAdd{Response: &commonpb.Response{}}
+
+	// If we have requested to switch to it now, register the switch
+	if req.Switch {
+		err = core.RegisterTransportSwitch(session, beacon)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// Send the profile to the implant
 	err = rpc.GenericHandler(sliverReq, sliverRes)
@@ -116,32 +116,39 @@ func (rpc *Server) AddTransport(ctx context.Context, req *clientpb.AddTransportR
 		return nil, fmt.Errorf("Failed to update Transport: %s", err)
 	}
 
-	return &clientpb.AddTransport{Response: &commonpb.Response{}}, nil
+	return sliverRes, nil
 }
 
 // isSessionTransportEnabled - Check that the requested C2 protocol is compiled in the targeted implant session.
-func isSessionTransportEnabled(name string, profile *models.Malleable) (enabled bool, err error) {
+func isSessionTransportEnabled(sess *core.Session, beacon *models.Beacon, profile *models.Malleable) error {
 
-	build, err := db.ImplantBuildByName(name)
+	var buildName string
+	if beacon != nil {
+		buildName = beacon.Name
+	}
+	if sess != nil {
+		buildName = sess.Name
+	}
+	build, err := db.ImplantBuildByName(buildName)
 	if err != nil {
-		return false, fmt.Errorf("Failed to retrieve session implant build: %s", err)
+		return fmt.Errorf("Failed to retrieve session implant build: %s", err)
 	}
 	config, err := db.ImplantConfigByID(build.ImplantConfig.ID.String())
 	if err != nil {
-		return false, fmt.Errorf("Failed to retrieve implant config for build: %s", err)
+		return fmt.Errorf("Failed to retrieve implant config for build: %s", err)
 	}
 
 	if config.RuntimeC2s == "all" {
-		return true, nil
+		return nil
 	}
 	var compiledC2s = strings.Split(config.RuntimeC2s, ",")
 	for _, c2 := range compiledC2s {
 		if c2 == strings.ToLower(profile.Channel.String()) {
-			return true, nil
+			return nil
 		}
 	}
 
-	return false, nil
+	return fmt.Errorf("Protocol (%s) not compiled in the implant build", profile.Channel.String())
 }
 
 // setTransportPriority - Reconciles the user-requested priority with the transports currently loaded by the session.
@@ -173,7 +180,7 @@ func setTransportPriority(transport *models.Transport, session *core.Session, be
 }
 
 // DeleteTransport - Delete a transport loaded and available from the implant session
-func (rpc *Server) DeleteTransport(ctx context.Context, req *clientpb.DeleteTransportReq) (res *clientpb.DeleteTransport, err error) {
+func (rpc *Server) DeleteTransport(ctx context.Context, req *sliverpb.TransportDeleteReq) (res *sliverpb.TransportDelete, err error) {
 
 	// Get the profile matching the requested transport ID
 	// Return if not found.
@@ -207,13 +214,13 @@ func (rpc *Server) DeleteTransport(ctx context.Context, req *clientpb.DeleteTran
 		return nil, fmt.Errorf("Implant deleted the transport, but failed to delete from DB: %s", err)
 	}
 
-	return &clientpb.DeleteTransport{Response: &commonpb.Response{}}, nil
+	return sliverRes, nil
 }
 
 // SwitchTransport - Requests the active session to switch to a different C2 transport
-func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTransportReq) (res *clientpb.SwitchTransport, err error) {
+func (rpc *Server) SwitchTransport(ctx context.Context, req *sliverpb.TransportSwitchReq) (res *sliverpb.TransportSwitch, err error) {
 
-	session, beacon := core.GetTargetContext(req.Request)
+	session, beacon := core.GetActiveTarget(req.Request)
 
 	// Get the profile matching the requested transport ID
 	// Return if not found.
@@ -248,17 +255,13 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *clientpb.SwitchTran
 		// Add cancelConfirmSwitch()
 		return nil, fmt.Errorf("Session returned an error: %s", err)
 	}
-	if !sliverRes.Success {
-		// Add cancelConfirmSwitch()
-		return nil, errors.New("Session returned no success, but no error")
-	}
 
-	return &clientpb.SwitchTransport{Response: &commonpb.Response{}}, nil
+	return sliverRes, nil
 }
 
 // GetTransports - Get all transports loaded and available to a session.
-func (rpc *Server) GetTransports(ctx context.Context, req *clientpb.GetTransportsReq) (res *clientpb.GetTransports, err error) {
-	session, beacon := core.GetTargetContext(req.Request)
+func (rpc *Server) GetTransports(ctx context.Context, req *sliverpb.TransportsReq) (res *sliverpb.Transports, err error) {
+	session, beacon := core.GetActiveTarget(req.Request)
 
 	var transports []*models.Transport
 	transports, err = core.TransportsByTarget(session, beacon)
@@ -266,7 +269,7 @@ func (rpc *Server) GetTransports(ctx context.Context, req *clientpb.GetTransport
 		return nil, err
 	}
 
-	res = &clientpb.GetTransports{Response: &commonpb.Response{}}
+	res = &sliverpb.Transports{Response: &commonpb.Response{}}
 
 	for _, transport := range transports {
 		res.Transports = append(res.Transports, transport.ToProtobuf())

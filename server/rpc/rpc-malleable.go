@@ -70,7 +70,7 @@ func (rpc *Server) CreateMalleable(ctx context.Context, req *clientpb.CreateMall
 // DeleteMalleable - Delete a Malleable C2 profile
 func (rpc *Server) DeleteMalleable(ctx context.Context, req *clientpb.DeleteMalleableReq) (res *clientpb.DeleteMalleable, err error) {
 
-	profile, err := db.C2ProfileByID(req.Profile.ID)
+	profile, err := db.MalleableByID(req.Profile.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find profile: %s", err)
 	}

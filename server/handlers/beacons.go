@@ -33,6 +33,7 @@ import (
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/log"
 	"github.com/gofrs/uuid"
+	gofrsUuid "github.com/gofrs/uuid"
 	"google.golang.org/protobuf/proto"
 	"gorm.io/gorm"
 )
@@ -80,6 +81,7 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 	// beacon.ConfigID = uuid.FromStringOrNil(beaconReg.Register.ConfigID)
 	beacon.WorkingDirectory = beaconReg.Register.WorkingDirectory
 	beacon.State = clientpb.State_Alive
+	beacon.TransportID = beaconReg.Register.TransportID
 
 	beacon.Interval = beaconReg.Interval
 	beacon.Jitter = beaconReg.Jitter
@@ -94,6 +96,24 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 		Type:   clientpb.EventType_BeaconRegistered,
 		Beacon: beacon,
 	})
+
+	// Transport ---------------------------------------------------------------------------
+
+	// Get the current transport used by the Session
+	transport, err := db.TransportByID(beacon.TransportID)
+	if transport == nil {
+		beaconHandlerLog.Errorf("Failed to find beacon transport %s", beacon.TransportID)
+		return nil
+	}
+	beacon.TransportID = transport.ID.String()
+
+	// Save the transport as running
+	transport.Running = true
+	transport.SessionID = gofrsUuid.FromStringOrNil(beacon.ID.String())
+	err = db.Session().Save(&transport).Error
+	if err != nil {
+		beaconHandlerLog.Errorf("Failed to update Transport: %s", err)
+	}
 
 	return nil
 }

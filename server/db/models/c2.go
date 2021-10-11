@@ -26,7 +26,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"gorm.io/gorm"
 
-	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
@@ -44,8 +43,8 @@ type Transport struct {
 }
 
 // ToProtobuf - The transport needs to be sent to a client console
-func (t *Transport) ToProtobuf() *clientpb.Transport {
-	transport := &clientpb.Transport{
+func (t *Transport) ToProtobuf() *sliverpb.Transport {
+	transport := &sliverpb.Transport{
 		ID:      t.ID.String(),
 		Order:   int32(t.Priority),
 		Running: t.Running,

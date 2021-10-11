@@ -228,8 +228,8 @@ func (s *sessions) GetByUUID(sessionUUID string) *Session {
 	return nil
 }
 
-// GetTargetContext - Get either active beacon or active session for the current request
-func GetTargetContext(req *commonpb.Request) (sess *Session, beacon *models.Beacon) {
+// GetActiveTarget - Get either active beacon or active session for the current request
+func GetActiveTarget(req *commonpb.Request) (sess *Session, beacon *models.Beacon) {
 	sess = Sessions.GetByUUID(req.SessionUUID)
 	beacons, _ := db.ListBeacons()
 	for _, b := range beacons {

@@ -45,11 +45,6 @@ func init() {
 	// in this package to the core package, so that the handlers package
 	// can start persistent jobs upon a session registration process.
 	core.StartPersistentSessionJobs = StartPersistentSessionJobs
-
-	// For the same reason of avoiding circular imports, we assign
-	// a function that automatically cleans up the transports set at
-	// runtime for a session. Called when the session is killed or dies (only).
-	// core.CleanupSessionTransports = CleanupSessionTransports
 }
 
 // NewHandlerJob - Create a new handler job based on the current C2 profile and the session context.
@@ -155,7 +150,7 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 
 		// Get the current transport for this session: some of them, like beacons
 		// or those that are expressely comm disabled, can run persistent jobs
-		transport, err := db.C2ProfileByID(session.TransportID)
+		transport, err := db.MalleableByID(session.TransportID)
 		if err != nil {
 			return err
 		}
