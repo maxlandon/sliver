@@ -29,14 +29,13 @@ import (
 	c2cmds "github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/transport"
-	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // TransportsIDs - Returns the IDs of the transports for a given session
 func TransportsIDs() (comps []*readline.CompletionGroup) {
 
-	transports, err := transport.RPC.GetTransports(context.Background(), &clientpb.GetTransportsReq{
+	transports, err := transport.RPC.GetTransports(context.Background(), &sliverpb.TransportsReq{
 		Request: core.ActiveTarget.Request(),
 	})
 	if err != nil {

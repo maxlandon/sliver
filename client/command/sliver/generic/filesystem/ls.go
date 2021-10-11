@@ -62,7 +62,6 @@ func (ls *ListDirectories) Execute(args []string) (err error) {
 			Path:    path,
 			Request: core.ActiveTarget.Request(),
 		})
-
 		if err != nil {
 			log.PrintErrorf(err.Error())
 			continue

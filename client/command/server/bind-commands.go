@@ -390,7 +390,7 @@ func BindCommands(cc *gonsole.Menu) {
 	gb.AddOptionCompletion("HTTP", completion.ServerInterfaceAddrs)
 	gb.AddOptionCompletion("DNS", completion.ServerInterfaceAddrs)
 	gb.AddOptionCompletion("TCPPivot", completion.ActiveSessionIfaceAddrs)
-	gb.AddOptionCompletion("C2Profiles", completion.MalleableIDs)
+	gb.AddOptionCompletion("Malleables", completion.MalleableIDs)
 
 	st := g.AddCommand("stage",
 		"Configure and compile a Sliver (stage) implant",
@@ -404,7 +404,7 @@ func BindCommands(cc *gonsole.Menu) {
 	st.AddOptionCompletion("HTTP", completion.ServerInterfaceAddrs)
 	st.AddOptionCompletion("DNS", completion.ServerInterfaceAddrs)
 	st.AddOptionCompletion("TCPPivot", completion.ActiveSessionIfaceAddrs)
-	st.AddOptionCompletion("C2Profiles", completion.MalleableIDs)
+	st.AddOptionCompletion("Malleables", completion.MalleableIDs)
 
 	sg := g.AddCommand(constants.StagerStr,
 		"Generate a stager shellcode payload using MSFVenom, (to file: --save, to stdout: --format",

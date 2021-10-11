@@ -20,6 +20,7 @@ package operators
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
@@ -58,7 +59,7 @@ func displayOperators(operators []*clientpb.Operator) {
 	for _, operator := range operators {
 		table.AppendRow([]string{operator.Name, status(operator.Online)})
 	}
-	table.Output()
+	fmt.Printf(table.Output())
 }
 
 func status(isOnline bool) string {

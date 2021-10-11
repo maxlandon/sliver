@@ -175,7 +175,7 @@ func printJobs(jobs map[string]*clientpb.Job) {
 		}
 
 		// Print table
-		table.Output()
+		fmt.Printf(table.Output())
 		next = true
 	}
 
@@ -218,7 +218,7 @@ func printJobs(jobs map[string]*clientpb.Job) {
 		}
 
 		// Print table
-		table.Output()
+		fmt.Printf(table.Output())
 		next = true
 	}
 
@@ -252,7 +252,7 @@ func printJobs(jobs map[string]*clientpb.Job) {
 		}
 
 		// Print table
-		table.Output()
+		fmt.Printf(table.Output())
 		next = true
 	}
 }

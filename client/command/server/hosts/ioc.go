@@ -82,6 +82,6 @@ func displayIOCs(hosts []*clientpb.Host) {
 			table.AppendRow([]string{ioc.Path, ioc.FileHash})
 		}
 
-		table.Output()
+		fmt.Printf(table.Output())
 	}
 }

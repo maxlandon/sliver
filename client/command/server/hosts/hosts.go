@@ -69,7 +69,7 @@ func displayHosts(hosts []*clientpb.Host) {
 		table.AppendRow([]string{shortID, host.Hostname, host.OSVersion, sessions, iocs, extData})
 	}
 
-	table.Output()
+	fmt.Printf(table.Output())
 }
 
 // HostSessionNumbers - Format the number of sessions for a host

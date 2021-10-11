@@ -88,5 +88,5 @@ func printSessions(sessions map[uint32]*clientpb.Session) {
 
 		table.AppendRow(row)
 	}
-	table.Output()
+	fmt.Printf(table.Output())
 }

@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -45,27 +46,27 @@ func (r *BeaconsRm) Execute(args []string) (err error) {
 	}
 	beaconsMap := map[string]*clientpb.Beacon{}
 	for _, beacon := range beacons.GetBeacons() {
-		beaconsMap[beacon.ID] = beacon
+		beaconsMap[c2.GetShortID(beacon.ID)] = beacon
 	}
 	if len(beaconsMap) == 0 {
 		log.Infof("No beacons")
 		return
 	}
 
-	// Kill each ID
+	// Remove each ID
 	for _, id := range r.Positional.BeaconID {
 		beacon, ok := beaconsMap[id]
 		if !ok || beacon == nil {
 			err := log.Errorf("Invalid beacon ID: %s", id)
-			fmt.Printf(err.Error())
+			fmt.Println(err.Error())
 			continue
 		}
 
-		// Kill session
+		// Remove
 		_, err = transport.RPC.RmBeacon(context.Background(), beacon)
 		if err != nil {
 			err := log.Errorf("Failed to remove beacon: %s", err)
-			fmt.Printf(err.Error())
+			fmt.Println(err.Error())
 			continue
 		}
 		log.Infof("Beacon removed (%s)", beacon.ID)

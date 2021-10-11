@@ -46,7 +46,7 @@ func (r *RemoveBuild) Execute(args []string) (err error) {
 			fmt.Printf(err.Error())
 			continue
 		}
-		log.Infof("Deleted implant %s\n", name)
+		log.Infof("Deleted implant %s", name)
 
 	}
 	return
