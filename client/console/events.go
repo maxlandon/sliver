@@ -304,7 +304,7 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 		// If our active beacon is switching its transport
 		if active.IsBeacon() && active.ID() == beacon.ID && beacon.State == clientpb.State_Switching {
 			log = log.WithField("success", true)
-			news := fmt.Sprintf("Switching transports: Updated beacon %s (%s)",
+			news := fmt.Sprintf("Beacon %s (%s) has been tasked to switch its transport",
 				c2.GetShortID(beacon.ID), beacon.ActiveC2)
 			log.Infof(news)
 
@@ -313,9 +313,23 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 			return
 		}
 
+		// If our active beacon is updated, either from a transport switch or anything else
+		if active.IsBeacon() && active.ID() == beacon.ID {
+
+			// If its a change in transports
+			if active.ActiveC2() != beacon.ActiveC2 {
+				log.Infof("Beacon (%s) successfully switched to transport: %s",
+					c2.GetShortID(beacon.ID), beacon.ActiveC2)
+			} else {
+				log.Infof("Beacon (%s) has been updated", c2.GetShortID(beacon.ID))
+			}
+			core.SetActiveTarget(nil, beacon)
+			return
+		}
+
 		// If our active beacon is now disconnected
 		if active.IsBeacon() && active.ID() == beacon.ID && beacon.State == clientpb.State_Disconnect {
-			log.Infof("Closed switched Beacon %s", c2.GetShortID(beacon.ID))
+			log.Warnf("Active beacon is now disconnected")
 			return
 		}
 

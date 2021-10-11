@@ -109,9 +109,11 @@ func SetActiveTarget(sess *clientpb.Session, beacon *clientpb.Beacon) {
 
 		// If the error is a switching transport that is a bind handler
 		// (you need to dial the session yourself), you can't have the commands.
-		if err == StateErrors[clientpb.State_Switching] {
-			if transport.Direction == sliverpb.C2Direction_Bind {
-				Console.HideCommands(constants.TargetAvailableCommand)
+		if transport != nil {
+			if err == StateErrors[clientpb.State_Switching] {
+				if transport.Direction == sliverpb.C2Direction_Bind {
+					Console.HideCommands(constants.TargetAvailableCommand)
+				}
 			}
 		}
 
@@ -138,10 +140,10 @@ func UnsetActiveSession() {
 
 	// We don't have a working Sliver object anymore.
 	if ActiveTarget.Session() != nil {
-		ActiveTarget.session = nil
+		ActiveTarget.SetSession(nil)
 	}
 	if ActiveTarget.Beacon() != nil {
-		ActiveTarget.beacon = nil
+		ActiveTarget.SetBeacon(nil)
 	}
 }
 
@@ -262,14 +264,14 @@ func GetActiveSessionConfig() *clientpb.ImplantConfig {
 func GetActiveTargetC2() *sliverpb.Malleable {
 
 	// Get the transports for the current target
-	transports, err := transport.RPC.GetTransports(context.Background(), &clientpb.GetTransportsReq{
+	transports, err := transport.RPC.GetTransports(context.Background(), &sliverpb.TransportsReq{
 		Request: ActiveTarget.Request(),
 	})
 	if err != nil {
 		return nil
 	}
 	for _, transport := range transports.Transports {
-		if transport.Running && transport.SessionID == ActiveTarget.UUID() {
+		if transport.Running {
 			return transport.Profile
 		}
 	}

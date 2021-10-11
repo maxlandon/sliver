@@ -220,12 +220,13 @@ func (t *Table) AppendRow(items []string) error {
 
 // Output - Render the table, and its title if non-nil
 func (t *Table) Output() string {
+	var title string
 	if len(stripansi.Strip(t.title)) > 0 {
-		t.buffer.Read([]byte(fmt.Sprintf(" " + t.title)))
+		title = fmt.Sprintf(" " + t.title + "\n")
 	}
 
-	t.Table.Render()         // This populates the embedded table buffer
-	return t.buffer.String() // And we return its content
+	t.Table.Render()                 // This populates the embedded table buffer
+	return title + t.buffer.String() // And we return its content
 }
 
 // SortMapInt - Sort a map with int keys
