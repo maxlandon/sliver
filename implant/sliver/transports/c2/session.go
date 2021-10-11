@@ -44,10 +44,6 @@ import (
 	"github.com/bishopfox/sliver/implant/sliver/transports/httpclient"
 	// {{end}}
 
-	// {{if .Config.NamePipec2Enabled}}
-
-	// {{end}}
-
 	"github.com/bishopfox/sliver/implant/sliver/handlers"
 	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -209,7 +205,6 @@ func (t *C2) ServeSessionHandlers() {
 			log.Printf("[recv] unknown envelope type %d", envelope.Type)
 			// {{end}}
 			connection.RequestSend(&sliverpb.Envelope{
-				// connection.Send <- &sliverpb.Envelope{
 				ID:                 envelope.ID,
 				Data:               nil,
 				UnknownMessageType: true,

