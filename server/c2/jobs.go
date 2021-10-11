@@ -225,7 +225,7 @@ func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 		logger.Infof("Restarting persistent server job %s", core.GetShortID(persisted.ID))
 
 		// Any low level management stuff before anything.
-		profile := models.C2ProfileFromProtobuf(persisted.Profile)
+		profile := models.MalleableFromProtobuf(persisted.Profile)
 
 		// We get the comm.Net interface for the session: if nil,
 		// pass 0 and return the server interfaces functions

@@ -34,7 +34,7 @@ import (
 func (rpc *Server) CreateMalleable(ctx context.Context, req *clientpb.CreateMalleableReq) (*clientpb.CreateMalleable, error) {
 
 	// Parse Protobuf profile into a DB suited one
-	profile := models.C2ProfileFromProtobuf(req.Profile)
+	profile := models.MalleableFromProtobuf(req.Profile)
 
 	// If we can find a C2 profile that has:
 	// The same context session
@@ -85,7 +85,7 @@ func (rpc *Server) DeleteMalleable(ctx context.Context, req *clientpb.DeleteMall
 // UpdateMalleable - Update a C2 profile with new values
 func (rpc *Server) UpdateMalleable(ctx context.Context, req *clientpb.UpdateMalleableReq) (res *clientpb.UpdateMalleable, err error) {
 
-	profile := models.C2ProfileFromProtobuf(req.Profile)
+	profile := models.MalleableFromProtobuf(req.Profile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find profile: %s", err)
 	}

@@ -39,9 +39,11 @@ message BeaconTasks {
 
 // Register - First message the implant sends to the server
 message Register {
+  // Base
+  string UUID = 19;
   string Name = 1;
-  string Hostname = 2;
   string HostUUID = 3;
+  string Hostname = 2;
   string Username = 4;
   string Uid = 5;
   string Gid = 6;
@@ -49,16 +51,13 @@ message Register {
   string Arch = 8;
   int32 Pid = 9;
   string Filename = 10;
-  string ActiveC2 = 11; //
   string Version = 12;
-  int64 ReconnectInterval = 13;//
-  string ProxyURL = 14;//
-  int64 PollTimeout = 15;//
   string ConfigID = 16;
   string WorkingDirectory = 17;
         
-  string TransportID = 18;
-  string UUID = 19;
+  // Transports
+  string ActiveTransportID = 18;
+  repeated Transport TransportStats = 20; // Attempts/failures
 }
 
 message BeaconRegister {
@@ -89,11 +88,10 @@ message Malleable {
 
   // Technicals
   int64 PollTimeout = 10;
-  int32 MaxConnectionErrors = 11;
-  bool IsFallback = 13; // When previous C2 failed, this transport is used if next
+  int64 ReconnectInterval = 11;
+  int32 MaxConnectionErrors = 12;
   bool Persistent = 19;
-  bool Active = 14;     // Probably not needed
-  string ConnectionStrategy = 15;
+  bool Active = 14;     
   bool CommDisabled = 18;
 
   // Beaconing
@@ -189,7 +187,8 @@ message Transport {
   int32 Order = 3;
   bool Running = 4;
   int32 Attempts = 5;
-  Malleable Profile = 6;
+  int32 Failures = 6;
+  Malleable Profile = 7;
 }
 
 message TransportAddReq {

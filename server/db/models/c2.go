@@ -36,8 +36,10 @@ type Transport struct {
 	ImplantBuildID uuid.UUID // Compile-time transports
 	SessionID      uuid.UUID // Runtime transports
 
-	Priority  int
+	Priority  int32
 	Running   bool
+	Attempts  int32
+	Failures  int32
 	ProfileID uuid.UUID
 	Profile   *Malleable
 }
@@ -49,6 +51,22 @@ func (t *Transport) ToProtobuf() *sliverpb.Transport {
 		Order:   int32(t.Priority),
 		Running: t.Running,
 		Profile: t.Profile.ToProtobuf(),
+	}
+
+	return transport
+}
+
+// TransportFromProtobuf - Given a transport passed by clients/implants, get a transport.
+func TransportFromProtobuf(t *sliverpb.Transport) *Transport {
+
+	transport := &Transport{
+		ID:        uuid.FromStringOrNil(t.ID),
+		Running:   t.Running,
+		Priority:  t.Order,
+		Attempts:  t.Attempts,
+		Failures:  t.Failures,
+		ProfileID: uuid.FromStringOrNil(t.Profile.ID),
+		Profile:   MalleableFromProtobuf(t.Profile),
 	}
 
 	return transport
@@ -182,8 +200,8 @@ func (p *Malleable) ToProtobuf() *sliverpb.Malleable {
 
 }
 
-// C2ProfileFromProtobuf - Convert C2 profile into Protobuf
-func C2ProfileFromProtobuf(p *sliverpb.Malleable) (profile *Malleable) {
+// MalleableFromProtobuf - Convert C2 profile into Protobuf
+func MalleableFromProtobuf(p *sliverpb.Malleable) (profile *Malleable) {
 	profile = &Malleable{
 		// Core
 		ID:               uuid.FromStringOrNil(p.ID),

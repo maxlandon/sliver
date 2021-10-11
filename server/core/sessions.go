@@ -75,13 +75,8 @@ type Session struct {
 	State            clientpb.State
 
 	// Transports
-	Connection        *ImplantConnection
-	TransportID       string
-	ActiveC2          string
-	RemoteAddress     string
-	ReconnectInterval int64
-	ProxyURL          string
-	PollTimeout       int64
+	Connection *ImplantConnection
+	Transport  *models.Transport
 }
 
 func (s *Session) LastCheckin() time.Time {
@@ -102,11 +97,13 @@ func (s *Session) CurrentState() clientpb.State {
 		return s.State
 	}
 
+	transport := s.Transport.Profile
+
 	sessionsLog.Debugf("Last checkin was %v", s.Connection.LastMessage)
 	padding := time.Duration(10 * time.Second) // Arbitrary margin of error
 	timePassed := time.Now().Sub(s.LastCheckin())
-	reconnect := time.Duration(s.ReconnectInterval)
-	pollTimeout := time.Duration(s.PollTimeout)
+	reconnect := time.Duration(transport.Interval)
+	pollTimeout := time.Duration(transport.PollTimeout)
 	if timePassed < reconnect+padding && timePassed < pollTimeout+padding {
 		sessionsLog.Debugf("Last message within reconnect interval / poll timeout with padding")
 		return clientpb.State_Alive
@@ -123,32 +120,26 @@ func (s *Session) CurrentState() clientpb.State {
 // ToProtobuf - Get the protobuf version of the object
 func (s *Session) ToProtobuf() *clientpb.Session {
 	return &clientpb.Session{
-		ID:                uint32(s.ID),
-		UUID:              s.UUID,
-		BeaconID:          s.BeaconID,
-		Name:              s.Name,
-		Hostname:          s.Hostname,
-		Username:          s.Username,
-		HostUUID:          s.HostUUID,
-		UID:               s.UID,
-		GID:               s.GID,
-		OS:                s.Os,
-		Version:           s.Version,
-		Arch:              s.Arch,
-		Transport:         s.Connection.Transport,
-		RemoteAddress:     s.Connection.RemoteAddress,
-		PID:               int32(s.PID),
-		Filename:          s.Filename,
-		LastCheckin:       s.LastCheckin().Unix(),
-		ActiveC2:          s.ActiveC2,
-		State:             s.CurrentState(),
-		ReconnectInterval: s.ReconnectInterval,
-		ProxyURL:          s.ProxyURL,
-		PollTimeout:       s.PollTimeout,
-		Burned:            s.Burned,
-		WorkingDirectory:  s.WorkingDirectory,
+		ID:               uint32(s.ID),
+		UUID:             s.UUID,
+		BeaconID:         s.BeaconID,
+		Name:             s.Name,
+		Hostname:         s.Hostname,
+		Username:         s.Username,
+		HostUUID:         s.HostUUID,
+		UID:              s.UID,
+		GID:              s.GID,
+		OS:               s.Os,
+		Version:          s.Version,
+		Arch:             s.Arch,
+		PID:              int32(s.PID),
+		Filename:         s.Filename,
+		LastCheckin:      s.LastCheckin().Unix(),
+		State:            s.CurrentState(),
+		Burned:           s.Burned,
+		WorkingDirectory: s.WorkingDirectory,
 		// ConfigID:          s.ConfigID,
-		TransportID: s.TransportID,
+		Transport: s.Transport.ToProtobuf(),
 	}
 }
 
@@ -184,7 +175,7 @@ func (s *Session) Request(msgType uint32, timeout time.Duration, data []byte) ([
 }
 
 // UpdateWorkingDirectory - Updated when either cd is invoked successfully,
-// or if comparison does not match
+// or if comparison does not match. TODO: Push event to all consoles, if they're using it.
 func (s *Session) UpdateWorkingDirectory(path string) {
 	s.WorkingDirectory = path
 }

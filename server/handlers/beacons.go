@@ -61,6 +61,9 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 			ID: uuid.FromStringOrNil(beaconReg.ID),
 		}
 	}
+
+	// Core ------------------------------------------------------------
+
 	beacon.Name = beaconReg.Register.Name
 	beacon.Hostname = beaconReg.Register.Hostname
 	beacon.HostUUID = uuid.FromStringOrNil(beaconReg.Register.HostUUID)
@@ -75,17 +78,36 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 	beacon.Filename = beaconReg.Register.Filename
 	beacon.LastCheckin = implantConn.LastMessage
 	beacon.Version = beaconReg.Register.Version
-	beacon.ReconnectInterval = beaconReg.Register.ReconnectInterval
-	beacon.ProxyURL = beaconReg.Register.ProxyURL
-	beacon.PollTimeout = beaconReg.Register.PollTimeout
 	// beacon.ConfigID = uuid.FromStringOrNil(beaconReg.Register.ConfigID)
 	beacon.WorkingDirectory = beaconReg.Register.WorkingDirectory
 	beacon.State = clientpb.State_Alive
-	beacon.TransportID = beaconReg.Register.TransportID
+
+	// Transports ------------------------------------------------------
+
+	// Get the current transport used by the Session
+	transport, err := db.TransportByID(beacon.TransportID)
+	if transport == nil {
+		beaconHandlerLog.Errorf("Failed to find beacon transport %s", beacon.TransportID)
+		return nil
+	}
+	beacon.TransportID = transport.ID.String()
+
+	// Update all transports, including the running one, with their statistics
+	err = core.UpdateSessionTransports(beaconReg.Register.TransportStats)
+	if err != nil {
+		sessionHandlerLog.Errorf("Error when updating session transports: %s", err)
+	}
+
+	beacon.TransportID = transport.ID.String()
+	// beacon.ReconnectInterval = beaconReg.Register.ReconnectInterval
+	beacon.ProxyURL = transport.Profile.ProxyURL
+	beacon.PollTimeout = transport.Profile.PollTimeout
 
 	beacon.Interval = beaconReg.Interval
 	beacon.Jitter = beaconReg.Jitter
 	beacon.NextCheckin = beaconReg.NextCheckin
+
+	// Registration ----------------------------------------------------
 
 	err = db.Session().Save(beacon).Error
 	if err != nil {
@@ -96,24 +118,6 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 		Type:   clientpb.EventType_BeaconRegistered,
 		Beacon: beacon,
 	})
-
-	// Transport ---------------------------------------------------------------------------
-
-	// Get the current transport used by the Session
-	transport, err := db.TransportByID(beacon.TransportID)
-	if transport == nil {
-		beaconHandlerLog.Errorf("Failed to find beacon transport %s", beacon.TransportID)
-		return nil
-	}
-	beacon.TransportID = transport.ID.String()
-
-	// Save the transport as running
-	transport.Running = true
-	transport.SessionID = gofrsUuid.FromStringOrNil(beacon.ID.String())
-	err = db.Session().Save(&transport).Error
-	if err != nil {
-		beaconHandlerLog.Errorf("Failed to update Transport: %s", err)
-	}
 
 	return nil
 }
@@ -144,6 +148,7 @@ func beaconTasksHandler(implantConn *core.ImplantConnection, data []byte) *slive
 	}
 
 	beaconHandlerLog.Infof("Beacon %s requested pending task(s)", beaconTasks.ID)
+
 	pendingTasks, err := db.PendingBeaconTasksByBeaconID(beaconTasks.ID)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		beaconHandlerLog.Errorf("Beacon task database error: %s", err)
@@ -207,5 +212,94 @@ func beaconTaskResults(beaconID string, taskEnvelopes []*sliverpb.Envelope) *sli
 			Data: eventData,
 		})
 	}
+	return nil
+}
+
+// switchBeacon - Create or update a beacon with the registration, and if the previous target was a session, remove it.
+func switchBeacon(s *core.Session, r *sliverpb.RegisterTransportSwitch, conn *core.ImplantConnection, t *models.Transport) error {
+	reg := r.Beacon
+
+	beaconHandlerLog.Infof("[Switching] Beacon registration from %s", reg.ID)
+
+	// Get beacon if existing
+	beacon, err := db.BeaconByID(reg.ID)
+	beaconHandlerLog.Debugf("Found %v err = %s", beacon, err)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		beaconHandlerLog.Errorf("Database query error %s", err)
+		return nil
+	}
+
+	// Core ------------------------------------------------------------
+
+	beacon.Name = reg.Register.Name
+	beacon.Hostname = reg.Register.Hostname
+	beacon.HostUUID = gofrsUuid.FromStringOrNil(reg.Register.HostUUID)
+	beacon.Username = reg.Register.Username
+	beacon.UID = reg.Register.Uid
+	beacon.GID = reg.Register.Gid
+	beacon.OS = reg.Register.Os
+	beacon.Arch = reg.Register.Arch
+	beacon.PID = reg.Register.Pid
+	beacon.Filename = reg.Register.Filename
+	beacon.LastCheckin = conn.LastMessage
+	beacon.Version = reg.Register.Version
+	// beacon.ConfigID = uuid.FromStringOrNil(reg.Register.ConfigID)
+	beacon.WorkingDirectory = reg.Register.WorkingDirectory
+	beacon.State = clientpb.State_Alive
+	if s != nil {
+		beacon.SessionID = s.UUID
+	}
+
+	// Transports ------------------------------------------------------
+
+	beacon.Transport = conn.Transport
+	beacon.RemoteAddress = conn.RemoteAddress
+	beacon.TransportID = t.ID.String()
+
+	// beacon.ReconnectInterval = reg.Register.ReconnectInterval
+	beacon.ProxyURL = t.Profile.ProxyURL
+	beacon.PollTimeout = t.Profile.PollTimeout
+
+	beacon.Interval = reg.Interval
+	beacon.Jitter = reg.Jitter
+	beacon.NextCheckin = reg.NextCheckin
+
+	// Update all transports, including the running one, with their statistics
+	err = core.UpdateSessionTransports(r.Session.TransportStats)
+	if err != nil {
+		sessionHandlerLog.Errorf("Error when updating session transports: %s", err)
+	}
+
+	// Registration ----------------------------------------------------
+
+	err = db.Session().Save(beacon).Error
+	if err != nil {
+		beaconHandlerLog.Errorf("Database write %s", err)
+	}
+
+	// Prepare an event, either a registration if new beacon...
+	var event core.Event
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// New beacon
+		beacon = &models.Beacon{
+			ID: gofrsUuid.FromStringOrNil(reg.ID),
+		}
+		event = core.Event{
+			Type:    clientpb.EventType_BeaconRegistered,
+			Beacon:  beacon,
+			Session: s,
+		}
+	} else {
+		// ... Or if we have found the beacon, update it
+		event = core.Event{
+			Type:    clientpb.EventType_BeaconUpdated,
+			Beacon:  beacon,
+			Session: s,
+		}
+	}
+
+	// Publish the corresponding type of event for this switch
+	core.EventBroker.Publish(event)
+
 	return nil
 }

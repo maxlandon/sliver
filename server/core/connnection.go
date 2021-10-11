@@ -199,6 +199,29 @@ func TransportsByTarget(session *Session, beacon *models.Beacon) (transports []*
 	return
 }
 
+// UpdateSessionTransports - When a session registers/switches, it sends stats on all
+// of its currently available transports. Update them in DB for clients to see.
+func UpdateSessionTransports(transports []*sliverpb.Transport) (err error) {
+
+	for _, t := range transports {
+		transport, err := db.TransportByID(t.ID)
+		if err != nil || transport == nil {
+			sessionsLog.Errorf("Failed to find transport %s", t.ID)
+		}
+
+		transport.Attempts = t.Attempts
+		transport.Failures = t.Failures
+		transport.Priority = t.Order
+
+		err = db.Session().Save(transport).Error
+		if err != nil {
+			sessionsLog.Errorf("Failed to save transport %s", t.ID)
+		}
+	}
+
+	return
+}
+
 // CleanupSessionTransports - Once a session has been killed (and not merely disconnected)
 // delete all the transports that have been set at runtime, so that they don't pile up at
 // each new session reconnection/restart.

@@ -47,7 +47,7 @@ import (
 func (rpc *Server) StartHandlerStage(ctx context.Context, req *clientpb.HandlerStageReq) (res *clientpb.HandlerStage, err error) {
 
 	// Any low level management stuff before anything.
-	profile := models.C2ProfileFromProtobuf(req.Profile)
+	profile := models.MalleableFromProtobuf(req.Profile)
 	session := core.Sessions.Get(req.Request.SessionID)
 
 	// Get a logger for the entire stream
@@ -117,7 +117,7 @@ func (rpc *Server) StartHandlerStage(ctx context.Context, req *clientpb.HandlerS
 func (rpc *Server) StartHandlerStager(ctx context.Context, req *clientpb.HandlerStagerReq) (res *clientpb.HandlerStager, err error) {
 
 	// Any low level management stuff before anything.
-	profile := models.C2ProfileFromProtobuf(req.Profile)
+	profile := models.MalleableFromProtobuf(req.Profile)
 	session := core.Sessions.Get(req.Request.SessionID)
 
 	// Get a logger for the entire stream

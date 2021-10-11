@@ -119,7 +119,9 @@ message SaveSliverSettings {
 // [ Core ] ----------------------------------------
 
 message Session {
+  // Base
   uint32 ID = 1;
+  string UUID = 27;      // generated at runtime by the session
   string BeaconID = 200; // Associated runtime beacon, if any
   string Name = 2;
   string Hostname = 3;
@@ -129,24 +131,19 @@ message Session {
   string GID = 7;
   string OS = 8;
   string Arch = 9;
-  string Transport = 10;
-  string RemoteAddress = 11;
   int32 PID = 12;
   string Filename = 13; // Argv[0]
   int64 LastCheckin = 14;
-  string ActiveC2 = 15;
   string Version = 16;
   bool Evasion = 17;
   State State = 18;
-  int64 ReconnectInterval = 19;
-  string ProxyURL = 20;
-  int64 PollTimeout = 21;
   bool Burned = 22;
+  string WorkingDirectory = 25;
   repeated string Extensions = 23;
   // string ConfigID = 24;
-  string WorkingDirectory = 25;
-  string TransportID = 26;
-  string UUID = 27; // generated at runtime by the session
+
+  // Transports
+  sliverpb.Transport Transport = 50;
 }
 
 message Beacon {
