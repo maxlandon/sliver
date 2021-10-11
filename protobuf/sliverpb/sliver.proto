@@ -183,19 +183,20 @@ message MalleableHTTP {
 
 // Transports ---------------------------------------------------------------------------
 
-message TransportsReq {
-  commonpb.Request Request = 9;
-}
-
-message Transports {
-  repeated Malleable Available = 1;
-  commonpb.Response Response = 9;
+message Transport {
+  string ID = 1;
+  string SessionID = 2;
+  int32 Order = 3;
+  bool Running = 4;
+  int32 Attempts = 5;
+  Malleable Profile = 6;
 }
 
 message TransportAddReq {
-  Malleable Profile = 1;
-  int32 Priority = 2;
-  bool Switch = 3;
+  string ID = 1;
+  Malleable Profile = 2;
+  int32 Priority = 3;
+  bool Switch = 4;
   commonpb.Request Request = 9;
 }
 
@@ -214,6 +215,16 @@ message TransportDelete {
   bool Success = 1;
   commonpb.Response Response = 9;
 }
+
+message TransportsReq {
+  commonpb.Request Request = 9;
+}
+
+message Transports {
+  repeated Transport Transports = 1;
+  commonpb.Response Response = 9;
+}
+
 
 message TransportSwitchReq {
   string ID = 1;

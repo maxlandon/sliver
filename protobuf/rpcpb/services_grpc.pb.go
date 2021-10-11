@@ -59,10 +59,10 @@ type SliverRPCClient interface {
 	StartHandlerStager(ctx context.Context, in *clientpb.HandlerStagerReq, opts ...grpc.CallOption) (*clientpb.HandlerStager, error)
 	CloseC2Handler(ctx context.Context, in *clientpb.HandlerCloseReq, opts ...grpc.CallOption) (*clientpb.HandlerClose, error)
 	// *** Transports ****
-	AddTransport(ctx context.Context, in *clientpb.AddTransportReq, opts ...grpc.CallOption) (*clientpb.AddTransport, error)
-	DeleteTransport(ctx context.Context, in *clientpb.DeleteTransportReq, opts ...grpc.CallOption) (*clientpb.DeleteTransport, error)
-	SwitchTransport(ctx context.Context, in *clientpb.SwitchTransportReq, opts ...grpc.CallOption) (*clientpb.SwitchTransport, error)
-	GetTransports(ctx context.Context, in *clientpb.GetTransportsReq, opts ...grpc.CallOption) (*clientpb.GetTransports, error)
+	AddTransport(ctx context.Context, in *sliverpb.TransportAddReq, opts ...grpc.CallOption) (*sliverpb.TransportAdd, error)
+	DeleteTransport(ctx context.Context, in *sliverpb.TransportDeleteReq, opts ...grpc.CallOption) (*sliverpb.TransportDelete, error)
+	SwitchTransport(ctx context.Context, in *sliverpb.TransportSwitchReq, opts ...grpc.CallOption) (*sliverpb.TransportSwitch, error)
+	GetTransports(ctx context.Context, in *sliverpb.TransportsReq, opts ...grpc.CallOption) (*sliverpb.Transports, error)
 	// *** Completions ****
 	CompleteServerInterfaces(ctx context.Context, in *sliverpb.IfconfigReq, opts ...grpc.CallOption) (*sliverpb.Ifconfig, error)
 	CompleteSessionPath(ctx context.Context, in *sliverpb.LsReq, opts ...grpc.CallOption) (*sliverpb.Ls, error)
@@ -413,8 +413,8 @@ func (c *sliverRPCClient) CloseC2Handler(ctx context.Context, in *clientpb.Handl
 	return out, nil
 }
 
-func (c *sliverRPCClient) AddTransport(ctx context.Context, in *clientpb.AddTransportReq, opts ...grpc.CallOption) (*clientpb.AddTransport, error) {
-	out := new(clientpb.AddTransport)
+func (c *sliverRPCClient) AddTransport(ctx context.Context, in *sliverpb.TransportAddReq, opts ...grpc.CallOption) (*sliverpb.TransportAdd, error) {
+	out := new(sliverpb.TransportAdd)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/AddTransport", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -422,8 +422,8 @@ func (c *sliverRPCClient) AddTransport(ctx context.Context, in *clientpb.AddTran
 	return out, nil
 }
 
-func (c *sliverRPCClient) DeleteTransport(ctx context.Context, in *clientpb.DeleteTransportReq, opts ...grpc.CallOption) (*clientpb.DeleteTransport, error) {
-	out := new(clientpb.DeleteTransport)
+func (c *sliverRPCClient) DeleteTransport(ctx context.Context, in *sliverpb.TransportDeleteReq, opts ...grpc.CallOption) (*sliverpb.TransportDelete, error) {
+	out := new(sliverpb.TransportDelete)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/DeleteTransport", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -431,8 +431,8 @@ func (c *sliverRPCClient) DeleteTransport(ctx context.Context, in *clientpb.Dele
 	return out, nil
 }
 
-func (c *sliverRPCClient) SwitchTransport(ctx context.Context, in *clientpb.SwitchTransportReq, opts ...grpc.CallOption) (*clientpb.SwitchTransport, error) {
-	out := new(clientpb.SwitchTransport)
+func (c *sliverRPCClient) SwitchTransport(ctx context.Context, in *sliverpb.TransportSwitchReq, opts ...grpc.CallOption) (*sliverpb.TransportSwitch, error) {
+	out := new(sliverpb.TransportSwitch)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/SwitchTransport", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -440,8 +440,8 @@ func (c *sliverRPCClient) SwitchTransport(ctx context.Context, in *clientpb.Swit
 	return out, nil
 }
 
-func (c *sliverRPCClient) GetTransports(ctx context.Context, in *clientpb.GetTransportsReq, opts ...grpc.CallOption) (*clientpb.GetTransports, error) {
-	out := new(clientpb.GetTransports)
+func (c *sliverRPCClient) GetTransports(ctx context.Context, in *sliverpb.TransportsReq, opts ...grpc.CallOption) (*sliverpb.Transports, error) {
+	out := new(sliverpb.Transports)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/GetTransports", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1391,10 +1391,10 @@ type SliverRPCServer interface {
 	StartHandlerStager(context.Context, *clientpb.HandlerStagerReq) (*clientpb.HandlerStager, error)
 	CloseC2Handler(context.Context, *clientpb.HandlerCloseReq) (*clientpb.HandlerClose, error)
 	// *** Transports ****
-	AddTransport(context.Context, *clientpb.AddTransportReq) (*clientpb.AddTransport, error)
-	DeleteTransport(context.Context, *clientpb.DeleteTransportReq) (*clientpb.DeleteTransport, error)
-	SwitchTransport(context.Context, *clientpb.SwitchTransportReq) (*clientpb.SwitchTransport, error)
-	GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error)
+	AddTransport(context.Context, *sliverpb.TransportAddReq) (*sliverpb.TransportAdd, error)
+	DeleteTransport(context.Context, *sliverpb.TransportDeleteReq) (*sliverpb.TransportDelete, error)
+	SwitchTransport(context.Context, *sliverpb.TransportSwitchReq) (*sliverpb.TransportSwitch, error)
+	GetTransports(context.Context, *sliverpb.TransportsReq) (*sliverpb.Transports, error)
 	// *** Completions ****
 	CompleteServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error)
 	CompleteSessionPath(context.Context, *sliverpb.LsReq) (*sliverpb.Ls, error)
@@ -1586,16 +1586,16 @@ func (UnimplementedSliverRPCServer) StartHandlerStager(context.Context, *clientp
 func (UnimplementedSliverRPCServer) CloseC2Handler(context.Context, *clientpb.HandlerCloseReq) (*clientpb.HandlerClose, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CloseC2Handler not implemented")
 }
-func (UnimplementedSliverRPCServer) AddTransport(context.Context, *clientpb.AddTransportReq) (*clientpb.AddTransport, error) {
+func (UnimplementedSliverRPCServer) AddTransport(context.Context, *sliverpb.TransportAddReq) (*sliverpb.TransportAdd, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddTransport not implemented")
 }
-func (UnimplementedSliverRPCServer) DeleteTransport(context.Context, *clientpb.DeleteTransportReq) (*clientpb.DeleteTransport, error) {
+func (UnimplementedSliverRPCServer) DeleteTransport(context.Context, *sliverpb.TransportDeleteReq) (*sliverpb.TransportDelete, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteTransport not implemented")
 }
-func (UnimplementedSliverRPCServer) SwitchTransport(context.Context, *clientpb.SwitchTransportReq) (*clientpb.SwitchTransport, error) {
+func (UnimplementedSliverRPCServer) SwitchTransport(context.Context, *sliverpb.TransportSwitchReq) (*sliverpb.TransportSwitch, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SwitchTransport not implemented")
 }
-func (UnimplementedSliverRPCServer) GetTransports(context.Context, *clientpb.GetTransportsReq) (*clientpb.GetTransports, error) {
+func (UnimplementedSliverRPCServer) GetTransports(context.Context, *sliverpb.TransportsReq) (*sliverpb.Transports, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransports not implemented")
 }
 func (UnimplementedSliverRPCServer) CompleteServerInterfaces(context.Context, *sliverpb.IfconfigReq) (*sliverpb.Ifconfig, error) {
@@ -2365,7 +2365,7 @@ func _SliverRPC_CloseC2Handler_Handler(srv interface{}, ctx context.Context, dec
 }
 
 func _SliverRPC_AddTransport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.AddTransportReq)
+	in := new(sliverpb.TransportAddReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2377,13 +2377,13 @@ func _SliverRPC_AddTransport_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/rpcpb.SliverRPC/AddTransport",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).AddTransport(ctx, req.(*clientpb.AddTransportReq))
+		return srv.(SliverRPCServer).AddTransport(ctx, req.(*sliverpb.TransportAddReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SliverRPC_DeleteTransport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.DeleteTransportReq)
+	in := new(sliverpb.TransportDeleteReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2395,13 +2395,13 @@ func _SliverRPC_DeleteTransport_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: "/rpcpb.SliverRPC/DeleteTransport",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).DeleteTransport(ctx, req.(*clientpb.DeleteTransportReq))
+		return srv.(SliverRPCServer).DeleteTransport(ctx, req.(*sliverpb.TransportDeleteReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SliverRPC_SwitchTransport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.SwitchTransportReq)
+	in := new(sliverpb.TransportSwitchReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2413,13 +2413,13 @@ func _SliverRPC_SwitchTransport_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: "/rpcpb.SliverRPC/SwitchTransport",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).SwitchTransport(ctx, req.(*clientpb.SwitchTransportReq))
+		return srv.(SliverRPCServer).SwitchTransport(ctx, req.(*sliverpb.TransportSwitchReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SliverRPC_GetTransports_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.GetTransportsReq)
+	in := new(sliverpb.TransportsReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2431,7 +2431,7 @@ func _SliverRPC_GetTransports_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/rpcpb.SliverRPC/GetTransports",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).GetTransports(ctx, req.(*clientpb.GetTransportsReq))
+		return srv.(SliverRPCServer).GetTransports(ctx, req.(*sliverpb.TransportsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }

@@ -58,10 +58,10 @@ service SliverRPC {
     rpc CloseC2Handler(clientpb.HandlerCloseReq) returns (clientpb.HandlerClose);
 
     // *** Transports ****
-    rpc AddTransport(clientpb.AddTransportReq) returns (clientpb.AddTransport);
-    rpc DeleteTransport(clientpb.DeleteTransportReq) returns (clientpb.DeleteTransport);
-    rpc SwitchTransport(clientpb.SwitchTransportReq) returns (clientpb.SwitchTransport);
-    rpc GetTransports(clientpb.GetTransportsReq) returns (clientpb.GetTransports);
+    rpc AddTransport(sliverpb.TransportAddReq) returns (sliverpb.TransportAdd);
+    rpc DeleteTransport(sliverpb.TransportDeleteReq) returns (sliverpb.TransportDelete);
+    rpc SwitchTransport(sliverpb.TransportSwitchReq) returns (sliverpb.TransportSwitch);
+    rpc GetTransports(sliverpb.TransportsReq) returns (sliverpb.Transports);
 
     // *** Completions ****  
     rpc CompleteServerInterfaces(sliverpb.IfconfigReq) returns (sliverpb.Ifconfig);

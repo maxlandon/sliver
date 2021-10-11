@@ -56,8 +56,9 @@ import (
 // C2 - A wrapper around a physical connection, embedding what is necessary to perform
 // connection multiplexing, and RPC layer management around these muxed logical streams.
 type C2 struct {
-	ID    string        // Short ID  for easy selection
-	mutex *sync.RWMutex // Concurrency management
+	ID     string        // Short ID  for easy selection
+	mutex  *sync.RWMutex // Concurrency management
+	closed chan bool     // Notify the transport goroutines we're closed
 
 	// The priority of use of this implant, simply increased at load time by C2s struct
 	Priority int
@@ -107,6 +108,7 @@ func NewC2FromBytes(profileData string) (t *C2, err error) {
 	// Base transport settings
 	t = &C2{
 		mutex:      &sync.RWMutex{},
+		closed:     make(chan bool, 1),
 		failures:   0,
 		attempts:   0,
 		Profile:    &sliverpb.Malleable{},
@@ -146,6 +148,7 @@ func NewC2FromProfile(p *sliverpb.Malleable) (t *C2, err error) {
 	t = &C2{
 		ID:         p.ID,
 		mutex:      &sync.RWMutex{},
+		closed:     make(chan bool, 1),
 		failures:   0,
 		attempts:   0,
 		Profile:    p,
@@ -266,7 +269,7 @@ func (t *C2) Register(isSwitch bool, oldTransportID string) (err error) {
 	// Or register a beacon, wrapping the register into a special envelope.
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
 		t.Connection.RequestSend(t.registerBeacon())
-		t.Stop() // RISKY WITH RACE CONDITIONS
+		t.Connection.Close()
 		time.Sleep(time.Second)
 	}
 
@@ -283,6 +286,10 @@ func (t *C2) Stop() (err error) {
 	// {{if .Config.Debug}}
 	log.Printf("Closing C2 %s (CC: %s) [%s]", t.Profile.ID, t.uri.String(), t.Profile.Type.String())
 	// {{end}}
+
+	// Notify all goroutines we're done. This is used
+	// to stop beaconing loops, but the chan is non-blocking.
+	t.closed <- true
 
 	// Close the RPC connection per se.
 	err = t.Connection.Close()

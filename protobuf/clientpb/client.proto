@@ -438,54 +438,6 @@ message HandlerClose {
   commonpb.Response Response = 9;
 }
 
-// [ Transports ] -----------------------------------------
-
-message Transport {
-  string ID = 1;
-  string SessionID = 2;
-  int32 Order = 3;
-  bool Running = 4;
-  sliverpb.Malleable Profile = 5;
-}
-
-message AddTransportReq {
-  string ID = 1;
-  bool Switch = 2;
-  int32 Priority = 3;
-  commonpb.Request Request = 9;
-}
-
-message AddTransport {
-  commonpb.Response Response = 9;
-}
-
-message SwitchTransportReq {
-  string ID = 1;
-  commonpb.Request Request = 9;
-}
-
-message SwitchTransport {
-  commonpb.Response Response = 9;
-}
-
-message DeleteTransportReq {
-  string ID = 1;
-  commonpb.Request Request = 9;
-}
-
-message DeleteTransport {
-  commonpb.Response Response = 9;
-}
-
-message GetTransportsReq {
-  commonpb.Request Request = 9;
-}
-
-message GetTransports {
-  repeated Transport Transports = 1;
-  commonpb.Response Response = 9;
-}
-
 // [ commands ] ----------------------------------------
 
 message Sessions {

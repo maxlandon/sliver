@@ -332,11 +332,13 @@ func (t *c2s) Switch(ID string) (err error) {
 	// {{if .Config.CommEnabled}}
 
 	// Close the Comm system, and all comm listeners
-	err = comm.PrepareCommSwitch()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("Comm Switch error: " + err.Error())
-		// {{end}}
+	if !t.Active.Profile.CommDisabled && t.Active.Profile.Type != sliverpb.C2Type_Beacon {
+		err = comm.PrepareCommSwitch()
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("Comm Switch error: " + err.Error())
+			// {{end}}
+		}
 	}
 	// {{end}}
 

