@@ -21,12 +21,13 @@ package transports
 import (
 	"context"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"google.golang.org/protobuf/proto"
 )
 
 // Switch - Switch the active transport of the current target
@@ -73,8 +74,8 @@ func (s *Switch) executeAsync(resp *sliverpb.TransportSwitch) (err error) {
 				return
 			}
 
-			log.Infof("Switching current transport... (%s)", s.Args.TransportID)
-			log.Infof("The session/beacon and connectivity status should update itself soon.")
+			log.InfofAsync("Switching current transport... (%s)", s.Args.TransportID)
+			log.InfofAsync("The session/beacon and connectivity status should update itself soon.")
 		})
 	}
 	return nil // Always return nil from just a task assignment

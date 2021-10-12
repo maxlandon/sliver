@@ -60,13 +60,19 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 		return nil
 	}
 
-	// Update the old transport
+	// Update both old and new transports (don't know why: bug in transportsStats
+	// at register that does not give correct status, but good attempts/failures)
 	oldTransport, err := db.TransportByID(register.OldTransportID)
 	if err != nil {
 		sessionHandlerLog.Errorf("(Transport switch) Failed to find old transport %s", register.OldTransportID)
 	}
 	oldTransport.Running = false
 	err = db.Session().Save(&oldTransport).Error
+	if err != nil {
+		sessionHandlerLog.Errorf("Failed to update Transport status: %s", err)
+	}
+	transport.Running = true
+	err = db.Session().Save(&transport).Error
 	if err != nil {
 		sessionHandlerLog.Errorf("Failed to update Transport status: %s", err)
 	}

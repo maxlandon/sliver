@@ -103,7 +103,7 @@ func addTransportHandler(envelope *sliverpb.Envelope, resp handlers.RPCResponse)
 	res := &sliverpb.TransportAdd{Response: &commonpb.Response{}}
 
 	// Instantiate the transport.
-	c2, err := NewC2FromProfile(req.Profile)
+	c2, err := NewMalleableFromProfile(req.Profile)
 	if err != nil {
 		res.Success = false
 		res.Response.Err = err.Error()

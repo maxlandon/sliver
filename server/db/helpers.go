@@ -516,10 +516,13 @@ func BeaconByID(id string) (*models.Beacon, error) {
 	err := Session().Where(
 		&models.Beacon{ID: uuid.FromStringOrNil(id)},
 	).First(beacon).Error
+	if err != nil {
+		return beacon, err
+	}
 
 	err = Session().Where(
 		&models.Transport{ID: uuid.FromStringOrNil(beacon.TransportID)},
-	).Find(beacon.Transport).Error
+	).Find(&beacon.Transport).Error
 
 	return beacon, err
 }
@@ -573,6 +576,14 @@ func BeaconTaskByID(taskID string) (*models.BeaconTask, error) {
 func ListBeacons() ([]*models.Beacon, error) {
 	beacons := []*models.Beacon{}
 	err := Session().Where(&models.Beacon{}).Find(&beacons).Error
+	for _, beacon := range beacons {
+		err = Session().Where(
+			&models.Transport{
+				ID: uuid.FromStringOrNil(beacon.TransportID),
+			},
+		).Find(beacon.Transport).Error
+	}
+
 	return beacons, err
 }
 

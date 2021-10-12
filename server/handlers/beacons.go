@@ -84,15 +84,21 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 	// Transports ------------------------------------------------------
 
 	// Get the current transport used by the Beacon
-	transport, err := db.TransportByID(beacon.TransportID)
+	transport, err := db.TransportByID(beaconReg.Register.ActiveTransportID)
 	if transport == nil {
 		beaconHandlerLog.Errorf("Failed to find beacon transport %s", beacon.TransportID)
 		return nil
 	}
+	transport.Running = true
 	transport.SessionID = beacon.ID
 	transport.RemoteAddress = implantConn.RemoteAddress
 	beacon.TransportID = transport.ID.String()
 	beacon.Transport = transport
+
+	err = db.Session().Save(&transport).Error
+	if err != nil {
+		sessionHandlerLog.Errorf("Failed to update Transport status: %s", err)
+	}
 
 	// Update all transports, including the running one, with their statistics
 	err = core.UpdateSessionTransports(beaconReg.Register.TransportStats)
@@ -246,11 +252,12 @@ func switchBeacon(s *core.Session, r *sliverpb.RegisterTransportSwitch, conn *co
 
 	// Transports ------------------------------------------------------
 
+	t.Running = true
 	beacon.TransportID = t.ID.String()
 	beacon.Transport = t
 
 	// Update all transports, including the running one, with their statistics
-	err = core.UpdateSessionTransports(r.Session.TransportStats)
+	err = core.UpdateSessionTransports(reg.Register.TransportStats)
 	if err != nil {
 		sessionHandlerLog.Errorf("Error when updating session transports: %s", err)
 	}

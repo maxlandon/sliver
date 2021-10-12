@@ -209,9 +209,10 @@ func UpdateSessionTransports(transports []*sliverpb.Transport) (err error) {
 			sessionsLog.Errorf("Failed to find transport %s", t.ID)
 		}
 
+		transport.Priority = t.Order
 		transport.Attempts = t.Attempts
 		transport.Failures = t.Failures
-		transport.Priority = t.Order
+		transport.Running = t.Running
 
 		err = db.Session().Save(transport).Error
 		if err != nil {

@@ -96,6 +96,9 @@ func (l *eventHook) Fire(log *logrus.Entry) (err error) {
 
 	// Final status line to be printed
 	line := logrusPrintLevels[log.Level]
+	if isSuccess, yes := log.Data["success"].(bool); yes && isSuccess {
+		line = success
+	}
 
 	// Print the component name in red if error
 	if log.Level == logrus.ErrorLevel {

@@ -34,7 +34,7 @@ var (
 	}
 
 	StateErrors = map[clientpb.State]error{
-		clientpb.State_Dead:       errors.New("Cannot use command: session is dead"),
+		// clientpb.State_Dead:       errors.New("Cannot use command: session is dead"),
 		clientpb.State_Sleep:      errors.New("Cannot use command: session is sleeping"),
 		clientpb.State_Switching:  errors.New("Cannot use command: currently switching to a bind transport: dial first"),
 		clientpb.State_Disconnect: errors.New("Cannot use command: beacon is currently disconnected"),

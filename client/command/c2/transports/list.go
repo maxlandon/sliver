@@ -73,8 +73,8 @@ func (l *List) Execute(args []string) (err error) {
 func printTransports(transports []*sliverpb.Transport) {
 
 	table := util.NewTable("")
-	headers := []string{"State", "Order", "ID", "Channel", "Direction", "Address", "Errs/Reconnect", "Jit/Interval", "SSH Comms"}
-	headLen := []int{0, 0, 0, 0, 0, 0, 0, 0, 0}
+	headers := []string{"State", "N°", "ID", "C2", "Direction", "Address", "Errs/Reconnect", "Jit/Interval", "SSH Comms", "tried/failed"}
+	headLen := []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	table.SetColumns(headers, headLen)
 
 	for _, t := range transports {
@@ -109,8 +109,21 @@ func printTransports(transports []*sliverpb.Transport) {
 			comms = readline.GREEN + "yes" + readline.RESET
 		}
 
+		// Attempts
+		var attempts string
+		if (t.Attempts == t.Failures) && t.Attempts == t.Profile.MaxConnectionErrors {
+			attempts = readline.BOLD + readline.RED
+		} else if t.Failures == 0 && t.Attempts > 1 {
+			attempts = readline.GREEN
+		} else if t.Failures > 0 {
+			attempts = readline.BOLD + readline.YELLOW
+		} else if t.Failures > 1 {
+			attempts = readline.YELLOW
+		}
+		attempts = attempts + fmt.Sprintf("%d / %d", t.Attempts, t.Failures)
+
 		// Add to table
-		table.AppendRow([]string{state, order, id, channel, dir, address, timeouts, jitInt, comms})
+		table.AppendRow([]string{state, order, id, channel, dir, address, timeouts, jitInt, comms, attempts})
 	}
 
 	fmt.Printf(table.Output())

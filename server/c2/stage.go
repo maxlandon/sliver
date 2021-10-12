@@ -103,7 +103,7 @@ func ServeListenerConnections(log *logrus.Entry, ln net.Listener) {
 func handleSliverConnection(log *logrus.Entry, conn net.Conn) {
 	log = log.WithField("component", "conn")
 
-	log.Debugf("New connection: (%s) %s <=> %s", conn.LocalAddr().Network, conn.LocalAddr(), conn.RemoteAddr())
+	log.Debugf("New connection: (%s) %s <=> %s", conn.LocalAddr().Network(), conn.LocalAddr(), conn.RemoteAddr())
 	implantConn := core.NewImplantConnection(conn.LocalAddr().Network(), conn.RemoteAddr().String())
 
 	// In the cleanup function, we add the automatic cleaning/deletion

