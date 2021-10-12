@@ -182,13 +182,17 @@ message MalleableHTTP {
 // Transports ---------------------------------------------------------------------------
 
 message Transport {
+  // Base
   string ID = 1;
   string SessionID = 2;
   int32 Order = 3;
   bool Running = 4;
-  int32 Attempts = 5;
-  int32 Failures = 6;
-  Malleable Profile = 7;
+  Malleable Profile = 5;
+
+  // Live
+  int32 Attempts = 6;
+  int32 Failures = 7;
+  string RemoteAddress = 8; // Filled by the Connection type
 }
 
 message TransportAddReq {

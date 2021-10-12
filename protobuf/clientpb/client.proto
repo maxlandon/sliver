@@ -157,8 +157,6 @@ message Beacon {
   string GID = 7;
   string OS = 8;
   string Arch = 9;
-  string Transport = 10;
-  string RemoteAddress = 11;
   int32 PID = 12;
   string Filename = 13; // Argv[0]
   int64 LastCheckin = 14;
@@ -170,15 +168,17 @@ message Beacon {
   int64 ReconnectInterval = 30;
   int64 PollTimeout = 31;
 
-  string ProxyURL = 20;
   int64 Interval = 21;
   int64 Jitter = 22;
   bool Burned = 23;
   int64 NextCheckin = 24;
-  string TransportID = 25;
 
   int64 TasksCount = 26;
   int64 TasksCountCompleted = 27;
+
+  // Transports
+  string TransportID = 25; // Query needs
+  sliverpb.Transport Transport = 50;
 }
 
 message Beacons {

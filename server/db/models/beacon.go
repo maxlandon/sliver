@@ -23,48 +23,41 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/gofrs/uuid"
 	"google.golang.org/protobuf/proto"
 	"gorm.io/gorm"
+
+	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // Beacon - Represents a host machine
 type Beacon struct {
-	CreatedAt time.Time `gorm:"->;<-:create;"`
-	// Base
-	ID                uuid.UUID `gorm:"type:uuid;"`
-	SessionID         string    // Associated runtime session, if any
-	Name              string
-	Hostname          string
-	HostUUID          uuid.UUID `gorm:"type:uuid;"` // Host UUID
-	Username          string
-	UID               string
-	GID               string
-	OS                string
-	Arch              string
-	Transport         string
-	RemoteAddress     string
-	PID               int32
-	Filename          string
-	LastCheckin       time.Time
-	Version           string
-	ReconnectInterval int64
-	ProxyURL          string
-	PollTimeout       int64
-	WorkingDirectory  string
-	State             clientpb.State
-
+	ID             uuid.UUID `gorm:"type:uuid;"`
 	ImplantBuildID uuid.UUID `gorm:"type:uuid;"`
-
-	Tasks []BeaconTask
-
+	CreatedAt      time.Time `gorm:"->;<-:create;"`
+	SessionID      string    // Associated runtime session, if any
+	// Base
+	Name             string
+	Hostname         string
+	HostUUID         uuid.UUID `gorm:"type:uuid;"` // Host UUID
+	Username         string
+	UID              string
+	GID              string
+	OS               string
+	Arch             string
+	PID              int32
+	Filename         string
+	Version          string
+	WorkingDirectory string
+	State            clientpb.State
+	// Beacon
+	LastCheckin time.Time
+	NextCheckin int64
+	Tasks       []BeaconTask
 	// Transports
 	TransportID string
-	Interval    int64
-	Jitter      int64
-	NextCheckin int64
+	Transport   *Transport
 }
 
 // BeforeCreate - GORM hook
@@ -73,35 +66,36 @@ func (b *Beacon) BeforeCreate(tx *gorm.DB) (err error) {
 	return nil
 }
 
+// ToProtobuf - Clients ask for the beacon object
 func (b *Beacon) ToProtobuf() *clientpb.Beacon {
-	return &clientpb.Beacon{
-		ID:                b.ID.String(),
-		SessionID:         b.SessionID,
-		Name:              b.Name,
-		Hostname:          b.Hostname,
-		UUID:              b.HostUUID.String(),
-		Username:          b.Username,
-		UID:               b.UID,
-		GID:               b.GID,
-		OS:                b.OS,
-		Arch:              b.Arch,
-		Transport:         b.Transport,
-		RemoteAddress:     b.RemoteAddress,
-		PID:               b.PID,
-		Filename:          b.Filename,
-		LastCheckin:       b.LastCheckin.Unix(),
-		Version:           b.Version,
-		State:             b.State,
-		ReconnectInterval: b.ReconnectInterval,
-		ProxyURL:          b.ProxyURL,
-		PollTimeout:       b.PollTimeout,
+
+	beacon := &clientpb.Beacon{
+		ID: b.ID.String(),
 		// ImplantBuildID: b.ImplantBuildID.String(),
-		Interval:         b.Interval,
-		Jitter:           b.Jitter,
+		SessionID: b.SessionID,
+		// Base
+		Name:     b.Name,
+		Hostname: b.Hostname,
+		UUID:     b.HostUUID.String(),
+		Username: b.Username,
+		UID:      b.UID,
+		GID:      b.GID,
+		OS:       b.OS,
+		Arch:     b.Arch,
+		PID:      b.PID,
+		Filename: b.Filename,
+		Version:  b.Version,
+		State:    b.State,
+		// Beacon
+		LastCheckin:      b.LastCheckin.Unix(),
 		NextCheckin:      b.NextCheckin,
 		WorkingDirectory: b.WorkingDirectory,
-		TransportID:      b.TransportID,
+		// Transport
+		TransportID: b.TransportID,
+		Transport:   b.Transport.ToProtobuf(),
 	}
+
+	return beacon
 }
 
 func (b *Beacon) Task(envelope *sliverpb.Envelope) (*BeaconTask, error) {

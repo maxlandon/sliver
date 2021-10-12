@@ -31,17 +31,20 @@ import (
 
 // Transport - A C2 profile loaded onto an implant as an available transport.
 type Transport struct {
+	// Base
 	ID             uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	CreatedAt      time.Time `gorm:"->;<-:create;"`
 	ImplantBuildID uuid.UUID // Compile-time transports
 	SessionID      uuid.UUID // Runtime transports
+	Priority       int32
+	ProfileID      uuid.UUID
+	Profile        *Malleable
 
-	Priority  int32
-	Running   bool
-	Attempts  int32
-	Failures  int32
-	ProfileID uuid.UUID
-	Profile   *Malleable
+	// Live
+	Running       bool
+	Attempts      int32
+	Failures      int32
+	RemoteAddress string // Set at registration time from the Connection
 }
 
 // ToProtobuf - The transport needs to be sent to a client console
@@ -49,8 +52,12 @@ func (t *Transport) ToProtobuf() *sliverpb.Transport {
 	transport := &sliverpb.Transport{
 		ID:      t.ID.String(),
 		Order:   int32(t.Priority),
-		Running: t.Running,
 		Profile: t.Profile.ToProtobuf(),
+
+		Running:       t.Running,
+		Attempts:      t.Attempts,
+		Failures:      t.Failures,
+		RemoteAddress: t.RemoteAddress,
 	}
 
 	return transport
@@ -61,12 +68,14 @@ func TransportFromProtobuf(t *sliverpb.Transport) *Transport {
 
 	transport := &Transport{
 		ID:        uuid.FromStringOrNil(t.ID),
-		Running:   t.Running,
-		Priority:  t.Order,
-		Attempts:  t.Attempts,
-		Failures:  t.Failures,
 		ProfileID: uuid.FromStringOrNil(t.Profile.ID),
 		Profile:   MalleableFromProtobuf(t.Profile),
+		Priority:  t.Order,
+
+		Running:       t.Running,
+		Attempts:      t.Attempts,
+		Failures:      t.Failures,
+		RemoteAddress: t.RemoteAddress,
 	}
 
 	return transport
@@ -111,6 +120,7 @@ type Malleable struct {
 	// Technicals
 	PollTimeout         int64
 	MaxConnectionErrors int32
+	ReconnectInterval   int64
 	Interval            int64
 	Jitter              int64
 	Persistent          bool
