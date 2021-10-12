@@ -45,7 +45,8 @@ func SessionIDs() (comps []*readline.CompletionGroup) {
 	for _, s := range sessions.Sessions {
 		sessionID := strconv.Itoa(int(s.ID))
 		comp.Suggestions = append(comp.Suggestions, sessionID)
-		desc := fmt.Sprintf("[%s] - %s@%s - %s", s.Name, s.Username, s.Hostname, s.RemoteAddress)
+		addr := s.Transport.RemoteAddress
+		desc := fmt.Sprintf("[%s] - %s@%s - %s", s.Name, s.Username, s.Hostname, addr)
 		comp.Descriptions[sessionID] = readline.DIM + desc + readline.RESET
 	}
 

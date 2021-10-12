@@ -320,7 +320,6 @@ func closeConnections(src io.Closer, dst io.Closer) {
 	// We always leave some time before closing the connections,
 	// because some of the traffic might still be processed by
 	// the SSH RPC tunnel, which can be a bit slow to process data.
-	// time.Sleep(1 * time.Second)
 	time.Sleep(200 * time.Millisecond)
 
 	// Close connections
@@ -339,7 +338,7 @@ func SetCommString(session *core.Session) string {
 
 	// The session object already has an address in its RemoteAddr field:
 	// HTTP/DNS/mTLS handlers have populated it. Make a copy of this field.
-	addr := session.RemoteAddress
+	addr := session.Connection.RemoteAddress
 
 	// Given the remote address, check all existing routes,
 	// and if any contains the given address, use this route.

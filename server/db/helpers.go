@@ -516,6 +516,11 @@ func BeaconByID(id string) (*models.Beacon, error) {
 	err := Session().Where(
 		&models.Beacon{ID: uuid.FromStringOrNil(id)},
 	).First(beacon).Error
+
+	err = Session().Where(
+		&models.Transport{ID: uuid.FromStringOrNil(beacon.TransportID)},
+	).Find(beacon.Transport).Error
+
 	return beacon, err
 }
 
@@ -529,7 +534,12 @@ func BeaconByShortID(id string) (*models.Beacon, error) {
 
 	for _, beacon := range beacons {
 		if GetShortID(beacon.ID.String()) == id {
-			return beacon, nil
+			err = Session().Where(
+				&models.Transport{
+					ID: uuid.FromStringOrNil(beacon.TransportID),
+				},
+			).Find(beacon.Transport).Error
+			return beacon, err
 		}
 	}
 

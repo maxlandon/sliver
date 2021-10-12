@@ -150,7 +150,15 @@ func (s *SliverHTTPC2) startSessionHandler(resp http.ResponseWriter, req *http.R
 		return
 	}
 	httpSession.CipherCtx = cryptography.NewCipherContext(sKey)
-	httpSession.ImplanConn = core.NewImplantConnection("http(s)", getRemoteAddr(req))
+
+	proto := "http(s)"
+	if s.profile.Channel == sliverpb.C2_HTTP {
+		proto = "http"
+	}
+	if s.profile.Channel == sliverpb.C2_HTTPS {
+		proto = "https"
+	}
+	httpSession.ImplanConn = core.NewImplantConnection(proto, getRemoteAddr(req))
 	s.HTTPSessions.Add(httpSession)
 	httpLog.Infof("Started new session with http session id: %s", httpSession.ID)
 

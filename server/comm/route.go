@@ -101,7 +101,7 @@ func (r *Route) ToProtobuf() *commpb.Route {
 		n := &commpb.Node{
 			ID:       node.ID,
 			Name:     node.Name,
-			Host:     node.RemoteAddress,
+			Host:     node.Connection.RemoteAddress,
 			Hostname: node.Hostname,
 		}
 		rt.Nodes = append(rt.Nodes, n)
@@ -110,7 +110,7 @@ func (r *Route) ToProtobuf() *commpb.Route {
 	rt.Gateway = &commpb.Node{
 		ID:       r.Gateway.ID,
 		Name:     r.Gateway.Name,
-		Host:     r.Gateway.RemoteAddress,
+		Host:     r.Gateway.Connection.RemoteAddress,
 		Hostname: r.Gateway.Hostname,
 	}
 	// Current connections & settings.
@@ -157,10 +157,10 @@ func (r *Route) Close() {
 
 // String - Forges a string of this route target network.
 func (r *Route) String() string {
-	host := "scheme://" + r.Gateway.RemoteAddress
+	host := "scheme://" + r.Gateway.Connection.RemoteAddress
 	addr, err := url.Parse(host)
 	if err != nil || addr == nil {
-		return r.Gateway.RemoteAddress
+		return r.Gateway.Connection.RemoteAddress
 	}
 
 	// Check if we can get an IP (either v4 or v6)

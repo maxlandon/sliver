@@ -45,7 +45,7 @@ type SessionInfo struct {
 func (i *SessionInfo) Execute(args []string) (err error) {
 
 	var session *clientpb.Session
-	if core.ActiveTarget.Session != nil {
+	if core.ActiveTarget.Session() != nil {
 		session = core.ActiveTarget.Session()
 	} else if i.Positional.SessionID != "" {
 		session = core.GetSession(i.Positional.SessionID)
@@ -63,8 +63,8 @@ func (i *SessionInfo) Execute(args []string) (err error) {
 		fmt.Printf(bold+"            OS: %s%s\n", normal, session.OS)
 		fmt.Printf(bold+"       Version: %s%s\n", normal, session.Version)
 		fmt.Printf(bold+"          Arch: %s%s\n", normal, session.Arch)
-		fmt.Printf(bold+"Remote Address: %s%s\n", normal, session.RemoteAddress)
-		fmt.Printf(bold+"     Proxy URL: %s%s\n", normal, session.ProxyURL)
+		fmt.Printf(bold+"Remote Address: %s%s\n", normal, session.Transport.RemoteAddress)
+		fmt.Printf(bold+"     Proxy URL: %s%s\n", normal, session.Transport.Profile.ProxyURL)
 	} else {
 		return log.Errorf("No target session, see `help %s`", consts.InfoStr)
 	}

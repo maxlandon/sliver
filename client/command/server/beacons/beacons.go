@@ -79,10 +79,12 @@ func printBeacons(beacons map[string]*clientpb.Beacon) {
 		tasks := fmt.Sprintf("%d / %d", b.TasksCountCompleted, b.TasksCount)
 		osArch := fmt.Sprintf("%s/%s", b.OS, b.Arch)
 
-		row := []string{b.ID, b.Name, tasks, b.Transport, b.RemoteAddress, b.Username,
+		transport := b.Transport.Profile.C2.String()
+		addr := b.Transport.RemoteAddress
+		row := []string{b.ID, b.Name, tasks, transport, addr, b.Username,
 			b.Hostname, osArch, strconv.Itoa(int(b.LastCheckin)), strconv.Itoa(int(b.NextCheckin))}
 
 		table.AppendRow(row)
 	}
-	table.Output()
+	fmt.Printf(table.Output())
 }

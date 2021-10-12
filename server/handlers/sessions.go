@@ -88,6 +88,7 @@ func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *s
 		sessionHandlerLog.Errorf("Could not find transport with ID %s", register.ActiveTransportID)
 	}
 	transport.SessionID = gofrsUuid.FromStringOrNil(session.UUID)
+	transport.RemoteAddress = session.Connection.RemoteAddress
 	session.Transport = transport
 
 	// Update all transports, including the running one, with their statistics
@@ -270,6 +271,7 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register, b *
 
 	// Update all transports, including the running one, with their statistics
 	s.Transport.SessionID = gofrsUuid.FromStringOrNil(s.UUID)
+	s.Transport.RemoteAddress = s.Connection.RemoteAddress
 	err = core.UpdateSessionTransports(r.TransportStats)
 	if err != nil {
 		sessionHandlerLog.Errorf("Error when updating session transports: %s", err)
@@ -304,12 +306,6 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register, b *
 		sessionHandlerLog.Errorf("Comm init failed: %v", err)
 		return nil
 	}
-
-	// Start any persistent jobs that might exist for this precise session
-	// err = core.StartPersistentSessionJobs(session)
-	// if err != nil {
-	//         sessionHandlerLog.Errorf("failed to start persistent jobs: %s", err)
-	// }
 
 	return nil
 }

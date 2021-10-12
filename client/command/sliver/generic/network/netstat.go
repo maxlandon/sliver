@@ -100,6 +100,7 @@ func isSliverAddr(dstAddr string) bool {
 	if len(parts) != 3 {
 		return false
 	}
-	c2Addr := strings.Split(core.ActiveTarget.ActiveC2(), "://")[1]
+	proto := strings.ToLower(core.ActiveTarget.Transport().Profile.C2.String())
+	c2Addr := strings.Split(proto, "://")[1]
 	return strings.Join(parts[:2], ":") == c2Addr
 }

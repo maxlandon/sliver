@@ -64,6 +64,7 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 
 	// Core ------------------------------------------------------------
 
+	// beacon.ConfigID = uuid.FromStringOrNil(beaconReg.Register.ConfigID)
 	beacon.Name = beaconReg.Register.Name
 	beacon.Hostname = beaconReg.Register.Hostname
 	beacon.HostUUID = uuid.FromStringOrNil(beaconReg.Register.HostUUID)
@@ -72,40 +73,32 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 	beacon.GID = beaconReg.Register.Gid
 	beacon.OS = beaconReg.Register.Os
 	beacon.Arch = beaconReg.Register.Arch
-	beacon.Transport = implantConn.Transport
-	beacon.RemoteAddress = implantConn.RemoteAddress
 	beacon.PID = beaconReg.Register.Pid
 	beacon.Filename = beaconReg.Register.Filename
 	beacon.LastCheckin = implantConn.LastMessage
 	beacon.Version = beaconReg.Register.Version
-	// beacon.ConfigID = uuid.FromStringOrNil(beaconReg.Register.ConfigID)
 	beacon.WorkingDirectory = beaconReg.Register.WorkingDirectory
 	beacon.State = clientpb.State_Alive
+	beacon.NextCheckin = beaconReg.NextCheckin
 
 	// Transports ------------------------------------------------------
 
-	// Get the current transport used by the Session
+	// Get the current transport used by the Beacon
 	transport, err := db.TransportByID(beacon.TransportID)
 	if transport == nil {
 		beaconHandlerLog.Errorf("Failed to find beacon transport %s", beacon.TransportID)
 		return nil
 	}
+	transport.SessionID = beacon.ID
+	transport.RemoteAddress = implantConn.RemoteAddress
 	beacon.TransportID = transport.ID.String()
+	beacon.Transport = transport
 
 	// Update all transports, including the running one, with their statistics
 	err = core.UpdateSessionTransports(beaconReg.Register.TransportStats)
 	if err != nil {
 		sessionHandlerLog.Errorf("Error when updating session transports: %s", err)
 	}
-
-	beacon.TransportID = transport.ID.String()
-	// beacon.ReconnectInterval = beaconReg.Register.ReconnectInterval
-	beacon.ProxyURL = transport.Profile.ProxyURL
-	beacon.PollTimeout = transport.Profile.PollTimeout
-
-	beacon.Interval = beaconReg.Interval
-	beacon.Jitter = beaconReg.Jitter
-	beacon.NextCheckin = beaconReg.NextCheckin
 
 	// Registration ----------------------------------------------------
 
@@ -249,20 +242,12 @@ func switchBeacon(s *core.Session, r *sliverpb.RegisterTransportSwitch, conn *co
 	if s != nil {
 		beacon.SessionID = s.UUID
 	}
+	beacon.NextCheckin = reg.NextCheckin
 
 	// Transports ------------------------------------------------------
 
-	beacon.Transport = conn.Transport
-	beacon.RemoteAddress = conn.RemoteAddress
 	beacon.TransportID = t.ID.String()
-
-	// beacon.ReconnectInterval = reg.Register.ReconnectInterval
-	beacon.ProxyURL = t.Profile.ProxyURL
-	beacon.PollTimeout = t.Profile.PollTimeout
-
-	beacon.Interval = reg.Interval
-	beacon.Jitter = reg.Jitter
-	beacon.NextCheckin = reg.NextCheckin
+	beacon.Transport = t
 
 	// Update all transports, including the running one, with their statistics
 	err = core.UpdateSessionTransports(r.Session.TransportStats)
@@ -277,7 +262,7 @@ func switchBeacon(s *core.Session, r *sliverpb.RegisterTransportSwitch, conn *co
 		beaconHandlerLog.Errorf("Database write %s", err)
 	}
 
-	// Prepare an event, either a registration if new beacon...
+	// Either a registration if new beacon...
 	var event core.Event
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// New beacon

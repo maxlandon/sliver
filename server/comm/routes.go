@@ -158,7 +158,7 @@ func buildRouteToSession(sess *core.Session, new *Route) (*Route, error) {
 
 	// The session remote address is mandatorily accesible through one
 	// of the routes' destination networks, as all pivot listeners have been
-	addr := strings.Split(sess.RemoteAddress, ":")[0]
+	addr := strings.Split(sess.Connection.RemoteAddress, ":")[0]
 	ip := net.ParseIP(addr)
 
 	// Find a potential active route that might be leading to session, or closest to it.
@@ -210,7 +210,7 @@ func checkExistingRoutes(route *Route, sessionID uint32) error {
 			if rt.comm.session.ID == sessionID && rt.IPNet.Contains(route.IPNet.IP) {
 				return fmt.Errorf("Route %s (Mask: %d, ID:%s) [via %s(%d) at %s] is colliding",
 					rt.IPNet.IP.String(), route.IPNet.Mask, rt.ID.String(),
-					rt.Gateway.Name, rt.Gateway.ID, rt.Gateway.RemoteAddress)
+					rt.Gateway.Name, rt.Gateway.ID, rt.Gateway.Connection.RemoteAddress)
 			}
 		}
 	}
@@ -220,7 +220,7 @@ func checkExistingRoutes(route *Route, sessionID uint32) error {
 		if rt.IPNet.Contains(route.IPNet.IP) {
 			return fmt.Errorf("Route %s (Mask: %d, ID:%s) [via %s(%d) at %s] is colliding",
 				rt.IPNet.IP.String(), route.IPNet.Mask, rt.ID.String(),
-				rt.Gateway.Name, rt.Gateway.ID, rt.Gateway.RemoteAddress)
+				rt.Gateway.Name, rt.Gateway.ID, rt.Gateway.Connection.RemoteAddress)
 		}
 	}
 

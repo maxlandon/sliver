@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -136,17 +137,28 @@ func (t *tunnel) Close() error {
 
 // RemoteAddr - Implements net.Conn RemoteAddr(), reducing the addr to either a TCP/UDP addr (don't need more)
 func (t *tunnel) RemoteAddr() (addr net.Addr) {
-	c2, _ := url.Parse(t.Sess.ActiveC2)
-	host, _ := url.Parse(t.Sess.RemoteAddress)
-	switch c2.Scheme {
+	conn := t.Sess.Transport.Profile
+	uri := fmt.Sprintf("%s://%s",
+		strings.ToLower(conn.Channel.String()),
+		t.Sess.Connection.RemoteAddress,
+	)
+	host, err := url.Parse(uri)
+	port, _ := strconv.Atoi(host.Port())
+	if err != nil {
+		addr = &net.TCPAddr{
+			IP:   net.ParseIP(host.Host),
+			Port: port,
+		}
+		return
+	}
+
+	switch host.Scheme {
 	case "dns":
-		port, _ := strconv.Atoi(host.Port())
 		addr = &net.UDPAddr{
 			IP:   net.ParseIP(host.Host),
 			Port: port,
 		}
-	case "mtls", "tcp", "http", "https", "named_pipe", "namedpipe":
-		port, _ := strconv.Atoi(host.Port())
+	default:
 		addr = &net.TCPAddr{
 			IP:   net.ParseIP(host.Host),
 			Port: port,
@@ -157,19 +169,29 @@ func (t *tunnel) RemoteAddr() (addr net.Addr) {
 
 // LocalAddr - Implements net.Conn LocalAddr().
 func (t *tunnel) LocalAddr() (addr net.Addr) {
-	c2, _ := url.Parse(t.Sess.ActiveC2)
-	switch c2.Scheme {
-	case "dns":
-		port, _ := strconv.Atoi(c2.Port())
-		addr = &net.UDPAddr{
-			IP:   net.ParseIP(c2.Host),
-			Port: port,
-		}
-	case "mtls", "tcp", "http", "https", "named_pipe", "namedpipe":
-		port, _ := strconv.Atoi(c2.Port())
+	conn := t.Sess.Transport.Profile
+	uri := fmt.Sprintf("%s://%s",
+		strings.ToLower(conn.Channel.String()),
+		conn.Hostname,
+	)
+	c2, err := url.Parse(uri)
+	if err != nil {
 		addr = &net.TCPAddr{
 			IP:   net.ParseIP(c2.Host),
-			Port: port,
+			Port: int(conn.Port),
+		}
+		return
+	}
+	switch c2.Scheme {
+	case "dns":
+		addr = &net.UDPAddr{
+			IP:   net.ParseIP(c2.Host),
+			Port: int(conn.Port),
+		}
+	default:
+		addr = &net.TCPAddr{
+			IP:   net.ParseIP(c2.Host),
+			Port: int(conn.Port),
 		}
 	}
 	return

@@ -89,7 +89,7 @@ func SetActiveTarget(sess *clientpb.Session, beacon *clientpb.Beacon) {
 	}
 
 	// Hide WireGuard commands if not the current transport
-	if ActiveTarget.Transport() != "wg" {
+	if ActiveTarget.Transport().Profile.C2 != sliverpb.C2_WG {
 		Console.HideCommands(constants.WireGuardGroup)
 	} else {
 		Console.ShowCommands(constants.WireGuardGroup)

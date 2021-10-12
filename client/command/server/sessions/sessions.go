@@ -83,7 +83,7 @@ func printSessions(sessions map[uint32]*clientpb.Session) {
 		if s.Burned {
 			burned = "🔥"
 		}
-		row := []string{strconv.Itoa(int(s.ID)), s.Name, osArch, s.RemoteAddress, s.Username,
+		row := []string{strconv.Itoa(int(s.ID)), s.Name, osArch, s.Transport.RemoteAddress, s.Username,
 			s.Hostname, strconv.Itoa(int(s.LastCheckin)), burned + status}
 
 		table.AppendRow(row)

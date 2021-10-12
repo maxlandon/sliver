@@ -94,7 +94,7 @@ func (rpc *Server) UpdateSession(ctx context.Context, update *clientpb.UpdateSes
 	}
 	//Update reconnect interval if set
 	if update.ReconnectInterval != -1 {
-		session.ReconnectInterval = update.ReconnectInterval
+		session.Transport.Profile.ReconnectInterval = update.ReconnectInterval
 
 		//Create protobuf msg
 		req := sliverpb.ReconnectIntervalReq{
@@ -113,7 +113,7 @@ func (rpc *Server) UpdateSession(ctx context.Context, update *clientpb.UpdateSes
 	}
 	//Update poll interval if set
 	if update.PollInterval != -1 {
-		session.PollTimeout = update.PollInterval
+		session.Transport.Profile.PollTimeout = update.PollInterval
 
 		//Create protobuf msg
 		req := sliverpb.PollIntervalReq{

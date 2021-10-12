@@ -52,10 +52,9 @@ type ProfileOptions struct {
 	Profile struct {
 		Name                string `long:"name" short:"n" description:"A name for this C2 profile"`
 		Type                string `long:"type" short:"t" description:"force C2 core type (beacon or session)"`
-		Reconnect           int    `long:"reconnect" short:"r" description:"attempt to reconnect every n second(s)" default:"60"`
-		PollTimeout         int    `long:"poll-timeout" description:"attempt to poll every n second(s)" default:"360"`
+		Reconnect           int64  `long:"reconnect" short:"r" description:"attempt to reconnect every n second(s)" default:"60"`
+		PollTimeout         int64  `long:"poll-timeout" description:"attempt to poll every n second(s)" default:"360"`
 		MaxConnectionErrors int32  `long:"max-errors" short:"E" description:"max number of failed connection attempts" default:"1000"`
-		IsFallback          bool   `long:"fallback" short:"f" description:"if true, when cycling C2s the implant is allowed to use it"`
 		DisableComm         bool   `long:"no-comm" description:"disable the use of Sessions SSH multiplexing on this channel"`
 	} `group:"core profile options"`
 

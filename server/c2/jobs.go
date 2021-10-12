@@ -150,7 +150,7 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 
 		// Get the current transport for this session: some of them, like beacons
 		// or those that are expressely comm disabled, can run persistent jobs
-		transport, err := db.MalleableByID(session.TransportID)
+		transport, err := db.MalleableByID(session.Transport.ID.String())
 		if err != nil {
 			return err
 		}

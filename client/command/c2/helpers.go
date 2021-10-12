@@ -194,7 +194,6 @@ func NewMalleable(c2Type sliverpb.C2, target string, direction sliverpb.C2Direct
 	// below if the transport session type is a beacon.
 	configureConnectionSettings(opts, profile)
 	profile.CommDisabled = opts.Profile.DisableComm
-	profile.IsFallback = opts.Profile.IsFallback
 
 	// Beaconing & related allowed stacks
 	configureBeaconing(opts, profile)
@@ -219,9 +218,6 @@ func NewHandlerC2(c2Type sliverpb.C2, target string, direction sliverpb.C2Direct
 		profile.Port = defaultPort
 	}
 
-	// When started from a handler, the profile is always marked anonymous: this
-	// will not fetch it in further requests for profiles. NOTE: should be changed to: not added to DB
-
 	return
 }
 
@@ -238,10 +234,9 @@ func GetShortID(ID string) (short string) {
 // defaultC2Profile - A C2 profile with default values into it, such as timeouts and pollers
 func defaultC2Profile() *sliverpb.Malleable {
 	profile := &sliverpb.Malleable{
-		IsFallback:          false,
 		MaxConnectionErrors: 1000,
 		PollTimeout:         int64(60 * time.Second),
-		Interval:            int64(30 * time.Second),
+		ReconnectInterval:   int64(30 * time.Second),
 		Credentials:         &sliverpb.Credentials{},
 		ContextSessionID:    core.ActiveTarget.UUID(), // Always give the current target
 	}
@@ -310,14 +305,14 @@ func getHostPortFromURL(hostport string) (host string, hostYes bool, port uint32
 // have been specified by the user as command options.
 func configureConnectionSettings(opts ProfileOptions, profile *sliverpb.Malleable) {
 
+	if opts.Profile.PollTimeout != profile.PollTimeout {
+		profile.PollTimeout = opts.Profile.PollTimeout * int64(time.Second)
+	}
 	if opts.Profile.MaxConnectionErrors != profile.MaxConnectionErrors {
 		profile.MaxConnectionErrors = opts.Profile.MaxConnectionErrors
 	}
-	if opts.Profile.Reconnect != int(profile.Interval) {
-		profile.Interval = int64(opts.Profile.Reconnect) * int64(time.Second)
-	}
-	if opts.Profile.PollTimeout != int(profile.PollTimeout) {
-		profile.PollTimeout = int64(opts.Profile.PollTimeout) * int64(time.Second)
+	if opts.Profile.Reconnect != profile.ReconnectInterval {
+		profile.ReconnectInterval = opts.Profile.Reconnect * int64(time.Second)
 	}
 }
 

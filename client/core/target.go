@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 var (
@@ -51,6 +52,11 @@ type Target interface {
 	// Type
 	IsSession() bool
 	IsBeacon() bool
+	// Underlying
+	Session() *clientpb.Session
+	SetSession(sess *clientpb.Session)
+	Beacon() *clientpb.Beacon
+	SetBeacon(beacon *clientpb.Beacon)
 
 	// Info
 	Hostname() string
@@ -66,31 +72,18 @@ type Target interface {
 	Evasion() bool
 	WorkingDirectory() string
 
+	// Session
+	Extensions() []string
+
 	// State
 	State() clientpb.State
 	Unavailable() error
 	Burned() bool
 
-	// Underlying
-	Session() *clientpb.Session
-	SetSession(sess *clientpb.Session)
-	Beacon() *clientpb.Beacon
-	SetBeacon(beacon *clientpb.Beacon)
-
 	// Transport
-	ActiveC2() string
-	Transport() string
-	RemoteAddress() string
-	ProxyURL() string
-
-	// Session
-	ReconnectInterval() int64
-	PollTimeout() int64
-	Extensions() []string
+	Transport() *sliverpb.Transport
 
 	// Beacon
-	Interval() int64
-	Jitter() int64
 	LastCheckin() int64
 	NextCheckin() int64
 	TasksCount() int64
@@ -232,26 +225,6 @@ func (t *activeTarget) Arch() string {
 	return t.beacon.Arch
 }
 
-func (t *activeTarget) Transport() string {
-	if t.session == nil && t.beacon == nil {
-		return ""
-	}
-	if t.session != nil {
-		return t.session.Transport
-	}
-	return t.beacon.Transport
-}
-
-func (t *activeTarget) RemoteAddress() string {
-	if t.session == nil && t.beacon == nil {
-		return ""
-	}
-	if t.session != nil {
-		return t.session.RemoteAddress
-	}
-	return t.beacon.RemoteAddress
-}
-
 func (t *activeTarget) Filename() string {
 	if t.session == nil && t.beacon == nil {
 		return ""
@@ -260,26 +233,6 @@ func (t *activeTarget) Filename() string {
 		return t.session.Filename
 	}
 	return t.beacon.Filename
-}
-
-func (t *activeTarget) LastCheckin() int64 {
-	if t.session == nil && t.beacon == nil {
-		return 0
-	}
-	if t.session != nil {
-		return t.session.LastCheckin
-	}
-	return t.beacon.LastCheckin
-}
-
-func (t *activeTarget) ActiveC2() string {
-	if t.session == nil && t.beacon == nil {
-		return ""
-	}
-	if t.session != nil {
-		return t.session.ActiveC2
-	}
-	return t.beacon.ActiveC2
 }
 
 func (t *activeTarget) Version() string {
@@ -320,16 +273,6 @@ func (t *activeTarget) Unavailable() (err error) {
 		state = t.beacon.State
 	}
 	return StateErrors[state]
-}
-
-func (t *activeTarget) ProxyURL() string {
-	if t.session == nil && t.beacon == nil {
-		return ""
-	}
-	if t.session != nil {
-		return t.session.ProxyURL
-	}
-	return t.beacon.ProxyURL
 }
 
 func (t *activeTarget) Burned() bool {
@@ -390,21 +333,14 @@ func (t *activeTarget) SetBeacon(beacon *clientpb.Beacon) *clientpb.Beacon {
 	return t.beacon
 }
 
+func (t *activeTarget) Transport() *sliverpb.Transport {
+	if t.session != nil {
+		return t.session.Transport
+	}
+	return t.beacon.Transport
+}
+
 // Session -----------------------------------------------
-func (t *activeTarget) ReconnectInterval() int64 {
-	if t.session != nil {
-		return t.session.ReconnectInterval
-	}
-	return -1
-}
-
-func (t *activeTarget) PollTimeout() int64 {
-	if t.session != nil {
-		return t.session.PollTimeout
-	}
-	return -1
-}
-
 func (t *activeTarget) Extensions() []string {
 	if t.session != nil {
 		return t.session.Extensions
@@ -413,6 +349,17 @@ func (t *activeTarget) Extensions() []string {
 }
 
 // Beacon -----------------------------------------------
+
+func (t *activeTarget) LastCheckin() int64 {
+	if t.session == nil && t.beacon == nil {
+		return 0
+	}
+	if t.session != nil {
+		return t.session.LastCheckin
+	}
+	return t.beacon.LastCheckin
+}
+
 func (t *activeTarget) Interval() int64 {
 	if t.beacon != nil {
 		return t.beacon.Interval

@@ -44,7 +44,8 @@ func BeaconIDs() (comps []*readline.CompletionGroup) {
 	}
 	for _, b := range beacons.Beacons {
 		comp.Suggestions = append(comp.Suggestions, c2.GetShortID(b.ID))
-		desc := fmt.Sprintf("[%s] - %s@%s - %s", b.Name, b.Username, b.Hostname, b.RemoteAddress)
+		addr := b.Transport.RemoteAddress
+		desc := fmt.Sprintf("[%s] - %s@%s - %s", b.Name, b.Username, b.Hostname, addr)
 		comp.Descriptions[c2.GetShortID(b.ID)] = readline.DIM + desc + readline.RESET
 	}
 

@@ -198,7 +198,7 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 		log = log.WithField("success", true)
 		fmt.Print(seqClearScreenBelow)
 		news := fmt.Sprintf("Session #%d %s - %s (%s) - %s/%s - %v",
-			session.ID, session.Name, session.RemoteAddress,
+			session.ID, session.Name, session.Transport.RemoteAddress,
 			session.Hostname, session.OS, session.Arch, currentTime)
 		log.Infof(news)
 
@@ -231,7 +231,7 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 			core.UnsetActiveSession()
 		}
 		lost := fmt.Sprintf("Lost session #%d %s - %s (%s) - %s/%s",
-			session.ID, session.Name, session.RemoteAddress,
+			session.ID, session.Name, session.Transport.RemoteAddress,
 			session.Hostname, session.OS, session.Arch)
 		log.Warnf(lost)
 
@@ -295,7 +295,7 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 		log = log.WithField("success", true)
 		currentTime := time.Now().Format(time.RFC1123)
 		news := fmt.Sprintf("Beacon #%s %s - %s (%s) - %s/%s - %v",
-			c2.GetShortID(beacon.ID), beacon.Name, beacon.RemoteAddress,
+			c2.GetShortID(beacon.ID), beacon.Name, beacon.Transport.RemoteAddress,
 			beacon.Hostname, beacon.OS, beacon.Arch, currentTime)
 		log.Infof(news)
 
@@ -317,7 +317,7 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 		if active.IsBeacon() && active.ID() == beacon.ID {
 
 			// If its a change in transports
-			if active.ActiveC2() != beacon.ActiveC2 {
+			if active.Transport().ID != beacon.Transport.ID {
 				log.Infof("Beacon (%s) successfully switched to transport: %s",
 					c2.GetShortID(beacon.ID), beacon.ActiveC2)
 			} else {
@@ -350,7 +350,7 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 		// If our active beacon is this one, drop the context
 		if active.IsBeacon() && active.ID() == beacon.ID {
 			lost := fmt.Sprintf("Removed beacon %s %s - %s (%s) - %s/%s",
-				c2.GetShortID(beacon.ID), beacon.Name, beacon.RemoteAddress,
+				c2.GetShortID(beacon.ID), beacon.Name, beacon.Transport.RemoteAddress,
 				beacon.Hostname, beacon.OS, beacon.Arch)
 			log.Warnf(lost)
 			core.UnsetActiveSession()

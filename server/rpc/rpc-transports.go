@@ -73,7 +73,7 @@ func (rpc *Server) AddTransport(ctx context.Context, req *sliverpb.TransportAddR
 	transport := &models.Transport{
 		ID:        tid,
 		SessionID: uuid.FromStringOrNil(targetID),
-		Priority:  int(req.Priority), // By default assign the requested priority
+		Priority:  req.Priority, // By default assign the requested priority
 		ProfileID: profile.ID,
 		Profile:   profile,
 	}
@@ -152,7 +152,7 @@ func isSessionTransportEnabled(sess *core.Session, beacon *models.Beacon, profil
 }
 
 // setTransportPriority - Reconciles the user-requested priority with the transports currently loaded by the session.
-func setTransportPriority(transport *models.Transport, session *core.Session, beacon *models.Beacon) (order int) {
+func setTransportPriority(transport *models.Transport, session *core.Session, beacon *models.Beacon) (order int32) {
 
 	// Get the transports for the target
 	transports, err := core.TransportsByTarget(session, beacon)
@@ -161,8 +161,8 @@ func setTransportPriority(transport *models.Transport, session *core.Session, be
 	}
 
 	// If the prescribed order is higher than the number of transports, just make it len+1
-	if len(transports) > transport.Priority || transport.Priority == 0 {
-		return len(transports)
+	if int32(len(transports)) > transport.Priority || transport.Priority == 0 {
+		return int32(len(transports))
 	}
 
 	// If the prescribed order is less, adapt all transports with new order

@@ -153,7 +153,7 @@ var (
 
 		// Transport
 		"{address}": func() string {
-			return active.RemoteAddress()
+			return active.Transport().RemoteAddress
 		},
 
 		// Beacon

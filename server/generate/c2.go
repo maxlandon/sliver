@@ -50,7 +50,7 @@ func InitImplantTransports(pbConfig *clientpb.ImplantConfig, cfg *models.Implant
 		if err != nil {
 			return err
 		}
-		transport.Priority = order
+		transport.Priority = int32(order)
 		cfg.Transports = append(cfg.Transports, transport)
 	}
 

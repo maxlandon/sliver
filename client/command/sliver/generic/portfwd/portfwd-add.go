@@ -26,6 +26,7 @@ import (
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/tcpproxy"
 	"github.com/bishopfox/sliver/client/transport"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // PortfwdAdd - Create a new port forwarding tunnel.
@@ -40,10 +41,10 @@ type PortfwdAdd struct {
 func (p *PortfwdAdd) Execute(args []string) (err error) {
 	session := core.ActiveTarget.Session()
 
-	if session.GetActiveC2() == "dns" {
+	if session.Transport.Profile.C2 == sliverpb.C2_DNS {
 		log.Warnf("Current C2 is DNS, this is going to be a very slow tunnel!\n")
 	}
-	if session.Transport == "wg" {
+	if session.Transport.Profile.C2 == sliverpb.C2_WG {
 		log.Warnf("Current C2 is WireGuard, we recommend using the `wg-portfwd` command!\n")
 	}
 

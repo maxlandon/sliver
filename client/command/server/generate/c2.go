@@ -137,9 +137,7 @@ func parseC2Transports(g StageOptions, cfg *clientpb.ImplantConfig) (err error) 
 		profile.PollTimeout = int64(g.TransportOptions.PollTimeout) * int64(time.Second)
 		profile.Interval = int64(g.TransportOptions.Reconnect) * int64(time.Second)
 
-		// All profiles are fallback by default
-		profile.IsFallback = true
-		// And they might be forbidden to use SSH multiplexing
+		// they might be forbidden to use SSH multiplexing
 		profile.CommDisabled = g.TransportOptions.DisableComm
 	}
 
