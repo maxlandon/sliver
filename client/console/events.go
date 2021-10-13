@@ -277,7 +277,6 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 	case clientpb.EventType_BeaconRegistered:
 
 		// If we are a session that is about to be closed, drop it before receiving the event
-		// if active.IsSession() && session.UUID == active.UUID() {
 		if active.IsSession() && session != nil && session.UUID == active.UUID() {
 			if session.State != clientpb.State_Switching {
 				return
@@ -305,9 +304,8 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 
 		// If our active beacon is switching its transport
 		if active.IsBeacon() && active.ID() == beacon.ID && beacon.State == clientpb.State_Switching {
-			log = log.WithField("success", true)
 			news := fmt.Sprintf("Beacon %s (%s) has been tasked to switch its transport",
-				c2.GetShortID(beacon.ID), beacon.ActiveC2)
+				c2.GetShortID(beacon.ID), beacon.Transport.RemoteAddress)
 
 			// Set the new beacon as the active target
 			core.SetActiveTarget(nil, beacon)
@@ -317,13 +315,17 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 
 		// If our active beacon is updated, either from a transport switch or anything else
 		if active.IsBeacon() && active.ID() == beacon.ID {
-			core.SetActiveTarget(nil, beacon)
 
 			// If its a change in transports
 			if active.Transport().ID != beacon.Transport.ID {
-				log.Infof("Beacon (%s) successfully switched to transport: %s",
-					c2.GetShortID(beacon.ID), beacon.ActiveC2)
+				core.SetActiveTarget(nil, beacon)
+				log.Infof("Beacon (%s) switched transport: (%s) %s  <=>  %s",
+					c2.GetShortID(beacon.ID),
+					beacon.Transport.Profile.C2, c2.FullTargetPath(beacon.Transport.Profile),
+					beacon.Transport.RemoteAddress,
+				)
 			} else {
+				core.SetActiveTarget(nil, beacon)
 				log.Infof("Beacon (%s) has been updated", c2.GetShortID(beacon.ID))
 			}
 			return

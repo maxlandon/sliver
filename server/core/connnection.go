@@ -97,7 +97,9 @@ func RegisterTransportSwitch(sess *Session, beacon *models.Beacon) (err error) {
 		}
 
 		beacon.State = clientpb.State_Switching
-		db.Session().Save(&beacon)
+		err = db.Session().Model(&models.Beacon{}).Where(&models.Beacon{
+			ID: beacon.ID,
+		}).Updates(beacon).Error
 		EventBroker.Publish(Event{
 			Type:   clientpb.EventType_BeaconUpdated,
 			Beacon: beacon,
@@ -131,69 +133,60 @@ func GetTargetSwitching(oldTransportID string) (sess *Session, beacon *models.Be
 func TransportsByTarget(session *Session, beacon *models.Beacon) (transports []*models.Transport, err error) {
 
 	var buildName string
+	var currentID string
+	var parentID string
 
 	if beacon != nil {
 		buildName = beacon.Name
-		compiled, _ := db.TransportsForBuild(buildName)
-		transports = append(transports, compiled...)
-
-		// Get any runtime transports set when we were a session, if we were
-		if beacon.SessionID != "" {
-			runtime, err := db.TransportsBySession(beacon.SessionID)
-			if err != nil {
-				return nil, fmt.Errorf("Failed to get transports for beacon: %s", err)
-			}
-			for _, t := range runtime {
-				if t.ImplantBuildID == uuid.Nil {
-					transports = append(transports, t)
-				}
-			}
-		} else {
-			runtime, err := db.TransportsBySession(beacon.ID.String())
-			if err != nil {
-				return nil, fmt.Errorf("Failed to get transports for beacon: %s", err)
-			}
-			for _, t := range runtime {
-				if t.ImplantBuildID == uuid.Nil {
-					transports = append(transports, t)
-				}
-			}
-		}
-
-		return transports, nil
+		currentID = beacon.ID.String()
+		parentID = beacon.SessionID
 	}
-
 	if session != nil {
 		buildName = session.Name
-		compiled, _ := db.TransportsForBuild(buildName)
-		transports = append(transports, compiled...)
+		currentID = session.UUID
+		parentID = session.BeaconID
+	}
 
-		// Get any runtime transports set when we were a beacon, if we were
-		if session.BeaconID != "" {
-			runtime, err := db.TransportsBySession(session.BeaconID)
-			if err != nil {
-				return nil, fmt.Errorf("Failed to get transports for session: %s", err)
+	// Compile-time transports
+	compiled, _ := db.TransportsForBuild(buildName)
+	transports = compiled
+
+	// Runtime transports set with the current session/beacon
+	runtimeCurrent, err := db.TransportsByTargetID(currentID)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get transports for current: %s", err)
+	}
+	for _, runtime := range runtimeCurrent {
+		included := false
+		for _, found := range transports {
+			if found.ID == runtime.ID {
+				included = true
+				break
 			}
-			for _, t := range runtime {
-				if t.ImplantBuildID == uuid.Nil {
-					transports = append(transports, t)
+		}
+		if !included && runtime.ImplantBuildID == uuid.Nil {
+			transports = append(transports, runtime)
+		}
+	}
+
+	// Runtime transports set from the parent, if any
+	if currentID != "" || currentID != uuid.Nil.String() {
+		runtimeParent, err := db.TransportsByTargetID(parentID)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get transports for parent: %s", err)
+		}
+		for _, t := range runtimeParent {
+			included := false
+			for _, found := range transports {
+				if found.ID == t.ID {
+					included = true
+					break
 				}
 			}
-		}
-
-		// Get any runtime transports set by sessions with the same UUID
-		// (that is, sessions spawned during the lifetime of this implant run)
-		runtime, err := db.TransportsBySession(session.UUID)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to get transports for session: %s", err)
-		}
-		for _, t := range runtime {
-			if t.ImplantBuildID == uuid.Nil {
+			if !included && t.ImplantBuildID == uuid.Nil {
 				transports = append(transports, t)
 			}
 		}
-
-		return transports, nil
 	}
 
 	return
@@ -214,7 +207,9 @@ func UpdateSessionTransports(transports []*sliverpb.Transport) (err error) {
 		transport.Failures = t.Failures
 		transport.Running = t.Running
 
-		err = db.Session().Save(transport).Error
+		err = db.Session().Model(&models.Transport{}).Where(&models.Transport{
+			ID: transport.ID,
+		}).Updates(transport).Error
 		if err != nil {
 			sessionsLog.Errorf("Failed to save transport %s", t.ID)
 		}

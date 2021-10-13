@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
@@ -81,7 +82,7 @@ func printBeacons(beacons map[string]*clientpb.Beacon) {
 
 		transport := b.Transport.Profile.C2.String()
 		addr := b.Transport.RemoteAddress
-		row := []string{b.ID, b.Name, tasks, transport, addr, b.Username,
+		row := []string{c2.GetShortID(b.ID), b.Name, tasks, transport, addr, b.Username,
 			b.Hostname, osArch, strconv.Itoa(int(b.LastCheckin)), strconv.Itoa(int(b.NextCheckin))}
 
 		table.AppendRow(row)

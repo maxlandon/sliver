@@ -390,9 +390,9 @@ func TransportsForBuild(name string) (transports []*models.Transport, err error)
 	return
 }
 
-// TransportsBySession - Loads all the transports currently available to (loaded on) an implant.
+// TransportsByTargetID - Loads all the transports currently available to (loaded on) an implant.
 // These will be either those compiled in, or a partially/fully different set if they have been changed at runtime.
-func TransportsBySession(ID string) (transports []*models.Transport, err error) {
+func TransportsByTargetID(ID string) (transports []*models.Transport, err error) {
 
 	// Runtime/active transports
 	err = Session().Where(&models.Transport{
@@ -610,7 +610,7 @@ func UpdateBeaconCheckinByID(beaconID string, next int64) error {
 	return err
 }
 
-// BeaconTasksByEnvelopeID - Select a (sent) BeaconTask by its envelope ID
+// BeaconTaskByEnvelopeID - Select a (sent) BeaconTask by its envelope ID
 func BeaconTaskByEnvelopeID(beaconID string, envelopeID int64) (*models.BeaconTask, error) {
 	task := &models.BeaconTask{}
 	err := Session().Where(

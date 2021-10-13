@@ -108,7 +108,7 @@ func beaconRegisterHandler(implantConn *core.ImplantConnection, data []byte) *sl
 
 	// Registration ----------------------------------------------------
 
-	err = db.Session().Save(beacon).Error
+	err = db.Session().Save(&beacon).Error
 	if err != nil {
 		beaconHandlerLog.Errorf("Database write %s", err)
 	}
@@ -199,12 +199,14 @@ func beaconTaskResults(beaconID string, taskEnvelopes []*sliverpb.Envelope) *sli
 		dbTask.CompletedAt = time.Now()
 		dbTask.Response = envelope.Data
 		err = db.Session().Model(&models.BeaconTask{}).Where(&models.BeaconTask{
-			ID: dbTask.ID,
-		}).Updates(dbTask).Error
+			ID:         dbTask.ID,
+			EnvelopeID: envelope.ID,
+		}).Updates(&dbTask).Error
 		if err != nil {
 			beaconHandlerLog.Errorf("Error updating db task: %s", err)
 			continue
 		}
+
 		eventData, _ := proto.Marshal(dbTask.ToProtobuf(false))
 		core.EventBroker.Publish(core.Event{
 			Type: clientpb.EventType_BeaconTaskResult,
@@ -230,6 +232,7 @@ func switchBeacon(s *core.Session, r *sliverpb.RegisterTransportSwitch, conn *co
 
 	// Core ------------------------------------------------------------
 
+	beacon.ID = gofrsUuid.FromStringOrNil(reg.ID) // Always overwrite ID
 	beacon.Name = reg.Register.Name
 	beacon.Hostname = reg.Register.Hostname
 	beacon.HostUUID = gofrsUuid.FromStringOrNil(reg.Register.HostUUID)
@@ -252,7 +255,6 @@ func switchBeacon(s *core.Session, r *sliverpb.RegisterTransportSwitch, conn *co
 
 	// Transports ------------------------------------------------------
 
-	t.Running = true
 	beacon.TransportID = t.ID.String()
 	beacon.Transport = t
 
@@ -264,7 +266,11 @@ func switchBeacon(s *core.Session, r *sliverpb.RegisterTransportSwitch, conn *co
 
 	// Registration ----------------------------------------------------
 
-	err = db.Session().Save(beacon).Error
+	// Very important: unique constraint on envelopeID makes it easy to duplicate
+	// the beacon's tasks without noticing. So we omit updating the field
+	err = db.Session().Model(&models.Beacon{}).
+		Omit("beacon_tasks").
+		Updates(&beacon).Error
 	if err != nil {
 		beaconHandlerLog.Errorf("Database write %s", err)
 	}
@@ -272,10 +278,6 @@ func switchBeacon(s *core.Session, r *sliverpb.RegisterTransportSwitch, conn *co
 	// Either a registration if new beacon...
 	var event core.Event
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		// New beacon
-		beacon = &models.Beacon{
-			ID: gofrsUuid.FromStringOrNil(reg.ID),
-		}
 		event = core.Event{
 			Type:    clientpb.EventType_BeaconRegistered,
 			Beacon:  beacon,

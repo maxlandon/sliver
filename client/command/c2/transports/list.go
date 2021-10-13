@@ -21,6 +21,7 @@ package transports
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
@@ -77,53 +78,67 @@ func printTransports(transports []*sliverpb.Transport) {
 	headLen := []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	table.SetColumns(headers, headLen)
 
+	// Sort the transports by priority
+	var keys []int
 	for _, t := range transports {
+		keys = append(keys, int(t.Order))
+	}
+	sort.Ints(keys)
 
-		var state string
-		if t.Running {
-			state = readline.Green("Active")
-		} else {
-			state = readline.Dim("Loaded")
+	for _, v := range keys {
+		for _, transport := range transports {
+			if int(transport.Order) != v {
+				continue
+			}
+
+			prof := transport.Profile
+
+			var state string
+			if transport.Running {
+				state = readline.Green("Active")
+			} else {
+				state = readline.Dim("Loaded")
+			}
+			order := readline.Dim(strconv.Itoa(int(transport.Order)))
+			id := c2.GetShortID(prof.ID)
+			channel := prof.C2.String()
+			dir := prof.Direction.String()
+			address := readline.Bold(c2.FullTargetPath(prof))
+
+			// Timeouts
+			var timeouts string
+			var jitInt string
+			if prof.Type == sliverpb.C2Type_Beacon {
+				jitInt = fmt.Sprintf("%-3s / %3s", time.Duration(prof.Jitter), time.Duration(prof.Interval))
+				timeouts = fmt.Sprintf("%d / %ss", prof.MaxConnectionErrors, time.Duration(prof.Interval))
+			} else {
+				timeouts = fmt.Sprintf("%-4d / %4s", prof.MaxConnectionErrors, time.Duration(prof.Interval))
+			}
+
+			// Comm
+			var comms string
+			if prof.CommDisabled {
+				comms = readline.YELLOW + "no" + readline.RESET
+			} else {
+				comms = readline.GREEN + "yes" + readline.RESET
+			}
+
+			// Attempts
+			var attempts string
+			if (transport.Attempts == transport.Failures) && transport.Attempts == prof.MaxConnectionErrors {
+				attempts = readline.BOLD + readline.RED
+			} else if transport.Failures == 0 && transport.Attempts > 0 {
+				attempts = readline.GREEN
+			} else if transport.Failures > 0 {
+				attempts = readline.BOLD + readline.YELLOW
+			} else if transport.Failures > 1 {
+				attempts = readline.YELLOW
+			}
+			attempts = attempts + fmt.Sprintf("%d / %d", transport.Attempts, transport.Failures)
+
+			// Add to table
+			table.AppendRow([]string{state, order, id, channel, dir, address, timeouts, jitInt, comms, attempts})
 		}
-		order := readline.Dim(strconv.Itoa(int(t.Order)))
-		id := c2.GetShortID(t.ID)
-		channel := t.Profile.C2.String()
-		dir := t.Profile.Direction.String()
-		address := readline.Bold(c2.FullTargetPath(t.Profile))
-
-		// Timeouts
-		var timeouts string
-		var jitInt string
-		if t.Profile.Type == sliverpb.C2Type_Beacon {
-			jitInt = fmt.Sprintf("%-3s / %3s", time.Duration(t.Profile.Jitter), time.Duration(t.Profile.Interval))
-			timeouts = fmt.Sprintf("%d / %ss", t.Profile.MaxConnectionErrors, time.Duration(t.Profile.Interval))
-		} else {
-			timeouts = fmt.Sprintf("%-4d / %4s", t.Profile.MaxConnectionErrors, time.Duration(t.Profile.Interval))
-		}
-
-		// Comm
-		var comms string
-		if t.Profile.CommDisabled {
-			comms = readline.YELLOW + "no" + readline.RESET
-		} else {
-			comms = readline.GREEN + "yes" + readline.RESET
-		}
-
-		// Attempts
-		var attempts string
-		if (t.Attempts == t.Failures) && t.Attempts == t.Profile.MaxConnectionErrors {
-			attempts = readline.BOLD + readline.RED
-		} else if t.Failures == 0 && t.Attempts > 1 {
-			attempts = readline.GREEN
-		} else if t.Failures > 0 {
-			attempts = readline.BOLD + readline.YELLOW
-		} else if t.Failures > 1 {
-			attempts = readline.YELLOW
-		}
-		attempts = attempts + fmt.Sprintf("%d / %d", t.Attempts, t.Failures)
-
-		// Add to table
-		table.AppendRow([]string{state, order, id, channel, dir, address, timeouts, jitInt, comms, attempts})
 	}
 
 	fmt.Printf(table.Output())

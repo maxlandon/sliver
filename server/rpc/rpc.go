@@ -170,6 +170,7 @@ func (rpc *Server) asyncGenericHandler(req GenericRequest, resp GenericResponse)
 	parts := strings.Split(string(req.ProtoReflect().Descriptor().FullName().Name()), ".")
 	name := parts[len(parts)-1]
 	task.Description = name
+	// err = db.Session().Create(task).Error
 	err = db.Session().Save(task).Error
 	if err != nil {
 		rpcLog.Errorf("Database error: %s", err)

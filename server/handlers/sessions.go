@@ -287,7 +287,17 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register, b *
 		// We were a beacon: mark it inactive, so it doesn't
 		// show up in some completions, cannot be used, etc
 		bc.State = clientpb.State_Disconnect
-		db.Session().Save(&bc)
+
+		// Very important: unique constraint on envelopeID makes it easy to duplicate
+		// the beacon's tasks without noticing. So we omit updating the field
+		err = db.Session().Model(&models.Beacon{}).
+			Omit("beacon_tasks").
+			Updates(&bc).Error
+		if err != nil {
+			beaconHandlerLog.Errorf("Database write %s", err)
+		}
+
+		// Publish
 		core.EventBroker.Publish(core.Event{
 			Type:   clientpb.EventType_BeaconUpdated,
 			Beacon: bc,

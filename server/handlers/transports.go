@@ -66,12 +66,13 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 	if err != nil {
 		sessionHandlerLog.Errorf("(Transport switch) Failed to find old transport %s", register.OldTransportID)
 	}
-	oldTransport.Running = false
+	// oldTransport.Running = false
 	err = db.Session().Save(&oldTransport).Error
 	if err != nil {
 		sessionHandlerLog.Errorf("Failed to update Transport status: %s", err)
 	}
-	transport.Running = true
+	// transport.Running = true
+	transport.RemoteAddress = implantConn.RemoteAddress
 	err = db.Session().Save(&transport).Error
 	if err != nil {
 		sessionHandlerLog.Errorf("Failed to update Transport status: %s", err)

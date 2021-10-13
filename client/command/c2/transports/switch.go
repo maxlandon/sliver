@@ -59,6 +59,17 @@ func (s *Switch) Execute(args []string) (err error) {
 	return s.executeSync(resp)
 }
 
+// Switch - Switch the active transport of the current target (synchronous/session)
+func (s *Switch) executeSync(resp *sliverpb.TransportSwitch) (err error) {
+	if resp.Response.Err != "" {
+		return log.Errorf("Failed to switch transport: %s", resp.Response.Err)
+	}
+
+	log.Infof("Switching current transport... (%s)", s.Args.TransportID)
+	log.Infof("The session/beacon and connectivity status should update itself soon.")
+	return
+}
+
 // Switch - Switch the active transport of the current target (asynchronous/beacon)
 func (s *Switch) executeAsync(resp *sliverpb.TransportSwitch) (err error) {
 
@@ -79,16 +90,4 @@ func (s *Switch) executeAsync(resp *sliverpb.TransportSwitch) (err error) {
 		})
 	}
 	return nil // Always return nil from just a task assignment
-}
-
-// Switch - Switch the active transport of the current target (synchronous/session)
-func (s *Switch) executeSync(resp *sliverpb.TransportSwitch) (err error) {
-	if resp.Response.Err != "" {
-		log.ErrorfAsync("Failed to switch transport: %s", resp.Response.Err)
-		return
-	}
-
-	log.Infof("Switching current transport... (%s)", s.Args.TransportID)
-	log.Infof("The session/beacon and connectivity status should update itself soon.")
-	return
 }
