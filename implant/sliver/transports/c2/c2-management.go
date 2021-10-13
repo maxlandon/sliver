@@ -323,10 +323,14 @@ func (t *c2s) Get(ID string) (c2 *C2) {
 // Switch - Dynamically switch the active transport, if multiple are available.
 func (c2 *c2s) Switch(ID string) (err error) {
 
+	// Get the transport and reset its attempts
 	var next = Transports.Get(ID)
 	if next == nil {
 		return fmt.Errorf("could not find transport with ID %s", ID)
 	}
+	next.attempts = 0
+	next.failures = 0
+
 	c2.mutex.RLock()
 	c2.isSwitching = true
 	c2.mutex.RUnlock()
@@ -349,6 +353,14 @@ func (c2 *c2s) Switch(ID string) (err error) {
 	}
 	// {{end}}
 
+	// Cut the old transport
+	err = c2.Active.Stop()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf(err.Error())
+		// {{end}}
+	}
+
 	// Keep the current transport ID, needed when registering
 	// again to the server, for identification purposes.
 	oldTransportID := c2.Active.ID
@@ -364,14 +376,6 @@ func (c2 *c2s) Switch(ID string) (err error) {
 		c2.isSwitching = false
 		c2.mutex.RUnlock()
 		return err
-	}
-
-	// Cut the old transport
-	err = c2.Active.Stop()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf(err.Error())
-		// {{end}}
 	}
 
 	// And assign the new one as current

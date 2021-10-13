@@ -189,7 +189,7 @@ func (t *C2) ServeSessionHandlers() {
 			// {{if .Config.Debug}}
 			log.Printf("[recv] commHandler with type %d", envelope.Type)
 			// {{end}}
-			go handler(envelope, func(data []byte, err error) {
+			go handler(envelope.Data, func(data []byte, err error) {
 				// {{if .Config.Debug}}
 				if err != nil {
 					log.Printf("[session] handler function returned an error: %s", err)

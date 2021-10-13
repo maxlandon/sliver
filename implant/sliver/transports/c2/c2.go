@@ -38,19 +38,17 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
 	// {{if .Config.CommEnabled}}
 	"github.com/bishopfox/sliver/implant/sliver/comm"
-	"github.com/bishopfox/sliver/implant/sliver/cryptography"
-	"github.com/bishopfox/sliver/implant/sliver/transports"
-
 	// {{end}}
 
 	consts "github.com/bishopfox/sliver/implant/sliver/constants"
+	"github.com/bishopfox/sliver/implant/sliver/cryptography"
 	"github.com/bishopfox/sliver/implant/sliver/hostuuid"
+	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/implant/sliver/version"
+	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // C2 - A wrapper around a physical connection, embedding what is necessary to perform
@@ -252,15 +250,14 @@ func (t *C2) startTransport() (err error) {
 // Register - Handle any type of registration message, for any C2 channel/type.
 func (t *C2) Register(isSwitch bool, oldTransportID string) (err error) {
 
-	// Short registration if we were just switching
-	if isSwitch {
-		t.Connection.RequestSend(t.registerSwitch(oldTransportID))
-		return
-	}
-
 	// Register a session
 	if t.Profile.Type == sliverpb.C2Type_Session {
-		// Prepare the registration
+		// Either switch
+		if isSwitch {
+			t.Connection.RequestSend(t.registerSwitch(oldTransportID))
+			return
+		}
+		// Or new
 		data, err := proto.Marshal(t.registerSliver())
 		if err != nil {
 			return fmt.Errorf("Failed to encode register msg %s", err)
@@ -274,7 +271,11 @@ func (t *C2) Register(isSwitch bool, oldTransportID string) (err error) {
 
 	// Or register a beacon, wrapping the register into a special envelope.
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
-		t.Connection.RequestSend(t.registerBeacon())
+		if isSwitch {
+			t.Connection.RequestSend(t.registerSwitch(oldTransportID))
+		} else {
+			t.Connection.RequestSend(t.registerBeacon())
+		}
 		t.Connection.Close()
 		time.Sleep(time.Second)
 	}
@@ -290,18 +291,21 @@ func (t *C2) Stop() (err error) {
 	log.Printf("Closing C2 %s (CC: %s) [%s]", t.Profile.ID, t.uri.String(), t.Profile.Type.String())
 	// {{end}}
 
-	// Notify all goroutines we're done. This is used
-	// to stop beaconing loops, but the chan is non-blocking.
+	// If the transport is a beacon, the full connection stack will
+	// be automatically closed as soon as its last checkin ends.
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
-		close(t.closed)
+		t.closed <- struct{}{}
+		<-t.closed // wait for it to confirm
 	}
 
-	// Close the RPC connection per se.
-	err = t.Connection.Close()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("Error closing Session connection: %s", err)
-		// {{end}}
+	// But a session needs to explicitly cut its connection
+	if t.Profile.Type == sliverpb.C2Type_Session {
+		err = t.Connection.Close()
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("Error closing Session connection: %s", err)
+			// {{end}}
+		}
 	}
 
 	// Just check the physical connection is not nil and kill it if necessary.
@@ -310,13 +314,12 @@ func (t *C2) Stop() (err error) {
 		// {{if .Config.Debug}}
 		log.Printf("killing physical connection (%s  ->  %s", t.Conn.LocalAddr(), t.Conn.RemoteAddr())
 		// {{end}}
-		err = t.Conn.Close()
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Printf("Error closing connection (%s  ->  %s", t.Conn.LocalAddr(), t.Conn.RemoteAddr())
-			// {{end}}
-		}
+		t.Conn.Close()
 	}
+
+	t.mutex.RLock()
+	t.Profile.Active = false
+	t.mutex.RUnlock()
 
 	// {{if .Config.Debug}}
 	log.Printf("Transport closed (%s)", t.uri.String())

