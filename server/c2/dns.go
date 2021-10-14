@@ -132,7 +132,7 @@ type SendBlock struct {
 // DNSSession - Holds DNS session information
 type DNSSession struct {
 	ID                string
-	ImplantConnection *core.ImplantConnection
+	ImplantConnection *core.Connection
 	Key               [32]byte
 	replay            sync.Map // Sessions are mutex 'd
 }
@@ -448,7 +448,7 @@ func startDNSSession(domain string, fields []string) ([]string, error) {
 
 	dnsLog.Infof("Received new session in request")
 
-	implantConn := core.NewImplantConnection("dns", "n/a")
+	implantConn := core.NewImplantConnection("dns", "n/a", "n/a")
 	implantConn.UpdateLastMessage()
 
 	sessionKey, _ := cryptography.KeyFromBytes(sessionInit.Key)

@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/maxlandon/readline"
 	rl "github.com/maxlandon/readline"
 
 	"github.com/bishopfox/sliver/client/core"
@@ -159,6 +160,7 @@ func PrintProfileSummary(profile *sliverpb.Malleable) {
 	}
 }
 
+// FullTargetPath - Get the entire target path of a Malleable profile.
 func FullTargetPath(profile *sliverpb.Malleable) (path string) {
 	path = profile.Hostname
 	if profile.Port > 0 {
@@ -168,6 +170,43 @@ func FullTargetPath(profile *sliverpb.Malleable) (path string) {
 		path = path + profile.Path
 	}
 	return
+}
+
+// TransportConnection - Get the full transport connection string, depending
+// on its state and runtime values. The padding is optional, but useful for tables.
+func TransportConnection(transport *sliverpb.Transport, padding int) string {
+	var lAddr = transport.LocalAddress
+	var rAddr = transport.RemoteAddress
+	var link string
+
+	// Return an optionally padded connection string
+	switch transport.Profile.Direction {
+	case sliverpb.C2Direction_Bind:
+		link = "==>"
+	case sliverpb.C2Direction_Reverse:
+		link = "<=="
+	default:
+		link = "<==>"
+	}
+
+	if !transport.Running {
+		link = readline.Dim(link)
+	} else {
+		lAddr = readline.Bold(lAddr)
+		rAddr = readline.Bold(rAddr)
+	}
+
+	// The non-padded connection string
+	conn := fmt.Sprintf("%s  %s  %s", lAddr, link, rAddr)
+
+	switch transport.Profile.Direction {
+	case sliverpb.C2Direction_Bind:
+		return fmt.Sprintf("        %*s", padding, conn)
+	case sliverpb.C2Direction_Reverse:
+		return fmt.Sprintf("%-*s", padding, conn)
+	default:
+		return conn
+	}
 }
 
 // NewMalleable - A generic function that C2 channel writers can use in order to automatically parse

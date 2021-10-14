@@ -25,6 +25,7 @@ package db
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -354,6 +355,26 @@ func TransportByShortID(ID string) (transport *models.Transport, err error) {
 	return nil, fmt.Errorf("Could not find Transport with short ID %s", ID)
 }
 
+// AllTransports - Returns all transports loaded with their C2 profiles
+func AllTransports() (transports []*models.Transport, err error) {
+
+	transports = []*models.Transport{}
+	err = Session().Find(&transports).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Load C2s
+	for _, transport := range transports {
+		err = loadC2ProfileForTransport(transport)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return
+}
+
 // TransportsForBuild - Loads all the transports compiled into an implant build, not fetching those set at runtime.
 func TransportsForBuild(name string) (transports []*models.Transport, err error) {
 
@@ -547,6 +568,27 @@ func BeaconByShortID(id string) (*models.Beacon, error) {
 	}
 
 	return nil, fmt.Errorf("Could not find beacon with ID %s", id)
+}
+
+// UpdateOrCreateBeacon - Either updates the state of an existing beacon, taking care
+// or not touching its associated tasks, so we don't duplicate them inadvertently,
+// or creates a new one. This function is often used during transport switches.
+func UpdateOrCreateBeacon(beacon *models.Beacon) (err error, updateErr error) {
+
+	// Try to update it first
+	err = Session().Model(&models.Beacon{}).
+		Omit("beacon_tasks").Where(&models.Beacon{
+		ID: beacon.ID,
+	}).Updates(&beacon).Error
+
+	// Or create it if needed
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		updateErr = Session().Model(&models.Beacon{}).
+			Omit("beacon_tasks").
+			Save(&beacon).Error
+	}
+
+	return
 }
 
 // BeaconTasksByBeaconID - Get all tasks for a specific beacon

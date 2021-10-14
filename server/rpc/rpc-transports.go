@@ -46,7 +46,6 @@ func (rpc *Server) AddTransport(ctx context.Context, req *sliverpb.TransportAddR
 	}
 
 	// Get the profile matching the requested profile ID
-	// Return if not found.
 	profile, err := db.MalleableByShortID(req.ID)
 	if err != nil || profile == nil {
 		// Try with long ID, just in case
@@ -62,8 +61,9 @@ func (rpc *Server) AddTransport(ctx context.Context, req *sliverpb.TransportAddR
 		return nil, err
 	}
 
-	// Setup the Transport Profile security details
-	err = c2.SetupProfileSecurity(profile, profile.Hostname)
+	// Verify that all security details (certs, keys, logins, etc)
+	// are correct for the C2 profile target, type, direction.
+	err = c2.SetupMalleableSecurity(profile, profile.Hostname)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to initialize transport security details: %s", err)
 	}
@@ -111,7 +111,7 @@ func (rpc *Server) AddTransport(ctx context.Context, req *sliverpb.TransportAddR
 	// in the database, so that we don't have to query it each time we want them.
 	// Rewrite the correct profile ID for not creating a new useless one
 	profile.ID = oldID
-	err = db.Session().Save(transport).Error
+	_, err = core.CreateOrUpdateTransport(transport, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to update Transport: %s", err)
 	}

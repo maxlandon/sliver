@@ -22,8 +22,9 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
+	"time"
 
+	"github.com/acarl005/stripansi"
 	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
@@ -71,9 +72,18 @@ func printBeacons(beacons map[string]*clientpb.Beacon) {
 	sort.Strings(keys)
 
 	table := util.NewTable("")
-	headers := []string{"ID", "Name", "Tasks", "Transport", "Remote Address", "User", "Hostname", "OS/Arch", "Last Check-in", "Next Check-in"}
+	headers := []string{"ID", "Name", "Tasks", "C2", "Remote Address", "User", "Hostname", "OS/Arch", "Last Check-in", "Next Check-in"}
 	headLen := []int{0, 0, 0, 0, 15, 0, 0, 0, 0, 0}
 	table.SetColumns(headers, headLen)
+
+	// Get padding for transports
+	var padd int
+	for _, beacon := range beacons {
+		transport := beacon.Transport
+		if len(stripansi.Strip(c2.TransportConnection(transport, 0))) > padd {
+			padd = len(stripansi.Strip(c2.TransportConnection(transport, 0)))
+		}
+	}
 
 	for _, k := range keys {
 		b := beacons[k]
@@ -81,9 +91,11 @@ func printBeacons(beacons map[string]*clientpb.Beacon) {
 		osArch := fmt.Sprintf("%s/%s", b.OS, b.Arch)
 
 		transport := b.Transport.Profile.C2.String()
-		addr := b.Transport.RemoteAddress
+		addr := c2.TransportConnection(b.Transport, padd)
+		last := fmt.Sprintf("%s", time.Duration(b.LastCheckin))
+		next := fmt.Sprintf("%s", time.Duration(b.NextCheckin))
 		row := []string{c2.GetShortID(b.ID), b.Name, tasks, transport, addr, b.Username,
-			b.Hostname, osArch, strconv.Itoa(int(b.LastCheckin)), strconv.Itoa(int(b.NextCheckin))}
+			b.Hostname, osArch, last, next}
 
 		table.AppendRow(row)
 	}

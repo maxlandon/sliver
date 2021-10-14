@@ -22,12 +22,13 @@ import (
 	"context"
 	"sync"
 
+	"github.com/maxlandon/readline"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/maxlandon/readline"
-	"google.golang.org/protobuf/proto"
 )
 
 var (

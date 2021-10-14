@@ -31,7 +31,7 @@ import (
 // HTTPSession - Holds data related to a sliver c2 session
 type HTTPSession struct {
 	ID         string
-	ImplanConn *core.ImplantConnection
+	ImplanConn *core.Connection
 	CipherCtx  *cryptography.CipherContext
 	Started    time.Time
 }

@@ -140,11 +140,11 @@ func printJobs(jobs map[string]*clientpb.Job) {
 	// Print handler jobs
 	if len(listeners) > 0 {
 		// Sort keys
-		var keys []string
+		var keys []int
 		for _, job := range listeners {
-			keys = append(keys, job.ID)
+			keys = append(keys, int(job.Order))
 		}
-		sort.Strings(keys)
+		sort.Ints(keys)
 
 		table := util.NewTable(readline.Bold(readline.Yellow("Listeners")))
 		headers := []string{"ID", "UUID", "Protocol", "Domain(s)", "Port", "Description"}
@@ -152,26 +152,30 @@ func printJobs(jobs map[string]*clientpb.Job) {
 		table.SetColumns(headers, headLen)
 
 		for _, k := range keys {
-			job := listeners[k]
+			for _, job := range listeners {
+				if int(job.Order) != k {
+					continue
+				}
 
-			// Some host address might be scattered
-			// between names and domain values.
-			var domains string
-			if len(job.Profile.Domains) != 0 {
-				strings.Join(job.Profile.Domains, ",")
-			} else {
-				domains = job.Name
+				// Some host address might be scattered
+				// between names and domain values.
+				var domains string
+				if len(job.Profile.Domains) != 0 {
+					strings.Join(job.Profile.Domains, ",")
+				} else {
+					domains = job.Name
+				}
+
+				// Append elements
+				table.AppendRow([]string{
+					strconv.Itoa(int(job.Order)),
+					c2.GetShortID(job.ID),
+					job.Profile.C2.String(),
+					domains,
+					strconv.Itoa(int(job.Profile.Port)),
+					job.Description,
+				})
 			}
-
-			// Append elements
-			table.AppendRow([]string{
-				strconv.Itoa(int(job.Order)),
-				c2.GetShortID(job.ID),
-				job.Profile.C2.String(),
-				domains,
-				strconv.Itoa(int(job.Profile.Port)),
-				job.Description,
-			})
 		}
 
 		// Print table
@@ -186,11 +190,11 @@ func printJobs(jobs map[string]*clientpb.Job) {
 		}
 
 		// Sort keys
-		var keys []string
+		var keys []int
 		for _, job := range servers {
-			keys = append(keys, job.ID)
+			keys = append(keys, int(job.Order))
 		}
-		sort.Strings(keys)
+		sort.Ints(keys)
 
 		table := util.NewTable(readline.Bold(readline.Yellow("gRPC servers")))
 		headers := []string{"ID", "Domain", "Port"}
@@ -198,23 +202,27 @@ func printJobs(jobs map[string]*clientpb.Job) {
 		table.SetColumns(headers, headLen)
 
 		for _, k := range keys {
-			job := servers[string(k)]
+			for _, job := range servers {
+				if int(job.Order) != k {
+					continue
+				}
 
-			// Some host address might be scattered
-			// between names and domain values.
-			var domains string
-			if len(job.Profile.Domains) != 0 {
-				strings.Join(job.Profile.Domains, ",")
-			} else {
-				domains = job.Name
+				// Some host address might be scattered
+				// between names and domain values.
+				var domains string
+				if len(job.Profile.Domains) != 0 {
+					strings.Join(job.Profile.Domains, ",")
+				} else {
+					domains = job.Name
+				}
+
+				// Append elements
+				table.AppendRow([]string{
+					c2.GetShortID(job.ID),
+					domains,
+					strconv.Itoa(int(job.Profile.Port)),
+				})
 			}
-
-			// Append elements
-			table.AppendRow([]string{
-				c2.GetShortID(job.ID),
-				domains,
-				strconv.Itoa(int(job.Profile.Port)),
-			})
 		}
 
 		// Print table

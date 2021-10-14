@@ -192,7 +192,8 @@ message Transport {
   // Live
   int32 Attempts = 6;
   int32 Failures = 7;
-  string RemoteAddress = 8; // Filled by the Connection type
+  string LocalAddress = 8; // Filled by the Connection type
+  string RemoteAddress = 9; // Filled by the Connection type
 }
 
 message TransportAddReq {

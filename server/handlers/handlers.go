@@ -29,7 +29,7 @@ import (
 	"github.com/bishopfox/sliver/server/core"
 )
 
-type ServerHandler func(*core.ImplantConnection, []byte) *sliverpb.Envelope
+type ServerHandler func(*core.Connection, []byte) *sliverpb.Envelope
 
 var (
 	serverHandlers = map[uint32]ServerHandler{

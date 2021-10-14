@@ -65,9 +65,9 @@ func SetupHandlerSecurity(p *models.Malleable, hostname string) (err error) {
 	return
 }
 
-// SetupProfileSecurity - The central point where all C2 Profiles go at some point, for validation of minimum safety levels, as
+// SetupMalleableSecurity - The central point where all C2 Profiles go at some point, for validation of minimum safety levels, as
 // well as for more specialized authentication steps that you can add below, for more exotic C2 channels like Wireguard.
-func SetupProfileSecurity(p *models.Malleable, certificateHostname string) (err error) {
+func SetupMalleableSecurity(p *models.Malleable, certificateHostname string) (err error) {
 
 	// - TLS authenticated implants
 	if p.Channel == sliverpb.C2_MTLS {

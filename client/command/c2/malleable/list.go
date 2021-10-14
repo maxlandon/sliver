@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/maxlandon/readline"
+
 	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
@@ -30,7 +32,6 @@ import (
 	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/maxlandon/readline"
 )
 
 // List - List all or some C2 profiles

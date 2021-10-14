@@ -50,7 +50,7 @@ type Beacon struct {
 	Filename         string
 	Version          string
 	WorkingDirectory string
-	State            clientpb.State
+	State            string // use clientpb.State.String()
 	// Beacon
 	LastCheckin time.Time
 	NextCheckin int64
@@ -85,7 +85,7 @@ func (b *Beacon) ToProtobuf() *clientpb.Beacon {
 		PID:      b.PID,
 		Filename: b.Filename,
 		Version:  b.Version,
-		State:    b.State,
+		State:    clientpb.State(clientpb.State_value[b.State]),
 		// Beacon
 		LastCheckin:      b.LastCheckin.Unix(),
 		NextCheckin:      b.NextCheckin,

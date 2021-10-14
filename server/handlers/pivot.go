@@ -73,7 +73,7 @@ func StopPivotHandlers() error {
 }
 
 // HandlePivotOpen - Handles a PivotOpen message
-func HandlePivotOpen(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
+func HandlePivotOpen(implantConn *core.Connection, data []byte) *sliverpb.Envelope {
 	// if implantConn == nil {
 	// 	return
 	// }
@@ -139,7 +139,7 @@ func HandlePivotOpen(implantConn *core.ImplantConnection, data []byte) *sliverpb
 }
 
 // HandlePivotData - Handles a PivotData message
-func HandlePivotData(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
+func HandlePivotData(implantConn *core.Connection, data []byte) *sliverpb.Envelope {
 	// envi := &sliverpb.PivotData{}
 	// err2 := proto.Unmarshal(data, envi)
 	// if err2 != nil {
@@ -170,7 +170,7 @@ func HandlePivotData(implantConn *core.ImplantConnection, data []byte) *sliverpb
 }
 
 // HandlePivotClose - Handles a PivotClose message
-func HandlePivotClose(conn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
+func HandlePivotClose(conn *core.Connection, data []byte) *sliverpb.Envelope {
 	// pivotClose := &sliverpb.PivotClose{}
 	// err := proto.Unmarshal(data, pivotClose)
 	// if err != nil {

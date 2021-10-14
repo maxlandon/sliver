@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	gofrsUuid "github.com/gofrs/uuid"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 
@@ -44,8 +43,8 @@ var (
 	sessionHandlerLog = log.NamedLogger("handlers", "sessions")
 )
 
-func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
-	if implantConn == nil {
+func registerSessionHandler(conn *core.Connection, data []byte) *sliverpb.Envelope {
+	if conn == nil {
 		return nil
 	}
 	register := &sliverpb.Register{}
@@ -56,7 +55,7 @@ func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *s
 	}
 
 	// Core ------------------------------------------------------------
-	session := core.NewSession(implantConn)
+	session := core.NewSession(conn)
 
 	// Parse Register UUID
 	hostUUID, err := uuid.Parse(register.HostUUID)
@@ -77,7 +76,7 @@ func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *s
 	session.Version = register.Version
 	session.ConfigID = register.ConfigID
 	session.WorkingDirectory = register.WorkingDirectory
-	session.State = clientpb.State_Alive
+	session.State = clientpb.State_Alive.String()
 
 	// Transports ------------------------------------------------------
 
@@ -87,12 +86,10 @@ func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *s
 	if transport == nil {
 		sessionHandlerLog.Errorf("Could not find transport with ID %s", register.ActiveTransportID)
 	}
-	transport.SessionID = gofrsUuid.FromStringOrNil(session.UUID)
-	transport.RemoteAddress = session.Connection.RemoteAddress
 	session.Transport = transport
 
 	// Update all transports, including the running one, with their statistics
-	err = core.UpdateSessionTransports(register.TransportStats)
+	err = core.UpdateTargetTransports(transport.ID.String(), session.UUID, conn, register.TransportStats)
 	if err != nil {
 		sessionHandlerLog.Errorf("Error when updating session transports: %s", err)
 	}
@@ -100,7 +97,7 @@ func registerSessionHandler(implantConn *core.ImplantConnection, data []byte) *s
 	// Registration ----------------------------------------------------
 
 	core.Sessions.Add(session)
-	implantConn.Cleanup = func() {
+	conn.Cleanup = func() {
 		core.Sessions.Remove(session.ID)
 	}
 	go auditLogSession(session, register)
@@ -165,7 +162,7 @@ func SetSessionCommSubsystem(transport *models.Transport, session *core.Session)
 
 // The handler mutex prevents a send on a closed channel, without it
 // two handlers calls may race when a tunnel is quickly created and closed.
-func tunnelDataHandler(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
+func tunnelDataHandler(implantConn *core.Connection, data []byte) *sliverpb.Envelope {
 	session := core.SessionFromImplantConnection(implantConn)
 	tunnelHandlerMutex.Lock()
 	defer tunnelHandlerMutex.Unlock()
@@ -184,7 +181,7 @@ func tunnelDataHandler(implantConn *core.ImplantConnection, data []byte) *sliver
 	return nil
 }
 
-func tunnelCloseHandler(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
+func tunnelCloseHandler(implantConn *core.Connection, data []byte) *sliverpb.Envelope {
 	session := core.SessionFromImplantConnection(implantConn)
 	tunnelHandlerMutex.Lock()
 	defer tunnelHandlerMutex.Unlock()
@@ -208,14 +205,14 @@ func tunnelCloseHandler(implantConn *core.ImplantConnection, data []byte) *slive
 	return nil
 }
 
-func pingHandler(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
+func pingHandler(implantConn *core.Connection, data []byte) *sliverpb.Envelope {
 	session := core.SessionFromImplantConnection(implantConn)
 	sessionHandlerLog.Debugf("ping from session %d", session.ID)
 	return nil
 }
 
 // commTunnelDataHandler - Handle Comm tunnel data coming from the server.
-func commTunnelDataHandler(conn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
+func commTunnelDataHandler(conn *core.Connection, data []byte) *sliverpb.Envelope {
 	session := core.SessionFromImplantConnection(conn)
 	tunnelData := &commpb.TunnelData{}
 	proto.Unmarshal(data, tunnelData)
@@ -235,7 +232,7 @@ func commTunnelDataHandler(conn *core.ImplantConnection, data []byte) *sliverpb.
 }
 
 // switchSession - Create a session if the current target was a beacon, or update the session if it was already one.
-func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register, b *models.ImplantBuild) error {
+func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register) error {
 	var sessionExists bool
 	if s.UUID == "" {
 		sessionExists = false
@@ -262,19 +259,9 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register, b *
 	s.Version = r.Version
 	s.ConfigID = r.ConfigID
 	s.WorkingDirectory = r.WorkingDirectory
-	s.State = clientpb.State_Alive
+	s.State = clientpb.State_Alive.String()
 	if bc != nil {
 		s.BeaconID = bc.ID.String() // Switching from a beacon
-	}
-
-	// Transports ---------------------------------------------------
-
-	// Update all transports, including the running one, with their statistics
-	s.Transport.SessionID = gofrsUuid.FromStringOrNil(s.UUID)
-	s.Transport.RemoteAddress = s.Connection.RemoteAddress
-	err = core.UpdateSessionTransports(r.TransportStats)
-	if err != nil {
-		sessionHandlerLog.Errorf("Error when updating session transports: %s", err)
 	}
 
 	// Registration -------------------------------------------------
@@ -286,7 +273,7 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register, b *
 
 		// We were a beacon: mark it inactive, so it doesn't
 		// show up in some completions, cannot be used, etc
-		bc.State = clientpb.State_Disconnect
+		bc.State = clientpb.State_Disconnect.String()
 
 		// Very important: unique constraint on envelopeID makes it easy to duplicate
 		// the beacon's tasks without noticing. So we omit updating the field

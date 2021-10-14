@@ -72,10 +72,10 @@ type Session struct {
 	Extensions       []string
 	ConfigID         string
 	WorkingDirectory string
-	State            clientpb.State
+	State            string // use clientpb.State.String()
 
 	// Transports
-	Connection *ImplantConnection
+	Connection *Connection
 	Transport  *models.Transport
 }
 
@@ -85,16 +85,16 @@ func (s *Session) LastCheckin() time.Time {
 
 func (s *Session) CurrentState() clientpb.State {
 	// If we are marked switching, there is a good reason:
-	if s.State == clientpb.State_Switching {
-		return s.State
+	if s.State == clientpb.State_Switching.String() {
+		return clientpb.State_Switching
 	}
 	// As well, for the disconnect, but should only be used for beacons
-	if s.State == clientpb.State_Disconnect {
-		return s.State
+	if s.State == clientpb.State_Disconnect.String() {
+		return clientpb.State_Disconnect
 	}
 	// Sleeping might also be set by a command
-	if s.State == clientpb.State_Sleep {
-		return s.State
+	if s.State == clientpb.State_Sleep.String() {
+		return clientpb.State_Sleep
 	}
 
 	transport := s.Transport.Profile
@@ -260,13 +260,13 @@ func (s *sessions) Remove(sessionID uint32) {
 
 	// If the session is currenly switching, don't return delete:
 	// we will clean it later
-	if session.State == clientpb.State_Switching {
+	if session.State == clientpb.State_Switching.String() {
 		sessionsLog.Infof("Did not delete session marked switching")
 		return
 	}
 
 	// Delete the transports set at runtime if this was a kill call
-	err := CleanupSessionTransports(session)
+	err := CleanupTargetTransports(session)
 	if err != nil {
 		sessionsLog.Errorf("Failed to cleanup session transports: %s", err)
 	}
@@ -285,7 +285,7 @@ func (s *sessions) RemoveSwitched(sessionID uint32) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	session, found := s.sessions[sessionID]
-	if !found || session == nil || session.State != clientpb.State_Switching {
+	if !found || session == nil || session.State != clientpb.State_Switching.String() {
 		return
 	}
 
@@ -299,7 +299,7 @@ func (s *sessions) RemoveSwitched(sessionID uint32) {
 }
 
 // NewSession - Create a session on top on a logical implant connection.
-func NewSession(implantConn *ImplantConnection) *Session {
+func NewSession(implantConn *Connection) *Session {
 	implantConn.UpdateLastMessage()
 	return &Session{
 		ID:         nextSessionID(),
@@ -308,7 +308,7 @@ func NewSession(implantConn *ImplantConnection) *Session {
 }
 
 // SessionFromImplantConnection - Find the logical implant connection used by a session.
-func SessionFromImplantConnection(conn *ImplantConnection) *Session {
+func SessionFromImplantConnection(conn *Connection) *Session {
 	Sessions.mutex.RLock()
 	defer Sessions.mutex.RUnlock()
 	for _, session := range Sessions.sessions {

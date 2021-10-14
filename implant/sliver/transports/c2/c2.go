@@ -291,6 +291,10 @@ func (t *C2) Stop() (err error) {
 	log.Printf("Closing C2 %s (CC: %s) [%s]", t.Profile.ID, t.uri.String(), t.Profile.Type.String())
 	// {{end}}
 
+	t.mutex.RLock()
+	t.Profile.Active = false
+	t.mutex.RUnlock()
+
 	// If the transport is a beacon, the full connection stack will
 	// be automatically closed as soon as its last checkin ends.
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
@@ -316,10 +320,6 @@ func (t *C2) Stop() (err error) {
 		// {{end}}
 		t.Conn.Close()
 	}
-
-	t.mutex.RLock()
-	t.Profile.Active = false
-	t.mutex.RUnlock()
 
 	// {{if .Config.Debug}}
 	log.Printf("Transport closed (%s)", t.uri.String())

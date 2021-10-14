@@ -21,12 +21,13 @@ package transports
 import (
 	"context"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"google.golang.org/protobuf/proto"
 )
 
 // Add - Add a C2 profile to a session/beacon as an available transport

@@ -451,7 +451,7 @@ func getRemoteAddr(req *http.Request) string {
 		httpLog.Warn("Failed to parse X-Header as ip address")
 		return req.RemoteAddr
 	}
-	return fmt.Sprintf("tcp(%s)->%s", req.RemoteAddr, ip.String())
+	return fmt.Sprintf("(%s)->%s", req.RemoteAddr, ip.String())
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {

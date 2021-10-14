@@ -25,13 +25,15 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/acarl005/stripansi"
+	"github.com/maxlandon/readline"
+
 	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/maxlandon/readline"
 )
 
 // List - List all or some C2 transports for the current session or context
@@ -74,7 +76,7 @@ func (l *List) Execute(args []string) (err error) {
 func printTransports(transports []*sliverpb.Transport) {
 
 	table := util.NewTable("")
-	headers := []string{"State", "N°", "ID", "C2", "Direction", "Address", "Errs/Reconnect", "Jit/Interval", "SSH Comms", "tried/failed"}
+	headers := []string{"State", "N°", "ID", "Type", "C2", "Address", "Errs/Reconnect", "Jit/Interval", "Comms", "try/fail"}
 	headLen := []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	table.SetColumns(headers, headLen)
 
@@ -84,6 +86,14 @@ func printTransports(transports []*sliverpb.Transport) {
 		keys = append(keys, int(t.Order))
 	}
 	sort.Ints(keys)
+
+	// Get padding for transports
+	var padd int
+	for _, transport := range transports {
+		if len(stripansi.Strip(c2.TransportConnection(transport, 0))) > padd {
+			padd = len(stripansi.Strip(c2.TransportConnection(transport, padd)))
+		}
+	}
 
 	for _, v := range keys {
 		for _, transport := range transports {
@@ -95,15 +105,15 @@ func printTransports(transports []*sliverpb.Transport) {
 
 			var state string
 			if transport.Running {
-				state = readline.Green("Active")
+				state = readline.Bold(readline.Green("Active"))
 			} else {
 				state = readline.Dim("Loaded")
 			}
 			order := readline.Dim(strconv.Itoa(int(transport.Order)))
-			id := c2.GetShortID(prof.ID)
+			id := c2.GetShortID(transport.ID)
 			channel := prof.C2.String()
-			dir := prof.Direction.String()
-			address := readline.Bold(c2.FullTargetPath(prof))
+			c2Type := prof.Type.String()
+			address := c2.TransportConnection(transport, padd)
 
 			// Timeouts
 			var timeouts string
@@ -118,9 +128,9 @@ func printTransports(transports []*sliverpb.Transport) {
 			// Comm
 			var comms string
 			if prof.CommDisabled {
-				comms = readline.YELLOW + "no" + readline.RESET
+				comms = "no"
 			} else {
-				comms = readline.GREEN + "yes" + readline.RESET
+				comms = "yes"
 			}
 
 			// Attempts
@@ -137,7 +147,7 @@ func printTransports(transports []*sliverpb.Transport) {
 			attempts = attempts + fmt.Sprintf("%d / %d", transport.Attempts, transport.Failures)
 
 			// Add to table
-			table.AppendRow([]string{state, order, id, channel, dir, address, timeouts, jitInt, comms, attempts})
+			table.AppendRow([]string{state, order, id, c2Type, channel, address, timeouts, jitInt, comms, attempts})
 		}
 	}
 

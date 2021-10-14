@@ -44,6 +44,7 @@ type Transport struct {
 	Running       bool
 	Attempts      int32
 	Failures      int32
+	LocalAddress  string // Set at registration from the Connection
 	RemoteAddress string // Set at registration time from the Connection
 }
 
@@ -57,6 +58,7 @@ func (t *Transport) ToProtobuf() *sliverpb.Transport {
 		Running:       t.Running,
 		Attempts:      t.Attempts,
 		Failures:      t.Failures,
+		LocalAddress:  t.LocalAddress,
 		RemoteAddress: t.RemoteAddress,
 	}
 
@@ -75,6 +77,7 @@ func TransportFromProtobuf(t *sliverpb.Transport) *Transport {
 		Running:       t.Running,
 		Attempts:      t.Attempts,
 		Failures:      t.Failures,
+		LocalAddress:  t.LocalAddress,
 		RemoteAddress: t.RemoteAddress,
 	}
 

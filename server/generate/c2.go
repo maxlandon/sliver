@@ -103,7 +103,7 @@ func NewTransport(config *models.ImplantConfig, template *sliverpb.Malleable) (t
 	// Setup all certificates, keys and other credentials for the
 	// appropriate C2 stack and the direction of the connection,
 	// before passing this C2 back to compilation.
-	err = c2.SetupProfileSecurity(profile, config.Name)
+	err = c2.SetupMalleableSecurity(profile, config.Name)
 	if err != nil {
 		return nil, err
 	}

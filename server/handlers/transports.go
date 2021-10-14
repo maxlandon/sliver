@@ -19,7 +19,10 @@ package handlers
 */
 
 import (
+	"errors"
+
 	"google.golang.org/protobuf/proto"
+	"gorm.io/gorm"
 
 	sliverpb "github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
@@ -28,7 +31,7 @@ import (
 
 // registerTransportSwitch - The implant has established a new connection to the server and sent
 // a registration notifying this new transport. Updates the session transport details.
-func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []byte) *sliverpb.Envelope {
+func registerTransportSwitchHandler(implantConn *core.Connection, data []byte) *sliverpb.Envelope {
 	if implantConn == nil {
 		return nil
 	}
@@ -45,38 +48,40 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 		sessionHandlerLog.Errorf("(Transport switch) Failed to find session for transport %s", register.OldTransportID)
 		return nil
 	}
-	var buildName string
-	if session != nil {
-		buildName = session.Name
-	} else {
-		buildName = beacon.Name
-	}
 
-	// Get this new transport and implant build
-	build, err := db.ImplantBuildByName(buildName)
+	// Transports ------------------------------------------------------------------------------------------
+
+	// First get the new transport updated, we need it for info
 	transport, err := db.TransportByID(register.TransportID)
 	if transport == nil || err != nil {
-		sessionHandlerLog.Errorf("(Transport switch) Failed to find transport %s", register.TransportID)
+		sessionHandlerLog.Errorf("(Transport update) Failed to find transport %s", register.TransportID)
 		return nil
 	}
 
-	// Update both old and new transports (don't know why: bug in transportsStats
-	// at register that does not give correct status, but good attempts/failures)
-	oldTransport, err := db.TransportByID(register.OldTransportID)
-	if err != nil {
-		sessionHandlerLog.Errorf("(Transport switch) Failed to find old transport %s", register.OldTransportID)
+	// Get runtime statistics for all transports
+	var targetID string
+	if session != nil {
+		targetID = session.UUID
+	} else {
+		targetID = beacon.ID.String()
 	}
-	// oldTransport.Running = false
-	err = db.Session().Save(&oldTransport).Error
-	if err != nil {
-		sessionHandlerLog.Errorf("Failed to update Transport status: %s", err)
+
+	var stats []*sliverpb.Transport
+	switch transport.Profile.Type {
+	case sliverpb.C2Type_Session:
+		stats = register.Session.TransportStats
+	case sliverpb.C2Type_Beacon:
+		stats = register.Beacon.Register.TransportStats
 	}
-	// transport.Running = true
-	transport.RemoteAddress = implantConn.RemoteAddress
-	err = db.Session().Save(&transport).Error
-	if err != nil {
-		sessionHandlerLog.Errorf("Failed to update Transport status: %s", err)
-	}
+
+	// Update all the transports related to this target:
+	// - mark the old one as inactive
+	// - mark the new one as active, and format its live connection string
+	// - Update the others with their respective statistics passed in the registration.
+	err = core.UpdateTargetTransports(register.TransportID, targetID, implantConn, stats)
+
+	// And query the updated transport, otherwise we use the wrong copy
+	transport, _ = db.TransportByID(transport.ID.String())
 
 	// Current => Session ----------------------------------------------------------------------------------
 	if transport.Profile.Type == sliverpb.C2Type_Session {
@@ -88,11 +93,10 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 				core.Sessions.Remove(session.ID)
 			}
 		}
-
-		// But we have its new transport anyway
 		session.Transport = transport
 
-		err = switchSession(session, beacon, register.Session, build)
+		// And handle switch registration
+		err = switchSession(session, beacon, register.Session)
 		if err != nil {
 			sessionHandlerLog.Errorf("(Transport switch => session) Failed with error: %s", err)
 		}
@@ -100,7 +104,18 @@ func registerTransportSwitchHandler(implantConn *core.ImplantConnection, data []
 
 	// Current => Beacon ----------------------------------------------------------------------------------
 	if transport.Profile.Type == sliverpb.C2Type_Beacon {
-		err = switchBeacon(session, register, implantConn, transport)
+
+		// Get beacon if existing, or instantiate a new one
+		beacon, err := db.BeaconByID(register.Beacon.ID)
+		beaconHandlerLog.Debugf("Found %v err = %s", beacon, err)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			beaconHandlerLog.Errorf("Database query error %s", err)
+			return nil
+		}
+		beacon.Transport = transport
+
+		// And handle switch registration
+		err = switchBeacon(beacon, session, register.Beacon, implantConn)
 		if err != nil {
 			sessionHandlerLog.Errorf("(Transport switch => beacon) Failed with error: %s", err)
 		}
