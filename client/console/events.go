@@ -223,7 +223,7 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 		// receive the resulting new beacon/session (events don't guarantee the order)
 		// We keep the session anyway. Will be changed later.
 		if id == session.ID && session.State == clientpb.State_Switching {
-			core.UnsetActiveSession()
+			// core.UnsetActiveSession()
 			log.Infof("Closed switched session %d", session.ID)
 			return
 		}
@@ -351,13 +351,14 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 		}
 
 		// If we are a session that is about to be closed, drop it before receiving the event
-		if active.IsSession() && session != nil && session.UUID == active.ID() {
-			if session.State != clientpb.State_Switching {
+		if active.IsSession() && session != nil && session.UUID == active.UUID() {
+			if active.State() != clientpb.State_Switching {
 				return
 			}
 			log = log.WithField("success", true)
 			news := fmt.Sprintf("Switching transports: Session %s (%s) => Beacon %s (%s)",
-				active.ID(), active.Transport(), c2.GetShortID(beacon.ID), beacon.Transport)
+				active.ID(), active.Transport().Profile.C2,
+				c2.GetShortID(beacon.ID), beacon.Transport.Profile.C2)
 			core.SetActiveTarget(nil, beacon)
 			log.Infof(news)
 		}
