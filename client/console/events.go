@@ -249,9 +249,22 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 
 		// If our active session is switching its transport
 		if active.IsSession() && session.ID == id && session.State == clientpb.State_Switching {
+			news := fmt.Sprintf("Session %d switching its transport", session.ID)
+
+			// Set the new beacon as the active target
+			core.SetActiveTarget(session, nil)
+			log.Infof(news)
+			return
+		}
+
+		// If our active session is done switching its transport
+		if active.IsSession() && active.State() == clientpb.State_Switching && session.State == clientpb.State_Alive && session.ID == id {
 			log = log.WithField("success", true)
-			news := fmt.Sprintf("Switching transports: Updated session %d (%s)",
-				session.ID, session.Transport.Profile.C2)
+			news := fmt.Sprintf("Session (%d) switched transport: (%s) %s  <=>  %s",
+				session.ID,
+				session.Transport.Profile.C2,
+				c2.FullTargetPath(session.Transport.Profile),
+				session.Transport.RemoteAddress)
 
 			// Set the new beacon as the active target
 			core.SetActiveTarget(session, nil)
@@ -314,7 +327,7 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 		}
 
 		// If our active beacon is updated, either from a transport switch or anything else
-		if active.IsBeacon() && active.ID() == beacon.ID {
+		if active.IsBeacon() && active.ID() == beacon.ID && beacon.State == clientpb.State_Alive {
 
 			// If its a change in transports
 			if active.Transport().ID != beacon.Transport.ID {

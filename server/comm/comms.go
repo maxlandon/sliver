@@ -146,37 +146,6 @@ func (c *tunnels) AddTunnel(tun *tunnel) {
 	c.tunnels[tun.ID] = tun
 }
 
-// Close - Close a tunnel and notify the other end
-// func (t *tunnels) Close(tunnelID uint64) error {
-//         t.mutex.Lock()
-//         defer t.mutex.Unlock()
-//
-//         tunnel := t.tunnels[tunnelID]
-//         if tunnel == nil {
-//                 return ErrInvalidTunnelID
-//         }
-//         tunnelClose, err := proto.Marshal(&sliverpb.TunnelData{
-//                 TunnelID:  tunnel.ID,
-//                 SessionID: tunnel.Sess.ID,
-//                 Closed:    true,
-//         })
-//         if err != nil {
-//                 return err
-//         }
-//         data, err := proto.Marshal(&sliverpb.Envelope{
-//                 Type: sliverpb.MsgTunnelClose,
-//                 Data: tunnelClose,
-//         })
-//         if err != nil {
-//                 return err
-//         }
-//         tunnel.ToImplant <- data // Send an in-band close to implant
-//         delete(t.tunnels, tunnelID)
-//         close(tunnel.ToImplant)
-//         close(tunnel.FromImplant)
-//         return nil
-// }
-
 // RemoveTunnel - Add tunnel to mapping
 func (c *tunnels) RemoveTunnel(ID uint64) {
 	c.mutex.Lock()

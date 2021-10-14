@@ -48,12 +48,6 @@ func registerTransportSwitchHandler(implantConn *core.Connection, data []byte) *
 		sessionHandlerLog.Errorf("(Transport switch) Failed to find session for transport %s", register.OldTransportID)
 		return nil
 	}
-	// if session != nil {
-	//         fmt.Println("Session NOT NIL")
-	// }
-	// if beacon != nil {
-	//         fmt.Println("Beacon NOT NIL")
-	// }
 
 	// Transports ------------------------------------------------------------------------------------------
 

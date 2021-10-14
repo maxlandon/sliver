@@ -191,6 +191,7 @@ func TransportConnection(transport *sliverpb.Transport, padding int) string {
 
 	if !transport.Running {
 		link = readline.Dim(link)
+		padding = padding + 8
 	} else {
 		lAddr = readline.Bold(lAddr)
 		rAddr = readline.Bold(rAddr)
@@ -201,7 +202,7 @@ func TransportConnection(transport *sliverpb.Transport, padding int) string {
 
 	switch transport.Profile.Direction {
 	case sliverpb.C2Direction_Bind:
-		return fmt.Sprintf("        %*s", padding, conn)
+		return fmt.Sprintf("%*s", padding, conn)
 	case sliverpb.C2Direction_Reverse:
 		return fmt.Sprintf("%-*s", padding, conn)
 	default:

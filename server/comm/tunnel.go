@@ -78,7 +78,6 @@ func newTunnelTo(conn *core.Session) (t *tunnel, err error) {
 	// Ask implant to start tunnel.
 	err = t.startRemote()
 	if err != nil {
-		// Tunnels.Close(t.ID)
 		Tunnels.RemoveTunnel(t.ID)
 		return
 	}

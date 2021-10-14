@@ -24,6 +24,8 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/acarl005/stripansi"
+	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
@@ -69,6 +71,15 @@ func printSessions(sessions map[uint32]*clientpb.Session) {
 	}
 	sort.Ints(keys)
 
+	// Get padding for transports
+	var padd int
+	for _, session := range sessions {
+		transport := session.Transport
+		if len(stripansi.Strip(c2.TransportConnection(transport, 0))) > padd {
+			padd = len(stripansi.Strip(c2.TransportConnection(transport, 0)))
+		}
+	}
+
 	table := util.NewTable("")
 	headers := []string{"ID", "Name", "OS/Arch", "Remote Address", "User", "Hostname", "Last Check-in", "Status"}
 	headLen := []int{0, 0, 0, 15, 0, 0, 0, 0}
@@ -77,13 +88,14 @@ func printSessions(sessions map[uint32]*clientpb.Session) {
 	for _, k := range keys {
 		s := sessions[uint32(k)]
 		osArch := fmt.Sprintf("%s/%s", s.OS, s.Arch)
+		addr := c2.TransportConnection(s.Transport, padd)
 
 		var status = s.State.String()
 		burned := ""
 		if s.Burned {
 			burned = "🔥"
 		}
-		row := []string{strconv.Itoa(int(s.ID)), s.Name, osArch, s.Transport.RemoteAddress, s.Username,
+		row := []string{strconv.Itoa(int(s.ID)), s.Name, osArch, addr, s.Username,
 			s.Hostname, strconv.Itoa(int(s.LastCheckin)), burned + status}
 
 		table.AppendRow(row)
