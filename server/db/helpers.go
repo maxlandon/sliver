@@ -297,8 +297,8 @@ func MalleableByID(ID string) (c2 *models.Malleable, err error) {
 	return c2, nil
 }
 
-// C2ProfilesByContextSessionID - Get all C2 Profiles that have been created within a given session context.
-func C2ProfilesByContextSessionID(sessionID string) (profiles []*models.Malleable, err error) {
+// MalleablesByTargetID - Get all C2 Profiles that have been created within a given session context.
+func MalleablesByTargetID(sessionID string) (profiles []*models.Malleable, err error) {
 	err = Session().Where(&models.Malleable{
 		ContextSessionID: uuid.FromStringOrNil(sessionID),
 		Persistent:       false, // always return non persistent profiles, because those are only meant for listeners
@@ -619,11 +619,7 @@ func ListBeacons() ([]*models.Beacon, error) {
 	beacons := []*models.Beacon{}
 	err := Session().Where(&models.Beacon{}).Find(&beacons).Error
 	for _, beacon := range beacons {
-		err = Session().Where(
-			&models.Transport{
-				ID: uuid.FromStringOrNil(beacon.TransportID),
-			},
-		).Find(beacon.Transport).Error
+		beacon.Transport, _ = TransportByID(beacon.TransportID)
 	}
 
 	return beacons, err

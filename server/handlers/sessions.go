@@ -192,6 +192,7 @@ func tunnelCloseHandler(implantConn *core.Connection, data []byte) *sliverpb.Env
 		return nil
 	}
 	tunnel := core.Tunnels.Get(tunnelData.TunnelID)
+	// The tunnel can be a core one, used for interactive system shells or various executions
 	if tunnel != nil {
 		if session.ID == tunnel.SessionID {
 			sessionHandlerLog.Infof("Closing tunnel %d", tunnel.ID)
@@ -199,8 +200,18 @@ func tunnelCloseHandler(implantConn *core.Connection, data []byte) *sliverpb.Env
 		} else {
 			sessionHandlerLog.Warnf("Warning: Session %d attempted to send data on tunnel it did not own", session.ID)
 		}
+	}
+
+	commTunnel := comm.Tunnels.Tunnel(tunnelData.TunnelID)
+	if commTunnel != nil {
+		if session.ID == commTunnel.Sess.ID {
+			sessionHandlerLog.Infof("Closing tunnel %d", commTunnel.ID)
+			comm.Tunnels.RemoveTunnel(commTunnel.ID)
+		} else {
+			sessionHandlerLog.Warnf("Warning: Session %d attempted to send data on tunnel it did not own", session.ID)
+		}
 	} else {
-		sessionHandlerLog.Warnf("Close sent on nil tunnel %d", tunnelData.TunnelID)
+		sessionHandlerLog.Warnf("Close sent on nil tunnel %d (not found either in Core or Comm tunnels)", tunnelData.TunnelID)
 	}
 	return nil
 }
@@ -270,17 +281,20 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register) err
 	if !sessionExists {
 		core.Sessions.Add(s)
 		go auditLogSession(s, r)
+	} else {
+		core.Sessions.UpdateSession(s)
+	}
 
-		// We were a beacon: mark it inactive, so it doesn't
-		// show up in some completions, cannot be used, etc
+	// We were a beacon: mark it inactive, so it doesn't
+	// show up in some completions, cannot be used, etc
+	if bc != nil {
 		bc.State = clientpb.State_Disconnect.String()
 
-		// Very important: unique constraint on envelopeID makes it easy to duplicate
-		// the beacon's tasks without noticing. So we omit updating the field
-		err = db.Session().Model(&models.Beacon{}).
-			Omit("beacon_tasks").
-			Updates(&bc).Error
+		err, updateErr := db.UpdateOrCreateBeacon(bc)
 		if err != nil {
+			beaconHandlerLog.Errorf("Database write %s", err)
+		}
+		if updateErr != nil {
 			beaconHandlerLog.Errorf("Database write %s", err)
 		}
 
@@ -289,11 +303,6 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register) err
 			Type:   clientpb.EventType_BeaconUpdated,
 			Beacon: bc,
 		})
-	}
-
-	// If we were already a session: just update it
-	if sessionExists {
-		core.Sessions.UpdateSession(s)
 	}
 
 	// Comm System & Jobs ----------------------------------------------

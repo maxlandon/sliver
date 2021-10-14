@@ -304,6 +304,18 @@ func (t *C2) Stop() (err error) {
 
 	// But a session needs to explicitly cut its connection
 	if t.Profile.Type == sliverpb.C2Type_Session {
+
+		// {{if .Config.CommEnabled}}
+		if !t.Profile.CommDisabled && t.Comm != nil {
+			err = t.Comm.Close()
+			if err != nil {
+				// {{if .Config.Debug}}
+				log.Printf("Comm Switch error: " + err.Error())
+				// {{end}}
+			}
+		}
+		// {{end}}
+
 		err = t.Connection.Close()
 		if err != nil {
 			// {{if .Config.Debug}}

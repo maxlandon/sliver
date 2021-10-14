@@ -262,6 +262,9 @@ func (rpc *Server) SwitchTransport(ctx context.Context, req *sliverpb.TransportS
 // GetTransports - Get all transports loaded and available to a session.
 func (rpc *Server) GetTransports(ctx context.Context, req *sliverpb.TransportsReq) (res *sliverpb.Transports, err error) {
 	session, beacon := core.GetActiveTarget(req.Request)
+	if session == nil && beacon == nil {
+		return nil, errors.New("Could not find active target")
+	}
 
 	var transports []*models.Transport
 	transports, err = core.TransportsByTarget(session, beacon)

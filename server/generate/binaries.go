@@ -467,7 +467,6 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 
 		// Override the profile ID that will be configured with the
 		// Transport ID, so that we can find it back at register time.
-		// var profID = ignited.ID
 		ignited.ID = transport.ID.String()
 
 		// And then prepare the string for compilation

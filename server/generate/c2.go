@@ -65,6 +65,8 @@ func InitImplantTransports(pbConfig *clientpb.ImplantConfig, cfg *models.Implant
 	// keys for SSH authentication & encryption.
 	configureCommSystem(pbConfig, cfg)
 
+	// Save the transports for retrieval at registration time.
+
 	return nil
 }
 

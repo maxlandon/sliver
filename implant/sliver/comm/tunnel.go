@@ -131,6 +131,7 @@ func (t *Tunnel) Close() error {
 		Type: sliverpb.MsgTunnelClose,
 		Data: tunnelClose,
 	})
+	Tunnels.RemoveTunnel(t.ID)
 	return nil
 }
 

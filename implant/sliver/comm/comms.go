@@ -41,20 +41,20 @@ const (
 var (
 	// Comms - All multiplexers currently running in Sliver, providing connection routing.
 	Comms = &comms{
-		active: map[string]*Comm{},
+		active: map[uint32]*Comm{},
 		mutex:  &sync.RWMutex{},
 	}
 	commID = uint32(0)
 )
 
 type comms struct {
-	active map[string]*Comm
+	active map[uint32]*Comm
 	server *Comm
 	mutex  *sync.RWMutex
 }
 
 // Get - Get a Session Comm by ID
-func (c *comms) Get(commID string) *Comm {
+func (c *comms) Get(commID uint32) *Comm {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.active[commID]
@@ -64,7 +64,9 @@ func (c *comms) Get(commID string) *Comm {
 func (c *comms) Add(mux *Comm) *Comm {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	c.active[mux.RemoteAddress] = mux
+	mux.ID = commID
+	commID = commID + 1
+	c.active[mux.ID] = mux
 	if c.server == nil {
 		c.server = mux
 	}
@@ -72,12 +74,15 @@ func (c *comms) Add(mux *Comm) *Comm {
 }
 
 // Remove - Remove a Comm from the map
-func (c *comms) Remove(commID string) {
+func (c *comms) Remove(commID uint32) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	mux := c.active[commID]
 	if mux != nil {
 		delete(c.active, commID)
+		if c.server.ID == mux.ID {
+			c.server = nil
+		}
 	}
 }
 

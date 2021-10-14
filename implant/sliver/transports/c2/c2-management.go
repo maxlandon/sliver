@@ -32,7 +32,6 @@ import (
 
 	"github.com/gofrs/uuid"
 
-	"github.com/bishopfox/sliver/implant/sliver/comm"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
@@ -326,19 +325,6 @@ func (c2 *c2s) Switch(ID string) (err error) {
 	// {{if .Config.Debug}}
 	log.Printf("Switching the current transport: %s", c2.Active.ID)
 	log.Printf("New transport: %s", next.ID)
-	// {{end}}
-
-	// {{if .Config.CommEnabled}}
-
-	// Close the Comm system, and all comm listeners
-	if !c2.Active.Profile.CommDisabled && c2.Active.Profile.Type == sliverpb.C2Type_Session {
-		err = comm.PrepareCommSwitch()
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Printf("Comm Switch error: " + err.Error())
-			// {{end}}
-		}
-	}
 	// {{end}}
 
 	// Keep the current transport ID, needed when registering

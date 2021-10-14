@@ -98,6 +98,7 @@ func beaconRegisterHandler(conn *core.Connection, data []byte) *sliverpb.Envelop
 		beaconHandlerLog.Errorf("Failed to find beacon transport %s", reg.Register.ActiveTransportID)
 		return nil
 	}
+	beacon.TransportID = transport.ID.String()
 	beacon.Transport = transport
 
 	// Registration ----------------------------------------------------

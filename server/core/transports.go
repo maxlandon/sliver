@@ -81,7 +81,7 @@ func UpdateTargetTransports(newTransportID, targetID string, conn *Connection, s
 
 	// For each registered transport, including the active one
 	for _, registerTransport := range stats {
-		fmt.Println(registerTransport.ID)
+		fmt.Println("Runtime: " + registerTransport.ID)
 
 		// Find in DB
 		saved, err := db.TransportByID(registerTransport.ID)
@@ -89,6 +89,7 @@ func UpdateTargetTransports(newTransportID, targetID string, conn *Connection, s
 			sessionsLog.Errorf("(Transport update) Failed to find transport %s", registerTransport.ID)
 			continue
 		}
+		fmt.Println("Saved: " + saved.ID.String())
 		saved.SessionID = uuid.FromStringOrNil(targetID)
 
 		// If the active one, update it with runtime information from its connection
@@ -116,13 +117,17 @@ func UpdateTargetTransports(newTransportID, targetID string, conn *Connection, s
 
 	for _, transport := range allTransports {
 		found := false
+
+		fmt.Println("Transport: " + transport.ID.String())
 		for _, runtime := range stats {
+			fmt.Println("Runtime: " + runtime.ID)
 			if runtime.ID == transport.ID.String() {
 				found = true
 				break
 			}
 		}
 		if !found {
+			// fmt.Println(transport.ID.String() + " \n \n\n")
 			err = db.Session().Delete(transport).Error
 			if err != nil {
 				sessionsLog.Errorf("Failed to delete transport from DB: %s", err)

