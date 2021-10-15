@@ -184,6 +184,9 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 		// for saving it into the database or server config if the job is persistent
 		job := NewHandlerJob(persisted.Profile, session)
 
+		// Persistent jobs need to get their old ID back
+		job.ID = persisted.ID
+
 		// Dispatch the profile to either the root Dialer functions or Listener ones.
 		// The actual implementation of the C2 handlers are in there, or possibly in
 		// functions still down the way.
@@ -253,6 +256,9 @@ func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 		// A job object that will be used after the listener dialer is started,
 		// for saving it into the database or server config if the job is persistent
 		job := NewHandlerJob(profile, nil)
+
+		// Persistent jobs need to get their old ID back
+		job.ID = uuid.FromStringOrNil(persisted.ID)
 
 		// Dispatch the profile to either the root Dialer functions or Listener ones.
 		// The actual implementation of the C2 handlers are in there, or possibly in
