@@ -94,5 +94,9 @@ func handleStagerConnection(log *logrus.Entry, conn net.Conn, data []byte) {
 		log.Debugf("Successfully written (%d bytes) to connection", n)
 	}
 	// Closing connection
-	// conn.Close()
+	log.Debugf("Closing connection")
+	err = conn.Close()
+	if err != nil {
+		log.Debugf("Error closing connection: %s", err)
+	}
 }
