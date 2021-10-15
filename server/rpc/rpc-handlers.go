@@ -81,7 +81,7 @@ func (rpc *Server) StartHandlerStage(ctx context.Context, req *clientpb.HandlerS
 
 	// A job object that will be used after the listener dialer is started,
 	// for saving it into the database or server config if the job is persistent
-	job, listener := c2.NewHandlerJob(profile, session)
+	job := c2.NewHandlerJob(profile, session)
 
 	// Dispatch the profile to either the root Dialer functions or Listener ones.
 	// The actual implementation of the C2 handlers are in there, or possibly in
@@ -97,14 +97,14 @@ func (rpc *Server) StartHandlerStage(ctx context.Context, req *clientpb.HandlerS
 
 	// Listeners
 	case sliverpb.C2Direction_Reverse:
-		err = c2.Listen(logger, profile, net, job, listener)
+		ln, err := c2.Listen(logger, profile, net, job)
 		if err != nil {
 			return nil, err
 		}
 		// If we are here, it means the C2 stack has successfully started
 		// (within what can be guaranteed excluding goroutine-based stuff).
 		// Assign an order value to this job and register it to the server job & event system.
-		c2.InitHandlerJob(job, listener)
+		c2.InitHandlerJob(job, ln)
 	}
 
 	// Save the job if it's marked persistent
@@ -151,7 +151,7 @@ func (rpc *Server) StartHandlerStager(ctx context.Context, req *clientpb.Handler
 
 	// A job object that will be used after the listener dialer is started,
 	// for saving it into the database or server config if the job is persistent
-	job, listener := c2.NewHandlerJob(profile, session)
+	job := c2.NewHandlerJob(profile, session)
 
 	// Load the payload stage:
 	err = setupStage(req.StageImplant, req.StageBytes, job, logger)
@@ -170,7 +170,7 @@ func (rpc *Server) StartHandlerStager(ctx context.Context, req *clientpb.Handler
 
 	// Listeners
 	case sliverpb.C2Direction_Reverse:
-		err = c2.Serve(logger, profile, net, job, listener)
+		ln, err := c2.Serve(logger, profile, net, job)
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +178,7 @@ func (rpc *Server) StartHandlerStager(ctx context.Context, req *clientpb.Handler
 		// If we are here, it means the C2 stack has successfully started
 		// (within what can be guaranteed excluding goroutine-based stuff).
 		// Assign an order value to this job and register it to the server job & event system.
-		c2.InitHandlerJob(job, listener)
+		c2.InitHandlerJob(job, ln)
 	}
 
 	// Save the job if it's marked persistent
@@ -211,7 +211,6 @@ func setupStage(implantName string, implantBytes []byte, job *core.Job, log *log
 				fallthrough
 			case clientpb.OutputFormat_EXECUTABLE:
 				fPath, err = generate.SliverExecutable(profile.Name, config, log)
-				break
 			case clientpb.OutputFormat_SHARED_LIB:
 				fPath, err = generate.SliverSharedLibrary(profile.Name, config, log)
 			case clientpb.OutputFormat_SHELLCODE:
@@ -239,9 +238,6 @@ func setupStage(implantName string, implantBytes []byte, job *core.Job, log *log
 			return err
 		}
 	}
-
-	// Done with the stage compilation
-	log = log.WithField("component", "handler")
 
 	return
 }

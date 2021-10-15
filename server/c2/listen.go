@@ -41,7 +41,7 @@ import (
 //
 // The listener is nil: you can optionally assign it to a listener that you started  within
 // your C2 channel implementation. The listener is then transparently handled by the job system.
-func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job *core.Job, ln net.Listener) (err error) {
+func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job *core.Job) (ln net.Listener, err error) {
 
 	// C2 Protocols Implementations -----------------------------------------------------------
 	switch profile.Channel {
@@ -53,7 +53,7 @@ func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job 
 		hostport := fmt.Sprintf("%s:%d", profile.Hostname, profile.Port)
 		ln, err = network.Listen("tcp", hostport)
 		if err != nil {
-			return err
+			return ln, err
 		}
 
 	case sliverpb.C2_MTLS:
@@ -62,7 +62,7 @@ func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job 
 		// The latter's cleanup is registered in InitHandlerJob()
 		ln, err = ListenMutualTLS(profile, network)
 		if err != nil {
-			return err
+			return ln, err
 		}
 
 	case sliverpb.C2_WG:
@@ -71,7 +71,7 @@ func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job 
 		// Specifies additional control listeners & device cleanup tasks for the job.
 		tNet, err := StartWireGuardDevInterface(profile, job)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Setup and start the WireGuard connection listener.
@@ -79,7 +79,7 @@ func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job 
 		// Specifies additional control listeners & device cleanup tasks (key exchange listener)
 		ln, err = ListenWireGuard(profile, job, tNet)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 	case sliverpb.C2_DNS:
@@ -88,7 +88,7 @@ func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job 
 		// (No listener, Sliver connections are handled from within the DNS server implementation.)
 		err = ServeDNS(profile, job)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 	case sliverpb.C2_HTTPS, sliverpb.C2_HTTP:
@@ -96,13 +96,13 @@ func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job 
 		// Instantiate a new HTTP(S) Server configured with the target C2 profile
 		server, err := http.NewServerFromProfile(profile)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Initialize the HTTP Server with job control/cleanup
 		err = server.InitServer(job)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Start the HTTP Server, handing its control to the job.
@@ -110,7 +110,7 @@ func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job 
 		// This will automatically either serve HTTP, or HTTPS with optional LetsEncrypt certs.
 		err = server.Serve(job)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 	case sliverpb.C2_NamedPipe:
@@ -118,7 +118,7 @@ func Listen(log *logrus.Entry, profile *models.Malleable, network comm.Net, job 
 		// Listen on a pipe routed to the current active session.
 		ln, err = network.Listen("pipe", profile.Hostname)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 

@@ -60,9 +60,9 @@ type Job struct {
 
 	// C2
 	Profile      *sliverpb.Malleable // All handler details
-	StageImplant string
-	StageBytes   []byte
-	cleanups     []func() error // All cleanup functions that have been registered with this job
+	StageImplant string              // Stage implant name, if a Sliver is used
+	StageBytes   []byte              // Stage implant bytes for custom ones
+	cleanups     []func() error      // All cleanup functions that have been registered with this job
 }
 
 // RegisterCleanup - Add a cleanup function to this job. This function will be called
@@ -79,12 +79,15 @@ func (j *Job) HandleCleanup() {
 
 	// Successively perform all registered cleanup tasks IN REVERSE ORDER:
 	// The logic is: we must close the layers in the inverse order they have setup
+	fmt.Printf("Length of cleanups: %d\n", len(j.cleanups))
 	for i := len(j.cleanups) - 1; i >= 0; i-- {
 		cleanup := j.cleanups[i]
 		err := cleanup()
 		if err != nil {
 			// TODO: Log error here
+			fmt.Println("Error cleaning up")
 		}
+		fmt.Printf("Done cleanup n°%d\n", i)
 	}
 
 	// Unregister the job and notify clients

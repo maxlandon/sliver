@@ -71,12 +71,9 @@ func (rpc *Server) KillJob(ctx context.Context, kill *clientpb.KillJobReq) (*cli
 		job.JobCtrl <- true
 		killJob.ID = job.ID.String()
 		killJob.Success = true
-		if job.Profile.Persistent {
-			configs.GetServerConfig().RemoveJob(job.ID.String())
-		}
 	} else {
 		killJob.Success = false
-		err = errors.New("Invalid Job ID")
+		return nil, errors.New("Invalid Job ID")
 	}
 
 	// Delete persistent jobs for their appropriate context, if they exist
@@ -84,6 +81,7 @@ func (rpc *Server) KillJob(ctx context.Context, kill *clientpb.KillJobReq) (*cli
 		// If job is a server job
 		if job.SessionName == "" {
 			configs.GetServerConfig().RemoveJob(job.ID.String())
+			return killJob, err
 		}
 		// If job was running on a session
 		dbJob, err := db.JobByID(job.ID.String())

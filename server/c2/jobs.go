@@ -19,7 +19,6 @@ package c2
 */
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"sort"
@@ -58,7 +57,7 @@ func init() {
 // - The handler job should, normally/in most cases, rest on a net.Listener running somewhere either on the session
 //   or on the server. This listener is automatically closed on job kill. You are free to use it or not: it won't have
 //   an impact on the overall C2 setup/usage workflow.
-func NewHandlerJob(profile *models.Malleable, session *core.Session) (job *core.Job, ln net.Listener) {
+func NewHandlerJob(profile *models.Malleable, session *core.Session) (job *core.Job) {
 
 	// Base elements applying for all jobs, no matter where they run
 	var host string
@@ -95,6 +94,7 @@ func NewHandlerJob(profile *models.Malleable, session *core.Session) (job *core.
 
 // InitHandlerJob - After your C2 channel stack has been correctly setup and successfully started, this function
 // takes care of initializing the handler job order, and pushing it through the Sliver server's event system.
+// You can also pass a nil listener along with your job: the workflow for your handler will stay the same.
 func InitHandlerJob(job *core.Job, ln net.Listener) {
 
 	session := core.Sessions.GetByUUID(job.SessionID)  // this might be nil...
@@ -152,19 +152,23 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 		// or those that are expressely comm disabled, can run persistent jobs
 		transport, err := db.MalleableByID(session.Transport.ID.String())
 		if err != nil {
-			return err
+			logger.Errorf("Error finding the C2 profile for job: %s", err)
+			continue
 		}
 		// We get the comm.Net interface for the session: if nil,
 		// pass 0 and return the server interfaces functions
 		var net comm.Net
 		if transport.CommDisabled {
-			return errors.New("Current transport is Comm-disabled")
+			logger.Errorf("Current transport is Comm-disabled")
+			continue
 		} else if transport.Type == sliverpb.C2Type_Beacon {
-			return errors.New("Current C2 is a beacon, does not support persistent jobs for now")
+			logger.Errorf("Current C2 is a beacon, does not support persistent jobs for now")
+			continue
 		} else {
 			net, err = comm.ActiveNetwork(session.ID)
 			if err != nil {
-				return err
+				logger.Errorf("Comm network error: %s", err)
+				continue
 			}
 		}
 
@@ -172,12 +176,13 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 		// As well, if there are nothing in it, it will just load the default
 		err = SetupHandlerSecurity(persisted.Profile, persisted.Profile.Hostname)
 		if err != nil {
-			return err
+			logger.Errorf("Handler security setup error: %s", err)
+			continue
 		}
 
 		// A job object that will be used after the listener dialer is started,
 		// for saving it into the database or server config if the job is persistent
-		job, listener := NewHandlerJob(persisted.Profile, session)
+		job := NewHandlerJob(persisted.Profile, session)
 
 		// Dispatch the profile to either the root Dialer functions or Listener ones.
 		// The actual implementation of the C2 handlers are in there, or possibly in
@@ -188,24 +193,25 @@ func StartPersistentSessionJobs(session *core.Session) (err error) {
 		case sliverpb.C2Direction_Bind:
 			err = Dial(logger, persisted.Profile, net, session)
 			if err != nil {
-				return err
+				logger.Errorf("Dial error: %s", err)
+				continue
 			}
 
 		// Listeners
 		case sliverpb.C2Direction_Reverse:
 			// This is supposed to return us a
 			// job but we don't need to save it again
-			err := Listen(logger, persisted.Profile, net, job, listener)
+			ln, err := Listen(logger, persisted.Profile, net, job)
 			if err != nil {
-				return err
+				logger.Errorf("Listen error: %s", err)
+				continue
 			}
 
 			// If we are here, it means the C2 stack has successfully started
 			// (within what can be guaranteed excluding goroutine-based stuff).
 			// Assign an order value to this job and register it to the server job & event system.
-			InitHandlerJob(job, listener)
+			InitHandlerJob(job, ln)
 		}
-
 	}
 
 	return
@@ -246,7 +252,7 @@ func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 
 		// A job object that will be used after the listener dialer is started,
 		// for saving it into the database or server config if the job is persistent
-		job, listener := NewHandlerJob(profile, nil)
+		job := NewHandlerJob(profile, nil)
 
 		// Dispatch the profile to either the root Dialer functions or Listener ones.
 		// The actual implementation of the C2 handlers are in there, or possibly in
@@ -264,14 +270,14 @@ func StartPersistentServerJobs(cfg *configs.ServerConfig) error {
 		case sliverpb.C2Direction_Reverse:
 			// This is supposed to return us a
 			// job but we don't need to save it again
-			err = Listen(logger, profile, net, job, listener)
+			ln, err := Listen(logger, profile, net, job)
 			if err != nil {
 				return err
 			}
 			// If we are here, it means the C2 stack has successfully started
 			// (within what can be guaranteed excluding goroutine-based stuff).
 			// Assign an order value to this job and register it to the server job & event system.
-			InitHandlerJob(job, listener)
+			InitHandlerJob(job, ln)
 		}
 	}
 	return nil

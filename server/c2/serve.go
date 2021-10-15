@@ -34,7 +34,7 @@ import (
 // Serve - Listen and serve a stage payload over a specific protocol or C2 stack.
 // The listener parameter is a placeholder, which you can use if you intend to use (at least one).
 // This listener is already registered for cleanup when the stager handler job will be killed
-func Serve(log *logrus.Entry, profile *models.Malleable, network comm.Net, job *core.Job, ln net.Listener) (err error) {
+func Serve(log *logrus.Entry, profile *models.Malleable, network comm.Net, job *core.Job) (ln net.Listener, err error) {
 
 	switch profile.Channel {
 
@@ -45,7 +45,7 @@ func Serve(log *logrus.Entry, profile *models.Malleable, network comm.Net, job *
 		hostport := fmt.Sprintf("%s:%d", profile.Hostname, profile.Port)
 		ln, err = network.Listen("tcp", hostport)
 		if err != nil {
-			return err
+			return ln, err
 		}
 
 	case sliverpb.C2_HTTP, sliverpb.C2_HTTPS:
@@ -53,7 +53,7 @@ func Serve(log *logrus.Entry, profile *models.Malleable, network comm.Net, job *
 		// Instantiate a new HTTP(S) Server configured with the target C2 profile
 		server, err := http.NewServerFromProfile(profile)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Add the payload to be served through HTTP
@@ -62,14 +62,14 @@ func Serve(log *logrus.Entry, profile *models.Malleable, network comm.Net, job *
 		// Initialize the HTTP Server with job control/cleanup
 		err = server.InitServer(job)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Start the HTTP Server, handing its control to the job.
 		// (No listener, Sliver connections are handled from within the HTTP server implementation.)
 		err = server.Serve(job)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 	case sliverpb.C2_NamedPipe:
@@ -77,7 +77,7 @@ func Serve(log *logrus.Entry, profile *models.Malleable, network comm.Net, job *
 		// Listen on a pipe routed to the current active session.
 		ln, err = network.Listen("pipe", profile.Hostname)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
