@@ -24,7 +24,6 @@ import (
 	// {{end}}
 
 	"fmt"
-	"time"
 
 	// {{if .Config.TCPc2Enabled}}
 	"github.com/bishopfox/sliver/implant/sliver/transports/tcp"
@@ -69,7 +68,7 @@ func (t *C2) startReverse() (err error) {
 				// {{if .Config.Debug}}
 				log.Printf("[mtls] Connection failed: %s", err)
 				// {{end}}
-				t.FailedAttempt()
+				t.WaitOnFailure()
 				continue
 			}
 			// {{end}} - MTLSc2Enabled
@@ -102,7 +101,7 @@ func (t *C2) startReverse() (err error) {
 				if dev != nil {
 					dev.Close()
 				}
-				t.FailedAttempt()
+				t.WaitOnFailure()
 				continue
 			}
 			t.Conn = conn
@@ -126,7 +125,7 @@ func (t *C2) startReverse() (err error) {
 				// {{if .Config.Debug}}
 				log.Printf("[namedpipe] Connection failed: %s", err)
 				// {{end}}
-				t.FailedAttempt()
+				t.WaitOnFailure()
 				continue
 			}
 			// {{end}} -NamePipec2Enabled
@@ -138,7 +137,7 @@ func (t *C2) startReverse() (err error) {
 				// {{if .Config.Debug}}
 				log.Printf("[tcppivot] Connection failed: %s", err)
 				// {{end}}
-				t.FailedAttempt()
+				t.WaitOnFailure()
 				continue
 			}
 			// {{end}} -TCPc2Enabled
@@ -154,11 +153,6 @@ func (t *C2) startReverse() (err error) {
 		if t.Conn != nil {
 			break
 		}
-
-		// In case of failure to initiate a session, sleep
-		// for the determined ReconnectInterval. This interval
-		// is shared both at the transport and at the Session layer.
-		time.Sleep(time.Duration(t.Profile.Interval))
 	}
 
 	// Only return an error if we have exhausted attempts
@@ -189,7 +183,7 @@ func (t *C2) startBind() (err error) {
 				// {{if .Config.Debug}}
 				log.Printf("[mtls] Connection failed: %s", err)
 				// {{end}}
-				t.FailedAttempt()
+				t.WaitOnFailure()
 				continue
 			}
 			// {{end}} - MTLSc2Enabled
@@ -201,7 +195,7 @@ func (t *C2) startBind() (err error) {
 				// {{if .Config.Debug}}
 				log.Printf("[namedpipe] Connection failed: %s", err)
 				// {{end}}
-				t.FailedAttempt()
+				t.WaitOnFailure()
 				continue
 			}
 			// {{end}} -NamePipec2Enabled
@@ -214,7 +208,7 @@ func (t *C2) startBind() (err error) {
 				// {{if .Config.Debug}}
 				log.Printf("[mtls] Connection failed: %s", err)
 				// {{end}}
-				t.FailedAttempt()
+				t.WaitOnFailure()
 				continue
 			}
 			// {{end}} - TCPc2Enabled
@@ -230,11 +224,6 @@ func (t *C2) startBind() (err error) {
 		if t.Conn != nil {
 			break
 		}
-
-		// In case of failure to initiate a session, sleep
-		// for the determined ReconnectInterval. This interval
-		// is shared both at the transport and at the Session layer.
-		time.Sleep(time.Duration(t.Profile.Interval))
 	}
 
 	// Only return an error if we have exhausted attempts

