@@ -89,7 +89,7 @@ func (t *c2s) Init() (err error) {
 			// {{end}}
 			continue
 		}
-		c2.Priority = order
+		c2.Priority = order + 1 // The first transport is 1, then 2, etc
 		t.Add(c2)
 	}
 	if len(t.Available) == 0 {
@@ -253,16 +253,13 @@ func (t *c2s) selectNextTransport() (next *C2) {
 		if t.Active == nil {
 			next = t.Available[0]
 		} else {
-			// fmt.Println("used sequential")
-			// fmt.Println(t.Active.Priority % len(t.Available))
-			next = t.Available[t.Active.Priority+1%len(t.Available)]
+			next = t.Available[t.Active.Priority%len(t.Available)]
 		}
 	default:
 		if t.Active == nil {
 			next = t.Available[0]
 		} else {
-			// fmt.Println(t.Active.Priority % len(t.Available))
-			next = t.Available[t.Active.Priority+1%len(t.Available)]
+			next = t.Available[t.Active.Priority%len(t.Available)]
 		}
 	}
 
