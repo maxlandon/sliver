@@ -163,9 +163,6 @@ func transportSwitchHandler(data []byte, resp handlers.RPCResponse) {
 	resData, err := proto.Marshal(res)
 	resp(resData, err)
 
-	// Wait a little to be sure the response has been sent.
-	// time.Sleep(500 * time.Millisecond)
-
 	err = Transports.Switch(tp.ID)
 	if err != nil {
 		// {{if .Config.Debug}}
@@ -192,24 +189,7 @@ func commTunnelHandler(envelope *sliverpb.Envelope, connection *transports.Conne
 
 	// Comm setup. This is goes on in the background, because we need
 	// to end this handler, (otherwise it blocks and the tunnel will stay dry)
-	// commSystem, err := comm.InitClient(tunnel)
-	// if err != nil {
-	//         // {{if .Config.Debug}}
-	//         log.Printf("Comm Init failed: %s", err)
-	//         // {{end}}
-	//
-	//         muxResp, _ := proto.Marshal(&commpb.TunnelOpen{
-	//                 Success:  false,
-	//                 Response: &commonpb.Response{Err: err.Error()},
-	//         })
-	//         connection.RequestSend(&sliverpb.Envelope{
-	//                 ID:   envelope.ID,
-	//                 Data: muxResp,
-	//         })
-	//         return
-	// }
 	go comm.InitClient(tunnel)
-	// Transports.Active.Comm = commSystem
 
 	muxResp, _ := proto.Marshal(&commpb.TunnelOpen{
 		Success:  true,

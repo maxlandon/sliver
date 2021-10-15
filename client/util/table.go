@@ -111,9 +111,10 @@ func (t *Table) SetColumns(names []string, widths []int) error {
 		switch name {
 
 		// Add color callbacks to Status strings in the table.
-		case "Status", "Health":
+		case "Status", "Health", "State":
 			statusCb := func(status string) tablewriter.Colors {
 				switch status {
+				// Implant sessions/beacons
 				case "ALIVE", "Alive":
 					return tablewriter.Colors{tablewriter.Normal, tablewriter.FgGreenColor}
 				case "DEAD", "Dead":
@@ -126,6 +127,16 @@ func (t *Table) SetColumns(names []string, widths []int) error {
 					return tablewriter.Colors{tablewriter.Normal, tablewriter.FgGreenColor}
 				case "Offline":
 					return tablewriter.Colors{tablewriter.Normal, tablewriter.FgRedColor}
+				case "Disconnect":
+					return tablewriter.Colors{tablewriter.Normal, tablewriter.FgHiBlackColor}
+
+					// Transports
+				case "Loaded":
+					return tablewriter.Colors{tablewriter.Normal, tablewriter.FgHiBlackColor}
+				case "Active":
+					return tablewriter.Colors{tablewriter.Bold, tablewriter.FgGreenColor}
+				case "Switch":
+					return tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiYellowColor}
 				default:
 					return tablewriter.Colors{tablewriter.Italic, tablewriter.FgHiBlackColor}
 				}
@@ -142,7 +153,6 @@ func (t *Table) SetColumns(names []string, widths []int) error {
 				tablewriter.Bold,
 			})
 
-		// Implant connection status: green/yellow/red depending on value.
 		case "Required", "Req":
 			columnColors = append(columnColors, tablewriter.Colors{
 				tablewriter.Normal,

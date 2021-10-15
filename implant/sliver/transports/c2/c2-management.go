@@ -308,6 +308,67 @@ func (t *c2s) Get(ID string) (c2 *C2) {
 }
 
 // Switch - Dynamically switch the active transport, if multiple are available.
+func (c2 *c2s) SwitchAlt(ID string) (err error) {
+
+	// Get the transport and reset its attempts
+	var next = Transports.Get(ID)
+	if next == nil {
+		return fmt.Errorf("could not find transport with ID %s", ID)
+	}
+	next.attempts = 0
+	next.failures = 0
+
+	c2.mutex.RLock()
+	c2.isSwitching = true
+	c2.mutex.RUnlock()
+
+	// {{if .Config.Debug}}
+	log.Printf("Switching the current transport: %s", c2.Active.ID)
+	log.Printf("New transport: %s", next.ID)
+	// {{end}}
+
+	// Keep the current transport ID, needed when registering
+	// again to the server, for identification purposes.
+	oldTransportID := c2.Active.ID
+
+	// Start the transport first.
+	// This automatically sends a transport switch registration message
+	err = next.Start(true, oldTransportID)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("(Switch) Failed to start new transport: %s", err)
+		// {{end}}
+		c2.mutex.RLock()
+		c2.isSwitching = false
+		c2.mutex.RUnlock()
+
+		// Send a transport registration marked failed, with updated stats
+		c2.Active.Connection.RequestSend(c2.Active.registerSwitch(oldTransportID, false))
+		return err
+	}
+
+	// Else if we succeeded, gracefully shutdown the old transport
+	err = c2.Active.Stop()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf(err.Error())
+		// {{end}}
+	}
+
+	// And assign the new one as current
+	c2.mutex.RLock()
+	c2.Active = next
+	c2.isSwitching = false
+	c2.mutex.RUnlock()
+
+	// {{if .Config.Debug}}
+	log.Printf("Done switching transport: %s", next.ID)
+	// {{end}}
+
+	return nil
+}
+
+// Switch - Dynamically switch the active transport, if multiple are available.
 func (c2 *c2s) Switch(ID string) (err error) {
 
 	// Get the transport and reset its attempts

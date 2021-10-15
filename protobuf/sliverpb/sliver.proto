@@ -244,8 +244,9 @@ message RegisterTransportSwitch {
   string OldTransportID = 1;
   string TransportID = 2;
   string RemoteAddress = 3;
-  BeaconRegister Beacon = 4;
-  Register Session = 5;
+  bool Success = 4;
+  BeaconRegister Beacon = 5;
+  Register Session = 6;
   commonpb.Response Response = 9;
 }
 

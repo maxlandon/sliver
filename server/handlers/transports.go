@@ -51,14 +51,18 @@ func registerTransportSwitchHandler(implantConn *core.Connection, data []byte) *
 
 	// Transports ------------------------------------------------------------------------------------------
 
-	// First get the new transport updated, we need it for info
-	transport, err := db.TransportByID(register.TransportID)
-	if transport == nil || err != nil {
-		sessionHandlerLog.Errorf("(Transport update) Failed to find transport %s", register.TransportID)
-		return nil
+	// The registration might be only to notify us the failure of the very transport that was
+	// supposed to be handled here: if the current-was-to-be-switched transport is doing it,
+	// simply pass it along in the update function, with its current connection and all transport details.
+	// Then return, no need to update any older session/beacon
+	var transportID string
+	if register.Success {
+		transportID = register.TransportID
+	} else {
+		transportID = register.OldTransportID
 	}
 
-	// Get runtime statistics for all transports
+	// Get the current target ID for finding its current transports in DB.
 	var targetID string
 	if session != nil {
 		targetID = session.UUID
@@ -66,32 +70,35 @@ func registerTransportSwitchHandler(implantConn *core.Connection, data []byte) *
 		targetID = beacon.ID.String()
 	}
 
-	var stats []*sliverpb.Transport
-	switch transport.Profile.Type {
-	case sliverpb.C2Type_Session:
-		stats = register.Session.TransportStats
-	case sliverpb.C2Type_Beacon:
-		stats = register.Beacon.Register.TransportStats
-	}
-
-	// Update all the transports related to this target:
-	// - mark the old one as inactive
-	// - mark the new one as active, and format its live connection string
+	// And update all the transports related to this target:
+	// - If success: mark the new transport as active, the old one inactive.
+	// - Update both of their connection strings
 	// - Update the others with their respective statistics passed in the registration.
-	err = core.UpdateTargetTransports(register.TransportID, targetID, implantConn, stats)
+	err = core.UpdateTargetTransports(transportID, targetID, implantConn, register.Session.TransportStats)
 
-	// And query the updated transport, otherwise we use the wrong copy
-	transport, _ = db.TransportByID(transport.ID.String())
+	// And query back the updated, current transport
+	transport, _ := db.TransportByID(transportID)
+
+	// If the registration switch was not successful,
+	// notify users and update the session/beacon state.
+	// Otherwise we're ready for updating the session/beacon itself.
+	if !register.Success {
+		core.CancelTransportSwitch(session, beacon)
+		return nil
+	}
 
 	// Current => Session ----------------------------------------------------------------------------------
 	if transport.Profile.Type == sliverpb.C2Type_Session {
 
-		// We might come from a beacon, so we might need a new session
+		// If we come from a beacon, we need a new session.
+		// If not, we need to update the TLV connection of the
+		// current one, otherwise it will stay dry eternally.
 		if session == nil {
 			session = core.NewSession(implantConn)
 		} else {
 			session.Connection = implantConn
 		}
+		// The connection is always assigned a "clean cleanup"
 		implantConn.Cleanup = func() {
 			core.Sessions.Remove(session.ID)
 		}

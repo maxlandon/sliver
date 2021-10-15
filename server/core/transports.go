@@ -309,6 +309,34 @@ func RegisterTransportSwitch(sess *Session, beacon *models.Beacon) (err error) {
 	return
 }
 
+// CancelTransportSwitch - Notify users that the target is still
+// running on its current transport and considered alive.
+func CancelTransportSwitch(sess *Session, beacon *models.Beacon) (err error) {
+
+	if sess != nil {
+		if sess.State != clientpb.State_Switching.String() {
+			return
+		}
+		sess.State = clientpb.State_Alive.String()
+		Sessions.UpdateSession(sess)
+	}
+
+	if beacon != nil {
+		if beacon.State != clientpb.State_Switching.String() {
+			return
+		}
+
+		beacon.State = clientpb.State_Alive.String()
+		_, err = db.UpdateOrCreateBeacon(beacon)
+		EventBroker.Publish(Event{
+			Type:   clientpb.EventType_BeaconUpdated,
+			Beacon: beacon,
+		})
+	}
+
+	return
+}
+
 // GetTargetSwitching - When sending the registration message following the transport
 // switch, the session/beacon has provided the ID of its old transport, which should
 // be unique among all sessions/beacons. Find it and return it for update.

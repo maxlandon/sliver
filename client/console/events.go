@@ -250,11 +250,18 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 		// If our active session is switching its transport
 		if active.IsSession() && session.ID == id && session.State == clientpb.State_Switching {
 			news := fmt.Sprintf("Session %d switching its transport", session.ID)
-
-			// Set the new beacon as the active target
 			core.SetActiveTarget(session, nil)
 			log.Infof(news)
 			return
+		}
+
+		// If our active session FAILED to switch its transport
+		if active.IsSession() && session.ID == id &&
+			active.Transport().ID == session.Transport.ID &&
+			active.State() == clientpb.State_Switching && session.State == clientpb.State_Alive {
+			news := fmt.Sprintf("Session %d failed to switch its transport", session.ID)
+			core.SetActiveTarget(session, nil)
+			log.Errorf(news)
 		}
 
 		// If our active session is done switching its transport
@@ -337,10 +344,19 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 					beacon.Transport.Profile.C2, c2.FullTargetPath(beacon.Transport.Profile),
 					beacon.Transport.RemoteAddress,
 				)
-			} else {
-				core.SetActiveTarget(nil, beacon)
-				log.Infof("Beacon (%s) has been updated", c2.GetShortID(beacon.ID))
+				return
 			}
+
+			// If it's a failure to switch a transport
+			if active.Transport().ID == beacon.Transport.ID && active.State() == clientpb.State_Switching {
+				news := fmt.Sprintf("Beacon (%s) failed to switch its transport", c2.GetShortID(beacon.ID))
+				core.SetActiveTarget(nil, beacon)
+				log.Errorf(news)
+				return
+			}
+
+			core.SetActiveTarget(nil, beacon)
+			log.Infof("Beacon (%s) has been updated", c2.GetShortID(beacon.ID))
 			return
 		}
 
@@ -351,10 +367,7 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 		}
 
 		// If we are a session that is about to be closed, drop it before receiving the event
-		if active.IsSession() && session != nil && session.UUID == active.UUID() {
-			if active.State() != clientpb.State_Switching {
-				return
-			}
+		if active.IsSession() && session != nil && session.UUID == active.UUID() && active.State() == clientpb.State_Switching {
 			log = log.WithField("success", true)
 			news := fmt.Sprintf("Switching transports: Session %s (%s) => Beacon %s (%s)",
 				active.ID(), active.Transport().Profile.C2,

@@ -33,6 +33,7 @@ import (
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/util"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
@@ -75,6 +76,13 @@ func (l *List) Execute(args []string) (err error) {
 
 func printTransports(transports []*sliverpb.Transport) {
 
+	// If target is a disconnected beacon (a beacon that passed by its
+	// expected checkin by too much) we grey out all transports, and
+	// add a warning here:
+	if core.ActiveTarget.State() == clientpb.State_Disconnect {
+		fmt.Println(readline.Yellow("The current target is disconnected: none of its transports are available\n"))
+	}
+
 	table := util.NewTable("")
 	headers := []string{"State", "N°", "ID", "Type", "C2", "Address", "Errs/Reconnect", "Jit/Interval", "Comms", "try/fail"}
 	headLen := []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -103,12 +111,7 @@ func printTransports(transports []*sliverpb.Transport) {
 
 			prof := transport.Profile
 
-			var state string
-			if transport.Running {
-				state = readline.Bold(readline.Green("Active"))
-			} else {
-				state = readline.Dim("Loaded")
-			}
+			var state = getTransportState(transport, core.ActiveTarget)
 			order := readline.Dim(strconv.Itoa(int(transport.Order)))
 			id := c2.GetShortID(transport.ID)
 			channel := prof.C2.String()
@@ -147,9 +150,43 @@ func printTransports(transports []*sliverpb.Transport) {
 			attempts = attempts + fmt.Sprintf("%d / %d", transport.Attempts, transport.Failures)
 
 			// Add to table
-			table.AppendRow([]string{state, order, id, c2Type, channel, address, timeouts, jitInt, comms, attempts})
+			if core.ActiveTarget.State() == clientpb.State_Disconnect {
+				items := []string{state, order, id, c2Type, channel, address, timeouts, jitInt, comms, attempts}
+				inactive := table.ApplyCurrentRowColor(items, readline.DIM)
+				table.AppendRow(inactive)
+			} else {
+				table.AppendRow([]string{state, order, id, c2Type, channel, address, timeouts, jitInt, comms, attempts})
+			}
 		}
 	}
 
 	fmt.Printf(table.Output())
+}
+
+const (
+	warnTransportSwitching = "\033[33;5m"
+)
+
+// getTransportState - Get the status of a transport, depending on the current target context
+func getTransportState(transport *sliverpb.Transport, target core.Target) (state string) {
+
+	if transport.Running {
+		// It might be the current one but also currently switching
+		if target.State() == clientpb.State_Switching && target.Transport().ID == transport.ID {
+			state = "Switch"
+			// Or it could be the next already marked running, but that should not happen
+		} else if target.State() == clientpb.State_Switching {
+			state = "Next"
+			// Or its just the current transport
+		} else {
+			state = "Active"
+		}
+	}
+
+	if !transport.Running {
+		// Or if the transport is simply inactive
+		state = "Loaded"
+	}
+
+	return
 }

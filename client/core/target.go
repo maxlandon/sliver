@@ -319,18 +319,16 @@ func (t *activeTarget) Session() *clientpb.Session {
 	return t.session
 }
 
-func (t *activeTarget) SetSession(sess *clientpb.Session) *clientpb.Session {
+func (t *activeTarget) SetSession(sess *clientpb.Session) {
 	t.session = sess
-	return t.session
 }
 
 func (t *activeTarget) Beacon() *clientpb.Beacon {
 	return t.beacon
 }
 
-func (t *activeTarget) SetBeacon(beacon *clientpb.Beacon) *clientpb.Beacon {
+func (t *activeTarget) SetBeacon(beacon *clientpb.Beacon) {
 	t.beacon = beacon
-	return t.beacon
 }
 
 func (t *activeTarget) Transport() *sliverpb.Transport {
