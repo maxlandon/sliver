@@ -208,10 +208,13 @@ func (rpc *Server) DeleteTransport(ctx context.Context, req *sliverpb.TransportD
 		return nil, errors.New("Session returned no success, but no error")
 	}
 
-	// Delete the transport from the database
-	err = db.Session().Delete(transport).Error
-	if err != nil {
-		return nil, fmt.Errorf("Implant deleted the transport, but failed to delete from DB: %s", err)
+	// Delete the transport from the database, only if not compiled in a build:
+	// we might need it on next reconnect, or for printing build informations.
+	if transport.ImplantBuildID == uuid.Nil {
+		err = db.Session().Delete(transport).Error
+		if err != nil {
+			return nil, fmt.Errorf("Implant deleted the transport, but failed to delete from DB: %s", err)
+		}
 	}
 
 	return sliverRes, nil

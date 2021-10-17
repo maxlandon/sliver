@@ -30,7 +30,6 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/c2"
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/log"
 	clientLog "github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/prelude"
 	"github.com/bishopfox/sliver/client/transport"
@@ -262,6 +261,7 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 			news := fmt.Sprintf("Session %d failed to switch its transport", session.ID)
 			core.SetActiveTarget(session, nil)
 			log.Errorf(news)
+			return
 		}
 
 		// If our active session is done switching its transport
@@ -415,12 +415,12 @@ func triggerReactions(event *clientpb.Event) {
 	// Execute each reaction
 	for _, reaction := range reactions {
 		for _, line := range reaction.Commands {
-			log.Infof("Execute reaction: '%s'\n", line)
+			clientLog.Infof("Execute reaction: '%s'\n", line)
 
 			// Check arguments
 			args, err := shlex.Split(line, true)
 			if err != nil {
-				log.Errorf("Reaction command has invalid args: %s", err)
+				clientLog.Errorf("Reaction command has invalid args: %s", err)
 				continue
 			}
 
@@ -428,7 +428,7 @@ func triggerReactions(event *clientpb.Event) {
 			_, err = core.Console.CommandParser().ParseArgs(args)
 			// err = con.App.RunCommand(args)
 			if err != nil {
-				log.Errorf("Reaction command error: %s", err)
+				clientLog.Errorf("Reaction command error: %s", err)
 			}
 		}
 	}

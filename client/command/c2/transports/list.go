@@ -118,15 +118,18 @@ func printTransports(transports []*sliverpb.Transport) {
 			c2Type := prof.Type.String()
 			address := c2.TransportConnection(transport, padd)
 
-			// Timeouts
-			var timeouts string
+			// Beacon-specific
 			var jitInt string
 			if prof.Type == sliverpb.C2Type_Beacon {
-				jitInt = fmt.Sprintf("%-3s / %3s", time.Duration(prof.Jitter), time.Duration(prof.Interval))
-				timeouts = fmt.Sprintf("%d / %ss", prof.MaxConnectionErrors, time.Duration(prof.Interval))
-			} else {
-				timeouts = fmt.Sprintf("%-4d / %4s", prof.MaxConnectionErrors, time.Duration(prof.Interval))
+				jit := fmt.Sprintf("%4s", time.Duration(prof.Jitter))
+				interval := fmt.Sprintf("%-6s", time.Duration(prof.Interval))
+				jitInt = fmt.Sprintf("%s / %s", jit, interval)
 			}
+
+			// Max errors & reconnect intervals (all C2 types need this)
+			maxErrs := fmt.Sprintf("%4d", prof.MaxConnectionErrors)
+			reconnect := fmt.Sprintf("%-5s", time.Duration(prof.ReconnectInterval))
+			timeouts := fmt.Sprintf("%s / %s", maxErrs, reconnect)
 
 			// Comm
 			var comms string

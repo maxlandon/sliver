@@ -25,7 +25,6 @@ package db
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 
@@ -573,21 +572,11 @@ func BeaconByShortID(id string) (*models.Beacon, error) {
 // UpdateOrCreateBeacon - Either updates the state of an existing beacon, taking care
 // or not touching its associated tasks, so we don't duplicate them inadvertently,
 // or creates a new one. This function is often used during transport switches.
-func UpdateOrCreateBeacon(beacon *models.Beacon) (err error, updateErr error) {
-
-	// Try to update it first
-	err = Session().Model(&models.Beacon{}).
-		Omit("beacon_tasks").Where(&models.Beacon{
+func UpdateOrCreateBeacon(beacon *models.Beacon) (err error) {
+	err = Session().Model(&models.Beacon{
 		ID: beacon.ID,
-	}).Updates(&beacon).Error
-
-	// Or create it if needed
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		updateErr = Session().Model(&models.Beacon{}).
-			Omit("beacon_tasks").
-			Save(&beacon).Error
-	}
-
+	}).Omit("beacon_tasks").
+		Save(&beacon).Error
 	return
 }
 

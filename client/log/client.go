@@ -48,11 +48,11 @@ var (
 
 	// Mappings between logrus log levels and their associated console print icon.
 	logrusPrintLevels = map[logrus.Level]string{
-		logrus.TraceLevel: fmt.Sprintf("%s[t] %s", readline.DIM, readline.RESET),
-		logrus.DebugLevel: fmt.Sprintf("%s%s[d] %s", readline.DIM, readline.BLUE, readline.RESET),
+		logrus.TraceLevel: fmt.Sprintf("%s[T] %s", readline.BACKDARKGRAY, readline.RESET),
+		logrus.DebugLevel: fmt.Sprintf("%s%s[D] %s", readline.DIM, readline.DIM, readline.RESET),
 		logrus.InfoLevel:  info,
-		logrus.WarnLevel:  fmt.Sprintf("%s[!] %s", readline.YELLOW, readline.RESET),
-		logrus.ErrorLevel: warn,
+		logrus.WarnLevel:  warn,
+		logrus.ErrorLevel: errror,
 	}
 )
 

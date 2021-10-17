@@ -86,8 +86,10 @@ func beaconRegisterHandler(conn *core.Connection, data []byte) *sliverpb.Envelop
 
 	// Transports ------------------------------------------------------
 
+	var newID = reg.Register.ActiveTransportID // The current transport
+
 	// Update all transports, including the running one, with their statistics
-	err = core.UpdateTargetTransports(reg.Register.ActiveTransportID, beacon.ID.String(), conn, reg.Register.TransportStats)
+	err = core.UpdateTargetTransports(newID, beacon.ID.String(), conn, reg.Register.TransportStats)
 	if err != nil {
 		sessionHandlerLog.Errorf("Error when updating session transports: %s", err)
 	}
@@ -212,31 +214,33 @@ func beaconTaskResults(beaconID string, taskEnvelopes []*sliverpb.Envelope) *sli
 }
 
 // switchBeacon - Create or update a beacon with the registration, and if the previous target was a session, remove it.
-func switchBeacon(beacon *models.Beacon, s *core.Session, reg *sliverpb.BeaconRegister, conn *core.Connection) error {
+func switchBeacon(beacon *models.Beacon, s *core.Session, reg *sliverpb.RegisterTransportSwitch, conn *core.Connection) error {
+	sessReg := reg.Session // Core info
+	beaconReg := reg.Beacon
 
-	beaconHandlerLog.Infof("[Switching] Beacon registration from %s", reg.ID)
+	beaconHandlerLog.Infof("[Switching] Beacon registration from %s", beaconReg.ID)
 
 	// Core ------------------------------------------------------------
 
-	beacon.ID = gofrsUuid.FromStringOrNil(reg.ID) // Always overwrite ID
-	beacon.Name = reg.Register.Name
-	beacon.Hostname = reg.Register.Hostname
-	beacon.HostUUID = gofrsUuid.FromStringOrNil(reg.Register.HostUUID)
-	beacon.Username = reg.Register.Username
-	beacon.UID = reg.Register.Uid
-	beacon.GID = reg.Register.Gid
-	beacon.OS = reg.Register.Os
-	beacon.Arch = reg.Register.Arch
-	beacon.PID = reg.Register.Pid
-	beacon.Filename = reg.Register.Filename
+	beacon.ID = gofrsUuid.FromStringOrNil(beaconReg.ID) // Always overwrite ID
+	beacon.Name = sessReg.Name
+	beacon.Hostname = sessReg.Hostname
+	beacon.HostUUID = gofrsUuid.FromStringOrNil(sessReg.HostUUID)
+	beacon.Username = sessReg.Username
+	beacon.UID = sessReg.Uid
+	beacon.GID = sessReg.Gid
+	beacon.OS = sessReg.Os
+	beacon.Arch = sessReg.Arch
+	beacon.PID = sessReg.Pid
+	beacon.Filename = sessReg.Filename
 	beacon.LastCheckin = conn.LastMessage
-	beacon.Version = reg.Register.Version
+	beacon.Version = sessReg.Version
 	// beacon.ConfigID = uuid.FromStringOrNil(reg.Register.ConfigID)
-	beacon.WorkingDirectory = reg.Register.WorkingDirectory
+	beacon.WorkingDirectory = sessReg.WorkingDirectory
 	if s != nil {
 		beacon.SessionID = s.UUID
 	}
-	beacon.NextCheckin = reg.NextCheckin
+	beacon.NextCheckin = beaconReg.NextCheckin
 	beacon.TransportID = beacon.Transport.ID.String()
 	beacon.State = clientpb.State_Alive.String()
 
@@ -244,24 +248,37 @@ func switchBeacon(beacon *models.Beacon, s *core.Session, reg *sliverpb.BeaconRe
 
 	// Very important: unique constraint on envelopeID makes it easy to duplicate
 	// the beacon's tasks without noticing. So we omit updating the field
-	recordNotFoundErr, updateErr := db.UpdateOrCreateBeacon(beacon)
-	if updateErr != nil {
-		beaconHandlerLog.Errorf("Failed to create/update beacon: Database write %s", recordNotFoundErr)
+	// recordNotFoundErr := db.Session().Model(&models.Beacon{ID: beacon.ID}).
+	//         Omit("beacon_tasks").
+	//         Save(&beacon).Error
+	// if recordNotFoundErr != nil {
+	//         beaconHandlerLog.Errorf("Error thrown when registering beacon after switch: %s", recordNotFoundErr)
+	// }
+
+	err := db.UpdateOrCreateBeacon(beacon)
+	if err != nil {
+		beaconHandlerLog.Errorf("Failed to create/update beacon: Database write %s", err)
+	}
+
+	registered, err := db.BeaconByID(beacon.ID.String())
+	if err != nil {
+		beaconHandlerLog.Errorf("Failed to find beacon after switch: %s", beacon.ID.String())
+		return nil
 	}
 
 	// Either a registration if new beacon...
 	var event core.Event
-	if errors.Is(recordNotFoundErr, gorm.ErrRecordNotFound) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		event = core.Event{
 			Type:    clientpb.EventType_BeaconRegistered,
-			Beacon:  beacon,
+			Beacon:  registered,
 			Session: s,
 		}
 	} else {
 		// ... Or if we have found the beacon, update it
 		event = core.Event{
 			Type:    clientpb.EventType_BeaconUpdated,
-			Beacon:  beacon,
+			Beacon:  registered,
 			Session: s,
 		}
 	}

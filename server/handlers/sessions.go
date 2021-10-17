@@ -80,19 +80,18 @@ func registerSessionHandler(conn *core.Connection, data []byte) *sliverpb.Envelo
 
 	// Transports ------------------------------------------------------
 
-	// Get the transport in database for the provided ID and populate it
-	// in the session. Get the current transport used by the Session
+	// Update all transports, including the running one, with their statistics
+	err = core.UpdateTargetTransports(register.ActiveTransportID, session.UUID, conn, register.TransportStats)
+	if err != nil {
+		sessionHandlerLog.Errorf("Error when updating session transports: %s", err)
+	}
+
+	// And query back the updated, current transport
 	transport, err := db.TransportByID(register.ActiveTransportID)
 	if transport == nil {
 		sessionHandlerLog.Errorf("Could not find transport with ID %s", register.ActiveTransportID)
 	}
 	session.Transport = transport
-
-	// Update all transports, including the running one, with their statistics
-	err = core.UpdateTargetTransports(transport.ID.String(), session.UUID, conn, register.TransportStats)
-	if err != nil {
-		sessionHandlerLog.Errorf("Error when updating session transports: %s", err)
-	}
 
 	// Registration ----------------------------------------------------
 
@@ -290,11 +289,8 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register) err
 	if bc != nil {
 		bc.State = clientpb.State_Disconnect.String()
 
-		err, updateErr := db.UpdateOrCreateBeacon(bc)
+		err = db.UpdateOrCreateBeacon(bc)
 		if err != nil {
-			beaconHandlerLog.Errorf("Database write %s", err)
-		}
-		if updateErr != nil {
 			beaconHandlerLog.Errorf("Database write %s", err)
 		}
 

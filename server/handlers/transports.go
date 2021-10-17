@@ -124,7 +124,7 @@ func registerTransportSwitchHandler(implantConn *core.Connection, data []byte) *
 		beacon.Transport = transport
 
 		// And handle switch registration
-		err = switchBeacon(beacon, session, register.Beacon, implantConn)
+		err = switchBeacon(beacon, session, register, implantConn)
 		if err != nil {
 			sessionHandlerLog.Errorf("(Transport switch => beacon) Failed with error: %s", err)
 		}
@@ -133,7 +133,6 @@ func registerTransportSwitchHandler(implantConn *core.Connection, data []byte) *
 		if session != nil {
 			core.Sessions.RemoveSwitched(session.ID)
 		}
-
 	}
 
 	return nil

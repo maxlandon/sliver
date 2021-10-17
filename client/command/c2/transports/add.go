@@ -37,8 +37,8 @@ type Add struct {
 	} `positional-args:"yes" required:"yes"`
 
 	Options struct {
-		Switch   bool `long:"switch" short:"s" description:"immediately switch the session transport to this one"`
-		Priority int  `long:"priority" short:"p" description:"order in which to insert the transport (defaults to last+1)"`
+		// Switch   bool `long:"switch" short:"s" description:"immediately switch the session transport to this one"`
+		Priority int `long:"priority" short:"p" description:"order in which to insert the transport (defaults to last+1)"`
 	} `group:"add options"`
 }
 
@@ -48,8 +48,8 @@ func (a *Add) Execute(args []string) (err error) {
 
 	// Make request
 	resp, err := transport.RPC.AddTransport(context.Background(), &sliverpb.TransportAddReq{
-		ID:       a.Args.ProfileID,
-		Switch:   a.Options.Switch,
+		ID: a.Args.ProfileID,
+		// Switch:   a.Options.Switch,
 		Priority: int32(a.Options.Priority),
 		Request:  core.ActiveTarget.Request(),
 	})

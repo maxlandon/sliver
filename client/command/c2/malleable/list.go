@@ -112,27 +112,31 @@ func printProfilesWithTitle(title string, profiles []*sliverpb.Malleable) {
 
 	table := util.NewTable(readline.Yellow(title))
 	// TODO: add Credentials  with "user/pass" or "api/pass" or "type" indication => devise
-	headers := []string{"ID", "Channel", "Direction", "Address", "Name", "Errs/Reconnect", "Jit/Interval", "SSH Comms"}
-	headLen := []int{0, 0, 0, 0, 0, 0, 0, 0}
+	headers := []string{"ID", "Type", "C2", "Direction", "Address", "Name", "Errs/Reconnect", "Jit/Interval", "Comms"}
+	headLen := []int{0, 0, 0, 0, 0, 0, 0, 0, 0}
 	table.SetColumns(headers, headLen)
 
 	for _, p := range profiles {
 
 		id := c2.GetShortID(p.ID)
+		c2Type := p.Type.String()
 		channel := p.C2.String()
 		dir := p.Direction.String()
 		address := readline.Bold(c2.FullTargetPath(p))
 		name := p.Name
 
-		// Timeouts
-		var timeouts string
+		// Beacon-specific
 		var jitInt string
 		if p.Type == sliverpb.C2Type_Beacon {
-			jitInt = fmt.Sprintf("%-3s / %3s", time.Duration(p.Jitter), time.Duration(p.Interval))
-			timeouts = fmt.Sprintf("%d / %s", p.MaxConnectionErrors, time.Duration(p.Interval))
-		} else {
-			timeouts = fmt.Sprintf("%-4d / %4s", p.MaxConnectionErrors, time.Duration(p.Interval))
+			jit := fmt.Sprintf("%4s", time.Duration(p.Jitter))
+			interval := fmt.Sprintf("%-6s", time.Duration(p.Interval))
+			jitInt = fmt.Sprintf("%s / %s", jit, interval)
 		}
+
+		// Max errors & reconnect intervals (all C2 types need this)
+		maxErrs := fmt.Sprintf("%4d", p.MaxConnectionErrors)
+		reconnect := fmt.Sprintf("%-5s", time.Duration(p.ReconnectInterval))
+		timeouts := fmt.Sprintf("%s / %s", maxErrs, reconnect)
 
 		// Comm
 		var comms string
@@ -143,7 +147,7 @@ func printProfilesWithTitle(title string, profiles []*sliverpb.Malleable) {
 		}
 
 		// Add to table
-		table.AppendRow([]string{id, channel, dir, address, name, timeouts, jitInt, comms})
+		table.AppendRow([]string{id, c2Type, channel, dir, address, name, timeouts, jitInt, comms})
 	}
 
 	fmt.Printf(table.Output())

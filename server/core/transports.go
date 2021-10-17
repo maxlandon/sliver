@@ -73,11 +73,11 @@ func TransportsByTarget(session *Session, beacon *models.Beacon) (transports []*
 
 // UpdateTargetTransports - Update all transports of a session/beacon when it registers/switches, passing in
 // statistics sent back with the registration. Parameters:
-// @newTransportID - The ID of the transport passed in a register/registerSwitch message.
-// @targetID       - The ID of the session, beacon that is either registered or switching.
-// @conn           - An optional existing implant (logical,TLV) connection to use for populating live rAddr/lAddr
-// @stats          - Statistics for all transports loaded on a target, sent by it when registering.
-func UpdateTargetTransports(newTransportID, targetID string, conn *Connection, stats []*sliverpb.Transport) (err error) {
+// @newID      - The ID of the transport passed in a register/registerSwitch message.
+// @targetID   - The ID of the session, beacon that is either registered or switching.
+// @conn       - An optional existing implant (logical,TLV) connection to use for populating live rAddr/lAddr
+// @stats      - Statistics for all transports loaded on a target, sent by it when registering.
+func UpdateTargetTransports(newID, targetID string, conn *Connection, stats []*sliverpb.Transport) (err error) {
 
 	// For each registered transport, including the active one
 	for _, registerTransport := range stats {
@@ -91,7 +91,7 @@ func UpdateTargetTransports(newTransportID, targetID string, conn *Connection, s
 		saved.SessionID = uuid.FromStringOrNil(targetID)
 
 		// If the active one, update it with runtime information from its connection
-		if saved.ID.String() == newTransportID {
+		if saved.ID.String() == newID {
 			_, err = CreateOrUpdateTransport(saved, conn, registerTransport)
 			if err != nil {
 				sessionsLog.Errorf("Failed to update old Transport: %s", err)
@@ -162,7 +162,6 @@ func CreateOrUpdateTransport(transport *models.Transport, conn *Connection, stat
 
 	// If information was passed by an implant at register/switch time
 	if stats != nil {
-		transport.Running = stats.Running
 		transport.Priority = stats.Order
 		transport.Attempts = stats.Attempts
 		transport.Failures = stats.Failures
@@ -299,7 +298,7 @@ func RegisterTransportSwitch(sess *Session, beacon *models.Beacon) (err error) {
 		}
 
 		beacon.State = clientpb.State_Switching.String()
-		_, err = db.UpdateOrCreateBeacon(beacon)
+		err = db.UpdateOrCreateBeacon(beacon)
 		EventBroker.Publish(Event{
 			Type:   clientpb.EventType_BeaconUpdated,
 			Beacon: beacon,
@@ -327,7 +326,7 @@ func CancelTransportSwitch(sess *Session, beacon *models.Beacon) (err error) {
 		}
 
 		beacon.State = clientpb.State_Alive.String()
-		_, err = db.UpdateOrCreateBeacon(beacon)
+		err = db.UpdateOrCreateBeacon(beacon)
 		EventBroker.Publish(Event{
 			Type:   clientpb.EventType_BeaconUpdated,
 			Beacon: beacon,
