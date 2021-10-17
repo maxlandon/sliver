@@ -20,13 +20,12 @@ package transports
 
 import (
 	// {{if .Config.Debug}}
-
 	"log"
-
 	// {{end}}
 
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"io"
 	insecureRand "math/rand"
 	"net"
@@ -182,6 +181,17 @@ func (c *Connection) RequestRecv() chan *pb.Envelope {
 	return c.Recv
 }
 
+// Receive - Receive a a task from the server. Blocks until one is received.
+func (c *Connection) Receive() (*pb.Envelope, error) {
+	for envelope := range c.Recv {
+		if envelope == nil {
+			return nil, errors.New("received nil envelope from underlying TLV connection")
+		}
+		return envelope, nil
+	}
+	return nil, errors.New("did not received any envelope in Receive call")
+}
+
 // NewSession - Create a primitive ReadWriteCloser on our goroutines (to rule them all)
 func NewSession(stream io.ReadWriteCloser, connection *Connection) error {
 	// We need a few clean fields
@@ -218,9 +228,11 @@ func NewSession(stream io.ReadWriteCloser, connection *Connection) error {
 				envelope, err := streamReadEnvelope(stream)
 				connection.errClosed = err // Assign the error in case its not nil.
 				if err == io.EOF {
+					connection.errClosed = io.EOF
 					break RECV
 				}
 				if err == net.ErrClosed {
+					connection.errClosed = net.ErrClosed
 					break RECV
 				}
 				// {{if .Config.Debug}}
