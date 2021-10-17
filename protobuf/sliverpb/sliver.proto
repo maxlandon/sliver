@@ -237,13 +237,13 @@ message TransportSwitchReq {
 
 message TransportSwitch {
   bool Success = 1;
+  repeated Transport TransportStats = 2; // Attempts/failures
   commonpb.Response Response = 9;
 }
 
 message RegisterTransportSwitch {
   string OldTransportID = 1;
   string TransportID = 2;
-  string RemoteAddress = 3;
   bool Success = 4;
   BeaconRegister Beacon = 5;
   Register Session = 6;

