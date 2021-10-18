@@ -289,10 +289,9 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register) err
 	if bc != nil {
 		bc.State = clientpb.State_Disconnect.String()
 
-		// And don't save either the transport or the tasks, both
-		// have been handled already.
-		err = db.Session().Omit("beacon_tasks", "transport").
-			Save(&bc).Error
+		// And don't save either the transport or the tasks:
+		///both have been handled already.
+		err = db.UpdateBeaconSwitched(bc)
 		if err != nil {
 			beaconHandlerLog.Errorf("Database write %s", err)
 		}

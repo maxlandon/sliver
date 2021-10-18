@@ -25,6 +25,7 @@ package db
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -573,8 +574,30 @@ func BeaconByShortID(id string) (*models.Beacon, error) {
 // or not touching its associated tasks, so we don't duplicate them inadvertently,
 // or creates a new one. This function is often used during transport switches.
 func UpdateOrCreateBeacon(beacon *models.Beacon) (err error) {
-	err = Session().Omit("beacon_tasks").
-		Save(&beacon).Error
+
+	// Find the beacon first to know if it exists
+	_, err = BeaconByID(beacon.ID.String())
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		err = Session().Omit("Tasks").
+			Save(&beacon).Error
+		return
+	}
+
+	// Or update it if we found it
+	err = Session().Where(&models.Beacon{
+		ID: beacon.ID,
+	}).Omit("Tasks").
+		Updates(&beacon).Error
+	return
+}
+
+// UpdateBeaconSwitched - Performs a full update of a beacon,
+// except for its tasks (avoid duplication) and its transport.
+func UpdateBeaconSwitched(beacon *models.Beacon) (err error) {
+	err = Session().Where(&models.Beacon{
+		ID: beacon.ID,
+	}).Omit("Tasks", "Transport").
+		Updates(&beacon).Error
 	return
 }
 
