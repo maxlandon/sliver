@@ -193,6 +193,16 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 			return
 		}
 
+		// If the session is a new one resulting from a transport switch, but not our current target
+		if (session.BeaconID != "" && event.Beacon != nil) && active.State() == clientpb.State_Alive {
+			log = log.WithField("success", true)
+			news := fmt.Sprintf("Switched transports: Beacon %s (%s) => Session %d (%s)",
+				c2.GetShortID(event.Beacon.ID), active.Transport().Profile.C2.String(),
+				session.ID, session.Transport.Profile.C2.String())
+			log.Infof(news)
+			return
+		}
+
 		// Else, notify the registered session.
 		log = log.WithField("important", true) // Add empty lines around the news
 		log = log.WithField("success", true)

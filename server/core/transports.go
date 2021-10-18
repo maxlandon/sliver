@@ -339,16 +339,16 @@ func CancelTransportSwitch(sess *Session, beacon *models.Beacon) (err error) {
 // GetTargetSwitching - When sending the registration message following the transport
 // switch, the session/beacon has provided the ID of its old transport, which should
 // be unique among all sessions/beacons. Find it and return it for update.
-func GetTargetSwitching(oldTransportID string) (sess *Session, beacon *models.Beacon) {
+func GetTargetSwitching(oldTransportID string) (sess *Session, beacon *models.Beacon, id string) {
 	for _, s := range Sessions.All() {
 		if s.State == clientpb.State_Switching.String() && s.Transport.ID.String() == oldTransportID {
-			return s, nil
+			return s, nil, s.UUID
 		}
 	}
 	beacons, _ := db.ListBeacons()
 	for _, b := range beacons {
 		if b.State == clientpb.State_Switching.String() && b.TransportID == oldTransportID {
-			return nil, b
+			return nil, b, b.ID.String()
 		}
 	}
 

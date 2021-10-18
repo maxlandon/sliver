@@ -278,7 +278,11 @@ func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register) err
 
 	// If we were a beacon: add session and update beacon
 	if !sessionExists {
-		core.Sessions.Add(s)
+		if bc != nil {
+			core.Sessions.AddFromBeacon(s, bc)
+		} else {
+			core.Sessions.Add(s)
+		}
 		go auditLogSession(s, r)
 	} else {
 		core.Sessions.UpdateSession(s)

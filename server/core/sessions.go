@@ -249,6 +249,24 @@ func (s *sessions) Add(session *Session) *Session {
 	return session
 }
 
+// Add - Add a sliver to the hive (atomically), with an optional
+// parent Beacon, which is passed in the event for clients to get
+// more precise information on what/why session has opened.
+func (s *sessions) AddFromBeacon(session *Session, beacon *models.Beacon) *Session {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if beacon != nil {
+		session.BeaconID = beacon.ID.String()
+	}
+	s.sessions[session.ID] = session
+	EventBroker.Publish(Event{
+		Type:    clientpb.EventType_SessionOpened,
+		Session: session,
+		Beacon:  beacon,
+	})
+	return session
+}
+
 // Remove - Remove a sliver from the hive (atomically), or just update
 // it if the session was just updating its transport mechanism.
 func (s *sessions) Remove(sessionID uint32) {
