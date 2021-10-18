@@ -96,7 +96,7 @@ func NewTransportFromBytes(profileData string) (t *Driver, err error) {
 	}
 
 	// Unmarshal from JSON
-	err = json.Unmarshal([]byte(profileData), t)
+	err = json.Unmarshal([]byte(profileData), t.Malleable)
 	if err != nil {
 		return nil, errors.New("Failed to parse string profile")
 	}
@@ -213,11 +213,13 @@ func (t *Driver) Connect() (conn net.Conn, err error) {
 // optionally letting the caller to pass information/statistics about a list of transports
 // living in this implant (compiled or runtime-added). This does not cover transport switches.
 func (t *Driver) Register(stats []*sliverpb.Transport) (reg *sliverpb.Envelope) {
+	var regType uint32
 	var registration proto.Message
 
 	// Register a session
 	if t.Type == sliverpb.C2Type_Session {
 		registration = t.RegisterCore(stats)
+		regType = sliverpb.MsgRegister
 	}
 
 	// Or register a beacon, wrapping the register into a special envelope,
@@ -226,10 +228,11 @@ func (t *Driver) Register(stats []*sliverpb.Transport) (reg *sliverpb.Envelope) 
 		beaconReg := t.RegisterBeacon()
 		beaconReg.Register = t.RegisterCore(stats)
 		registration = beaconReg
+		regType = sliverpb.MsgBeaconRegister
 	}
 
 	// Package the registration message
-	return Envelope(sliverpb.MsgRegister, registration)
+	return Envelope(regType, registration)
 }
 
 // RegisterCore - Prepare a registration message containing only transport-agnostic information,
@@ -330,6 +333,8 @@ func (t *Driver) RegisterSwitch(fromTransport string, stats []*sliverpb.Transpor
 	// means the switch failed, we must notify it.
 	if fromTransport == t.ID {
 		register.Success = false
+	} else {
+		register.Success = true
 	}
 
 	// Base session information is always sent in the session

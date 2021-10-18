@@ -573,9 +573,7 @@ func BeaconByShortID(id string) (*models.Beacon, error) {
 // or not touching its associated tasks, so we don't duplicate them inadvertently,
 // or creates a new one. This function is often used during transport switches.
 func UpdateOrCreateBeacon(beacon *models.Beacon) (err error) {
-	err = Session().Model(&models.Beacon{
-		ID: beacon.ID,
-	}).Omit("beacon_tasks").
+	err = Session().Omit("beacon_tasks").
 		Save(&beacon).Error
 	return
 }

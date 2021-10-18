@@ -158,8 +158,6 @@ func (s *Session) StartSession() (err error) {
 		// Else return, there are no errors, we have thus a session
 		return
 	}
-
-	return
 }
 
 // Serve - Block and serve the session handlers. The error channel
@@ -268,8 +266,9 @@ func (s *Session) Serve(errs chan error) {
 // Send - Send a message to the server without any prior request.
 // The underlying ReadWriter ensures no cleanup/shutdown is performed
 // before being able to try to write the data to the connection/channel.
-func (s *Session) Send(req *sliverpb.Envelope) {
+func (s *Session) Send(req *sliverpb.Envelope) error {
 	s.Connection.RequestSend(req)
+	return nil
 }
 
 // Close - Close the session and all its underlying components.

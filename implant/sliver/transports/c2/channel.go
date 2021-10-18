@@ -38,10 +38,10 @@ type Channel interface {
 	RegisterSwitch(string, []*pb.Transport) *pb.Envelope // Send a transport switch registration message
 
 	// Specialized Channel types implementations (Sessions/Beacons implement them)
-	Start() error      // Start the Channel C2 stack: initial transport, session and related
-	Serve(chan error)  // Serve handlers for the corresponding Channel type (session/beacon)
-	Send(*pb.Envelope) // Send a message back to the server, without prior request
-	Close() error      // Shutdown the Channel and all its components
+	Start() error            // Start the Channel C2 stack: initial transport, session and related
+	Serve(chan error)        // Serve handlers for the corresponding Channel type (session/beacon)
+	Send(*pb.Envelope) error // Send a message back to the server, without prior request
+	Close() error            // Shutdown the Channel and all its components
 }
 
 // InitChannel - Main/root instantiation function for all C2 Channels in the implant.

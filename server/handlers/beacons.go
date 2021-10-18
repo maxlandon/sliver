@@ -247,14 +247,7 @@ func switchBeacon(beacon *models.Beacon, s *core.Session, reg *sliverpb.Register
 	// Registration ----------------------------------------------------
 
 	// Very important: unique constraint on envelopeID makes it easy to duplicate
-	// the beacon's tasks without noticing. So we omit updating the field
-	// recordNotFoundErr := db.Session().Model(&models.Beacon{ID: beacon.ID}).
-	//         Omit("beacon_tasks").
-	//         Save(&beacon).Error
-	// if recordNotFoundErr != nil {
-	//         beaconHandlerLog.Errorf("Error thrown when registering beacon after switch: %s", recordNotFoundErr)
-	// }
-
+	// the beacon's tasks without noticing. So we omit updating the field.
 	err := db.UpdateOrCreateBeacon(beacon)
 	if err != nil {
 		beaconHandlerLog.Errorf("Failed to create/update beacon: Database write %s", err)

@@ -152,6 +152,11 @@ func transportSwitchHandler(data []byte, resp handlers.RPCResponse) {
 		return
 	}
 
+	// Reset the attempts/failures for this transport.
+	// We assume that the user knows the statistics and
+	// would taken appropriate action if he should not use it.
+	tp.Transport().ResetAttempts()
+
 	// Send the response before doing the switch
 	res.Success = true
 	resData, err := proto.Marshal(res)

