@@ -80,6 +80,7 @@ func registerTransportSwitchHandler(conn *core.Connection, data []byte) *sliverp
 		} else {
 			session.Connection = conn
 		}
+		session.UUID = reg.Session.UUID
 		// The connection is always assigned a "clean cleanup"
 		conn.Cleanup = func() {
 			core.Sessions.Remove(session.ID)

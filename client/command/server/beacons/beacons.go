@@ -31,6 +31,7 @@ import (
 	"github.com/bishopfox/sliver/client/util"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/maxlandon/readline"
 )
 
 // Main & Sliver context available commands
@@ -92,12 +93,30 @@ func printBeacons(beacons map[string]*clientpb.Beacon) {
 
 		transport := b.Transport.Profile.C2.String()
 		addr := c2.TransportConnection(b.Transport, padd)
-		last := fmt.Sprintf("%s", time.Duration(b.LastCheckin))
-		next := fmt.Sprintf("%s", time.Duration(b.NextCheckin))
+		last, next := beaconLastNextCheckin(b)
+
 		row := []string{c2.GetShortID(b.ID), b.Name, tasks, transport, addr, b.Username,
 			b.Hostname, osArch, last, next}
 
 		table.AppendRow(row)
 	}
 	fmt.Printf(table.Output())
+}
+
+// beaconLastNextCheckin - Get checkins for a beacon in a human readable string format, and colored
+func beaconLastNextCheckin(b *clientpb.Beacon) (last, next string) {
+
+	lastCheckin := time.Now().Round(time.Millisecond).Sub(time.Unix(b.LastCheckin, 0))
+	last = fmt.Sprintf("%s ago", lastCheckin)
+
+	nextCheckin := time.Unix(b.NextCheckin, 0)
+	if time.Unix(b.NextCheckin, 0).Before(time.Now()) {
+		past := time.Now().Round(time.Millisecond).Sub(nextCheckin)
+		next = fmt.Sprintf("-%s", readline.Bold(readline.Red(fmt.Sprintf("%s", past))))
+	} else {
+		eta := nextCheckin.Sub(time.Now().Round(time.Millisecond))
+		next = readline.Bold(readline.Green(fmt.Sprintf("%s", eta)))
+	}
+
+	return
 }

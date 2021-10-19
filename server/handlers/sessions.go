@@ -244,7 +244,7 @@ func commTunnelDataHandler(conn *core.Connection, data []byte) *sliverpb.Envelop
 // switchSession - Create a session if the current target was a beacon, or update the session if it was already one.
 func switchSession(s *core.Session, bc *models.Beacon, r *sliverpb.Register) error {
 	var sessionExists bool
-	if s.UUID == "" {
+	if s.Name == "" {
 		sessionExists = false
 	} else {
 		sessionExists = true

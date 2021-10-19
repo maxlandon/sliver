@@ -194,10 +194,10 @@ func handleEventSession(event *clientpb.Event, log *logrus.Entry, autoLevel func
 		}
 
 		// If the session is a new one resulting from a transport switch, but not our current target
-		if (session.BeaconID != "" && event.Beacon != nil) && active.State() == clientpb.State_Alive {
+		if (session.BeaconID != "" && event.Beacon != nil) && session.State == clientpb.State_Alive {
 			log = log.WithField("success", true)
 			news := fmt.Sprintf("Switched transports: Beacon %s (%s) => Session %d (%s)",
-				c2.GetShortID(event.Beacon.ID), active.Transport().Profile.C2.String(),
+				c2.GetShortID(event.Beacon.ID), event.Beacon.Transport.Profile.C2.String(),
 				session.ID, session.Transport.Profile.C2.String())
 			log.Infof(news)
 			return
@@ -317,6 +317,16 @@ func handleEventBeacon(event *clientpb.Event, log *logrus.Entry, autoLevel func(
 
 			// Set the new beacon as the active target
 			core.SetActiveTarget(nil, beacon)
+			log.Infof(news)
+			return
+		}
+
+		// If the beacon is a new one resulting from a transport switch, but not our current target
+		if (beacon.SessionID != "" && event.Session != nil) && beacon.State == clientpb.State_Alive {
+			log = log.WithField("success", true)
+			news := fmt.Sprintf("Switched transports: Session %d (%s) => Beacon %s (%s)",
+				event.Session.ID, event.Session.Transport.Profile.C2.String(),
+				c2.GetShortID(beacon.ID), beacon.Transport.Profile.C2.String())
 			log.Infof(news)
 			return
 		}

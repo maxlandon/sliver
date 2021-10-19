@@ -89,7 +89,8 @@ func (t *Driver) Dial() (conn net.Conn, err error) {
 				// {{if .Config.Debug}}
 				log.Printf("Invalid address: %s", t.URI.String())
 				// {{end}}
-				break
+				t.WaitOnFailure()
+				continue // originally was a break
 			}
 
 			hostname := addrs[0]

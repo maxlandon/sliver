@@ -157,23 +157,23 @@ message MalleableHTTP {
   // Stager File Extension
   string StagerFileExt = 9;
 
-	// Key Exchange (default .txt) files and paths
+  // Key Exchange (default .txt) files and paths
   string KeyExchangeFileExt = 10;
   repeated string KeyExchangeFiles = 11; 
   repeated string KeyExchangePaths = 13; 
 
-	// Poll files and paths
+  // Poll files and paths
   string PollFileExt = 15;
   repeated string PollFiles = 16;
   repeated string PollPaths = 17;
 
-	// Session files and paths
+  // Session files and paths
   string StartSessionFileExt = 18;
   string SessionFileExt = 20;
   repeated string SessionFiles = 21;    
   repeated string SessionPaths = 22; 
 
-	// Close session files and paths
+  // Close session files and paths
   string CloseFileExt = 23;
   repeated string CloseFiles = 24;
   repeated string ClosePaths = 25;
