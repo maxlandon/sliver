@@ -78,8 +78,10 @@ func NewConnection() *Connection {
 	return connection
 }
 
-// Close - Execute default & user-provided cleanups once
-func (c *Connection) Close() (err error) {
+// Close - Execute default & user-provided cleanups once. The deliberate parameter, if true
+// is used to signal that we wanted to close the connection, and if false, means that the
+// connection needs to be closed/cleaned up because of an error. Check last line pushing error.
+func (c *Connection) Close(deliberate bool) (err error) {
 
 	// Never close anything while there still are
 	// envelopes to be written to the connection.
@@ -116,7 +118,7 @@ func (c *Connection) Close() (err error) {
 		// If we were closed because of an internal error (not the user wish),
 		// notify the caller (and block until acknowledged) that we are closed
 		// and we have cleaned up our stuff.
-		if c.errClosed != nil {
+		if c.errClosed != nil && !deliberate {
 			c.ErrClosed <- c.errClosed
 		}
 	})
@@ -198,7 +200,7 @@ func NewSession(stream io.ReadWriteCloser, connection *Connection) error {
 	connection.stream = stream
 
 	go func() {
-		defer connection.Close()
+		defer connection.Close(false)
 	SEND:
 		for {
 			select {
@@ -218,7 +220,7 @@ func NewSession(stream io.ReadWriteCloser, connection *Connection) error {
 	}()
 
 	go func() {
-		defer connection.Close()
+		defer connection.Close(false)
 	RECV:
 		for {
 			select {
@@ -249,6 +251,11 @@ func NewSession(stream io.ReadWriteCloser, connection *Connection) error {
 			}
 		}
 	}()
+
+	// Notify we are open.
+	connection.mutex.RLock()
+	connection.IsOpen = true
+	connection.mutex.RUnlock()
 
 	return nil
 }

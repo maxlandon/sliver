@@ -292,7 +292,7 @@ func (s *Session) Close() (err error) {
 	}
 	// {{end}}
 
-	err = s.Connection.Close()
+	err = s.Connection.Close(true) // True is that we want to close it.
 	if err != nil {
 		// {{if .Config.Debug}}
 		log.Printf("Error closing Session connection: %s", err)
