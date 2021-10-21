@@ -98,6 +98,7 @@ service SliverRPC {
     rpc MsfStage(clientpb.MsfStagerReq) returns (clientpb.MsfStager);
     rpc ShellcodeRDI(clientpb.ShellcodeRDIReq) returns (clientpb.ShellcodeRDI);
     rpc GetCompiler(commonpb.Empty) returns (clientpb.Compiler);
+    rpc GetImplantConfig(commonpb.Request) returns (clientpb.ImplantConfig); // Used by the console prompt & context
 
     // *** Websites ***
     rpc Websites(commonpb.Empty) returns (clientpb.Websites);
@@ -179,5 +180,4 @@ service SliverRPC {
 
     // *** Events ***
     rpc Events(commonpb.Request) returns (stream clientpb.Event);
-    // rpc Events(commonpb.Empty) returns (stream clientpb.Event);
 }

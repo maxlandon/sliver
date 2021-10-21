@@ -33,11 +33,13 @@ var (
 		done: make(chan bool, 1),
 	}
 
+	// StateErrors - Errors that are raised when the active target (session/beacon) the user
+	// is currently interactiving with, is unable to process any command/action for some reason.
 	StateErrors = map[clientpb.State]error{
 		// clientpb.State_Dead:       errors.New("Cannot use command: session is dead"),
 		clientpb.State_Sleep:      errors.New("Cannot use command: session is sleeping"),
 		clientpb.State_Switching:  errors.New("Cannot use command: currently switching to a bind transport: dial first"),
-		clientpb.State_Disconnect: errors.New("Cannot use command: beacon is currently disconnected"),
+		clientpb.State_Disconnect: errors.New("Cannot use command: beacon is currently disconnected"), // When way past due checkin
 	}
 )
 
@@ -57,6 +59,10 @@ type Target interface {
 	SetSession(sess *clientpb.Session)
 	Beacon() *clientpb.Beacon
 	SetBeacon(beacon *clientpb.Beacon)
+
+	// Build
+	ImplantConfig() *clientpb.ImplantConfig
+	setImplantConfig(*clientpb.ImplantConfig) // Unexported: this package always takes care of it
 
 	// Info
 	Hostname() string
@@ -93,9 +99,12 @@ type Target interface {
 // activeTarget - Either an active session, or an active beacon.
 // This allows to transparently use either of these in the other packages.
 type activeTarget struct {
-	session *clientpb.Session
-	beacon  *clientpb.Beacon
-	done    chan bool
+	// Base information
+	session       *clientpb.Session
+	beacon        *clientpb.Beacon
+	implantConfig *clientpb.ImplantConfig
+	// Operating
+	done chan bool
 }
 
 // Common -----------------------------------------------
@@ -329,6 +338,14 @@ func (t *activeTarget) Beacon() *clientpb.Beacon {
 
 func (t *activeTarget) SetBeacon(beacon *clientpb.Beacon) {
 	t.beacon = beacon
+}
+
+func (t *activeTarget) ImplantConfig() *clientpb.ImplantConfig {
+	return t.implantConfig
+}
+
+func (t *activeTarget) setImplantConfig(config *clientpb.ImplantConfig) {
+	t.implantConfig = config
 }
 
 func (t *activeTarget) Transport() *sliverpb.Transport {

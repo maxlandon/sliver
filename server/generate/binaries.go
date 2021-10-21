@@ -136,7 +136,9 @@ const (
 	SliverPlatformCXX32EnvVar = "SLIVER_%s_CXX_32"
 )
 
-// ImplantConfigFromProtobuf - Create a native config struct from Protobuf
+// ImplantConfigFromProtobuf - Create a native config struct from Protobuf. This DOES NOT compile anything,
+// but (should) take care of everything required to output a valid implant build configuration, including its
+// specified/prepared C2 Channels. Those are processed and optionally populated in this function.
 func ImplantConfigFromProtobuf(pbConfig *clientpb.ImplantConfig) (string, *models.ImplantConfig) {
 	cfg := &models.ImplantConfig{}
 
@@ -447,6 +449,7 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 
 	// Saving the implant before we generate one-time things with it
 	log.Tracef("Saving build config before igniting C2 profiles")
+	config.Name = name // This is needed for retrieval of this configuration by client consoles
 	err = ImplantConfigSave(config)
 	if err != nil {
 		return "", err

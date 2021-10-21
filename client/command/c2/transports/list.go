@@ -69,9 +69,34 @@ func (l *List) Execute(args []string) (err error) {
 		list = transports.Transports
 	}
 
+	// Print the C2 fallback reconnection strategy before the transports
+	strategy := core.ActiveTarget.ImplantConfig().ConnectionStrategy
+	fmt.Println(readline.Bold(readline.Yellow("C2 fallback/reconnection strategy: ")))
+	fmt.Println(getConnectionStrategy(strategy))
+	fmt.Println()
+
 	printTransports(list)
 
 	return
+}
+
+const (
+	StrategyRandom       = "random"
+	StrategyRandomDomain = "random-domain"
+	StrategySequential   = "sequential"
+)
+
+func getConnectionStrategy(strategy string) string {
+	switch strategy {
+	case StrategyRandom:
+		return "Random (one of all available C2 channels, over any protocol)"
+	case StrategyRandomDomain:
+		return "Random Domain (one all available C2 channels for a given protocol)"
+	case StrategySequential:
+		return "Sequential (C2 channels are tried in the order in which they were compiled. See generate for order info)"
+	default:
+		return "No recognized transports fallback selection/reconnection strategy"
+	}
 }
 
 func printTransports(transports []*sliverpb.Transport) {

@@ -160,8 +160,9 @@ func newProfileFromConfig(p *sliverpb.Malleable, certificateHostname string) (*m
 		Path:             p.Path,
 		Domains:          strings.Join(p.Domains, ","),
 		// Technicals
-		PollTimeout:         p.PollTimeout,
 		MaxConnectionErrors: p.MaxConnectionErrors,
+		ReconnectInterval:   p.ReconnectInterval,
+		PollTimeout:         p.PollTimeout,
 		Active:              p.Active,
 		CommDisabled:        p.CommDisabled,
 		Interval:            p.Interval,
@@ -197,7 +198,7 @@ func newProfileFromConfig(p *sliverpb.Malleable, certificateHostname string) (*m
 // setupTransportHTTP - Validates and/or populates any required HTTP C2 Profile stuff.
 func setupTransportHTTP(p *sliverpb.Malleable, config *models.ImplantConfig, profile *models.Malleable) error {
 
-	// If there are any miningful values set up, don't touch anything
+	// If there are any meaningful values set up, don't touch anything
 	// and pass along, we assume the guy throwing the config has set it up already.
 	if p.HTTP != nil && len(p.HTTP.SessionFiles) > 0 && len(p.HTTP.KeyExchangeFiles) > 0 {
 		return nil

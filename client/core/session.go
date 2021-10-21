@@ -72,6 +72,12 @@ func SetActiveTarget(sess *clientpb.Session, beacon *clientpb.Beacon) {
 		// go refreshBeaconPrompt(ActiveTarget.done)
 	}
 
+	// Fetch the implant build configuration (including C2) from the server
+	config, _ := transport.RPC.GetImplantConfig(context.Background(), ActiveTarget.Request())
+	if config != nil {
+		ActiveTarget.setImplantConfig(config)
+	}
+
 	// Then switch the console context
 	Console.SwitchMenu(constants.SliverMenu)
 
@@ -145,6 +151,7 @@ func UnsetActiveSession() {
 	if ActiveTarget.Beacon() != nil {
 		ActiveTarget.SetBeacon(nil)
 	}
+	ActiveTarget.setImplantConfig(nil)
 }
 
 // GetSession - Get session by session ID or name

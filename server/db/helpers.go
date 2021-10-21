@@ -62,6 +62,20 @@ func ImplantConfigByID(id string) (*models.ImplantConfig, error) {
 	return &config, err
 }
 
+// ImplantConfigByName - Given the name of a session/beacon, retrieve
+// the target and load its configuration with compiled C2 profiles.
+func ImplantConfigByName(name string) (*models.ImplantConfig, error) {
+
+	config := models.ImplantConfig{}
+	err := Session().Where(&models.ImplantConfig{
+		Name: name,
+	}).First(&config).Error
+	if err != nil {
+		return nil, err
+	}
+	return &config, err
+}
+
 // ImplantConfigByECCPublicKeyDigest - Fetch implant build by it's ecc public key
 func ImplantConfigByECCPublicKeyDigest(publicKeyDigest [32]byte) (*models.ImplantConfig, error) {
 	config := models.ImplantConfig{}

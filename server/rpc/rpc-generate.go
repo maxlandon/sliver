@@ -247,3 +247,26 @@ func (rpc *Server) GetCompiler(ctx context.Context, _ *commonpb.Empty) (*clientp
 	rcpLog.Debugf("GetCompiler = %v", compiler)
 	return compiler, nil
 }
+
+// GetImplantConfig - Return the build configuration (including C2s) for a given session/beacon, retrieved with its UUID.
+func (rpc *Server) GetImplantConfig(ctx context.Context, req *commonpb.Request) (*clientpb.ImplantConfig, error) {
+
+	var name string
+	session, beacon := core.GetActiveTarget(req)
+	if session == nil && beacon == nil {
+		return nil, errors.New("Failed to find session/beacon when searching for config")
+	}
+	if session != nil {
+		name = session.Name
+	} else if beacon != nil {
+		name = beacon.Name
+	}
+
+	// Get the config and return it as protobuf
+	conf, err := db.ImplantConfigByName(name)
+	if err != nil || conf == nil {
+		return nil, ErrDatabaseFailure
+	}
+
+	return conf.ToProtobuf(), nil
+}
