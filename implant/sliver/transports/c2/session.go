@@ -165,7 +165,11 @@ func (s *Session) StartSession() (err error) {
 // closures of this transport, for automatic fallback purposes.
 func (s *Session) Serve(errs chan error) {
 
+	// Assign the Transports error channel to the connection
+	// so that when closed, the caller will be notified of it,
+	// and take the appropriate steps, if any.
 	connection := s.Connection
+	connection.ErrClosed = errs
 
 	// Reconnect active pivots
 	// pivots.ReconnectActivePivots(connection)

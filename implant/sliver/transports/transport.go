@@ -375,7 +375,7 @@ func (t *Driver) WaitOnFailure() {
 
 	// The transport just sleeps for the duration specified
 	// as reconnect-on-failure interval (different from beacons intervals).
-	time.Sleep(time.Duration(t.Interval))
+	time.Sleep(time.Duration(t.ReconnectInterval))
 }
 
 // FailedAttempt - Simply notify an failed attempt to initiate full Session/Beacon

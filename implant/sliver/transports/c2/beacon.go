@@ -23,7 +23,6 @@ import (
 	"log"
 	// {{end}}
 
-	"fmt"
 	"sync"
 	"time"
 
@@ -130,7 +129,9 @@ LOOP:
 		// run: when attempting to connect. But if that was the case
 		// we would not get to that point anyway.
 		if _, failures := b.Statistics(); failures == int(b.MaxConnectionErrors) {
-			fmt.Println(failures)
+			// {{if .Config.Debug}}
+			log.Printf("Failures: %d", failures)
+			// {{end}}
 			Transports.transportErrors <- ErrMaxAttempts
 			return
 		}
@@ -379,7 +380,5 @@ func (b *Beacon) RefreshStatistics(child *transports.Driver) (err error) {
 
 	_, parentFailures = b.Statistics()
 	_, childFailures = child.Statistics()
-	fmt.Println(parentFailures)
-	fmt.Println(childFailures)
 	return
 }
