@@ -1,0 +1,550 @@
+
+// ------------------------------------------------------------------------------
+// 
+// *** Overview ***
+//
+// This file contains all the C2 Malleable Profile definitions.
+// These definitions might be accessed and edited by users wishing
+// to write Malleable profiles, or simply used by commands spawning handlers,
+// and by the implant generation code, when channels are compiled in the build.
+//
+// This data is in a different file so that we can treat its Go generated
+// code separately, and automatically generate things like JSON schema files
+// for completion/validation/documentation of the various C2 base/advanced options.
+
+// *** Adding Channels ***
+//
+// The first strongly advised thing, for those who wish to either write a new Profile
+// from scratch, or a completely new Channel stack, should open a Sliver console, use
+// the `malleable new` or `malleable edit` command, and profit from JSON schema 
+// completion and documentation. This is useful to have an overview of what can be set
+// within a Malleable profile, from top to bottom.
+
+// Also, the directory containing all Sliver Protobuf definitions (including here)
+// is managed and validated by the buf.build/buf tool, and its associated yaml files.
+// Linting standards are particularly enforced on this file (comments, lengths, naming)
+// because all of its contents will/might be exposed to user edition. All those
+// fields have specific purposes and may have far-reaching consequences on the overall
+// channel/implant functionality, and thus should be all correctly documented, and
+// easily accessible via either the console, or from the editor itself. So...
+// 
+// PLEASE CORRECTLY DOCUMENT EVERTYHING YOU ADD HERE, AND ABIDE WITH LINTING RULES.
+//
+// Finally, you are free to add any message, enum or fields to this file, whether
+// those are part of existing messages (you will need to if you add a new Channel)
+// or entirely new ones.
+//
+// -------------------------------------------------------------------------------
+
+syntax = "proto3";
+package sliverpb;
+option go_package = "github.com/bishopfox/sliver/protobuf/sliverpb";
+
+// import "tagger/tagger.proto";
+
+
+// Malleable - A Malleable profile contains the entire information a C2 Channel 
+// needs to use as operating parameters, for all protocols, all session types and 
+// directions. Some fields are base ones, used by all profiles, regardless of their 
+// stacks, while others might be specific to some. 
+// All of these options (base and protocol-specific) can be used by both sides of a 
+// Channel (ex: bind 127.0.0.1 is used by implant to listen, and server to dial).
+//
+// Also, a Malleable profile integrates its own Security details, which can vary 
+// greatly across C2 channels, and also depending on the side of the Channel that 
+// will use the profile.
+message Malleable {
+    // schema is an unexported variable used for schema 
+    // completion validation when editing the Profile.
+    // string schema = 1 [(tagger.tags) = "json:\"$schema\""];            
+    string schema = 1;            
+
+    // ID - You should NOT EVER modify the ID of a Malleable profile: even when 
+    // forking an existing one, copying it, updating it, writing it from scratch: 
+    // the Sliver server will ALWAYS take care of an ID.
+    string ID = 2; 
+    // ContextSessionID - You should NOT EVER modify the ContextSessionID. 
+    // This identifies the Session in the context of which this profile was 
+    // created (a user created it with this session as active).
+    string ContextSessionID = 3;  
+    // Name - A name for this profile, for easy search in completions 
+    // and very, very simple one-word description of the profile.
+    string Name = 4;              
+
+    // Direction - The direction of the Channel connection, which determines how the 
+    // owner of this profile (the server consuming it, or an implant compiled with 
+    // it) will behave. Two possible choices:
+    // Bind - The server dials toward an implant listening on a (remote) host/path.
+    // Reverse - The server/implant listens for incoming connections on one of its 
+    // interfaces/paths.
+    C2Direction Direction = 10;
+    // Type- The fundamental type of Channel: this somehow describes the overall
+    // and synthetized behavior of this channel, which might be interactive
+    // (a Session) or asynchronous (a Beacon).
+    // There are important differences between those types, 
+    // and consequences on tooling availalibity can be significant, as it's 
+    // the case for network discovery and pivoting tools that are possible 
+    // through a Session channel, and not on a Beacon one.
+    C2Type Type = 11;              
+    // C2 - The global name of the networking stack used by this C2. Therefore, many
+    // kinds of names can be valid when you add yours; some channels will use the
+    // name of their transport protocols (TCP), their applications protocol 
+    // (DNS/HTTPS) or even specifics about their security details (MTLS, for 
+    // Mutually Authenticated TLS). Yet other Channels, like WireGuard, are also 
+    // complete networking stacks of their own.
+    C2 C2 = 12;
+
+
+    // Hostname - The name of the target host, WITHOUT any port information.
+    string Hostname = 20;          
+    // Port - An optional port number used by some protocols.
+    uint32 Port = 21;              
+    // Path - An optional path used by the application layer of the Channel,
+    // for example the path component of a HTTP URL.
+    string Path = 22;              
+    // ControlPort - An optional control port for some Channels (eg: WireGuard, Tor)
+    uint32 ControlPort = 23;       
+    // KeyExchangePort - An optional port used for exchanging keys (eg: WireGuard)
+    uint32 KeyExchangePort = 24;   
+    // Domains - A series of domains that are either to listen for, or to dial to.
+    // TODO: Document this field according to the capacities of Sliver. Will change.
+    repeated string Domains = 25;  
+    // Canaries - If the profile consumer is listening, watch for canary connections.
+    bool Canaries = 26;            
+
+    // PollTimeout - The maximum amount of times between poll operations for protocols 
+    // like HTTP or DNS. This is different from both beaconing and reconnect intervals.
+    // Also, and as a consequence, this will not have much effect when using a Beacon.
+    int64 PollTimeout = 40;           
+    // ReconnectInterval - The amount of wait time after a failed (reverse) connection 
+    // attempt (one side) or bind (other side) attempts. This means:
+    // - An unsuccessful attempt to listen on a port is considered a failed attempt.
+    // - An unsuccessful attempts to dial a destination host is also considered failed.
+    int64 ReconnectInterval = 41;     
+    // MaxConnectionErrors - The max number of errors that the consumer is allowed to 
+    // sustain when connecting/binding its transport stack. This means:
+    // - An unsuccessful attempt to listen on a port is considered a failed attempt.
+    // - An unsuccessful attempts to dial a destination host is also considered failed.
+    // This value is solely used by the transport using this profile, and is not split
+    // between other available Transports/Channels on a given host.
+    int32 MaxConnectionErrors = 42;   
+    // Persistent - When this profile is used with a C2 Handler job, the job is saved
+    // and will be restarted in the current context (either on the server, or implant
+    // if C2 routing is available). Thus, setting this value will only have an effect 
+    // on C2 channel handlers (jobs), and not on C2 channel transports (implants). 
+    // In other words, this setting does NOT mean "always start this transport when 
+    // the implant starts".
+    bool Persistent = 43;             
+    // Active - Used by internals, will soon be deprecated and removed.
+    bool Active = 44;                 
+    // CommDisabled - Explicitly disallow both parties from establishing an SSH 
+    // multiplexer on top of this Channel, if it's a Session one. This will thus
+    // render most network tools unavailable (like proxies and UDP forwarders),
+    // unless the transport stack used by Channel provides its own (eg: WireGuard).
+    // To be noted also: this will only have an effect on this Profile, and is NOT
+    // a way to explicitly forbid the Comm code to be compiled in the implant.
+    bool CommDisabled = 45;           
+
+    // Interval - The base duration used by a Beacon channel to wait before two beacon 
+    // checkins. This is different from the ReconnectInterval interval field.
+    // To be noted, the implant will send an updated next-checkin time to the server
+    // over each beaconing run, and those are available in the console tools.
+    int64 Interval = 60;              
+    // Jitter - The duration seed to use as a variation over the base Interval 
+    // duration (for time randomness). For example: if a Beacon channel has
+    // 10s Interval and 5s Jitter, checkins might look like "12,323s", "13,78s",
+    // "7.436s", and so on. 
+    int64 Jitter = 61;                
+
+    // HTTP - This contains the MalleableHTTP contains all HTTP-specific configuration 
+    // options, exluding security/encryption parameters. There are a few important 
+    // things to know before editing this Malleable component:
+    // - There is a SINGLE HTTP profile type for both server and implant sides 
+    // of the channel. Thus, some fields might be used by both ends, while other
+    // fields will only be used by one of them. All fields in the HTTP section
+    // have a documentation specifiying which channel side uses them.
+    // - Because different implants might make use of different but overlaping HTTP
+    // profiles, the server side of the channel is able to "merge" several HTTP
+    // profiles into one at runtime, so as to be able to serve all implants.
+    // - If some fields are populated by yourself, and that other required fields 
+    // remain empty, they will be automatically populated with random samples out 
+    // of their default lists/values when the Profile is consumed (compiled or used 
+    // with a handler)
+    // Refer to its doc for further info.
+    MalleableHTTP HTTP = 100;         
+    // ProxyURL - A system proxy URL that should be used when either the implant 
+    // is told to so, or if it needs to. In the latter case, the implant has different
+    // methods: either fetching environment variables, or use of specialized proxy
+    // libraries, such as github.com/aus/proxyplease.
+    string ProxyURL = 101;            
+    // Website - When the consumer of this profile is a server, this value is the 
+    // name of the Website that will be used as a frontend (the website code must 
+    // exist and be already loaded into the Sliver server: see `websites` command).
+    string Website = 102;             
+ 
+    // Credentials - All security elements needed by the profile (certs, keys, logins)
+    // for all C2 channel transport stacks. There are thus many possible configurations
+    // in this section, and its own documentation aims to describe them exhaustively.
+    // Please note, however:
+    // Most of the Sliver communication security is assured by a thoughtfully set up
+    // Certificate Infrastructure, which handles the different layers of encryption
+    // and identity across the Channel stack (transport-layer, core Session/Beacon 
+    // datastream encryption, one-time secrets, etc). This is performed automatically
+    // when handlers are spawned along with a profile, or when transports are compiled
+    // into an implant build. Thus, if you don't have a REAL need to customize the
+    // encryption further (and 99.999% of the time, you won't), don't touch this field.
+    Credentials Credentials = 200;    
+}
+
+// C2Type - The type of interaction that is enabled by the C2 profile. 
+// This, in other words, is the level of interactivity that you have 
+// over the implant. There are important differences between those types, 
+// and consequences on tooling availalibity can be significant, as it's 
+// the case for network discovery and pivoting tools that are possible 
+// through a Session channel, and not on a Beacon one.
+enum C2Type {
+    // Session - The most basic C2 type, a session is interactive. This type
+    // provides many advantages over beacon C2s, because one benefits from
+    // all real-time completions for the host target environment and its 
+    // associated commands (Sliver commands, not host bins).
+    // Sidenote: the Session type is also used internally by the Beacon type,
+    // because a Session provides with the transport stack management code and
+    // TLV read/write boilerplate around it. The beacon is very short-lived session.
+    Session = 0;
+    
+    // Beacon - The Beacon type allows an implant to beacon out through its current
+    // transport stack, which means establishing a connection, fetching any tasks to
+    // execute from the server, perform them and send results back, then close the
+    // connection stack. 
+    // This, by nature, is lesser interactive than the Session type. No networking 
+    // tools are available when interacting with a Beacon-channel implant, and other
+    // commands/functionality making use of stream-like tunneling will be either
+    // unavailable, or will be fetching the streamed data through other means.
+    // (eg: some execution & injection commands that require a new payload as bytes.)
+    // The beacon type is available with all C2 transport stacks, in any direction.
+    Beacon = 1;
+    // Could be lower-level, like plain ReadWriteCloser ?
+}
+
+// C2 - The global name of the networking stack used by this C2. Therefore, many
+// kinds of names can be valid when you add yours; some channels will use the
+// name of their transport protocols (TCP), their applications protocol 
+// (DNS/HTTPS) or even specifics about their security details (MTLS, for 
+// Mutually Authenticated TLS). Yet other Channels, like WireGuard, are also 
+// complete networking stacks of their own.
+// Also, note that some protocols might or might not be unable to automatically
+// route their listeners/dialers through Sliver's routing system (which works
+// quite like Metasploit' Comm Subsystem, but without Routes as subnets).
+enum C2 {
+    // TCP - The most simple transport stack in Sliver. This channel establishes
+    // a TCP connection between two parties (either server-implant, or pivot-implant)
+    // and hands over to the Channel driver for session/beacon action. To be noted:
+    // Although there is no TLS encryption, the Channel core type (session/beacon)
+    // DOES ENCRYPT all data sent on the wire with its own cryptosystem. Thus, the
+    // connection is still deemed to be secure, but without any TLS handshake bust.
+    // This channel is available for bind and reverse connections.
+    TCP = 0;
+
+    // MTLS - A Mutually-Authenticated TLS encryption channel, in which both parties
+    // will verify the authenticity and identity of their respective certificates. 
+    // More explanation on how this works in Sliver is available in the project Wiki.
+    // This channel is available for bind and reverse connections.
+    MTLS = 1;
+
+    // HTTP - The HTTP channel is different from the HTTPS channel the same way the
+    // TCP channel is different from the MTLS one: No "system-level" TLS is set up,
+    // so the identity of both parties is not enforced at the HTTP-level. Though,
+    // like with TCP, the Channel core will encrypt all data passed on the wire.
+    // This channel is only available for reverse connections.
+    HTTP = 2;
+
+    // HTTPS - The HTTPS channel has several mode of TLS setup available. 
+    // For differences with the HTTP mode, please refer to the C2_HTTP type.
+    // The TLS layer is here always set at the HTTP level, and can be either:
+    // - Provided by a specialized LetsEncrypt server started along the C2 Handler.
+    // - Mutually authenticated with the same TLS stack used by the MTLS Channel
+    // Therefore, the way to set up the security details of your wish is to head to
+    // the Credentials section of the profile, and perform any modifications to them.
+    // This channel is only available for reverse connections.
+    HTTPS = 3;
+
+    // DNS - A Channel communicating through DNS TXT record requests. As for TCP and
+    // HTTP channels, the Channel core will encrypt all data passed through the wire.
+    // When used in conjunction with a Session Channel core, all networking tools will
+    // still be available to use, but there are obviously less guarantees about their
+    // throughput capacity first, and will not be OPSEC-safe at all to use, because of
+    // an abnormally large quantity of DNS requests made by a single host.
+    // This channel is only available for reverse connections.
+    DNS = 4;
+
+    // WG - The WireGuard channel starts a complete VPN stack and establishes comms
+    // with the server over it. There are multiple control listeners and routines
+    // involved with this channel, that is quite deep. However, this channel also
+    // includes its own networking pivoting and discovery tools. They are transparently
+    // synchronized when you are interacting with an implant over this Channel.
+    // This channel is only available for reverse connections.
+    WG = 5;
+
+    // NamedPipe - This channel is currently only available on Windows 
+    // implants, but works with Sliver's core routing & pivoting system.
+    // It establishes a named pipe between both parties, and exactly like the TCP
+    // and HTTP channels, the Channel core will encrypt all data passed on the wire.
+    // This channel is available for bind and reverse connections.
+    NamedPipe = 6;
+
+    // Channel Writers: add an Enum field here with your Channel name. Try to choose
+    // a name that exhaustively describes your Channel, without overlaping with others.
+}
+
+// C2Direction - The direction of the Channel connection, which determines how the 
+// owner of this profile (the server consuming it, or an implant compiled with it) 
+// will behave. Note that both values can be spawned as jobs, although a bind (dial)
+// will always exit rather quickly, given that the connection will either fail, 
+// succeed, or wait a given timeout waiting for result. Also, note that, similarly
+// to Metasploit's parlance, there is a rule of thumb to ALWAYS remember on which
+// direction will do what:
+// We always consider the connection from within attacker-controlled territory, and
+// the following actions ALWAYS describes what will ultimately a server action to
+// establish the channel, eg. the server will either "bind" or "listen for reverse"
+// connections initiated from somewhere in non-attacker controlled territory.
+enum C2Direction {
+    // Bind - In this case, the attacker endpoint (server or pivot implant) dials
+    // a remote destination address/path and, if successful, establishes the channel.
+    // Note that, as a detail: the Sliver internals are made so that any command
+    // spawning a bind handler will not wait for a full Session/Beacon to be set up,
+    // and will return either on connection failure, or success. Everything happening
+    // after is asynchronous with respect to the handler, as job or not.
+    Bind = 0;
+
+    // Reverse - In this case, the attacker endpoints listens for incoming connection
+    // attempts (these come from the target territory). These connections can be either
+    // transport/system-level (TCP/UDP/IP) or higher in the OSI model, like HTTP,DNS
+    // which are session-based. 
+    Reverse = 1;
+}
+
+// Credentials - All security elements needed by the profile (certs, keys, logins)
+// for all C2 channel transport stacks. 
+// Most of the Sliver communication security is assured by a thoughtfully set up
+// Certificate Infrastructure, which handles the different layers of encryption
+// and identity across the Channel stack (transport-layer, core Session/Beacon 
+// datastream encryption, one-time secrets, etc). 
+// This is performed automatically when handlers are spawned along with a profile, 
+// or when transports are compiled into an implant build. Thus, if you don't have a 
+// REAL need to customize the encryption further (and 99.999% of the time, you won't), 
+// don't touch this field.
+// In the future, a much better integration of the Credentials stored in database and
+// those fetched on target hosts is likely, and selecting which credentials/logins are
+// used within a profile will be easier through console commands and their completions.
+message Credentials {
+    // CACertPEM - A PEM-encoded Certificate Authority Public Key, which is used by
+    // channels such as MTLS (and HTTPS in some instances), to verify that the identity
+    // provided by the remote party is indeed validated by the Sliver server. 
+    // Note that, more than any other fields, you should not have to populate it on 
+    // your own, except from if your specific needs have already made you populate ALL
+    // other Credentials fields already.
+    bytes CACertPEM = 1;
+    // CertPEM - A PEM-encoded Public Key that can have several usages:
+    // - For channels such as MTLS/HTTPS, is used as a Public Key for TLS wrapping, if
+    // so and mutual authentication is required, this Key will be verified against the
+    // CACertPEM, thus, if you intend to use those Channels in a standard way, you
+    // won't have to populate this field on your own: the server will take care of it.
+    bytes CertPEM = 2;
+    // KeyPEM - A PEM-encoded Private Key, which can as well have several usages:
+    // - For channels such as MTLS/HTTPS, is used as a Private Key for TLS wrapping.
+    bytes KeyPEM = 3;
+    // ServerFingerprint - The fingerprint of the Certificate Authority is used when
+    // the Channel starts the SSH Comm system, which requires authentication. Because
+    // this value is fixed across all Channels, it will soon be DEPRECATED.
+    bytes ServerFingerprint = 4;
+
+    // ControlServerCert - An optional Public Key used by a control component 
+    // (like a Key Exchange service for WireGuard, or a Tor control port). Most
+    // channels don't make use of this, but it is here so that you don't have
+    // to create a new field if you want to add your own (stack-deep) Channel.
+    bytes ControlServerCert = 10;
+    // ControlClientKey - An optional Private Key used for decryption of the
+    // communications of a control component. This key generally goes hand-in-hand 
+    // with the ControlServerCert field. Thus, if you intend to set either field
+    // on your own (that is, in an editor and out of the Sliver console context),
+    // ensure that your fill your related fields correctly.
+    bytes ControlClientKey = 11;
+    // TOTPServerSecret - This value is fixed across all Channels, 
+    // thus not relevant, so it will soon be DEPRECATED.
+    bytes TOTPServerSecret = 12;
+
+    // LetsEncrypt - Some application-level protocols like HTTPS (not HTTP) may want
+    // to connect over "insecure" TLS settings, because the server's end of the Channel
+    // can start a LetsEncrypt certificate infrastructure. This might theoretically be
+    // applied to any application protocol using TLS, as LetsEncrypt is just an side 
+    // server component handling some certificate generation/fetching/matching.
+    // If true: Starts the LetsEncrypt server on the server end, and connects over
+    // insecure TLS on the implant's end.
+    // If false: If the Channel still requires TLS set up, the profile will use either
+    // user-provided certificates, or certs generated by the Sliver server's PKI.
+    bool LetsEncrypt = 103;           
+}
+
+// MalleableHTTP - An HTTP-specific Channel profile. Important notes:
+// - There is a SINGLE HTTP profile type for both server and implant sides 
+// of the channel. Thus, some fields might be used by both ends, while other
+// fields will only be used by one of them. All fields in the HTTP section
+// have a documentation specifiying which channel side uses them.
+// - Because different implants might make use of different but overlaping HTTP
+// profiles, the server side of the channel is able to "merge" several HTTP
+// profiles into one at runtime, so as to be able to serve all implants.
+// - If some fields are populated by yourself, and that other required fields remain
+// empty, they will be automatically populated with random samples out of their 
+// default lists/values when the Profile is consumed (compiled or used with a handler)
+message MalleableHTTP {
+    // ID - You should NOT EVER modify the ID of a Malleable profile: even when 
+    // forking an existing one, copying it, updating it, writing it from scratch: 
+    // the Sliver server will ALWAYS take care of an ID.
+    string ID = 1;
+    
+    // UserAgent - The User Agent value is only used when this Profile is consumed
+    // by an implant Transport, because the implant is (always) acting as the client.
+    // If this string is empty, the Server will ALWAYS take care of generating a new
+    // random one. If this field is already populated, that likely means the server
+    // already generated one for the profile you are currently editing.
+    // You can change it however you like, though: it will override the previous value.
+    // Important: Implant-side field only
+    string UserAgent = 2;
+    // URLParameters - The URL parameters are some of those fields that will stay the
+    // same across all HTTP requests: thus, they are not randomized on a per-request
+    // basis. Currently the HTTP Channel implementation doesn't make use of this field.
+    repeated string URLParameters = 3;
+    // Headers - The headers of every HTTP request. If this array is empty, the Server
+    // will automatically use the following headers (there are risks that this list is 
+    // not up-to-date though):
+    // 
+    // ["Cache-Control", "no-store, no-cache, must-revalidate"]
+    //
+    // Important: Server-side field only
+    repeated string Headers = 4;
+
+    // MaxFiles - The maximum number of complete file names (ex: mysessionfile.txt),
+    // that are generated for each SAMPLE, sample being passed to the HTTP C2 internals
+    // for generating a random request URL. Defaults to 8.
+    //
+    // Important: Implant-side field only
+    int32 MaxFiles = 5;
+    // MinFiles - The minimum number of complete file names (ex: mysessionfile.txt),
+    // that are generated for each SAMPLE, sample being passed to the HTTP C2 internals
+    // for generating a random request URL. Defaults to 2.
+    //
+    // Important: Implant-side field only
+    int32 MinFiles = 6;
+    // MaxPaths - The maximum number of paths (eg: "my/path/to" in the following URL:
+    // "https://example.domain.com/my/path/to/mysessionfile.txt") that are generated
+    // for each SAMPLE, sample being passed to the HTTP C2 internals for generating a 
+    // random request URL. Defaults to 8.
+    //
+    // Important: Implant-side field only
+    int32 MaxPaths = 7;
+    // MinPaths - The minimum number of paths (eg: "my/path/to" in the following URL:
+    // "https://example.domain.com/my/path/to/mysessionfile.txt") that are generated
+    // for each SAMPLE, sample being passed to the HTTP C2 internals for generating a 
+    // random request URL. Defaults to 2.
+    //
+    // Important: Implant-side field only
+    int32 MinPaths = 8;
+
+    // StagerFileExt - The Stager file extension is consumed by an HTTP server 
+    // consuming this Profile. All incoming connections requesting a URL ending 
+    // with this extension will be served an implant stage.
+    //
+    // Default: ".woff"
+    //
+    // Important: Server-side field only
+    string StagerFileExt = 9;
+
+    // KeyExchangeFileExt - Key Exchange file extension. (default .txt) 
+    // Important: Server/Implant field
+    string KeyExchangeFileExt = 10;
+    // KeyExchangeFiles - Filenames for key exchange requests.
+    //
+    // Default list: 
+    // "robots", "sample", "readme", "example"
+    //
+    // Important: Server/Implant field
+    repeated string KeyExchangeFiles = 11; 
+    // KeyExchangePaths - URL paths for key exchange requests.
+    // 
+    // Default list: 
+    // "static", "www", "assets", "text", "docs", 
+    // "sample", "data", "readme", "examples"
+    //
+    // Important: Server/Implant field
+    repeated string KeyExchangePaths = 13; 
+
+    // PollFileExt - Session Polling file extension. For a normal Session/Beacon 
+    // Channel, polling files are the most used ones, because most of the underlying 
+    // stream content passes through them (default: .js)
+    //
+    // Important: Server/Implant field
+    string PollFileExt = 15;
+    // PollFiles - Filenames for session polling requests.
+    // 
+    // Default list: 
+    // "bootstrap", "bootstrap.min", "jquery.min", "jquery", "route",
+    // "app", "app.min", "array", "backbone", "script", "email",
+    //
+    // Important: Server/Implant field
+    repeated string PollFiles = 16;
+    // PollPaths - URL paths for session polling requests.
+    // 
+    // Default list: 
+    // "js", "umd", "assets", "bundle", "bundles", "scripts", "script", "javascripts",
+    // "javascript", "jscript",
+    //
+    // Important: Server/Implant field
+    repeated string PollPaths = 17;
+
+    // StartSessionFileExt - File extension for requests to start a new Session.
+    // This is also used by Beacon channels because as the Malleable.Type 
+    // documentation above explains, the Session type is used by Beacon channels.
+    // (default .phtml)
+    //
+    // Important: Server/Implant field
+    string StartSessionFileExt = 18;
+    // SessionFileExt - Session files requests are used when the implant side of the
+    // channel (the client) wants to write data back to the server. Thus, session files
+    // are also used a lot, like Poll requests. (default: .php)
+    string SessionFileExt = 20;
+    // SessionFiles - Filenames for session (write data to server) requests.
+    //
+    // Default list:
+    // "login", "signin", "api", "samples", "rpc", "index",
+    // "admin", "register", "sign-up",
+    //
+    // Important: Server/Implant field
+    repeated string SessionFiles = 21;    
+    // SessionPaths - URL paths for session (write data to server) requests.
+    //
+    // Default list:
+    // "php", "api", "upload", "actions", "rest", "v1", "auth", "authenticate",
+    // "oauth", "oauth2", "oauth2callback", "database", "db", "namespaces",
+    //
+    // Important: Server/Implant field
+    repeated string SessionPaths = 22; 
+
+    // CloseFileExt - The file extension used for requests to close the HTTP Channel.
+    // (default: .png)
+    // 
+    // Important: Server/Implant field
+    string CloseFileExt = 23;
+    // CloseFiles - Filenames for Session close requests.
+    //
+    // Default list: "favicon", "sample", "example",
+    //
+    // Important: Server/Implant field
+    repeated string CloseFiles = 24;
+    // ClosePaths - URL paths for Session close requests.
+    //
+    // Default list:
+    // "static", "www", "assets", "images", "icons", "image", "icon", "png",
+    //
+    // Important: Server/Implant field
+    repeated string ClosePaths = 25;
+}
