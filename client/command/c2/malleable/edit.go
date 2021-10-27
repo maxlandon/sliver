@@ -21,7 +21,6 @@ package malleable
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command/c2"
@@ -74,16 +73,29 @@ func (e *Edit) Execute(args []string) (err error) {
 	if err != nil {
 		return log.Errorf("Error returning from Editor: %s", err)
 	}
+	// If there are no changes in the profile bytes, return without saving.
+	if len(updatedBuffer) == 0 || string(updatedBuffer) == string(profileBuffer) {
+		log.Infof("No changes detected in the profile, skipping saving to server DB.")
+		return
+	}
 
 	// Unmarshal this updated buffer into the profile type
-	// var updated = &sliverpb.Malleable{}
-	// err = json.Unmarshal(updatedBuffer, updated)
 	err = json.Unmarshal(updatedBuffer, prof)
 	if err != nil {
 		return log.Errorf("Failed to unmarshal edited Profile into its type: %s", err)
 	}
 
-	fmt.Println(prof.Type.String())
+	// Send the updated Malleable version to the server for saving it to the DB
+	_, err = transport.RPC.UpdateMalleable(context.Background(), &clientpb.UpdateMalleableReq{
+		Profile: prof,
+		Request: core.ActiveTarget.Request(),
+	})
+	if err != nil {
+		return log.Error(err)
+	}
+
+	// If no errors, notify success
+	log.Infof("Saved updated Malleable profile %s", c2.GetShortID(prof.ID))
 
 	return
 }
