@@ -55,7 +55,7 @@ message Malleable {
     // schema is an unexported variable used for schema 
     // completion validation when editing the Profile.
     // string schema = 1 [(tagger.tags) = "json:\"$schema\""];            
-    string schema = 1;            
+    string Schema = 1;            
 
     // ID - You should NOT EVER modify the ID of a Malleable profile: even when 
     // forking an existing one, copying it, updating it, writing it from scratch: 
@@ -121,13 +121,13 @@ message Malleable {
     // - An unsuccessful attempt to listen on a port is considered failed.
     // - An unsuccessful attempts to dial a destination is considered failed.
     int64 ReconnectInterval = 41;     
-    // MaxConnectionErrors - The max number of errors that the consumer is allowed 
+    // MaxErrors - The max number of errors that the consumer is allowed 
     // to sustain when connecting/binding its transport stack. This means:
     // - An unsuccessful attempt to listen on a port is considered failed.
     // - An unsuccessful attempts to dial a destination is considered failed.
     // This value is solely used by the transport using this profile, and is 
     // not split between other available Transports/Channels on a given host.
-    int32 MaxConnectionErrors = 42;   
+    int32 MaxErrors = 42;   
     // Persistent - When this profile is used with a C2 Handler job, the job is saved
     // and will be restarted in the current context (either on the server, or 
     // implant if C2 routing is available). Thus, setting this value will only 

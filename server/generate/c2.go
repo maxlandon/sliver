@@ -157,7 +157,7 @@ func newProfileFromConfig(p *sliverpb.Malleable, certificateHostname string) (*m
 		Path:             p.Path,
 		Domains:          strings.Join(p.Domains, ","),
 		// Technicals
-		MaxConnectionErrors: p.MaxConnectionErrors,
+		MaxConnectionErrors: p.MaxErrors,
 		ReconnectInterval:   p.ReconnectInterval,
 		PollTimeout:         p.PollTimeout,
 		Active:              p.Active,

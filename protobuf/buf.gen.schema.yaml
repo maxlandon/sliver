@@ -9,4 +9,4 @@ plugins:
     out: sliverpb/
     opt:
       - paths=source_relative
-      - file_extension=jsonschema
+      # - file_extension=jsonschema

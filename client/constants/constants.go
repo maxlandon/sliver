@@ -136,6 +136,7 @@ const (
 	TablesStr = "tables"
 	ListStr   = "list"
 	ShowStr   = "show"
+	EditStr   = "edit"
 	SwitchStr = "switch"
 
 	LootStr       = "loot"

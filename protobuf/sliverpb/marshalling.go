@@ -18,13 +18,6 @@ package sliverpb
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// SetSchema - Consumers of a Malleable profile may wish to open it in an client editor,
-// which might be set to benefit from JSON schema validation/completion/documentation.
-// The client code can set the schema here, before opening the file.
-func (m *Malleable) SetSchema(path string) {
-	m.Schema = path
-}
-
 // MarshalJSON - A custom method for implementing the json.Marshaller interface,
 // used to automatically set fields necessary to correct Malleable edition/usage.
 // func (m *Malleable) MarshalJSON() (data []byte, err error) {
