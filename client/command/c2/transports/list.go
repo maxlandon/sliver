@@ -152,7 +152,7 @@ func printTransports(transports []*sliverpb.Transport) {
 			}
 
 			// Max errors & reconnect intervals (all C2 types need this)
-			maxErrs := fmt.Sprintf("%4d", prof.MaxConnectionErrors)
+			maxErrs := fmt.Sprintf("%4d", prof.MaxErrors)
 			reconnect := fmt.Sprintf("%-5s", time.Duration(prof.ReconnectInterval))
 			timeouts := fmt.Sprintf("%s / %s", maxErrs, reconnect)
 
@@ -166,7 +166,7 @@ func printTransports(transports []*sliverpb.Transport) {
 
 			// Attempts
 			var attempts string
-			if (transport.Attempts == transport.Failures) && transport.Attempts == prof.MaxConnectionErrors {
+			if (transport.Attempts == transport.Failures) && transport.Attempts == prof.MaxErrors {
 				attempts = readline.BOLD + readline.RED
 			} else if transport.Failures == 0 && transport.Attempts > 0 {
 				attempts = readline.GREEN

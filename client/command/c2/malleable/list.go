@@ -3,7 +3,6 @@ package malleable
 /*
    Sliver Implant Framework
    Copyright (C) 2019  Bishop Fox
-
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
@@ -134,7 +133,7 @@ func printProfilesWithTitle(title string, profiles []*sliverpb.Malleable) {
 		}
 
 		// Max errors & reconnect intervals (all C2 types need this)
-		maxErrs := fmt.Sprintf("%4d", p.MaxConnectionErrors)
+		maxErrs := fmt.Sprintf("%4d", p.MaxErrors)
 		reconnect := fmt.Sprintf("%-5s", time.Duration(p.ReconnectInterval))
 		timeouts := fmt.Sprintf("%s / %s", maxErrs, reconnect)
 

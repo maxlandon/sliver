@@ -67,7 +67,7 @@ func PrintProfileSummaryLong(profile *sliverpb.Malleable) {
 
 	// Right hand
 	c2Type := fmt.Sprintf(rl.YELLOW+"          Type: %s%s", rl.RESET, profile.Type.String())
-	errs := fmt.Sprintf(rl.YELLOW+"     Max errors: %s%d", rl.RESET, profile.MaxConnectionErrors)
+	errs := fmt.Sprintf(rl.YELLOW+"     Max errors: %s%d", rl.RESET, profile.MaxErrors)
 	timeout := fmt.Sprintf(rl.YELLOW+" (Poll) Timeout: %s%s", rl.RESET, time.Duration(profile.PollTimeout))
 
 	jitIntVal := fmt.Sprintf("%-3s / %3s", time.Duration(profile.Jitter), time.Duration(profile.Interval))
@@ -277,11 +277,11 @@ func GetShortID(ID string) (short string) {
 // defaultC2Profile - A C2 profile with default values into it, such as timeouts and pollers
 func defaultC2Profile() *sliverpb.Malleable {
 	profile := &sliverpb.Malleable{
-		MaxConnectionErrors: 1000,
-		PollTimeout:         int64(60 * time.Second),
-		ReconnectInterval:   int64(30 * time.Second),
-		Credentials:         &sliverpb.Credentials{},
-		ContextSessionID:    core.ActiveTarget.UUID(), // Always give the current target
+		MaxErrors:         1000,
+		PollTimeout:       int64(60 * time.Second),
+		ReconnectInterval: int64(30 * time.Second),
+		Credentials:       &sliverpb.Credentials{},
+		ContextSessionID:  core.ActiveTarget.UUID(), // Always give the current target
 	}
 	return profile
 }
@@ -351,8 +351,8 @@ func configureConnectionSettings(opts ProfileOptions, profile *sliverpb.Malleabl
 	if opts.Profile.PollTimeout != profile.PollTimeout {
 		profile.PollTimeout = opts.Profile.PollTimeout * int64(time.Second)
 	}
-	if opts.Profile.MaxConnectionErrors != profile.MaxConnectionErrors {
-		profile.MaxConnectionErrors = opts.Profile.MaxConnectionErrors
+	if opts.Profile.MaxConnectionErrors != profile.MaxErrors {
+		profile.MaxErrors = opts.Profile.MaxConnectionErrors
 	}
 	if opts.Profile.Reconnect != profile.ReconnectInterval {
 		profile.ReconnectInterval = opts.Profile.Reconnect * int64(time.Second)

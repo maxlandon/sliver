@@ -76,12 +76,14 @@ func (e *Edit) Execute(args []string) (err error) {
 	}
 
 	// Unmarshal this updated buffer into the profile type
+	// var updated = &sliverpb.Malleable{}
+	// err = json.Unmarshal(updatedBuffer, updated)
 	err = json.Unmarshal(updatedBuffer, prof)
 	if err != nil {
-		return log.Errorf("Failed to unmarshal edited Profile into its type: %s")
+		return log.Errorf("Failed to unmarshal edited Profile into its type: %s", err)
 	}
 
-	fmt.Println(prof)
+	fmt.Println(prof.Type.String())
 
 	return
 }

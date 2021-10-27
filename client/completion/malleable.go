@@ -162,7 +162,7 @@ func getSessionDescriptions(sessions []*sliverpb.Malleable) (descriptions map[st
 		name := fmt.Sprintf("%15s", "["+c2.Name+"] ")
 		connSettings := fmt.Sprintf("%-8s / %5s", time.Duration(c2.Interval), time.Duration(c2.PollTimeout))
 		sessionInfo := fmt.Sprintf("(S) %8s", connSettings)
-		maxErrors := fmt.Sprintf("  MaxErr: %-5d", c2.MaxConnectionErrors)
+		maxErrors := fmt.Sprintf("  MaxErr: %-5d", c2.MaxErrors)
 
 		rightHand := name + sessionInfo + maxErrors
 
@@ -193,7 +193,7 @@ func getBeaconDescriptions(beacons []*sliverpb.Malleable) (descriptions map[stri
 		name := fmt.Sprintf("%15s", "["+c2.Name+"] ")
 		connSettings := fmt.Sprintf("%-8s / %5s", time.Duration(c2.Interval), time.Duration(c2.Jitter))
 		sessionInfo := fmt.Sprintf("(B) %8s", connSettings)
-		maxErrors := fmt.Sprintf("  MaxErr: %-5d", c2.MaxConnectionErrors)
+		maxErrors := fmt.Sprintf("  MaxErr: %-5d", c2.MaxErrors)
 
 		rightHand := name + sessionInfo + maxErrors
 

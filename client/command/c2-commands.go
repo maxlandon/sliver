@@ -87,6 +87,14 @@ func bindCommandsC2(cc *gonsole.Menu) {
 		func() gonsole.Commander { return &malleable.Show{} })
 	malleableShow.AddArgumentCompletion("ProfileID", completion.MalleableIDs)
 
+	malleableEdit := malleableCmd.AddCommand(constants.EditStr,
+		"Edit a Malleable C2 profile with the system $EDITOR",
+		help.GetHelpFor(constants.EditStr),
+		"management",
+		[]string{""},
+		func() gonsole.Commander { return &malleable.Edit{} })
+	malleableEdit.AddArgumentCompletion("ProfileID", completion.MalleableIDs)
+
 	malleableRm := malleableCmd.AddCommand(constants.RmStr,
 		"Remove one or more C2 profiles",
 		help.GetHelpFor(constants.RmStr),

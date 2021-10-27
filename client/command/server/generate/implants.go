@@ -149,11 +149,11 @@ func printImplantBuilds(configs map[string]*clientpb.ImplantConfig) {
 			var jitInt string
 			var settings string
 			if c2.Type == sliverpb.C2Type_Beacon {
-				timeouts = fmt.Sprintf(" %-3d / ", c2.MaxConnectionErrors)
+				timeouts = fmt.Sprintf(" %-3d / ", c2.MaxErrors)
 				jitInt = fmt.Sprintf(" %-3s/ %3s", time.Duration(c2.Interval), time.Duration(c2.Jitter))
 				settings = fmt.Sprintf("%10s%s", timeouts, jitInt)
 			} else {
-				timeouts = fmt.Sprintf("%6d / %s", c2.MaxConnectionErrors, time.Duration(c2.Interval))
+				timeouts = fmt.Sprintf("%6d / %s", c2.MaxErrors, time.Duration(c2.Interval))
 				settings = fmt.Sprintf("%14s", timeouts)
 			}
 
