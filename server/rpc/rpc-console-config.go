@@ -98,3 +98,32 @@ func (rpc *Server) SaveUserConsoleConfig(ctx context.Context, req *clientpb.Save
 
 	return &clientpb.SaveConsoleConfig{Response: &commonpb.Response{}}, nil
 }
+
+// LoadClientAssets - The client requests assets needed from the server, to ensure the user will use an updated version.
+func (rpc *Server) LoadClientAssets(ctx context.Context, req *clientpb.GetAssetsReq) (res *clientpb.GetAssets, err error) {
+	res = &clientpb.GetAssets{Response: &commonpb.Response{}}
+
+	// MalleableSchemas --------------------------------------------------
+
+	// First a make a saver function for each Schema file found.
+	loadSchema := func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() && info.Name() == "malleable_schemas" {
+			return nil
+		}
+		data, readErr := ioutil.ReadFile(path)
+		if readErr != nil {
+			rpcLog.Errorf("Failed to read JSON Schema file (%s): %s", info.Name(), err)
+		}
+		res.MalleableSchemas[info.Name()] = data
+		return nil
+	}
+	res.MalleableSchemas = map[string][]byte{}
+
+	// Read all Schema files and load them in the response.
+	err = filepath.Walk(assets.GetMalleableSchemaDir(), loadSchema)
+	if err != nil {
+		return res, err
+	}
+
+	return
+}

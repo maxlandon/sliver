@@ -21,8 +21,10 @@ package console
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	insecureRand "math/rand"
+	"path"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -38,6 +40,7 @@ import (
 	clientLog "github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/version"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 )
@@ -115,8 +118,9 @@ func Start(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds, config *assets.Client
 // setup - Sets everything directly related to the client "part". This includes the full
 // console configuration, setup, history loading, menu contexts, command registration, etc..
 func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
-
 	console := core.Console
+
+	// Menus -------------------------------------------------------
 
 	// Declare server and sliver contexts (menus).
 	server := console.NewMenu(consts.ServerMenu)
@@ -124,6 +128,8 @@ func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
 
 	// The current one is the server
 	console.SwitchMenu(consts.ServerMenu)
+
+	// Configuration, Settings & Assets ----------------------------
 
 	// Get the user's console configuration from the server, and load it in the console.
 	config, err := loadConsoleConfig(rpc)
@@ -148,6 +154,14 @@ func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
 	// Set history sources for both contexts
 	setHistorySources()
 
+	// Finally, load all remaining needed assets.
+	err = loadClientAssets(rpc)
+	if err != nil {
+		fmt.Printf(Warning+"Failed to load assets from server: %s\n", err)
+	}
+
+	// Other console details ----------------------------------------
+
 	// Setup parser details
 	console.SetParserOptions(flags.IgnoreUnknown | flags.HelpFlag)
 
@@ -163,6 +177,8 @@ func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
 		return fmt.Errorf("Failed to start log monitor (%s)", err.Error())
 	}
 
+	// Commands -----------------------------------------------------
+
 	// Bind admin commands if we are the server binary.
 	if extraCmds != nil {
 		extraCmds(server)
@@ -173,6 +189,27 @@ func setup(rpc rpcpb.SliverRPCClient, extraCmds ExtraCmds) (err error) {
 	command.BindCommands()
 
 	return nil
+}
+
+// loadClientAssets - A function gathering all assets operations that need to be
+// performed by the client on startup (reading/writing files in its private dir)
+func loadClientAssets(rpc rpcpb.SliverRPCClient) (err error) {
+
+	// Get all assets
+	servAssets, err := rpc.LoadClientAssets(context.Background(), &clientpb.GetAssetsReq{})
+	if err != nil {
+		return err
+	}
+
+	// Save all Malleable Schema files
+	for filename, data := range servAssets.MalleableSchemas {
+		err := ioutil.WriteFile(path.Join(assets.GetMalleableSchemaDir(), filename), data, 0600)
+		if err != nil {
+			clientLog.ClientLogger.Errorf("Failed to write Malleable Schema file (%s): %s", filename, err)
+		}
+	}
+
+	return
 }
 
 // setHistorySources - Both contexts have different history sources available to the user.

@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -302,25 +303,31 @@ func setupGo(appDir string) error {
 	}
 
 	// Malleable Profiles JSON Schemas, might be needed before compiling any implant.
-	malleableSchema, err := protobufs.FS.ReadFile("sliverpb/Malleable.json")
+	loadSchema := func(path string, info fs.DirEntry, err error) error {
+		// Skip all non-JSON files
+		if filepath.Ext(info.Name()) != ".json" {
+			return nil
+		}
+		// Otherwise read and write the file
+		data, readErr := protobufs.FS.ReadFile(path)
+		if readErr != nil {
+			setupLog.Errorf("Failed to read JSON Schema file (%s): %s", info.Name(), readErr)
+			return nil
+		}
+		writeErr := ioutil.WriteFile(filepath.Join(GetMalleableSchemaDir(), info.Name()), data, 0600)
+		if writeErr != nil {
+			setupLog.Errorf("Failed to write Malleable Schema file (%s): %s", info.Name(), err)
+			return nil
+		}
+		return nil
+	}
+
+	// Read all Schema files and writem them to disk
+	err = fs.WalkDir(protobufs.FS, "sliverpb", loadSchema)
 	if err != nil {
-		setupLog.Info("Static asset not found: Malleable.json")
+		setupLog.Errorf("Failed to write Malleable JSON files to disk: %s", err)
 		return err
 	}
-	malleableHTTPSchema, err := protobufs.FS.ReadFile("sliverpb/MalleableHTTP.json")
-	if err != nil {
-		setupLog.Info("Static asset not found: MalleableHTTP.json")
-		return err
-	}
-	malleableCredentialSchema, err := protobufs.FS.ReadFile("sliverpb/Credentials.json")
-	if err != nil {
-		setupLog.Info("Static asset not found: Credentials.json")
-		return err
-	}
-	malleableSchemasDir := GetMalleableSchemaDir()
-	ioutil.WriteFile(path.Join(malleableSchemasDir, "Malleable.jsonschema"), malleableSchema, 0600)
-	ioutil.WriteFile(path.Join(malleableSchemasDir, "MalleableHTTP.jsonschema"), malleableHTTPSchema, 0600)
-	ioutil.WriteFile(path.Join(malleableSchemasDir, "Credentials.jsonschema"), malleableCredentialSchema, 0600)
 
 	return nil
 }

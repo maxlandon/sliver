@@ -44,6 +44,7 @@ require (
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.3
+	github.com/srikrsna/protoc-gen-gotag v0.6.2
 	github.com/stretchr/testify v1.7.0
 	github.com/yl2chen/cidranger v1.0.2
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
