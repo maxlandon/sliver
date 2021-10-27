@@ -1,5 +1,10 @@
 version: v1
 plugins:
+  # Generate custom tags. Currently used only for tags
+  # enabling the use of a JSON schema when editing Malleables. 
+  - name: gotag
+    out: .
+    opt: paths=source_relative
   # Generate a JSON Schema file for the Malleable type.
   # This plugin call is stored in a separate config file
   # so that we can use it in a different command-line

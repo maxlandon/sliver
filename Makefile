@@ -126,9 +126,9 @@ windows: clean
 pb:
 	cd protobuf
 	# Clean all existing Malleable JSON schema files
-	rm sliverpb/*.jsonschema
+	rm sliverpb/*.json
 	# Generate Go code from Protobuf definitions. Pass the specific
-	# // config to be applied on all files in all proto packages
+	# config to be applied on all files in all proto packages
 	buf generate --template buf.gen.yaml 
 	# Generate JSON schema files for all Protobuf definitions in
 	# the malleable.proto file, with a restricted config file.

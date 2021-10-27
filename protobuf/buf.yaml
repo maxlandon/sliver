@@ -1,5 +1,5 @@
 version: v1
-name: buf.build/maxlandon/sliverpb
+name: buf.build/maxlandon/protobuf
 deps:
   - buf.build/srikrsna/protoc-gen-gotag
 lint:

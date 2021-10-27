@@ -38,7 +38,7 @@
 syntax = "proto3";
 package sliverpb;
 
-// import "tagger/tagger.proto";
+import "tagger/tagger.proto";
 
 
 // Malleable - A Malleable profile contains the entire information a C2 Channel 
@@ -54,8 +54,7 @@ package sliverpb;
 message Malleable {
     // schema is an unexported variable used for schema 
     // completion validation when editing the Profile.
-    // string schema = 1 [(tagger.tags) = "json:\"$schema\""];            
-    string Schema = 1;            
+    string schema = 1 [(tagger.tags) = "json:\"$schema\""];            
 
     // ID - You should NOT EVER modify the ID of a Malleable profile: even when 
     // forking an existing one, copying it, updating it, writing it from scratch: 

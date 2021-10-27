@@ -92,7 +92,7 @@ message SaveConsoleConfig {
   commonpb.Response Response = 9;
 }
 
-// [ Sliver Settings] ----------------------------------------
+// [ Sliver Settings & Assets] -------------------------------------
 
 // Ask for settings 
 message GetSliverSettingsReq {
@@ -113,6 +113,23 @@ message SaveSliverSettingsReq {
 
 // Saved
 message SaveSliverSettings {
+  commonpb.Response Response = 9;
+}
+
+// GetAssetsReq - Get all assets that the client
+// might need but also might not have, or might not
+// have an updated version of. This is the case for
+// Malleable JSON Schemas, which might be outdated.
+message GetAssetsReq {
+  commonpb.Request Request = 9;
+}
+
+// GetAssets - Send assets to the server
+message GetAssets {
+  // Update JSON Schemas for Malleables. 
+  // The string index is the name of the file
+  map<string, bytes> MalleableSchemas = 1; 
+
   commonpb.Response Response = 9;
 }
 

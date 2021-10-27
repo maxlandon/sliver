@@ -26,12 +26,12 @@ type SliverRPCClient interface {
 	// *** Command History (client and/or user-wide) ***
 	GetHistory(ctx context.Context, in *clientpb.HistoryRequest, opts ...grpc.CallOption) (*clientpb.History, error)
 	AddToHistory(ctx context.Context, in *clientpb.AddCmdHistoryRequest, opts ...grpc.CallOption) (*clientpb.AddCmdHistory, error)
-	// *** Console configuration management
+	// *** Console configuration, Sliver settings & Server assets ***
 	LoadConsoleConfig(ctx context.Context, in *clientpb.GetConsoleConfigReq, opts ...grpc.CallOption) (*clientpb.GetConsoleConfig, error)
 	SaveUserConsoleConfig(ctx context.Context, in *clientpb.SaveConsoleConfigReq, opts ...grpc.CallOption) (*clientpb.SaveConsoleConfig, error)
-	// *** Sliver settings management
 	LoadSliverSettings(ctx context.Context, in *clientpb.GetSliverSettingsReq, opts ...grpc.CallOption) (*clientpb.GetSliverSettings, error)
 	SaveUserSliverSettings(ctx context.Context, in *clientpb.SaveSliverSettingsReq, opts ...grpc.CallOption) (*clientpb.SaveSliverSettings, error)
+	LoadClientAssets(ctx context.Context, in *clientpb.GetAssetsReq, opts ...grpc.CallOption) (*clientpb.GetAssets, error)
 	// *** Operator Commands ***
 	GetOperators(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Operators, error)
 	// *** Sessions ***
@@ -237,6 +237,15 @@ func (c *sliverRPCClient) LoadSliverSettings(ctx context.Context, in *clientpb.G
 func (c *sliverRPCClient) SaveUserSliverSettings(ctx context.Context, in *clientpb.SaveSliverSettingsReq, opts ...grpc.CallOption) (*clientpb.SaveSliverSettings, error) {
 	out := new(clientpb.SaveSliverSettings)
 	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/SaveUserSliverSettings", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) LoadClientAssets(ctx context.Context, in *clientpb.GetAssetsReq, opts ...grpc.CallOption) (*clientpb.GetAssets, error) {
+	out := new(clientpb.GetAssets)
+	err := c.cc.Invoke(ctx, "/rpcpb.SliverRPC/LoadClientAssets", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1368,12 +1377,12 @@ type SliverRPCServer interface {
 	// *** Command History (client and/or user-wide) ***
 	GetHistory(context.Context, *clientpb.HistoryRequest) (*clientpb.History, error)
 	AddToHistory(context.Context, *clientpb.AddCmdHistoryRequest) (*clientpb.AddCmdHistory, error)
-	// *** Console configuration management
+	// *** Console configuration, Sliver settings & Server assets ***
 	LoadConsoleConfig(context.Context, *clientpb.GetConsoleConfigReq) (*clientpb.GetConsoleConfig, error)
 	SaveUserConsoleConfig(context.Context, *clientpb.SaveConsoleConfigReq) (*clientpb.SaveConsoleConfig, error)
-	// *** Sliver settings management
 	LoadSliverSettings(context.Context, *clientpb.GetSliverSettingsReq) (*clientpb.GetSliverSettings, error)
 	SaveUserSliverSettings(context.Context, *clientpb.SaveSliverSettingsReq) (*clientpb.SaveSliverSettings, error)
+	LoadClientAssets(context.Context, *clientpb.GetAssetsReq) (*clientpb.GetAssets, error)
 	// *** Operator Commands ***
 	GetOperators(context.Context, *commonpb.Empty) (*clientpb.Operators, error)
 	// *** Sessions ***
@@ -1539,6 +1548,9 @@ func (UnimplementedSliverRPCServer) LoadSliverSettings(context.Context, *clientp
 }
 func (UnimplementedSliverRPCServer) SaveUserSliverSettings(context.Context, *clientpb.SaveSliverSettingsReq) (*clientpb.SaveSliverSettings, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveUserSliverSettings not implemented")
+}
+func (UnimplementedSliverRPCServer) LoadClientAssets(context.Context, *clientpb.GetAssetsReq) (*clientpb.GetAssets, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LoadClientAssets not implemented")
 }
 func (UnimplementedSliverRPCServer) GetOperators(context.Context, *commonpb.Empty) (*clientpb.Operators, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetOperators not implemented")
@@ -2032,6 +2044,24 @@ func _SliverRPC_SaveUserSliverSettings_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).SaveUserSliverSettings(ctx, req.(*clientpb.SaveSliverSettingsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_LoadClientAssets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.GetAssetsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).LoadClientAssets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcpb.SliverRPC/LoadClientAssets",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).LoadClientAssets(ctx, req.(*clientpb.GetAssetsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4223,6 +4253,10 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SaveUserSliverSettings",
 			Handler:    _SliverRPC_SaveUserSliverSettings_Handler,
+		},
+		{
+			MethodName: "LoadClientAssets",
+			Handler:    _SliverRPC_LoadClientAssets_Handler,
 		},
 		{
 			MethodName: "GetOperators",

@@ -15,13 +15,12 @@ service SliverRPC {
     rpc GetHistory(clientpb.HistoryRequest) returns (clientpb.History);
     rpc AddToHistory(clientpb.AddCmdHistoryRequest) returns (clientpb.AddCmdHistory);
 
-    // *** Console configuration management
+    // *** Console configuration, Sliver settings & Server assets ***
     rpc LoadConsoleConfig(clientpb.GetConsoleConfigReq) returns (clientpb.GetConsoleConfig);
     rpc SaveUserConsoleConfig(clientpb.SaveConsoleConfigReq) returns (clientpb.SaveConsoleConfig);
-
-    // *** Sliver settings management
     rpc LoadSliverSettings(clientpb.GetSliverSettingsReq) returns (clientpb.GetSliverSettings);
     rpc SaveUserSliverSettings(clientpb.SaveSliverSettingsReq) returns (clientpb.SaveSliverSettings);
+    rpc LoadClientAssets(clientpb.GetAssetsReq) returns (clientpb.GetAssets);
 
     // *** Operator Commands *** 
     rpc GetOperators(commonpb.Empty) returns (clientpb.Operators);

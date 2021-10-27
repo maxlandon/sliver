@@ -4,9 +4,9 @@
     "definitions": {
         "Malleable": {
             "properties": {
-                "Schema": {
+                "schema": {
                     "type": "string",
-                    "description": "schema is an unexported variable used for schema \n completion validation when editing the Profile.\n string schema = 1 [(tagger.tags) = \"json:\\\"$schema\\\"\"];"
+                    "description": "schema is an unexported variable used for schema \n completion validation when editing the Profile."
                 },
                 "ID": {
                     "type": "string",
@@ -165,7 +165,7 @@
             },
             "additionalProperties": true,
             "type": "object",
-            "description": "import \"tagger/tagger.proto\";\n\nMalleable - A Malleable profile contains the entire information a C2 Channel \n needs to use as operating parameters, for all protocols, all session types and \n directions. Some fields are base ones, used by all profiles, regardless of their \n stacks, while others might be specific to some. \n All of these options (base and protocol-specific) can be used by both sides of a \n Channel (ex: bind 127.0.0.1 is used by implant to listen, and server to dial).\n\n Also, a Malleable profile integrates its own Security details, which can vary \n greatly across C2 channels, and also depending on the side of the Channel that \n will use the profile."
+            "description": "Malleable - A Malleable profile contains the entire information a C2 Channel \n needs to use as operating parameters, for all protocols, all session types and \n directions. Some fields are base ones, used by all profiles, regardless of their \n stacks, while others might be specific to some. \n All of these options (base and protocol-specific) can be used by both sides of a \n Channel (ex: bind 127.0.0.1 is used by implant to listen, and server to dial).\n\n Also, a Malleable profile integrates its own Security details, which can vary \n greatly across C2 channels, and also depending on the side of the Channel that \n will use the profile."
         },
         "sliverpb.Credentials": {
             "properties": {
