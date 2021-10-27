@@ -1,6 +1,5 @@
 syntax = "proto3";
 package commpb;
-option go_package = "github.com/bishopfox/sliver/protobuf/commpb";
 
 import "commonpb/common.proto";
 

@@ -1,0 +1,8 @@
+ version: v1
+ directories:
+   - .           # All Protobuf files in all package directories. 
+   # - clientpb  # All types shared between the client and the server
+   # - commonpb  # Common types embedded in other client/server/implant types.
+   # - commpb    # All types used for SSH Comm system requests.
+   # - rpcpb     # All client/server RPC service declarations. 
+   # - sliverpb  # All server-implant types, can be also used by clients.

@@ -3,8 +3,8 @@ package clientpb;
 
 import "commonpb/common.proto";
 import "sliverpb/sliver.proto";
+import "sliverpb/malleable.proto";
 
-option go_package = "github.com/bishopfox/sliver/protobuf/clientpb";
 
 
 // [ Version ] ----------------------------------------

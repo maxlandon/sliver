@@ -62,53 +62,6 @@ type DaemonConfig struct {
 	Port int    `json:"port"`
 }
 
-// JobConfig - Restart Jobs on Load
-type JobConfig struct {
-	MTLS []*MTLSJobConfig `json:"mtls,omitempty"`
-	WG   []*WGJobConfig   `json:"wg,omitempty"`
-	DNS  []*DNSJobConfig  `json:"dns,omitempty"`
-	HTTP []*HTTPJobConfig `json:"http,omitempty"`
-
-	Jobs []*clientpb.Job `json:"jobs"`
-}
-
-// MTLSJobConfig - Per-type job configs
-type MTLSJobConfig struct {
-	Host  string `json:"host"`
-	Port  uint16 `json:"port"`
-	JobID string `json:"jobid"`
-}
-
-// WGJobConfig - Per-type job configs
-type WGJobConfig struct {
-	Port    uint16 `json:"port"`
-	NPort   uint16 `json:"nport"`
-	KeyPort uint16 `json:"key_port"`
-	JobID   string `json:"jobid"`
-}
-
-// DNSJobConfig - Persistent DNS job config
-type DNSJobConfig struct {
-	Domains  []string `json:"domains"`
-	Canaries bool     `json:"canaries"`
-	Host     string   `json:"host"`
-	Port     uint16   `json:"port"`
-	JobID    string   `json:"jobid"`
-}
-
-// HTTPJobConfig - Persistent HTTP job config
-type HTTPJobConfig struct {
-	Domain  string `json:"domain"`
-	Host    string `json:"host"`
-	Port    uint16 `json:"port"`
-	Secure  bool   `json:"secure"`
-	Website string `json:"website"`
-	Cert    []byte `json:"cert"`
-	Key     []byte `json:"key"`
-	ACME    bool   `json:"acme"`
-	JobID   string `json:"jobid"`
-}
-
 // WatchTowerConfig - Watch Tower job config
 type WatchTowerConfig struct {
 	VTApiKey          string `json:"vt_api_key"`
@@ -118,12 +71,11 @@ type WatchTowerConfig struct {
 
 // ServerConfig - Server config
 type ServerConfig struct {
-	DaemonMode   bool          `json:"daemon_mode"`
-	DaemonConfig *DaemonConfig `json:"daemon"`
-	Logs         *LogConfig    `json:"logs"`
-	// Jobs         *JobConfig    `json:"jobs,omitempty"`
-	Jobs       []*clientpb.Job   `json:"jobs"`
-	Watchtower *WatchTowerConfig `json:"watch_tower"`
+	DaemonMode   bool              `json:"daemon_mode"`
+	DaemonConfig *DaemonConfig     `json:"daemon"`
+	Logs         *LogConfig        `json:"logs"`
+	Jobs         []*clientpb.Job   `json:"jobs"`
+	Watchtower   *WatchTowerConfig `json:"watch_tower"`
 }
 
 // Save - Save config file to disk

@@ -93,6 +93,10 @@ endif
 #
 # Targets
 #
+.ONESHELL:
+	# Applies to all targets in the file. Runs all recipes
+	# in a single instantiation of the shell (enables cd)
+
 .PHONY: default
 default: clean
 	$(ENV) $(GO) build -mod=vendor -trimpath $(TAGS),server $(LDFLAGS) -o sliver-server ./server
@@ -120,11 +124,14 @@ windows: clean
 
 .PHONY: pb
 pb:
-	protoc -I protobuf/ protobuf/commonpb/common.proto --go_out=paths=source_relative:protobuf/
-	protoc -I protobuf/ protobuf/sliverpb/sliver.proto --go_out=paths=source_relative:protobuf/
-	protoc -I protobuf/ protobuf/clientpb/client.proto --go_out=paths=source_relative:protobuf/
-	protoc -I protobuf/ protobuf/rpcpb/services.proto --go_out=paths=source_relative:protobuf/ --go-grpc_out=protobuf/ --go-grpc_opt=paths=source_relative 
-	protoc -I protobuf/ protobuf/commpb/comm.proto --go_out=paths=source_relative:protobuf/
+	cd protobuf
+	# Generate Go code from Protobuf definitions. Pass the specific
+	# // config to be applied on all files in all proto packages
+	buf generate --template buf.gen.yaml 
+	# Generate JSON schema files for all Protobuf definitions in
+	# the malleable.proto file, with a restricted config file.
+	buf generate --template buf.gen.schema.yaml --path sliverpb/malleable.proto
+	cd ..
 
 .PHONY: clean-all
 clean-all: clean

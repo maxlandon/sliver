@@ -2,6 +2,8 @@ package protobufs
 
 import (
 	"embed"
+	// Needed by buf tool for tag generation in Malleable profiles Protobuf definitions.
+	// _ "github.com/srikrsna/protoc-gen-gotag"
 )
 
 var (

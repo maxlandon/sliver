@@ -1,0 +1,12 @@
+version: v1
+plugins:
+  # Generate a JSON Schema file for the Malleable type.
+  # This plugin call is stored in a separate config file
+  # so that we can use it in a different command-line
+  # invocation: we only need to generate schemas for the 
+  # malleable.proto file, but for all fields in it.
+  - name: jsonschema
+    out: sliverpb/
+    opt:
+      - paths=source_relative
+      - file_extension=jsonschema

@@ -1,0 +1,10 @@
+version: v1
+name: buf.build/maxlandon/sliverpb
+deps:
+  - buf.build/srikrsna/protoc-gen-gotag
+lint:
+  use:
+    - DEFAULT
+breaking:
+  use:
+    - FILE

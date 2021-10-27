@@ -1,0 +1,26 @@
+version: v1
+managed:
+  # Automatically generates Go package paths 
+  # for the generated definitions.
+  enabled: true
+  go_package_prefix:
+    default: github.com/bishopfox/sliver/protobuf
+    except:
+      # The only exception is for generating gRPC
+      # stubs, because the Google Protobuf definitions
+      # have their own Go package path hard-coded.
+      - buf.build/googleapis/googleapis
+plugins:
+  # Generate Go code type definitions for all packages.
+  - name: go
+    out: .
+    opt: paths=source_relative
+  #  Generate the gRPC service stubs for client/server.
+  - name: go-grpc
+    out: .
+    opt: paths=source_relative
+  # Generate custom tags. Currently used only for tags
+  # enabling the use of a JSON schema when editing Malleables. 
+  # - name: gotag
+  #   out: protobuf/
+  #   opt: paths=source_relative

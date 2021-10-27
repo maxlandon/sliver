@@ -1,8 +1,8 @@
 syntax = "proto3";
 package sliverpb;
-option go_package = "github.com/bishopfox/sliver/protobuf/sliverpb";
 
 import "commonpb/common.proto";
+import "sliverpb/malleable.proto";
 
 /*
   
@@ -68,116 +68,6 @@ message BeaconRegister {
   int64 NextCheckin = 5;
 }
 
-// C2 Profiles -------------------------------------------------
-
-message Malleable {
-  // Base
-  string ID = 1;
-  string ContextSessionID = 50;
-  string Name = 2;
-  C2Type Type = 3;
-  C2 C2 = 4;
-  C2Direction Direction = 5;
-  string Hostname = 6;
-  uint32 Port = 7;
-  string Path = 8;
-  uint32 ControlPort = 16;
-  uint32 KeyExchangePort = 17 ;
-  repeated string Domains = 9;
-  bool Canaries = 22;
-
-  // Technicals
-  int64 PollTimeout = 10;
-  int64 ReconnectInterval = 11;
-  int32 MaxConnectionErrors = 12;
-  bool Persistent = 19;
-  bool Active = 14;     
-  bool CommDisabled = 18;
-
-  // Beaconing
-  int64 Interval = 20;
-  int64 Jitter = 21;
-
-  // HTTP-related
-  MalleableHTTP HTTP = 30;
-  string ProxyURL = 31;
-  string Website = 32;
-  bool LetsEncrypt = 33;
- 
-  // Identity & Security
-  Credentials Credentials = 40;
-}
-
-enum C2Type {
-  Session = 0;
-  Beacon = 1;
-  // Could be lower-level, like plain ReadWriteCloser ?
-}
-
-enum C2 {
-  TCP = 0;
-  MTLS = 1;
-  HTTP = 2;
-  HTTPS = 3;
-  DNS = 4;
-  WG = 5;
-  NamedPipe = 6;
-}
-
-enum C2Direction {
-  Bind = 0;
-  Reverse = 1;
-}
-
-// Any security details, such as encryption keys and auth.
-message Credentials {
-  // Core
-  bytes CACertPEM = 1;
-  bytes CertPEM = 2;
-  bytes KeyPEM = 3;
-  bytes ServerFingerprint = 4;
-  // Advanced
-  bytes ControlServerCert = 10;
-  bytes ControlClientKey = 11;
-  bytes TOTPServerSecret = 12;
-}
-
-// MalleableHTTP - HTTP-specific C2 profile
-message MalleableHTTP {
-  string ID = 1;
-  string UserAgent = 2;
-  repeated string URLParameters = 3;
-  repeated string Headers = 4;
-
-  int32 MaxFiles = 5;
-  int32 MinFiles = 6;
-  int32 MaxPaths = 7;
-  int32 MinPaths = 8;
-
-  // Stager File Extension
-  string StagerFileExt = 9;
-
-  // Key Exchange (default .txt) files and paths
-  string KeyExchangeFileExt = 10;
-  repeated string KeyExchangeFiles = 11; 
-  repeated string KeyExchangePaths = 13; 
-
-  // Poll files and paths
-  string PollFileExt = 15;
-  repeated string PollFiles = 16;
-  repeated string PollPaths = 17;
-
-  // Session files and paths
-  string StartSessionFileExt = 18;
-  string SessionFileExt = 20;
-  repeated string SessionFiles = 21;    
-  repeated string SessionPaths = 22; 
-
-  // Close session files and paths
-  string CloseFileExt = 23;
-  repeated string CloseFiles = 24;
-  repeated string ClosePaths = 25;
-}
 
 // Transports ---------------------------------------------------------------------------
 
