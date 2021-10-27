@@ -48,7 +48,7 @@ func (l *Listen) Execute(args []string) (err error) {
 
 	// Declare profile
 	profile := c2.NewHandlerC2(
-		sliverpb.C2_HTTPS,            // A Channel using Mutual TLS
+		sliverpb.C2_HTTPS,            // A Channel using HTTPS
 		l.Args.LocalAddr,             // Targeting the host:[port] argument of our command
 		sliverpb.C2Direction_Reverse, // A listener
 	)
@@ -60,7 +60,7 @@ func (l *Listen) Execute(args []string) (err error) {
 	// HTTPS-specific options
 	profile.Domains = []string{l.HTTPOptions.Options.Domain} // Restrict responses to this domain
 	profile.Website = l.HTTPOptions.Options.Website
-	profile.LetsEncrypt = l.HTTPOptions.Options.LetsEncrypt
+	profile.Credentials.LetsEncrypt = l.HTTPOptions.Options.LetsEncrypt
 
 	log.Infof("Starting HTTPS %s:%d listener (%s)...", profile.Hostname, profile.Port, profile.Domains[0])
 	res, err := transport.RPC.StartHandlerStage(context.Background(), &clientpb.HandlerStageReq{

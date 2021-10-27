@@ -68,6 +68,11 @@ func (l *Listener) Execute(args []string) (err error) {
 	// Add HTTP-specific options
 	http.PopulateProfileHTTP(profile, l.AdvancedOptions)
 
+	// HTTPS-specific options
+	profile.Domains = []string{l.HTTPListenerOptions.Options.Domain} // Restrict responses to this domain
+	profile.Website = l.HTTPListenerOptions.Options.Website
+	profile.Credentials.LetsEncrypt = l.HTTPListenerOptions.Options.LetsEncrypt
+
 	// Send this profile to the server
 	req := &clientpb.CreateMalleableReq{
 		Profile: profile,

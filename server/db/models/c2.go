@@ -201,8 +201,8 @@ func (p *Malleable) ToProtobuf() *sliverpb.Malleable {
 			ServerFingerprint: []byte(p.ServerFingerprint),
 			ControlServerCert: []byte(p.ControlServerCert),
 			ControlClientKey:  []byte(p.ControlClientKey),
+			LetsEncrypt:       p.LetsEncrypt,
 		},
-		LetsEncrypt: p.LetsEncrypt,
 	}
 
 	if p.HTTP != nil {
@@ -252,7 +252,7 @@ func MalleableFromProtobuf(p *sliverpb.Malleable) (profile *Malleable) {
 		profile.ServerFingerprint = []byte(p.Credentials.ServerFingerprint)
 		profile.ControlServerCert = []byte(p.Credentials.ControlServerCert)
 		profile.ControlClientKey = []byte(p.Credentials.ControlClientKey)
-		profile.LetsEncrypt = p.LetsEncrypt
+		profile.LetsEncrypt = p.Credentials.LetsEncrypt
 	}
 
 	if p.HTTP != nil {

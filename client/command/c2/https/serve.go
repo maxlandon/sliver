@@ -59,7 +59,7 @@ func (s *Serve) Execute(args []string) (err error) {
 	// HTTPS-specific options
 	profile.Domains = []string{s.HTTPOptions.Options.Domain} // Restrict responses to this domain
 	profile.Website = s.HTTPOptions.Options.Website
-	profile.LetsEncrypt = s.HTTPOptions.Options.LetsEncrypt
+	profile.Credentials.LetsEncrypt = s.HTTPOptions.Options.LetsEncrypt
 
 	if profile.Port == 0 {
 		profile.Port = 80

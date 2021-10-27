@@ -174,7 +174,7 @@ func newProfileFromConfig(p *sliverpb.Malleable, certificateHostname string) (*m
 		ControlServerCert: p.Credentials.ControlServerCert,
 		ControlClientKey:  p.Credentials.ControlClientKey,
 		ServerFingerprint: p.Credentials.ServerFingerprint, // REMOVE
-		LetsEncrypt:       p.LetsEncrypt,
+		LetsEncrypt:       p.Credentials.LetsEncrypt,
 	}
 
 	// If this profile has no ID and no name, this means it is a buffer profile

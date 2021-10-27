@@ -258,6 +258,9 @@ func NewHandlerC2(c2Type sliverpb.C2, target string, direction sliverpb.C2Direct
 		profile.Port = defaultPort
 	}
 
+	// Always make a blank Credentials type, if functions or user manually touches it.
+	profile.Credentials = &sliverpb.Credentials{}
+
 	return
 }
 
