@@ -112,7 +112,7 @@ func (s *Session) StartSession() (err error) {
 	// Maybe move this out of here
 	for {
 		// Return an error if we have exhausted our allowed maximum errors.
-		if _, failures := s.Statistics(); failures == int(s.MaxConnectionErrors) {
+		if _, failures := s.Statistics(); failures == int(s.MaxErrors) {
 			return ErrMaxAttempts
 		}
 

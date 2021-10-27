@@ -231,7 +231,7 @@ func (c2s *channels) serveTransports() {
 func (c2s *channels) transportsExhausted() bool {
 	for _, transport := range c2s.Available {
 		_, failures := transport.Transport().Statistics()
-		if failures < int(transport.Transport().MaxConnectionErrors) {
+		if failures < int(transport.Transport().MaxErrors) {
 			return false
 		}
 	}

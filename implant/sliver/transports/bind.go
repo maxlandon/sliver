@@ -48,7 +48,7 @@ func (t *Driver) Listen() (conn net.Conn, err error) {
 	log.Printf("Listening (bind) on %s (%s)", t.URI.Host, t.URI.Scheme)
 	// {{end}}
 
-	for t.failures < int(t.MaxConnectionErrors) {
+	for t.failures < int(t.MaxErrors) {
 		switch t.C2 {
 
 		// {{if .Config.MTLSc2Enabled}}
@@ -101,7 +101,7 @@ func (t *Driver) Listen() (conn net.Conn, err error) {
 	}
 
 	// Only return an error if we have exhausted attempts
-	if t.failures == int(t.MaxConnectionErrors) {
+	if t.failures == int(t.MaxErrors) {
 		return nil, ErrMaxAttempts
 	}
 

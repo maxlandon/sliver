@@ -52,7 +52,7 @@ func (t *Driver) Dial() (conn net.Conn, err error) {
 	log.Printf("Dialing (reverse) %s <- (%s)", t.URI.Host, t.URI.Scheme)
 	// {{end}}
 
-	for t.failures < int(t.MaxConnectionErrors) {
+	for t.failures < int(t.MaxErrors) {
 
 		// We might have several transport protocols available, while some
 		// of which being unable to do stream multiplexing (ex: mTLS + DNS):
@@ -155,7 +155,7 @@ func (t *Driver) Dial() (conn net.Conn, err error) {
 	}
 
 	// Only return an error if we have exhausted attempts
-	if t.failures == int(t.MaxConnectionErrors) {
+	if t.failures == int(t.MaxErrors) {
 		return nil, ErrMaxAttempts
 	}
 

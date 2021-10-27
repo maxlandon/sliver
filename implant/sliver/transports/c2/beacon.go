@@ -128,7 +128,7 @@ LOOP:
 		// Note that this might fail even before the first beaconing
 		// run: when attempting to connect. But if that was the case
 		// we would not get to that point anyway.
-		if _, failures := b.Statistics(); failures == int(b.MaxConnectionErrors) {
+		if _, failures := b.Statistics(); failures == int(b.MaxErrors) {
 			// {{if .Config.Debug}}
 			log.Printf("Failures: %d", failures)
 			// {{end}}

