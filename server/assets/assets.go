@@ -88,7 +88,7 @@ func GetUserDirectory(name string) (dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			setupLog.Errorf("Cannot write to Wiregost Data Service directory %s", err)
+			setupLog.Errorf("Cannot write user directory %s", err)
 		}
 	}
 	return
@@ -103,7 +103,7 @@ func GetSliverDirectory(sess *clientpb.Session) (dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			setupLog.Errorf("Cannot write to Wiregost Data Service directory %s", err)
+			setupLog.Errorf("Cannot write sliver directory for session %s: %s", sess.UUID, err)
 		}
 	}
 	return
@@ -118,7 +118,7 @@ func GetBeaconDirectory(beacon *clientpb.Beacon) (dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			setupLog.Errorf("Cannot write to Wiregost Data Service directory %s", err)
+			setupLog.Errorf("Cannot write slivers/ directory: %s", err)
 		}
 	}
 	return
@@ -126,17 +126,42 @@ func GetBeaconDirectory(beacon *clientpb.Beacon) (dir string) {
 
 // GetUserHistoryDir - Directory where all history files for a user are stored.
 func GetUserHistoryDir(name string) (dir string) {
-
 	dir = path.Join(GetUserDirectory(name), ".history")
-
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
-			setupLog.Errorf("Cannot write to Wiregost Data Service directory %s", err)
+			setupLog.Errorf("Cannot write user directory: %s", err)
 		}
 	}
 	return
 }
+
+// GetC2Dir - Directory where all C2 related things are stored on the server.
+func GetC2Dir() (dir string) {
+	dir = path.Join(GetRootAppDir(), "c2")
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			setupLog.Errorf("Cannot write c2/ directory: %s", err)
+		}
+	}
+	return
+}
+
+// GetMalleableSchemaDir - The directory where JSON schemas related to Malleable profiles
+// are stored. These schemas are passed to client consoles when they connect, so that they
+// have full completion, validation and documentation available for Malleable C2 functionality.
+func GetMalleableSchemaDir() (dir string) {
+	dir = path.Join(GetC2Dir(), "malleable_schemas")
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			setupLog.Errorf("Cannot write malleable_schemas/ directory: %s", err)
+		}
+	}
+	return
+}
+
 func assetVersion() string {
 	appDir := GetRootAppDir()
 	data, err := ioutil.ReadFile(path.Join(appDir, versionFileName))
@@ -275,6 +300,27 @@ func setupGo(appDir string) error {
 		setupLog.Errorf("Failed to write garble %s", err)
 		return err
 	}
+
+	// Malleable Profiles JSON Schemas, might be needed before compiling any implant.
+	malleableSchema, err := protobufs.FS.ReadFile("sliverpb/Malleable.json")
+	if err != nil {
+		setupLog.Info("Static asset not found: Malleable.json")
+		return err
+	}
+	malleableHTTPSchema, err := protobufs.FS.ReadFile("sliverpb/MalleableHTTP.json")
+	if err != nil {
+		setupLog.Info("Static asset not found: MalleableHTTP.json")
+		return err
+	}
+	malleableCredentialSchema, err := protobufs.FS.ReadFile("sliverpb/Credentials.json")
+	if err != nil {
+		setupLog.Info("Static asset not found: Credentials.json")
+		return err
+	}
+	malleableSchemasDir := GetMalleableSchemaDir()
+	ioutil.WriteFile(path.Join(malleableSchemasDir, "Malleable.jsonschema"), malleableSchema, 0600)
+	ioutil.WriteFile(path.Join(malleableSchemasDir, "MalleableHTTP.jsonschema"), malleableHTTPSchema, 0600)
+	ioutil.WriteFile(path.Join(malleableSchemasDir, "Credentials.jsonschema"), malleableCredentialSchema, 0600)
 
 	return nil
 }

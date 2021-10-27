@@ -41,9 +41,12 @@ const (
 	// SliverClientDirName - Directory storing all of the client configs/logs
 	SliverClientDirName = ".sliver-client"
 	// SliverExtensionsDirName - Directory storing the client side extensions
-	SliverExtensionsDirName = "extensions"
-	SliverArtDirName        = ".art"
-	versionFileName         = "version"
+	SliverExtensionsDirName       = "extensions"
+	SliverArtDirName              = ".art"
+	versionFileName               = "version"
+	SliverC2DirName               = "c2"
+	SliverMalleableSchemasDirName = "malleable_schemas"
+	SliverMalleableSchema         = "Malleable.json"
 )
 
 // GetRootAppDir - Get the Sliver app dir ~/.sliver-client/
@@ -83,6 +86,39 @@ func GetArtDir() string {
 		}
 	}
 	return dir
+}
+
+// GetC2Dir - Directory where all C2 related things are stored for the client console.
+func GetC2Dir() string {
+	dir := path.Join(GetRootAppDir(), SliverC2DirName)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return dir
+}
+
+// GetMalleableSchemaDir - The directory where JSON schemas related to Malleable profiles
+// are stored. These schemas are passed to client consoles when they connect, so that they
+// have full completion, validation and documentation available for Malleable C2 functionality.
+func GetMalleableSchemaDir() (dir string) {
+	dir = path.Join(GetC2Dir(), SliverMalleableSchemasDirName)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return
+}
+
+// GetMalleableSchemaPath - The full, absolute path to the conventionned location of the
+// Malleable JSON Schema file. This does not ensure that the file exists: if it doesn't
+// no completion/validation/documentation will be available in the client editor.
+func GetMalleableSchemaPath() string {
+	return path.Join(GetMalleableSchemaDir(), SliverMalleableSchema)
 }
 
 func assetVersion() string {
