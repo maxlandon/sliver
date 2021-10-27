@@ -177,16 +177,6 @@ func (c2s *channels) serveTransports() {
 			continue
 		}
 
-		// If beacon, errors are constantly being thrown because closing connections
-		// will performing blocking reading operations will always return an error.
-		// We only care about if not maximum attempts reached
-		// if current.Transport().Type == sliverpb.C2Type_Beacon && err != ErrMaxAttempts {
-		//         // {{if .Config.Debug}}
-		//         log.Printf("(Transports)[Beacon] Ignoring error: %s", err)
-		//         // {{end}}
-		//         continue
-		// }
-
 		// Unknown Errors to handle --------------------------------------------------------
 
 		// {{if .Config.Debug}}

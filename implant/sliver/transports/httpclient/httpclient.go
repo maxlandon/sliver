@@ -59,7 +59,8 @@ var (
 	ErrStatusCodeUnexpected = errors.New("unexpected http response code")
 )
 
-// StartSessionHTTP - Attempts to start a session with a given address
+// StartSessionHTTP - Attempts to start an HTTP session with a given address, with no TLS setup.
+// The Channel datastream is still encrypted by the Channel core cryptosystem.
 func StartSessionHTTP(c2URI *url.URL, profile *sliverpb.Malleable) (*SliverHTTPClient, error) {
 
 	address := c2URI.Host
@@ -83,7 +84,8 @@ func StartSessionHTTP(c2URI *url.URL, profile *sliverpb.Malleable) (*SliverHTTPC
 	return client, nil
 }
 
-// StartSessionHTTPS - Start an HTTP Session with mutual TLS authentication
+// StartSessionHTTPS - Start an HTTP Session with either mutual TLS authentication or LetsEncrypt.
+// The LetsEncrypt option simply means dialing with a TLS insecure config, and the server handles the rest.
 func StartSessionHTTPS(c2URI *url.URL, profile *sliverpb.Malleable) (*SliverHTTPClient, error) {
 
 	address := c2URI.Host
@@ -541,7 +543,7 @@ func httpsClient(address string, timeout time.Duration, proxyConfig string, tlsC
 			Timeout: timeout,
 		}).Dial,
 		TLSHandshakeTimeout: timeout,
-		TLSClientConfig:     tlsConfig, // Mutually authenticated TLS connection
+		TLSClientConfig:     tlsConfig, // Mutually authenticated TLS or LetsEncrypt
 	}
 	client := &SliverHTTPClient{
 		Origin: fmt.Sprintf("https://%s", address),

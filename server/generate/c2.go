@@ -45,7 +45,6 @@ func InitImplantTransports(pbConfig *clientpb.ImplantConfig, cfg *models.Implant
 	// For each C2 profile in the implant config, parse, validate and
 	// populate it with everything needed to be compiled into an implant.
 	for order, profile := range pbConfig.C2S {
-
 		transport, err := NewTransport(cfg, profile)
 		if err != nil {
 			return err
@@ -64,8 +63,6 @@ func InitImplantTransports(pbConfig *clientpb.ImplantConfig, cfg *models.Implant
 	// If the Comm system enabled, add necessary
 	// keys for SSH authentication & encryption.
 	configureCommSystem(pbConfig, cfg)
-
-	// Save the transports for retrieval at registration time.
 
 	return nil
 }
