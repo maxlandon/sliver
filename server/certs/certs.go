@@ -31,6 +31,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	insecureRand "math/rand"
 	"net"
 	"time"
 
@@ -40,12 +41,6 @@ import (
 )
 
 const (
-	// RSAKeySize - Default size of RSA keys in bits
-	RSAKeySize = 2048 // This is plenty 4096 is overkill
-
-	// Certs are valid for ~3 Years, minus up to 1 year from Now()
-	validFor = 3 * (365 * 24 * time.Hour)
-
 	// ECCKey - Namespace for ECC keys
 	ECCKey = "ecc"
 
@@ -124,7 +119,13 @@ func RemoveCertificate(caType string, keyType string, commonName string) error {
 	if keyType != ECCKey && keyType != RSAKey {
 		return fmt.Errorf("Invalid key type '%s'", keyType)
 	}
-	return nil
+	dbSession := db.Session()
+	err := dbSession.Where(&models.Certificate{
+		CAType:     caType,
+		KeyType:    keyType,
+		CommonName: commonName,
+	}).Delete(&models.Certificate{}).Error
+	return err
 }
 
 // --------------------------------
@@ -142,7 +143,9 @@ func GenerateECCCertificate(caType string, commonName string, isCA bool, isClien
 	var err error
 
 	// Generate private key
-	privateKey, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	curves := []elliptic.Curve{elliptic.P521(), elliptic.P384(), elliptic.P256()}
+	curve := curves[randomInt(len(curves))]
+	privateKey, err = ecdsa.GenerateKey(curve, rand.Reader)
 	if err != nil {
 		certsLog.Fatalf("Failed to generate private key: %s", err)
 	}
@@ -152,16 +155,16 @@ func GenerateECCCertificate(caType string, commonName string, isCA bool, isClien
 	return generateCertificate(caType, subject, isCA, isClient, privateKey)
 }
 
-// GenerateRSACertificate - Generates a 2048 bit RSA Certificate
+// GenerateRSACertificate - Generates an RSA Certificate
 func GenerateRSACertificate(caType string, commonName string, isCA bool, isClient bool) ([]byte, []byte) {
 
-	certsLog.Infof("Generating TLS certificate (RSA) for '%s' ...", commonName)
+	certsLog.Debugf("Generating TLS certificate (RSA) for '%s' ...", commonName)
 
 	var privateKey interface{}
 	var err error
 
 	// Generate private key
-	privateKey, err = rsa.GenerateKey(rand.Reader, RSAKeySize)
+	privateKey, err = rsa.GenerateKey(rand.Reader, rsaKeySize())
 	if err != nil {
 		certsLog.Fatalf("Failed to generate private key %s", err)
 	}
@@ -177,32 +180,32 @@ func generateCertificate(caType string, subject pkix.Name, isCA bool, isClient b
 	notBefore := time.Now()
 	days := randomInt(365) * -1 // Within -1 year
 	notBefore = notBefore.AddDate(0, 0, days)
-	notAfter := notBefore.Add(validFor)
-	certsLog.Infof("Valid from %v to %v", notBefore, notAfter)
+	notAfter := notBefore.Add(randomValidFor())
+	certsLog.Debugf("Valid from %v to %v", notBefore, notAfter)
 
 	// Serial number
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, _ := rand.Int(rand.Reader, serialNumberLimit)
-	certsLog.Infof("Serial Number: %d", serialNumber)
+	certsLog.Debugf("Serial Number: %d", serialNumber)
 
 	var keyUsage x509.KeyUsage = x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
 	var extKeyUsage []x509.ExtKeyUsage
 
 	if isCA {
-		certsLog.Infof("Authority certificate")
+		certsLog.Debugf("Authority certificate")
 		keyUsage = x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
 		extKeyUsage = []x509.ExtKeyUsage{
 			x509.ExtKeyUsageServerAuth,
 			x509.ExtKeyUsageClientAuth,
 		}
 	} else if isClient {
-		certsLog.Infof("Client authentication certificate")
+		certsLog.Debugf("Client authentication certificate")
 		extKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
 	} else {
-		certsLog.Infof("Server authentication certificate")
+		certsLog.Debugf("Server authentication certificate")
 		extKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
 	}
-	certsLog.Infof("ExtKeyUsage = %v", extKeyUsage)
+	certsLog.Debugf("ExtKeyUsage = %v", extKeyUsage)
 
 	// Certificate template
 	template := x509.Certificate{
@@ -218,34 +221,34 @@ func generateCertificate(caType string, subject pkix.Name, isCA bool, isClient b
 	if !isClient {
 		// Host or IP address
 		if ip := net.ParseIP(subject.CommonName); ip != nil {
-			certsLog.Infof("Certificate authenticates IP address: %v", ip)
+			certsLog.Debugf("Certificate authenticates IP address: %v", ip)
 			template.IPAddresses = append(template.IPAddresses, ip)
 		} else {
-			certsLog.Infof("Certificate authenticates host: %v", subject.CommonName)
+			certsLog.Debugf("Certificate authenticates host: %v", subject.CommonName)
 			template.DNSNames = append(template.DNSNames, subject.CommonName)
 		}
 	} else {
-		certsLog.Infof("Client certificate authenticates CN: %v", subject.CommonName)
+		certsLog.Debugf("Client certificate authenticates CN: %v", subject.CommonName)
 	}
 
 	// Sign certificate or self-sign if CA
-	var err error
+	var certErr error
 	var derBytes []byte
 	if isCA {
-		certsLog.Infof("Certificate is an AUTHORITY")
+		certsLog.Debugf("Certificate is an AUTHORITY")
 		template.IsCA = true
 		template.KeyUsage |= x509.KeyUsageCertSign
-		derBytes, err = x509.CreateCertificate(rand.Reader, &template, &template, publicKey(privateKey), privateKey)
+		derBytes, certErr = x509.CreateCertificate(rand.Reader, &template, &template, publicKey(privateKey), privateKey)
 	} else {
 		caCert, caKey, err := GetCertificateAuthority(caType) // Sign the new certificate with our CA
 		if err != nil {
 			certsLog.Fatalf("Invalid ca type (%s): %v", caType, err)
 		}
-		derBytes, err = x509.CreateCertificate(rand.Reader, &template, caCert, publicKey(privateKey), caKey)
+		derBytes, certErr = x509.CreateCertificate(rand.Reader, &template, caCert, publicKey(privateKey), caKey)
 	}
-	if err != nil {
+	if certErr != nil {
 		// We maybe don't want this to be fatal, but it should basically never happen afaik
-		certsLog.Fatalf("Failed to create certificate: %s", err)
+		certsLog.Fatalf("Failed to create certificate: %s", certErr)
 	}
 
 	// Encode certificate and key
@@ -290,4 +293,20 @@ func randomInt(max int) int {
 	rand.Read(buf)
 	i := binary.LittleEndian.Uint32(buf)
 	return int(i) % max
+}
+
+func randomValidFor() time.Duration {
+	validFor := 3 * (365 * 24 * time.Hour)
+	switch insecureRand.Intn(2) {
+	case 0:
+		validFor = 2 * (365 * 24 * time.Hour)
+	case 1:
+		validFor = 3 * (365 * 24 * time.Hour)
+	}
+	return validFor
+}
+
+func rsaKeySize() int {
+	rsaKeySizes := []int{4096, 2048}
+	return rsaKeySizes[randomInt(len(rsaKeySizes))]
 }

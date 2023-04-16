@@ -1,7 +1,26 @@
 package core
 
+/*
+	Sliver Implant Framework
+	Copyright (C) 2022  Bishop Fox
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -14,10 +33,10 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/bishopfox/sliver/server/core"
 )
 
 var (
+	// Portfwds - Struct instance that holds all the portfwds
 	Portfwds = portfwds{
 		forwards: map[int]*Portfwd{},
 		mutex:    &sync.RWMutex{},
@@ -29,7 +48,7 @@ var (
 // PortfwdMeta - Metadata about a portfwd listener
 type PortfwdMeta struct {
 	ID         int
-	SessionID  uint32
+	SessionID  string
 	BindAddr   string
 	RemoteAddr string
 }
@@ -41,6 +60,7 @@ type Portfwd struct {
 	ChannelProxy *ChannelProxy
 }
 
+// GetMetadata - Get metadata about the portfwd
 func (p *Portfwd) GetMetadata() *PortfwdMeta {
 	return &PortfwdMeta{
 		ID:         p.ID,
@@ -55,6 +75,7 @@ type portfwds struct {
 	mutex    *sync.RWMutex
 }
 
+// Add - Add a TCP proxy instance
 func (f *portfwds) Add(tcpProxy *tcpproxy.Proxy, channelProxy *ChannelProxy) *Portfwd {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
@@ -67,6 +88,7 @@ func (f *portfwds) Add(tcpProxy *tcpproxy.Proxy, channelProxy *ChannelProxy) *Po
 	return portfwd
 }
 
+// Remove - Remove a TCP proxy instance
 func (f *portfwds) Remove(portfwdID int) bool {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
@@ -78,6 +100,7 @@ func (f *portfwds) Remove(portfwdID int) bool {
 	return false
 }
 
+// List - List all TCP proxy instances
 func (f *portfwds) List() []*PortfwdMeta {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
@@ -102,6 +125,7 @@ type ChannelProxy struct {
 	DialTimeout     time.Duration
 }
 
+// HandleConn - Handle a TCP connection
 func (p *ChannelProxy) HandleConn(conn net.Conn) {
 	log.Printf("[tcpproxy] Handling new connection")
 	ctx := context.Background()
@@ -111,7 +135,7 @@ func (p *ChannelProxy) HandleConn(conn net.Conn) {
 	}
 	tunnel, err := p.dialImplant(ctx)
 	if cancel != nil {
-		cancel()
+		defer cancel()
 	}
 	if err != nil {
 		return
@@ -119,8 +143,8 @@ func (p *ChannelProxy) HandleConn(conn net.Conn) {
 
 	// Cleanup
 	defer func() {
-		go conn.Close()
-		core.Tunnels.Close(tunnel.ID)
+		conn.Close()
+		GetTunnels().Close(tunnel.ID)
 	}()
 
 	errs := make(chan error, 1)
@@ -134,6 +158,7 @@ func (p *ChannelProxy) HandleConn(conn net.Conn) {
 	}
 }
 
+// HostPort - Returns the host and port of the TCP proxy
 func (p *ChannelProxy) HostPort() (string, uint32) {
 	defaultPort := uint32(8080)
 	host, rawPort, err := net.SplitHostPort(p.RemoteAddr)
@@ -154,17 +179,19 @@ func (p *ChannelProxy) HostPort() (string, uint32) {
 	return host, port
 }
 
+// Port - Returns the TCP port of the proxy
 func (p *ChannelProxy) Port() uint32 {
 	_, port := p.HostPort()
 	return port
 }
 
+// Host - Returns the host (i.e., interface) of the TCP proxy
 func (p *ChannelProxy) Host() string {
 	host, _ := p.HostPort()
 	return host
 }
 
-func (p *ChannelProxy) dialImplant(ctx context.Context) (*Tunnel, error) {
+func (p *ChannelProxy) dialImplant(ctx context.Context) (*TunnelIO, error) {
 
 	log.Printf("[tcpproxy] Dialing implant to create tunnel ...")
 
@@ -176,8 +203,9 @@ func (p *ChannelProxy) dialImplant(ctx context.Context) (*Tunnel, error) {
 		log.Printf("[tcpproxy] Failed to dial implant %s", err)
 		return nil, err
 	}
-	log.Printf("[tcpproxy] Created new tunnel with id %d (session %d)", rpcTunnel.TunnelID, p.Session.ID)
-	tunnel := Tunnels.Start(rpcTunnel.TunnelID, rpcTunnel.SessionID)
+
+	log.Printf("[tcpproxy] Created new tunnel with id %d (session %s)", rpcTunnel.TunnelID, p.Session.ID)
+	tunnel := GetTunnels().Start(rpcTunnel.TunnelID, rpcTunnel.SessionID)
 
 	log.Printf("[tcpproxy] Binding tunnel to portfwd %d", p.Port())
 	portfwdResp, err := p.Rpc.Portfwd(ctx, &sliverpb.PortfwdReq{
@@ -186,11 +214,19 @@ func (p *ChannelProxy) dialImplant(ctx context.Context) (*Tunnel, error) {
 		},
 		Host:     p.Host(),
 		Port:     p.Port(),
-		Protocol: sliverpb.PortfwdProtocol_TCP,
+		Protocol: sliverpb.PortFwdProtoTCP,
 		TunnelID: tunnel.ID,
 	})
 	if err != nil {
 		return nil, err
+	}
+	// Close tunnel in case of error on the implant side
+	if portfwdResp.Response != nil && portfwdResp.Response.Err != "" {
+		p.Rpc.CloseTunnel(ctx, &sliverpb.Tunnel{
+			TunnelID:  tunnel.ID,
+			SessionID: p.Session.ID,
+		})
+		return nil, errors.New(portfwdResp.Response.Err)
 	}
 	log.Printf("Portfwd response: %v", portfwdResp)
 
@@ -211,7 +247,7 @@ func (p *ChannelProxy) dialTimeout() time.Duration {
 	return 30 * time.Second
 }
 
-func toImplantLoop(conn net.Conn, tunnel *Tunnel, errs chan<- error) {
+func toImplantLoop(conn net.Conn, tunnel *TunnelIO, errs chan<- error) {
 	if wc, ok := conn.(*tcpproxy.Conn); ok && len(wc.Peeked) > 0 {
 		if _, err := tunnel.Write(wc.Peeked); err != nil {
 			errs <- err
@@ -224,7 +260,7 @@ func toImplantLoop(conn net.Conn, tunnel *Tunnel, errs chan<- error) {
 	errs <- err
 }
 
-func fromImplantLoop(conn net.Conn, tunnel *Tunnel, errs chan<- error) {
+func fromImplantLoop(conn net.Conn, tunnel *TunnelIO, errs chan<- error) {
 	n, err := io.Copy(conn, tunnel)
 	log.Printf("[tcpproxy] Closing from-implant after %d byte(s)", n)
 	errs <- err

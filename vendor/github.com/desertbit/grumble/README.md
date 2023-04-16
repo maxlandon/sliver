@@ -8,7 +8,7 @@ However sometimes an integrated shell interface is a great and useful extension 
 This library offers a simple API to create powerful CLI applications and automatically starts
 an **integrated interactive shell**, if the application is started without any command arguments.
 
-**Hint:** The API might change slightly, until a first 1.0 release is published.
+**Hint:** We do not guarantee 100% backwards compatiblity between minor versions (1.x). However, the API is mostly stable and should not change much.
 
 [![asciicast](https://asciinema.org/a/155332.png)](https://asciinema.org/a/155332?t=5)
 
@@ -35,22 +35,23 @@ app.AddCommand(&grumble.Command{
     Name:      "daemon",
     Help:      "run the daemon",
     Aliases:   []string{"run"},
-    Usage:     "daemon [OPTIONS]",
-    AllowArgs: true,
 
     Flags: func(f *grumble.Flags) {
         f.Duration("t", "timeout", time.Second, "timeout duration")
     },
 
+    Args: func(a *grumble.Args) {
+        a.String("service", "which service to start", grumble.Default("server"))
+    },
+
     Run: func(c *grumble.Context) error {
-        c.App.Println("timeout:", c.Flags.Duration("timeout"))
+        // Parent Flags.
         c.App.Println("directory:", c.Flags.String("directory"))
         c.App.Println("verbose:", c.Flags.Bool("verbose"))
-
-        // Handle args.
-        c.App.Println("args:")
-        c.App.Println(strings.Join(c.Args, "\n"))
-
+        // Flags.
+        c.App.Println("timeout:", c.Flags.Duration("timeout"))
+        // Args.
+        c.App.Println("service:", c.Args.String("service"))
         return nil
     },
 })
@@ -80,11 +81,55 @@ Builtin support for multiple lines.
 ... command
 ```
 
+## Separate flags and args specifically
+If you need to pass a flag-like value as positional argument, you can do so by using a double dash:  
+`>>> command --flag1=something -- --myPositionalArg`
+
+## Remote shell access with readline
+By calling RunWithReadline() rather than Run() you can pass instance of readline.Instance. 
+One of interesting usages is having a possibility of remote access to your shell:
+
+```go
+handleFunc := func(rl *readline.Instance) {
+
+    var app = grumble.New(&grumble.Config{
+        // override default interrupt handler to avoid remote shutdown
+        InterruptHandler: func(a *grumble.App, count int) {
+            // do nothing
+        },
+		
+        // your usual grumble configuration
+    })  
+    
+    // add commands
+	
+    app.RunWithReadline(rl)
+
+}
+
+cfg := &readline.Config{}
+readline.ListenRemote("tcp", ":5555", cfg, handleFunc)
+```
+
+In the client code just use readline built in DialRemote function:
+
+```go
+if err := readline.DialRemote("tcp", ":5555"); err != nil {
+    fmt.Errorf("An error occurred: %s \n", err.Error())
+}
+```
+
 ## Samples
 
 Check out the [sample directory](/sample) for some detailed examples.
 
-The [grml project](https://github.com/desertbit/grml) uses grumble.
+## Projects using Grumble
+
+- grml - A simple build automation tool written in Go: https://github.com/desertbit/grml
+- orbit - A RPC-like networking backend written in Go: https://github.com/desertbit/orbit
+
+## Known issues
+- Windows unicode not fully supported ([issue](https://github.com/desertbit/grumble/issues/48))
 
 ## Additional Useful Packages
 

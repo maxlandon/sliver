@@ -20,14 +20,14 @@ package generate
 
 import (
 	"bytes"
-	"errors"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"text/template"
@@ -36,6 +36,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/assets"
 	"github.com/bishopfox/sliver/server/certs"
+	"github.com/bishopfox/sliver/server/configs"
+	"github.com/bishopfox/sliver/server/cryptography"
 	"github.com/bishopfox/sliver/server/db/models"
 	"github.com/bishopfox/sliver/server/gogo"
 	"github.com/bishopfox/sliver/server/log"
@@ -43,17 +45,33 @@ import (
 )
 
 var (
-	buildLog         = log.NamedLogger("generate", "build")
-	defaultMingwPath = map[string]map[string]string{
+	buildLog = log.NamedLogger("generate", "build")
+
+	// RUNTIME GOOS -> TARGET GOOS -> TARGET ARCH
+	defaultCCPaths = map[string]map[string]map[string]string{
 		"linux": {
-			"386":   "/usr/bin/i686-w64-mingw32-gcc",
-			"amd64": "/usr/bin/x86_64-w64-mingw32-gcc",
+			"windows": {
+				"386":   "/usr/bin/i686-w64-mingw32-gcc",
+				"amd64": "/usr/bin/x86_64-w64-mingw32-gcc",
+			},
+			"darwin": {
+				// OSX Cross - https://github.com/tpoechtrager/osxcross
+				"amd64": "/opt/osxcross/target/bin/o64-clang",
+				"arm64": "/opt/osxcross/target/bin/aarch64-apple-darwin20.2-clang",
+			},
 		},
 		"darwin": {
-			"386":   "/usr/local/bin/i686-w64-mingw32-gcc",
-			"amd64": "/usr/local/bin/x86_64-w64-mingw32-gcc",
+			"windows": {
+				"386":   "/opt/homebrew/bin/i686-w64-mingw32-gcc",
+				"amd64": "/opt/homebrew/bin/x86_64-w64-mingw32-gcc",
+			},
+			"linux": {
+				// brew install FiloSottile/musl-cross/musl-cross
+				"amd64": "/opt/homebrew/bin/x86_64-linux-musl-gcc",
+			},
 		},
 	}
+
 	// SupportedCompilerTargets - Supported compiler targets
 	SupportedCompilerTargets = map[string]bool{
 		"darwin/amd64":  true,
@@ -66,6 +84,8 @@ var (
 )
 
 const (
+	SliverTemplateName = "sliver"
+
 	// WINDOWS OS
 	WINDOWS = "windows"
 
@@ -75,15 +95,8 @@ const (
 	// LINUX OS
 	LINUX = "linux"
 
-	// GoPrivate - The default Go private arg to garble when obfuscation is enabled.
-	// Wireguard dependencies prevent the use of wildcard github.com/* and golang.org/*.
-	// The current packages below aren't definitive and need to be tidied up.
-	GoPrivate = "github.com/bishopfox/*,github.com/Microsoft/*,github.com/burntsushi/*,github.com/kbinani/*,github.com/lxn/*,github.com/golang/*,github.com/shm/*,github.com/lesnuages/*"
-
 	clientsDirName = "clients"
 	sliversDirName = "slivers"
-
-	encryptKeySize = 16
 
 	// DefaultReconnectInterval - In seconds
 	DefaultReconnectInterval = 60
@@ -97,25 +110,56 @@ const (
 	// DefaultSuffix - Indicates a platform independent src file
 	DefaultSuffix = "_default.go"
 
+	// *** Default ***
+
 	// SliverCC64EnvVar - Environment variable that can specify the 64 bit mingw path
 	SliverCC64EnvVar = "SLIVER_CC_64"
 	// SliverCC32EnvVar - Environment variable that can specify the 32 bit mingw path
 	SliverCC32EnvVar = "SLIVER_CC_32"
+
+	// SliverCXX64EnvVar - Environment variable that can specify the 64 bit mingw path
+	SliverCXX64EnvVar = "SLIVER_CXX_64"
+	// SliverCXX32EnvVar - Environment variable that can specify the 32 bit mingw path
+	SliverCXX32EnvVar = "SLIVER_CXX_32"
+
+	// *** Platform Specific ***
+
+	// SliverPlatformCC64EnvVar - Environment variable that can specify the 64 bit mingw path
+	SliverPlatformCC64EnvVar = "SLIVER_%s_CC_64"
+	// SliverPlatformCC32EnvVar - Environment variable that can specify the 32 bit mingw path
+	SliverPlatformCC32EnvVar = "SLIVER_%s_CC_32"
+	// SliverPlatformCXX64EnvVar - Environment variable that can specify the 64 bit mingw path
+	SliverPlatformCXX64EnvVar = "SLIVER_%s_CXX_64"
+	// SliverPlatformCXX32EnvVar - Environment variable that can specify the 32 bit mingw path
+	SliverPlatformCXX32EnvVar = "SLIVER_%s_CXX_32"
 )
 
 // ImplantConfigFromProtobuf - Create a native config struct from Protobuf
 func ImplantConfigFromProtobuf(pbConfig *clientpb.ImplantConfig) (string, *models.ImplantConfig) {
 	cfg := &models.ImplantConfig{}
 
+	cfg.IsBeacon = pbConfig.IsBeacon
+	cfg.BeaconInterval = pbConfig.BeaconInterval
+	cfg.BeaconJitter = pbConfig.BeaconJitter
+
+	cfg.ECCServerPublicKey = pbConfig.ECCServerPublicKey
+	cfg.ECCPrivateKey = pbConfig.ECCPrivateKey
+	cfg.ECCPublicKey = pbConfig.ECCPublicKey
+
 	cfg.GOOS = pbConfig.GOOS
 	cfg.GOARCH = pbConfig.GOARCH
-	cfg.CACert = pbConfig.CACert
-	cfg.Cert = pbConfig.Cert
-	cfg.Key = pbConfig.Key
+	cfg.MtlsCACert = pbConfig.MtlsCACert
+	cfg.MtlsCert = pbConfig.MtlsCert
+	cfg.MtlsKey = pbConfig.MtlsKey
 	cfg.Debug = pbConfig.Debug
+	cfg.DebugFile = pbConfig.DebugFile
 	cfg.Evasion = pbConfig.Evasion
 	cfg.ObfuscateSymbols = pbConfig.ObfuscateSymbols
-	// cfg.CanaryDomains = pbConfig.CanaryDomains
+	cfg.TemplateName = pbConfig.TemplateName
+	if cfg.TemplateName == "" {
+		cfg.TemplateName = SliverTemplateName
+	}
+	cfg.ConnectionStrategy = pbConfig.ConnectionStrategy
 
 	cfg.WGImplantPrivKey = pbConfig.WGImplantPrivKey
 	cfg.WGServerPubKey = pbConfig.WGServerPubKey
@@ -124,18 +168,20 @@ func ImplantConfigFromProtobuf(pbConfig *clientpb.ImplantConfig) (string, *model
 	cfg.WGTcpCommsPort = pbConfig.WGTcpCommsPort
 	cfg.ReconnectInterval = pbConfig.ReconnectInterval
 	cfg.MaxConnectionErrors = pbConfig.MaxConnectionErrors
-	cfg.PollInterval = pbConfig.PollInterval
 
 	cfg.LimitDomainJoined = pbConfig.LimitDomainJoined
 	cfg.LimitDatetime = pbConfig.LimitDatetime
 	cfg.LimitUsername = pbConfig.LimitUsername
 	cfg.LimitHostname = pbConfig.LimitHostname
 	cfg.LimitFileExists = pbConfig.LimitFileExists
+	cfg.LimitLocale = pbConfig.LimitLocale
 
 	cfg.Format = pbConfig.Format
 	cfg.IsSharedLib = pbConfig.IsSharedLib
 	cfg.IsService = pbConfig.IsService
 	cfg.IsShellcode = pbConfig.IsShellcode
+
+	cfg.RunAtLoad = pbConfig.RunAtLoad
 
 	cfg.CanaryDomains = []models.CanaryDomain{}
 	for _, pbCanary := range pbConfig.CanaryDomains {
@@ -158,11 +204,10 @@ func ImplantConfigFromProtobuf(pbConfig *clientpb.ImplantConfig) (string, *model
 	}
 
 	name := ""
-	if pbConfig.Name != "" {
-		// Only allow user-provided alpha/numeric names
-		if regexp.MustCompile(`^[[:alnum:]]+$`).MatchString(pbConfig.Name) {
-			name = pbConfig.Name
-		}
+	if err := util.AllowedName(pbConfig.Name); err != nil {
+		buildLog.Warnf("%s\n", err)
+	} else {
+		name = pbConfig.Name
 	}
 	return name, cfg
 }
@@ -206,7 +251,7 @@ func GetSliversDir() string {
 	appDir := assets.GetRootAppDir()
 	sliversDir := path.Join(appDir, sliversDirName)
 	if _, err := os.Stat(sliversDir); os.IsNotExist(err) {
-		buildLog.Infof("Creating bin directory: %s", sliversDir)
+		buildLog.Debugf("Creating bin directory: %s", sliversDir)
 		err = os.MkdirAll(sliversDir, 0700)
 		if err != nil {
 			buildLog.Fatal(err)
@@ -219,102 +264,109 @@ func GetSliversDir() string {
 // Sliver Generation Code
 // -----------------------
 
-// SliverShellcode - Generates a sliver shellcode using sRDI
-func SliverShellcode(name string, config *models.ImplantConfig) (string, error) {
-	// Compile go code
-	var crossCompiler string
-	appDir := assets.GetRootAppDir()
-	// Don't use a cross-compiler if the target bin is built on the same platform
-	// as the sliver-server.
-	if runtime.GOOS != config.GOOS {
-		crossCompiler = getCCompiler(config.GOARCH)
-		if crossCompiler == "" {
-			return "", errors.New("No cross-compiler (mingw) found")
-		}
+// SliverShellcode - Generates a sliver shellcode using Donut
+func SliverShellcode(name string, otpSecret string, config *models.ImplantConfig, save bool) (string, error) {
+	if config.GOOS != "windows" {
+		return "", fmt.Errorf("shellcode format is currently only supported on Windows")
 	}
+	appDir := assets.GetRootAppDir()
 	goConfig := &gogo.GoConfig{
-		CGO:        "1",
-		CC:         crossCompiler,
+		CGO: "0",
+
 		GOOS:       config.GOOS,
 		GOARCH:     config.GOARCH,
 		GOCACHE:    gogo.GetGoCache(appDir),
 		GOMODCACHE: gogo.GetGoModCache(appDir),
 		GOROOT:     gogo.GetGoRootDir(appDir),
+		GOPROXY:    getGoProxy(),
+		HTTPPROXY:  getGoHttpProxy(),
+		HTTPSPROXY: getGoHttpsProxy(),
 
 		Obfuscation: config.ObfuscateSymbols,
-		GOPRIVATE:   GoPrivate,
+		GOGARBLE:    goPrivate(config),
 	}
-	pkgPath, err := renderSliverGoCode(name, config, goConfig)
+	pkgPath, err := renderSliverGoCode(name, otpSecret, config, goConfig)
 	if err != nil {
 		return "", err
 	}
 
-	dest := path.Join(goConfig.ProjectDir, "bin", path.Base(name))
+	dest := filepath.Join(goConfig.ProjectDir, "bin", filepath.Base(name))
 	dest += ".bin"
 
-	tags := []string{"netgo"}
+	tags := []string{} // []string{"netgo"}
 	ldflags := []string{"-s -w -buildid="}
 	if !config.Debug && goConfig.GOOS == WINDOWS {
 		ldflags[0] += " -H=windowsgui"
 	}
 	// Keep those for potential later use
-	gcflags := fmt.Sprintf("")
-	asmflags := fmt.Sprintf("")
+	gcflags := ""
+	asmflags := ""
 	// trimpath is now a separate flag since Go 1.13
 	trimpath := "-trimpath"
 	_, err = gogo.GoBuild(*goConfig, pkgPath, dest, "pie", tags, ldflags, gcflags, asmflags, trimpath)
-	// _, err = gogo.GoBuild(*goConfig, pkgPath, dest, "c-shared", tags, ldflags, gcflags, asmflags, trimpath)
+	if err != nil {
+		return "", err
+	}
 	config.FileName = path.Base(dest)
 	shellcode, err := DonutShellcodeFromFile(dest, config.GOARCH, false, "", "", "")
-	// shellcode, err := ShellcodeRDI(dest, "RunSliver", "")
 	if err != nil {
 		return "", err
 	}
-	err = ioutil.WriteFile(dest, shellcode, 0600)
+	err = os.WriteFile(dest, shellcode, 0600)
 	if err != nil {
 		return "", err
 	}
-	config.Format = clientpb.ImplantConfig_SHELLCODE
+	config.Format = clientpb.OutputFormat_SHELLCODE
 	// Save to database
-	saveBuildErr := ImplantBuildSave(name, config, dest)
-	if saveBuildErr != nil {
-		buildLog.Errorf("Failed to save build: %s", saveBuildErr)
+	if save {
+		saveBuildErr := ImplantBuildSave(name, config, dest)
+		if saveBuildErr != nil {
+			buildLog.Errorf("Failed to save build: %s", saveBuildErr)
+		}
 	}
 	return dest, err
 
 }
 
 // SliverSharedLibrary - Generates a sliver shared library (DLL/dylib/so) binary
-func SliverSharedLibrary(name string, config *models.ImplantConfig) (string, error) {
+func SliverSharedLibrary(name string, otpSecret string, config *models.ImplantConfig, save bool) (string, error) {
 	// Compile go code
-	var crossCompiler string
+	var cc string
+	var cxx string
+
 	appDir := assets.GetRootAppDir()
 	// Don't use a cross-compiler if the target bin is built on the same platform
 	// as the sliver-server.
 	if runtime.GOOS != config.GOOS {
-		crossCompiler = getCCompiler(config.GOARCH)
-		if crossCompiler == "" {
-			return "", errors.New("No cross-compiler (mingw) found")
+		buildLog.Debugf("Cross-compiling from %s/%s to %s/%s", runtime.GOOS, runtime.GOARCH, config.GOOS, config.GOARCH)
+		cc, cxx = findCrossCompilers(config.GOOS, config.GOARCH)
+		if cc == "" {
+			return "", fmt.Errorf("CC '%s/%s' not found", config.GOOS, config.GOARCH)
 		}
 	}
 	goConfig := &gogo.GoConfig{
-		CGO:        "1",
-		CC:         crossCompiler,
+		CGO: "1",
+		CC:  cc,
+		CXX: cxx,
+
 		GOOS:       config.GOOS,
 		GOARCH:     config.GOARCH,
 		GOCACHE:    gogo.GetGoCache(appDir),
 		GOMODCACHE: gogo.GetGoModCache(appDir),
 		GOROOT:     gogo.GetGoRootDir(appDir),
+		GOPROXY:    getGoProxy(),
+		HTTPPROXY:  getGoHttpProxy(),
+		HTTPSPROXY: getGoHttpsProxy(),
 
 		Obfuscation: config.ObfuscateSymbols,
-		GOPRIVATE:   GoPrivate,
+		GOGARBLE:    goPrivate(config),
 	}
-	pkgPath, err := renderSliverGoCode(name, config, goConfig)
+	pkgPath, err := renderSliverGoCode(name, otpSecret, config, goConfig)
 	if err != nil {
 		return "", err
 	}
 
-	dest := path.Join(goConfig.ProjectDir, "bin", path.Base(name))
+	dest := filepath.Join(goConfig.ProjectDir, "bin", filepath.Base(name))
 	if goConfig.GOOS == WINDOWS {
 		dest += ".dll"
 	}
@@ -325,28 +377,37 @@ func SliverSharedLibrary(name string, config *models.ImplantConfig) (string, err
 		dest += ".so"
 	}
 
-	tags := []string{"netgo"}
+	tags := []string{} // []string{"netgo"}
 	ldflags := []string{"-s -w -buildid="}
 	if !config.Debug && goConfig.GOOS == WINDOWS {
 		ldflags[0] += " -H=windowsgui"
 	}
+	// Statically link Linux .so files to avoid glibc hell
+	if goConfig.GOOS == LINUX && goConfig.CC != "" && goConfig.CGO == "1" {
+		ldflags[0] += " -linkmode external -extldflags \"-static\""
+	}
 	// Keep those for potential later use
-	gcflags := fmt.Sprintf("")
-	asmflags := fmt.Sprintf("")
+	gcflags := ""
+	asmflags := ""
 	// trimpath is now a separate flag since Go 1.13
 	trimpath := "-trimpath"
 	_, err = gogo.GoBuild(*goConfig, pkgPath, dest, "c-shared", tags, ldflags, gcflags, asmflags, trimpath)
-	config.FileName = path.Base(dest)
-
-	err = ImplantBuildSave(name, config, dest)
 	if err != nil {
-		buildLog.Errorf("Failed to save build: %s", err)
+		return "", err
+	}
+	config.FileName = filepath.Base(dest)
+
+	if save {
+		err = ImplantBuildSave(name, config, dest)
+		if err != nil {
+			buildLog.Errorf("Failed to save build: %s", err)
+		}
 	}
 	return dest, err
 }
 
 // SliverExecutable - Generates a sliver executable binary
-func SliverExecutable(name string, config *models.ImplantConfig) (string, error) {
+func SliverExecutable(name string, otpSecret string, config *models.ImplantConfig, save bool) (string, error) {
 	// Compile go code
 	appDir := assets.GetRootAppDir()
 	cgo := "0"
@@ -361,27 +422,30 @@ func SliverExecutable(name string, config *models.ImplantConfig) (string, error)
 		GOROOT:     gogo.GetGoRootDir(appDir),
 		GOCACHE:    gogo.GetGoCache(appDir),
 		GOMODCACHE: gogo.GetGoModCache(appDir),
+		GOPROXY:    getGoProxy(),
+		HTTPPROXY:  getGoHttpProxy(),
+		HTTPSPROXY: getGoHttpsProxy(),
 
 		Obfuscation: config.ObfuscateSymbols,
-		GOPRIVATE:   GoPrivate,
+		GOGARBLE:    goPrivate(config),
 	}
 
-	pkgPath, err := renderSliverGoCode(name, config, goConfig)
+	pkgPath, err := renderSliverGoCode(name, otpSecret, config, goConfig)
 	if err != nil {
 		return "", err
 	}
 
-	dest := path.Join(goConfig.ProjectDir, "bin", path.Base(name))
+	dest := filepath.Join(goConfig.ProjectDir, "bin", filepath.Base(name))
 	if goConfig.GOOS == WINDOWS {
 		dest += ".exe"
 	}
-	tags := []string{"netgo"}
+	tags := []string{} // []string{"netgo"}
 	ldflags := []string{"-s -w -buildid="}
 	if !config.Debug && goConfig.GOOS == WINDOWS {
 		ldflags[0] += " -H=windowsgui"
 	}
-	gcflags := fmt.Sprintf("")
-	asmflags := fmt.Sprintf("")
+	gcflags := ""
+	asmflags := ""
 	if config.Debug {
 		gcflags = "all=-N -l"
 		ldflags = []string{}
@@ -392,187 +456,131 @@ func SliverExecutable(name string, config *models.ImplantConfig) (string, error)
 		trimpath = "-trimpath"
 	}
 	_, err = gogo.GoBuild(*goConfig, pkgPath, dest, "", tags, ldflags, gcflags, asmflags, trimpath)
-	config.FileName = path.Base(dest)
-
-	err = ImplantBuildSave(name, config, dest)
-
 	if err != nil {
-		buildLog.Errorf("Failed to save build: %s", err)
+		return "", err
+	}
+	config.FileName = filepath.Base(dest)
+	if save {
+		err = ImplantBuildSave(name, config, dest)
+		if err != nil {
+			buildLog.Errorf("Failed to save build: %s", err)
+		}
 	}
 	return dest, err
 }
 
 // This function is a little too long, we should probably refactor it as some point
-func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gogo.GoConfig) (string, error) {
-	var err error
+func renderSliverGoCode(name string, otpSecret string, config *models.ImplantConfig, goConfig *gogo.GoConfig) (string, error) {
 	target := fmt.Sprintf("%s/%s", config.GOOS, config.GOARCH)
-	if _, ok := gogo.ValidCompilerTargets[target]; !ok {
-		return "", fmt.Errorf("Invalid compiler target: %s", target)
+	if _, ok := gogo.ValidCompilerTargets(*goConfig)[target]; !ok {
+		return "", fmt.Errorf("invalid compiler target: %s", target)
+	}
+	if name == "" {
+		return "", fmt.Errorf("name cannot be empty")
 	}
 
-	buildLog.Infof("Generating new sliver binary '%s'", name)
-
-	config.MTLSc2Enabled = isC2Enabled([]string{"mtls"}, config.C2)
-	config.WGc2Enabled = isC2Enabled([]string{"wg"}, config.C2)
-	config.HTTPc2Enabled = isC2Enabled([]string{"http", "https"}, config.C2)
-	config.DNSc2Enabled = isC2Enabled([]string{"dns"}, config.C2)
-	config.NamePipec2Enabled = isC2Enabled([]string{"namedpipe"}, config.C2)
-	config.TCPPivotc2Enabled = isC2Enabled([]string{"tcppivot"}, config.C2)
+	buildLog.Debugf("Generating new sliver binary '%s'", name)
 
 	sliversDir := GetSliversDir() // ~/.sliver/slivers
-	projectGoPathDir := path.Join(sliversDir, config.GOOS, config.GOARCH, path.Base(name))
+	projectGoPathDir := filepath.Join(sliversDir, config.GOOS, config.GOARCH, filepath.Base(name))
 	if _, err := os.Stat(projectGoPathDir); os.IsNotExist(err) {
 		os.MkdirAll(projectGoPathDir, 0700)
 	}
-
 	goConfig.ProjectDir = projectGoPathDir
 
-	// Cert PEM encoded certificates
-	serverCACert, _, _ := certs.GetCertificateAuthorityPEM(certs.C2ServerCA)
-	sliverCert, sliverKey, err := certs.ImplantGenerateECCCertificate(name)
-	if err != nil {
-		return "", err
-	}
-	config.CACert = string(serverCACert)
-	config.Cert = string(sliverCert)
-	config.Key = string(sliverKey)
-
-	// Generate wg Keys as needed
-	if config.WGc2Enabled {
-		implantPrivKey, _, err := certs.ImplantGenerateWGKeys(config.WGPeerTunIP)
-		_, serverPubKey, err := certs.GetWGServerKeys()
-
-		if err != nil {
-			return "", fmt.Errorf("Failed to embed implant wg keys: %s", err)
-		} else {
-			config.WGImplantPrivKey = implantPrivKey
-			config.WGServerPubKey = serverPubKey
-		}
-	}
-
 	// binDir - ~/.sliver/slivers/<os>/<arch>/<name>/bin
-	binDir := path.Join(projectGoPathDir, "bin")
+	binDir := filepath.Join(projectGoPathDir, "bin")
 	os.MkdirAll(binDir, 0700)
 
 	// srcDir - ~/.sliver/slivers/<os>/<arch>/<name>/src
-	srcDir := path.Join(projectGoPathDir, "src")
-	assets.SetupGoPath(srcDir)            // Extract GOPATH dependency files
-	err = util.ChmodR(srcDir, 0600, 0700) // Ensures src code files are writable
+	srcDir := filepath.Join(projectGoPathDir, "src")
+	assets.SetupGoPath(srcDir)             // Extract GOPATH dependency files
+	err := util.ChmodR(srcDir, 0600, 0700) // Ensures src code files are writable
 	if err != nil {
 		buildLog.Errorf("fs perms: %v", err)
 		return "", err
 	}
 
-	sliverPkgDir := path.Join(srcDir, "github.com", "bishopfox", "sliver") // "main"
+	sliverPkgDir := filepath.Join(srcDir, "github.com", "bishopfox", "sliver") // "main"
 	err = os.MkdirAll(sliverPkgDir, 0700)
 	if err != nil {
 		return "", nil
 	}
 
-	// Load code template
-	renderFiles := srcFiles
-	_, isSupportedTarget := SupportedCompilerTargets[fmt.Sprintf("%s/%s", config.GOOS, config.GOARCH)]
-	if !isSupportedTarget {
-		buildLog.Warnf("Unsupported compiler target, using generic src files ...")
-		renderFiles = genericSrcFiles
-	}
-	for index, boxName := range renderFiles {
-
-		// Gobfuscate doesn't handle all the platform specific code
-		// well and the renamer can get confused when symbols for a
-		// different OS don't show up. So we just filter out anything
-		// we're not actually going to compile into the final binary
-		suffix := ".go"
-		if strings.Contains(boxName, "_") {
-			fileNameParts := strings.Split(boxName, "_")
-			suffix = "_" + fileNameParts[len(fileNameParts)-1]
-
-			// Test files get skipped
-			if strings.HasSuffix(boxName, "_test.go") {
-				buildLog.Infof("Skipping (test): %s", boxName)
-				continue
-			}
-
-			// We only include "_default.go" files for "unsupported" platforms i.e., not windows/darwin/linux
-			if suffix == DefaultSuffix && isSupportedTarget {
-				buildLog.Infof("Skipping default file (target is supported): %s", boxName)
-				continue
-			}
-
-			// Only include code for our target goos/goarch
-			if isSupportedTarget {
-				osSuffix := fmt.Sprintf("_%s.go", strings.ToLower(config.GOOS))
-				archSuffix := fmt.Sprintf("_%s.go", strings.ToLower(config.GOARCH))
-				if !strings.HasSuffix(boxName, osSuffix) && !strings.HasSuffix(boxName, archSuffix) {
-					buildLog.Infof("Skipping file wrong os/arch: %s", boxName)
-					continue
-				}
-			}
+	err = fs.WalkDir(implant.FS, ".", func(fsPath string, f fs.DirEntry, err error) error {
+		if f.IsDir() {
+			return nil
 		}
+		buildLog.Debugf("Walking: %s %s %v", fsPath, f.Name(), err)
 
-		sliverGoCodeRaw, err := implant.FS.ReadFile(path.Join("sliver", boxName))
+		sliverGoCodeRaw, err := implant.FS.ReadFile(fsPath)
 		if err != nil {
-			buildLog.Warnf("Failed to read %s: %s", boxName, err)
-			continue
+			buildLog.Errorf("Failed to read %s: %s", fsPath, err)
+			return nil
 		}
 		sliverGoCode := string(sliverGoCodeRaw)
 
-		// We need to correct for the "github.com/bishopfox/sliver/implant/sliver/foo" imports,
-		// since Go doesn't allow relative imports and "sliver" is a subdirectory of
-		// the main "sliver" repo we need to fake this when copying the code
-		// to our per-compile "GOPATH"
-		var sliverCodePath string
-		dirName := filepath.Dir(boxName)
-		var fileName string
 		// Skip dllmain files for anything non windows
-		if boxName == "sliver.h" || boxName == "sliver.c" {
+		if f.Name() == "sliver.c" || f.Name() == "sliver.h" {
 			if !config.IsSharedLib && !config.IsShellcode {
-				continue
+				return nil
 			}
-		}
-		if config.Debug || strings.HasSuffix(boxName, ".c") || strings.HasSuffix(boxName, ".h") {
-			fileName = filepath.Base(boxName)
-		} else {
-			fileName = fmt.Sprintf("s%d%s", index, suffix)
-		}
-		if dirName != "." {
-			// Add an extra "sliver" dir
-			dirPath := path.Join(sliverPkgDir, "implant", "sliver", dirName)
-			if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-				buildLog.Infof("[mkdir] %#v", dirPath)
-				err = os.MkdirAll(dirPath, 0700)
-				if err != nil {
-					return "", err
-				}
-			}
-			sliverCodePath = path.Join(dirPath, fileName)
-		} else {
-			sliverCodePath = path.Join(sliverPkgDir, fileName)
 		}
 
+		var sliverCodePath string
+		if f.Name() == "sliver.go" || f.Name() == "sliver.c" || f.Name() == "sliver.h" {
+			sliverCodePath = filepath.Join(sliverPkgDir, f.Name())
+		} else {
+			sliverCodePath = filepath.Join(sliverPkgDir, "implant", fsPath)
+		}
+		dirPath := filepath.Dir(sliverCodePath)
+		if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+			buildLog.Debugf("[mkdir] %#v", dirPath)
+			err = os.MkdirAll(dirPath, 0700)
+			if err != nil {
+				return err
+			}
+		}
 		fSliver, err := os.Create(sliverCodePath)
 		if err != nil {
-			return "", err
+			return err
 		}
 		buf := bytes.NewBuffer([]byte{})
-		buildLog.Infof("[render] %s -> %s", boxName, sliverCodePath)
+		buildLog.Debugf("[render] %s -> %s", f.Name(), sliverCodePath)
 
-		// Render code
-		sliverCodeTmpl := template.Must(template.New("sliver").Parse(sliverGoCode))
+		// --------------
+		// Render Code
+		// --------------
+		sliverCodeTmpl := template.New("sliver")
+		sliverCodeTmpl, err = sliverCodeTmpl.Funcs(template.FuncMap{
+			"GenerateUserAgent": func() string {
+				return configs.GetHTTPC2Config().GenerateUserAgent(config.GOOS, config.GOARCH)
+			},
+		}).Parse(sliverGoCode)
+		if err != nil {
+			buildLog.Errorf("Template parsing error %s", err)
+			return err
+		}
 		err = sliverCodeTmpl.Execute(buf, struct {
-			Name   string
-			Config *models.ImplantConfig
+			Name                string
+			Config              *models.ImplantConfig
+			OTPSecret           string
+			HTTPC2ImplantConfig *configs.HTTPC2ImplantConfig
 		}{
 			name,
 			config,
+			otpSecret,
+			configs.GetHTTPC2Config().RandomImplantConfig(),
 		})
 		if err != nil {
-			buildLog.Error(err)
-			return "", err
+			buildLog.Errorf("Template execution error %s", err)
+			return err
 		}
 
 		// Render canaries
-		buildLog.Infof("Canary domain(s): %v", config.CanaryDomains)
+		if len(config.CanaryDomains) > 0 {
+			buildLog.Debugf("Canary domain(s): %v", config.CanaryDomains)
+		}
 		canaryTmpl := template.New("canary").Delims("[[", "]]")
 		canaryGenerator := &CanaryGenerator{
 			ImplantName:   name,
@@ -582,65 +590,365 @@ func renderSliverGoCode(name string, config *models.ImplantConfig, goConfig *gog
 			"GenerateCanary": canaryGenerator.GenerateCanary,
 		}).Parse(buf.String())
 		if err != nil {
-			return "", err
+			return err
 		}
 		err = canaryTmpl.Execute(fSliver, canaryGenerator)
 
 		if err != nil {
-			buildLog.Infof("Failed to render go code: %s", err)
-			return "", err
+			buildLog.Debugf("Failed to render go code: %s", err)
+			return err
 		}
+		return nil
+	})
+	if err != nil {
+		return "", err
 	}
 
 	// Render GoMod
 	buildLog.Info("Rendering go.mod file ...")
-	goModPath := path.Join(sliverPkgDir, "go.mod")
-	err = ioutil.WriteFile(goModPath, []byte(implant.GoMod), 0600)
+	goModPath := filepath.Join(sliverPkgDir, "go.mod")
+	err = os.WriteFile(goModPath, []byte(implant.GoMod), 0600)
 	if err != nil {
 		return "", err
 	}
-	goSumPath := path.Join(sliverPkgDir, "go.sum")
-	err = ioutil.WriteFile(goSumPath, []byte(implant.GoSum), 0600)
+	goSumPath := filepath.Join(sliverPkgDir, "go.sum")
+	err = os.WriteFile(goSumPath, []byte(implant.GoSum), 0600)
 	if err != nil {
 		return "", err
 	}
-	buildLog.Infof("Created %s", goModPath)
-	output, err := gogo.GoMod((*goConfig), sliverPkgDir, []string{"tidy"})
-	if err != nil {
-		buildLog.Errorf("Go mod tidy failed:\n%s", output)
-		return "", err
-	}
+	// Render vendor dir
+	err = fs.WalkDir(implant.Vendor, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 
+		if d.IsDir() {
+			return os.MkdirAll(filepath.Join(sliverPkgDir, path), 0700)
+		}
+
+		contents, err := implant.Vendor.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		return os.WriteFile(filepath.Join(sliverPkgDir, path), contents, 0600)
+	})
 	if err != nil {
-		buildLog.Errorf("Failed to save sliver config %s", err)
+		buildLog.Errorf("Failed to copy vendor directory %v", err)
 		return "", err
 	}
+	buildLog.Debugf("Created %s", goModPath)
+
 	return sliverPkgDir, nil
 }
 
-func getCCompiler(arch string) string {
-	var found bool // meh, ugly
-	var compiler string
-	if arch == "amd64" {
-		compiler = os.Getenv(SliverCC64EnvVar)
+// GenerateConfig - Generate the keys/etc for the implant
+func GenerateConfig(name string, config *models.ImplantConfig, save bool) error {
+	var err error
+
+	config.MTLSc2Enabled = isC2Enabled([]string{"mtls"}, config.C2)
+	config.WGc2Enabled = isC2Enabled([]string{"wg"}, config.C2)
+	config.HTTPc2Enabled = isC2Enabled([]string{"http", "https"}, config.C2)
+	config.DNSc2Enabled = isC2Enabled([]string{"dns"}, config.C2)
+	config.NamePipec2Enabled = isC2Enabled([]string{"namedpipe"}, config.C2)
+	config.TCPPivotc2Enabled = isC2Enabled([]string{"tcppivot"}, config.C2)
+
+	// Cert PEM encoded certificates
+	serverCACert, _, _ := certs.GetCertificateAuthorityPEM(certs.MtlsServerCA)
+	sliverCert, sliverKey, err := certs.MtlsC2ImplantGenerateECCCertificate(name)
+	if err != nil {
+		return err
 	}
-	if arch == "386" {
-		compiler = os.Getenv(SliverCC32EnvVar)
+
+	// ECC keys
+	implantKeyPair, err := cryptography.RandomECCKeyPair()
+	if err != nil {
+		return err
 	}
-	if compiler == "" {
-		if _, ok := defaultMingwPath[runtime.GOOS]; ok {
-			if compiler, found = defaultMingwPath[runtime.GOOS][arch]; !found {
-				buildLog.Warnf("No default for arch %s on %s", arch, runtime.GOOS)
-			}
+	serverKeyPair := cryptography.ECCServerKeyPair()
+	digest := sha256.Sum256((*implantKeyPair.Public)[:])
+	config.ECCPublicKey = implantKeyPair.PublicBase64()
+	config.ECCPublicKeyDigest = hex.EncodeToString(digest[:])
+	config.ECCPrivateKey = implantKeyPair.PrivateBase64()
+	config.ECCPublicKeySignature = cryptography.MinisignServerSign(implantKeyPair.Public[:])
+	config.ECCServerPublicKey = serverKeyPair.PublicBase64()
+	config.MinisignServerPublicKey = cryptography.MinisignServerPublicKey()
+
+	// MTLS keys
+	if config.MTLSc2Enabled {
+		config.MtlsCACert = string(serverCACert)
+		config.MtlsCert = string(sliverCert)
+		config.MtlsKey = string(sliverKey)
+	}
+
+	// Generate wg Keys as needed
+	if config.WGc2Enabled {
+		implantPrivKey, _, err := certs.ImplantGenerateWGKeys(config.WGPeerTunIP)
+		if err != nil {
+			return err
+		}
+		_, serverPubKey, err := certs.GetWGServerKeys()
+		if err != nil {
+			return fmt.Errorf("failed to embed implant wg keys: %s", err)
+		}
+		config.WGImplantPrivKey = implantPrivKey
+		config.WGServerPubKey = serverPubKey
+	}
+
+	if save {
+		err = ImplantConfigSave(config)
+		if err != nil {
+			return err
 		}
 	}
-	if _, err := os.Stat(compiler); os.IsNotExist(err) {
-		buildLog.Warnf("CC path %v does not exist", compiler)
-		return ""
+	return nil
+}
+
+// Platform specific ENV VARS take precedence over generic
+func getCrossCompilersFromEnv(targetGoos string, targetGoarch string) (string, string) {
+	var cc string
+	var cxx string
+
+	TARGET_GOOS := strings.ToUpper(targetGoos)
+
+	// Get Defaults
+	if targetGoarch == "amd64" {
+		if os.Getenv(fmt.Sprintf(SliverPlatformCC64EnvVar, TARGET_GOOS)) != "" {
+			cc = os.Getenv(fmt.Sprintf(SliverPlatformCC64EnvVar, TARGET_GOOS))
+		}
+		if cc == "" {
+			cc = os.Getenv(SliverCC64EnvVar)
+		}
+		if os.Getenv(fmt.Sprintf(SliverPlatformCXX64EnvVar, TARGET_GOOS)) != "" {
+			cc = os.Getenv(fmt.Sprintf(SliverPlatformCXX64EnvVar, TARGET_GOOS))
+		}
+		if cxx == "" {
+			cxx = os.Getenv(SliverCXX64EnvVar)
+		}
 	}
-	if runtime.GOOS == "windows" {
-		compiler = "" // TODO: Add windows mingw support
+	if targetGoarch == "386" {
+		cc = os.Getenv(SliverCC32EnvVar)
+		if os.Getenv(fmt.Sprintf(SliverPlatformCC32EnvVar, TARGET_GOOS)) != "" {
+			cc = os.Getenv(fmt.Sprintf(SliverPlatformCC32EnvVar, TARGET_GOOS))
+		}
+		cxx = os.Getenv(SliverCXX64EnvVar)
+		if os.Getenv(fmt.Sprintf(SliverPlatformCXX32EnvVar, TARGET_GOOS)) != "" {
+			cc = os.Getenv(fmt.Sprintf(SliverPlatformCXX32EnvVar, TARGET_GOOS))
+		}
 	}
-	buildLog.Infof("CC = %v", compiler)
-	return compiler
+	return cc, cxx
+}
+
+func findCrossCompilers(targetGoos string, targetGoarch string) (string, string) {
+	var found bool
+
+	// Get CC and CXX from ENV
+	cc, cxx := getCrossCompilersFromEnv(targetGoos, targetGoarch)
+
+	// If no CC is set in ENV then look for default path(s), we need a CC
+	// but don't always need a CXX so we only WARN on a missing CXX
+	if cc == "" {
+		buildLog.Debugf("CC not found in ENV, using default paths")
+		if _, ok := defaultCCPaths[runtime.GOOS]; ok {
+			if cc, found = defaultCCPaths[runtime.GOOS][targetGoos][targetGoarch]; !found {
+				buildLog.Debugf("No default for %s/%s from %s", targetGoos, targetGoarch, runtime.GOOS)
+			}
+		} else {
+			buildLog.Debugf("No default paths for %s runtime", runtime.GOOS)
+		}
+	}
+
+	// Check to see if CC and CXX exist
+	if cc != "" {
+		if _, err := os.Stat(cc); os.IsNotExist(err) {
+			buildLog.Warnf("CC path '%s' does not exist", cc)
+		}
+	}
+	buildLog.Debugf(" CC = '%s'", cc)
+	if cxx != "" {
+		if _, err := os.Stat(cxx); os.IsNotExist(err) {
+			buildLog.Warnf("CXX path '%s' does not exist", cxx)
+		}
+	}
+	buildLog.Debugf("CXX = '%s'", cxx)
+	return cc, cxx
+}
+
+// GetCompilerTargets - This function attempts to determine what we can reasonably target
+func GetCompilerTargets() []*clientpb.CompilerTarget {
+	targets := []*clientpb.CompilerTarget{}
+
+	// EXE - Any server should be able to target EXEs of each platform
+	for longPlatform := range SupportedCompilerTargets {
+		platform := strings.SplitN(longPlatform, "/", 2)
+		targets = append(targets, &clientpb.CompilerTarget{
+			GOOS:   platform[0],
+			GOARCH: platform[1],
+			Format: clientpb.OutputFormat_EXECUTABLE,
+		})
+	}
+
+	// SHARED_LIB - Determine if we can probably build a dll/dylib/so
+	for longPlatform := range SupportedCompilerTargets {
+		platform := strings.SplitN(longPlatform, "/", 2)
+
+		// We can always build our own platform
+		if runtime.GOOS == platform[0] {
+			targets = append(targets, &clientpb.CompilerTarget{
+				GOOS:   platform[0],
+				GOARCH: platform[1],
+				Format: clientpb.OutputFormat_SHARED_LIB,
+			})
+			continue
+		}
+
+		// Cross-compile with the right configuration
+		if runtime.GOOS == LINUX || runtime.GOOS == DARWIN {
+			cc, _ := findCrossCompilers(platform[0], platform[1])
+			if cc != "" {
+				if runtime.GOOS == DARWIN && platform[0] == LINUX && platform[1] == "386" {
+					continue // Darwin can't target 32-bit Linux, even with a cc/cxx
+				}
+				targets = append(targets, &clientpb.CompilerTarget{
+					GOOS:   platform[0],
+					GOARCH: platform[1],
+					Format: clientpb.OutputFormat_SHARED_LIB,
+				})
+			}
+		}
+
+	}
+
+	// SERVICE - Can generate service executables for Windows targets only
+	for longPlatform := range SupportedCompilerTargets {
+		platform := strings.SplitN(longPlatform, "/", 2)
+		if platform[0] != WINDOWS {
+			continue
+		}
+
+		targets = append(targets, &clientpb.CompilerTarget{
+			GOOS:   platform[0],
+			GOARCH: platform[1],
+			Format: clientpb.OutputFormat_SERVICE,
+		})
+	}
+
+	// SHELLCODE - Can generate shellcode for Windows targets only
+	for longPlatform := range SupportedCompilerTargets {
+		platform := strings.SplitN(longPlatform, "/", 2)
+		if platform[0] != WINDOWS {
+			continue
+		}
+
+		targets = append(targets, &clientpb.CompilerTarget{
+			GOOS:   platform[0],
+			GOARCH: platform[1],
+			Format: clientpb.OutputFormat_SHELLCODE,
+		})
+	}
+
+	return targets
+}
+
+// GetCrossCompilers - Get information about the server's cross-compiler configuration
+func GetCrossCompilers() []*clientpb.CrossCompiler {
+	compilers := []*clientpb.CrossCompiler{}
+	for longPlatform := range SupportedCompilerTargets {
+		platform := strings.SplitN(longPlatform, "/", 2)
+		if runtime.GOOS == platform[0] {
+			continue
+		}
+		cc, cxx := findCrossCompilers(platform[0], platform[1])
+		if cc != "" {
+			compilers = append(compilers, &clientpb.CrossCompiler{
+				TargetGOOS:   platform[0],
+				TargetGOARCH: platform[1],
+				CCPath:       cc,
+				CXXPath:      cxx,
+			})
+		}
+	}
+	return compilers
+}
+
+// GetUnsupportedTargets - Get compiler targets that are not "supported" on this platform
+func GetUnsupportedTargets() []*clientpb.CompilerTarget {
+	appDir := assets.GetRootAppDir()
+	distList := gogo.GoToolDistList(gogo.GoConfig{
+		GOCACHE:    gogo.GetGoCache(appDir),
+		GOMODCACHE: gogo.GetGoModCache(appDir),
+		GOROOT:     gogo.GetGoRootDir(appDir),
+	})
+	targets := []*clientpb.CompilerTarget{}
+	for _, dist := range distList {
+		if _, ok := SupportedCompilerTargets[dist]; ok {
+			continue
+		}
+		parts := strings.SplitN(dist, "/", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		targets = append(targets, &clientpb.CompilerTarget{
+			GOOS:   parts[0],
+			GOARCH: parts[1],
+			Format: clientpb.OutputFormat_EXECUTABLE,
+		})
+	}
+	return targets
+}
+
+func getGoProxy() string {
+	serverConfig := configs.GetServerConfig()
+	if serverConfig.GoProxy != "" {
+		buildLog.Debugf("Using GOPROXY from server config = %s", serverConfig.GoProxy)
+		return serverConfig.GoProxy
+	}
+	value, present := os.LookupEnv("GOPROXY")
+	if present {
+		buildLog.Debugf("Using GOPROXY from env: %s", value)
+		return value
+	}
+	const defaultGoProxy = "off"
+	buildLog.Debugf("No GOPROXY setting found, default to %s", defaultGoProxy)
+	return defaultGoProxy
+}
+
+func getGoHttpProxy() string {
+	value, present := os.LookupEnv("HTTP_PROXY")
+	if present {
+		buildLog.Debugf("Using HTTP_PROXY from env: %s", value)
+		return value
+	}
+	buildLog.Debugf("No HTTP_PROXY found")
+	return ""
+}
+
+func getGoHttpsProxy() string {
+	value, present := os.LookupEnv("HTTPS_PROXY")
+	if present {
+		buildLog.Debugf("Using HTTPS_PROXY from env: %s", value)
+		return value
+	}
+	buildLog.Debugf("No HTTPS_PROXY found")
+	return ""
+}
+
+const (
+	// The wireguard garble bug appears to have been fixed.
+	// Updated the wgGoPrivate to "*"
+	// wgGoPrivate  = "*"
+	allGoPrivate = "*"
+)
+
+func goPrivate(config *models.ImplantConfig) string {
+	// for _, c2 := range config.C2 {
+	// 	uri, err := url.Parse(c2.URL)
+	// 	if err != nil {
+	// 		return wgGoPrivate
+	// 	}
+	// 	if uri.Scheme == "wg" {
+	// 		return wgGoPrivate
+	// 	}
+	// }
+	return allGoPrivate
 }

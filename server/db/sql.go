@@ -19,6 +19,7 @@ package db
 */
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/bishopfox/sliver/server/configs"
@@ -26,11 +27,7 @@ import (
 	"github.com/bishopfox/sliver/server/log"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-
-	// Always include SQLite
-	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
@@ -49,18 +46,28 @@ func newDBClient() *gorm.DB {
 		dbClient = postgresClient(dbConfig)
 	case configs.MySQL:
 		dbClient = mySQLClient(dbConfig)
+	default:
+		panic(fmt.Sprintf("Unknown DB Dialect: '%s'", dbConfig.Dialect))
 	}
 
 	err := dbClient.AutoMigrate(
+		&models.Beacon{},
+		&models.BeaconTask{},
 		&models.DNSCanary{},
 		&models.Certificate{},
-		&models.ImplantC2{},
-		&models.ImplantConfig{},
+		&models.Host{},
+		&models.IOC{},
+		&models.ExtensionData{},
 		&models.ImplantBuild{},
-		&models.CanaryDomain{},
 		&models.ImplantProfile{},
-		&models.WebContent{},
+		&models.ImplantConfig{},
+		&models.ImplantC2{},
+		&models.KeyValue{},
+		&models.CanaryDomain{},
+		&models.Loot{},
+		&models.Operator{},
 		&models.Website{},
+		&models.WebContent{},
 		&models.WGKeys{},
 		&models.WGPeer{},
 	)
@@ -86,29 +93,11 @@ func newDBClient() *gorm.DB {
 	return dbClient
 }
 
-func sqliteClient(dbConfig *configs.DatabaseConfig) *gorm.DB {
-	dsn, err := dbConfig.DSN()
-	if err != nil {
-		panic(err)
-	}
-	clientLog.Infof("sqlite -> %s", dsn)
-
-	dbClient, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
-		PrepareStmt: true,
-		Logger:      getGormLogger(dbConfig),
-	})
-	if err != nil {
-		panic(err)
-	}
-	return dbClient
-}
-
 func postgresClient(dbConfig *configs.DatabaseConfig) *gorm.DB {
 	dsn, err := dbConfig.DSN()
 	if err != nil {
 		panic(err)
 	}
-	clientLog.Infof("postgres -> %s", dsn)
 	dbClient, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		PrepareStmt: true,
 		Logger:      getGormLogger(dbConfig),
@@ -124,7 +113,6 @@ func mySQLClient(dbConfig *configs.DatabaseConfig) *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-	clientLog.Infof("mysql -> %s", dsn)
 	dbClient, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		PrepareStmt: true,
 		Logger:      getGormLogger(dbConfig),

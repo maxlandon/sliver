@@ -10,6 +10,7 @@ import (
 	"github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/configs"
+	"github.com/bishopfox/sliver/server/cryptography"
 	"github.com/bishopfox/sliver/server/daemon"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +37,7 @@ var daemonCmd = &cobra.Command{
 		}
 
 		appDir := assets.GetRootAppDir()
-		logFile := initLogging(appDir)
+		logFile := initConsoleLogging(appDir)
 		defer logFile.Close()
 
 		defer func() {
@@ -50,6 +51,9 @@ var daemonCmd = &cobra.Command{
 		assets.Setup(force, false)
 		certs.SetupCAs()
 		certs.SetupWGKeys()
+		cryptography.ECCServerKeyPair()
+		cryptography.TOTPServerSecret()
+		cryptography.MinisignServerPrivateKey()
 
 		serverConfig := configs.GetServerConfig()
 		c2.StartPersistentJobs(serverConfig)

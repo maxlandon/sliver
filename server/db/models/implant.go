@@ -28,12 +28,19 @@ import (
 
 // ImplantBuild - Represents an implant
 type ImplantBuild struct {
-	// gorm.Model
-
 	ID        uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	CreatedAt time.Time `gorm:"->;<-:create;"`
 
 	Name string `gorm:"unique;"`
+
+	// Checksums stores of the implant binary
+	MD5    string
+	SHA1   string
+	SHA256 string
+
+	// Burned indicates whether the implant
+	// has been seen on threat intel platforms
+	Burned bool
 
 	ImplantConfig ImplantConfig
 }
@@ -50,8 +57,6 @@ func (ib *ImplantBuild) BeforeCreate(tx *gorm.DB) (err error) {
 
 // ImplantConfig - An implant build configuration
 type ImplantConfig struct {
-	// gorm.Model
-
 	ID               uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	ImplantBuildID   uuid.UUID
 	ImplantProfileID uuid.UUID
@@ -62,18 +67,34 @@ type ImplantConfig struct {
 	GOOS   string
 	GOARCH string
 
-	// Standard
-	// Name                string
-	CACert              string
-	Cert                string
-	Key                 string
+	TemplateName string
+
+	IsBeacon       bool
+	BeaconInterval int64
+	BeaconJitter   int64
+
+	// ECC
+	ECCPublicKey            string
+	ECCPublicKeyDigest      string
+	ECCPrivateKey           string
+	ECCPublicKeySignature   string
+	ECCServerPublicKey      string
+	MinisignServerPublicKey string
+
+	// MTLS
+	MtlsCACert string
+	MtlsCert   string
+	MtlsKey    string
+
 	Debug               bool
+	DebugFile           string
 	Evasion             bool
 	ObfuscateSymbols    bool
-	ReconnectInterval   uint32
-	PollInterval        uint32
+	ReconnectInterval   int64
 	MaxConnectionErrors uint32
+	ConnectionStrategy  string
 
+	// WireGuard
 	WGImplantPrivKey  string
 	WGServerPubKey    string
 	WGPeerTunIP       string
@@ -97,14 +118,17 @@ type ImplantConfig struct {
 	LimitUsername     string
 	LimitDatetime     string
 	LimitFileExists   string
+	LimitLocale       string
 
 	// Output Format
-	Format clientpb.ImplantConfig_OutputFormat
+	Format clientpb.OutputFormat
 
 	// For 	IsSharedLib bool
 	IsSharedLib bool
 	IsService   bool
 	IsShellcode bool
+
+	RunAtLoad bool
 
 	FileName string
 }
@@ -122,25 +146,37 @@ func (ic *ImplantConfig) BeforeCreate(tx *gorm.DB) (err error) {
 // ToProtobuf - Convert ImplantConfig to protobuf equiv
 func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 	config := &clientpb.ImplantConfig{
-		GOOS:   ic.GOOS,
-		GOARCH: ic.GOARCH,
+		ID: ic.ID.String(),
 
-		CACert:           ic.CACert,
-		Cert:             ic.Cert,
-		Key:              ic.Key,
+		IsBeacon:       ic.IsBeacon,
+		BeaconInterval: ic.BeaconInterval,
+		BeaconJitter:   ic.BeaconJitter,
+
+		GOOS:               ic.GOOS,
+		GOARCH:             ic.GOARCH,
+		ECCServerPublicKey: ic.ECCServerPublicKey,
+		ECCPublicKey:       ic.ECCPublicKey,
+		ECCPrivateKey:      ic.ECCPrivateKey,
+		MtlsCACert:         ic.MtlsCACert,
+		MtlsCert:           ic.MtlsCert,
+		MtlsKey:            ic.MtlsKey,
+
 		Debug:            ic.Debug,
+		DebugFile:        ic.DebugFile,
 		Evasion:          ic.Evasion,
 		ObfuscateSymbols: ic.ObfuscateSymbols,
+		TemplateName:     ic.TemplateName,
 
 		ReconnectInterval:   ic.ReconnectInterval,
-		PollInterval:        ic.PollInterval,
 		MaxConnectionErrors: ic.MaxConnectionErrors,
+		ConnectionStrategy:  ic.ConnectionStrategy,
 
 		LimitDatetime:     ic.LimitDatetime,
 		LimitDomainJoined: ic.LimitDomainJoined,
 		LimitHostname:     ic.LimitHostname,
 		LimitUsername:     ic.LimitUsername,
 		LimitFileExists:   ic.LimitFileExists,
+		LimitLocale:       ic.LimitLocale,
 
 		IsSharedLib:       ic.IsSharedLib,
 		IsService:         ic.IsService,
@@ -154,7 +190,6 @@ func (ic *ImplantConfig) ToProtobuf() *clientpb.ImplantConfig {
 
 		FileName: ic.FileName,
 	}
-
 	// Copy Canary Domains
 	config.CanaryDomains = []string{}
 	for _, canaryDomain := range ic.CanaryDomains {

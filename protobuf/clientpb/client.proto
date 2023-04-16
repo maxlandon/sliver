@@ -21,7 +21,7 @@ message Version {
 
 // [ Core ] ----------------------------------------
 message Session {
-  uint32 ID = 1;
+  string ID = 1;
   string Name = 2;
   string Hostname = 3;
   string UUID = 4;
@@ -34,14 +34,74 @@ message Session {
   string RemoteAddress = 11;
   int32 PID = 12;
   string Filename = 13; // Argv[0]
-  string LastCheckin = 14;
+  int64 LastCheckin = 14;
   string ActiveC2 = 15;
   string Version = 16;
   bool Evasion = 17;
   bool IsDead = 18;
-  uint32 ReconnectInterval = 19;
+  int64 ReconnectInterval = 19;
   string ProxyURL = 20;
-  uint32 PollInterval = 21;
+  bool Burned = 22;
+  repeated string Extensions = 23;
+  // string ConfigID = 24;
+  int64 PeerID = 25;
+  string Locale = 26;
+  int64 FirstContact = 27;
+}
+
+message Beacon {
+  string ID = 1;
+  string Name = 2;
+  string Hostname = 3;
+  string UUID = 4;
+  string Username = 5;
+  string UID = 6;
+  string GID = 7;
+  string OS = 8;
+  string Arch = 9;
+  string Transport = 10;
+  string RemoteAddress = 11;
+  int32 PID = 12;
+  string Filename = 13; // Argv[0]
+  int64 LastCheckin = 14;
+  string ActiveC2 = 15;
+  string Version = 16;
+  bool Evasion = 17;
+  bool IsDead = 18;
+
+  string ProxyURL = 20;
+  int64 ReconnectInterval = 21;
+  int64 Interval = 22;
+  int64 Jitter = 23;
+  bool Burned = 24;
+  int64 NextCheckin = 25;
+
+  int64 TasksCount = 26;
+  int64 TasksCountCompleted = 27;
+
+  string Locale = 28;
+  int64 FirstContact = 29;
+}
+
+message Beacons {
+  repeated Beacon Beacons = 2;
+}
+
+message BeaconTask {
+  string ID = 1;
+  string BeaconID = 2;
+  int64 CreatedAt = 3;
+  string State = 4;
+  int64 SentAt  = 5;
+  int64 CompletedAt = 6;
+  bytes Request = 7;
+  bytes Response = 8;
+  string Description = 9;
+}
+
+message BeaconTasks {
+  string BeaconID = 1;
+  repeated BeaconTask Tasks = 2;
 }
 
 message ImplantC2 {
@@ -50,54 +110,106 @@ message ImplantC2 {
   string Options = 3; // Protocol specific options
 }
 
+enum OutputFormat {
+  SHARED_LIB = 0;
+  SHELLCODE = 1;
+  EXECUTABLE = 2;
+  SERVICE = 3;
+  THIRD_PARTY = 4;
+}
+
 message ImplantConfig {
-  string GOOS = 1;
-  string GOARCH = 2;
-  string Name = 3;
-  string CACert = 4;
-  string Cert = 5;
-  string Key = 6;
-  bool Debug = 7;
-  bool Evasion = 31;
-  bool ObfuscateSymbols = 30;
+  string ID = 1;
+  bool IsBeacon = 2;
+  int64 BeaconInterval = 3;
+  int64 BeaconJitter = 4;
 
-  string WGImplantPrivKey = 33;
-  string WGServerPubKey = 34;
-  string WGPeerTunIP = 35;
-  uint32 WGKeyExchangePort = 36;
-  uint32 WGTcpCommsPort = 37;
+  string GOOS = 5;
+  string GOARCH = 6;
+  string Name = 7;
 
-  uint32 ReconnectInterval = 8;
-  uint32 MaxConnectionErrors = 9;
-  uint32 PollInterval = 38;
+  bool Debug = 8;
+  bool Evasion = 9;
+  bool ObfuscateSymbols = 10;
+  string TemplateName = 11;
+
+  string MtlsCACert = 20;
+  string MtlsCert = 21;
+  string MtlsKey = 22;
+
+  string ECCServerPublicKey = 23;
+  string ECCPublicKey = 24;
+  string ECCPrivateKey = 25;
+  string ECCPublicKeySignature = 26;
+  string MinisignServerPublicKey = 27;
+
+  string WGImplantPrivKey = 30;
+  string WGServerPubKey = 31;
+  string WGPeerTunIP = 32;
+  uint32 WGKeyExchangePort = 33;
+  uint32 WGTcpCommsPort = 34;
+
+  int64 ReconnectInterval = 40;
+  uint32 MaxConnectionErrors = 41;
+  int64 PollTimeout = 42;
 
   // c2
-  repeated ImplantC2 C2 = 10;
-  repeated string CanaryDomains = 11;
+  repeated ImplantC2 C2 = 50;
+  repeated string CanaryDomains = 51;
+  string ConnectionStrategy = 52;
 
-  bool LimitDomainJoined = 20;
-  string LimitDatetime = 21;
-  string LimitHostname = 22;
-  string LimitUsername = 23;
-  string LimitFileExists = 32;
+  bool LimitDomainJoined = 60;
+  string LimitDatetime = 61;
+  string LimitHostname = 62;
+  string LimitUsername = 63;
+  string LimitFileExists = 64;
+  string LimitLocale = 65;
 
-  enum OutputFormat {
-    SHARED_LIB = 0;
-    SHELLCODE = 1;
-    EXECUTABLE = 2;
-    SERVICE = 3;
-  }
-  OutputFormat Format = 25;
-  bool IsSharedLib = 26;
+  OutputFormat Format = 100;
+  bool IsSharedLib = 101;
+  string FileName = 102;
+  bool IsService = 103;
+  bool IsShellcode = 104;
 
-  string FileName = 27;
-  bool IsService = 28;
-  bool IsShellcode = 29;
+  bool RunAtLoad = 105;
+  string DebugFile = 106;
+}
+
+message ExternalImplantConfig {
+  ImplantConfig Config = 1;
+  string OTPSecret = 2;
+}
+
+message ExternalImplantBinary {
+  string Name = 1;
+  string ImplantConfigID = 2;
+  commonpb.File File = 3;
 }
 
 // Configs of previously built implants
 message ImplantBuilds {
   map<string, ImplantConfig> Configs = 1;
+}
+
+message CompilerTarget {
+  string GOOS = 1;  // The server's OS
+  string GOARCH = 2;  // The server's Arch
+  OutputFormat Format = 3;
+}
+
+message CrossCompiler {
+  string TargetGOOS = 1;  // The server's OS
+  string TargetGOARCH = 2;  // The server's Arch
+  string CCPath = 3;
+  string CXXPath = 4;
+}
+
+message Compiler {
+  string GOOS = 1;  // The server's OS
+  string GOARCH = 2;  // The server's Arch
+  repeated CompilerTarget Targets = 3;
+  repeated CrossCompiler CrossCompilers = 4;
+  repeated CompilerTarget UnsupportedTargets = 5;
 }
 
 message DeleteReq {
@@ -173,6 +285,7 @@ message MTLSListener {
 }
 
 message WGListenerReq {
+  string Host = 6;
   uint32 Port = 1;
   string TunIP = 2;
   uint32 NPort = 3;
@@ -190,6 +303,7 @@ message DNSListenerReq {
   string Host = 3;
   uint32 Port = 4;
   bool Persistent = 5;
+  bool EnforceOTP = 6; 
 }
 
 message DNSListener {
@@ -206,6 +320,10 @@ message HTTPListenerReq {
   bytes Key = 7;
   bool ACME = 8;
   bool Persistent = 9;
+  bool EnforceOTP = 10;
+  int64 LongPollTimeout = 11;
+  int64 LongPollJitter = 12;
+  bool RandomizeJARM = 13; // Only valid with Secure = true
 }
 
 // Named Pipes Messages for pivoting
@@ -245,11 +363,10 @@ message Sessions {
   repeated Session Sessions = 1;
 }
 
-message UpdateSession {
-  uint32 SessionID = 1;
-  string Name = 2;
-  int32 ReconnectInterval = 3;
-  int32 PollInterval = 4;
+message RenameReq {
+  string SessionID = 1;
+  string BeaconID = 2;
+  string Name = 3;
 }
 
 message GenerateReq {
@@ -282,9 +399,9 @@ message MSFRemoteReq {
 }
 
 enum StageProtocol {
-    TCP = 0;
-    HTTP = 1;
-    HTTPS = 2;
+  TCP = 0;
+  HTTP = 1;
+  HTTPS = 2;
 }
 
 message StagerListenerReq {
@@ -339,10 +456,10 @@ message GetSystemReq {
 message MigrateReq {
   uint32 Pid = 1;
   ImplantConfig Config = 2;
+  ShellcodeEncoder Encoder = 3;
 
   commonpb.Request Request = 9;
 }
-
 
 // [ Tunnels ] ----------------------------------------
 message CreateTunnelReq {
@@ -362,7 +479,19 @@ message CloseTunnelReq {
   commonpb.Request Request = 9;
 }
 
-// [ events ] ----------------------------------------
+// [ Pivots ] ----------------------------------------
+message PivotGraphEntry {
+  int64 PeerID = 1;
+  Session Session = 2;
+  string Name = 3;
+  repeated PivotGraphEntry Children = 4;
+}
+
+message PivotGraph {
+  repeated PivotGraphEntry Children = 1;
+}
+
+// [ Events ] ----------------------------------------
 message Client {
   uint32 ID = 1;
   string Name = 2;
@@ -389,7 +518,7 @@ message Operator {
   string Name = 2;
 }
 
-// [ websites ] ----------------------------------------
+// [ Websites ] ----------------------------------------
 message WebContent {
   string Path = 1;
   string ContentType = 2;
@@ -418,11 +547,148 @@ message Websites {
 }
 
 
-// [Wireguard]
+// [ Wireguard ] ----------------------------------------
 
 message WGClientConfig {
   string ServerPubKey = 1;
   string ClientPrivateKey = 2;
   string ClientPubKey = 3;
   string ClientIP = 4;
+}
+
+
+// [ Loot ] ----------------------------------------
+enum LootType {
+  LOOT_FILE = 0;
+  LOOT_CREDENTIAL = 1;
+}
+
+enum CredentialType {
+  NO_CREDENTIAL = 0;
+  USER_PASSWORD = 1;
+  API_KEY = 2;
+  FILE = 3;
+}
+
+enum FileType {
+  NO_FILE = 0;
+  BINARY = 1;
+  TEXT = 2;
+}
+
+message Credential {
+  
+  // USER_PASSWORD
+  string User = 2;
+  string Password = 3;
+
+  // API_KEY
+  string APIKey = 4;
+}
+
+message Loot {
+  LootType Type = 1;
+
+  string LootID = 2;
+  string Name = 3;
+
+  CredentialType CredentialType = 4;
+  Credential Credential = 5;
+  FileType FileType = 6;
+
+  commonpb.File File = 9;
+}
+
+message AllLoot {
+  repeated Loot Loot = 1;
+}
+
+// [ Hosts ] ----------------------------------------
+message IOC {
+  string Path = 1;
+  string FileHash = 2;
+  string ID = 3;
+}
+
+message ExtensionData {
+  string Output = 1;
+}
+
+message Host {
+  string Hostname = 1;
+  string HostUUID = 2;
+  string OSVersion = 3;
+
+  repeated IOC IOCs = 4;
+  map<string, ExtensionData> ExtensionData = 5;
+
+  string Locale = 6;
+  int64 FirstContact = 7;
+}
+
+message AllHosts {
+  repeated Host Hosts = 1;
+}
+
+// [ Dll Hijack ] ----------------------------------------
+message DllHijackReq {
+  string ReferenceDLLPath = 1;
+  string TargetLocation = 2;
+  bytes ReferenceDLL = 3;
+  bytes TargetDLL = 4;
+  string ProfileName = 5;
+
+  commonpb.Request Request = 9;
+}
+
+message DllHijack {
+  commonpb.Response Response = 9;
+}
+
+
+// [ Shellcode ] ----------------------------------------
+enum ShellcodeEncoder {
+  NONE = 0;
+  SHIKATA_GA_NAI = 1;
+}
+
+message ShellcodeEncodeReq {
+  ShellcodeEncoder Encoder = 1;
+  string Architecture = 2;
+  uint32 Iterations = 3;
+  bytes BadChars = 4;
+
+  bytes Data = 8;
+  commonpb.Request Request = 9;
+}
+
+message ShellcodeEncode {
+
+  bytes Data = 8;
+  commonpb.Response Response = 9;
+}
+
+message ShellcodeEncoderMap {
+  map<string, ShellcodeEncoder> Encoders = 1;
+}
+
+// [ Builder ] ----------------------------------------
+message ExternalGenerateReq {
+  ImplantConfig Config = 1;
+  string BuilderName = 2;
+}
+
+
+message Builders {
+  repeated Builder Builders = 1;
+}
+
+message Builder {
+  string Name = 1;
+  string OperatorName = 2;
+  string GOOS = 3;  // The builder's OS
+  string GOARCH = 4;  // The builder's Arch
+  repeated string Templates = 5;
+  repeated CompilerTarget Targets = 6;
+  repeated CrossCompiler CrossCompilers = 7;
 }

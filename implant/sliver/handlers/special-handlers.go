@@ -1,4 +1,4 @@
-// +build windows linux darwin
+//go:build !windows
 
 package handlers
 
@@ -22,19 +22,16 @@ package handlers
 
 import (
 	"os"
+	"time"
 
 	"github.com/bishopfox/sliver/implant/sliver/transports"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	// {{if or .Config.IsSharedLib .Config.IsShellcode}}
-	// {{if eq .Config.GOOS "windows"}}
-	"runtime"
-	"syscall"
-
-	// {{end}}
+	// {{if .Config.Debug}}
+	"log"
 	// {{end}}
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 var specialHandlers = map[uint32]SpecialHandler{
@@ -46,37 +43,21 @@ func GetSpecialHandlers() map[uint32]SpecialHandler {
 	return specialHandlers
 }
 
-func killHandler(data []byte, connection *transports.Connection) error {
-	killReq := &sliverpb.KillSessionReq{}
+func killHandler(data []byte, _ *transports.Connection) error {
+	killReq := &sliverpb.KillReq{}
 	err := proto.Unmarshal(data, killReq)
 	// {{if .Config.Debug}}
-	println("KILL called")
+	log.Println("KILL called")
 	// {{end}}
 	if err != nil {
 		return err
 	}
-	// {{if eq .Config.GOOS "windows"}}
-	// {{if or .Config.IsSharedLib .Config.IsShellcode}}
-	if runtime.GOOS == "windows" {
-		// Windows only: ExitThread() instead of os.Exit() for DLL/shellcode slivers
-		// so that the parent process is not killed
-		var exitFunc *syscall.Proc
-		if killReq.Force {
-			exitFunc = syscall.MustLoadDLL("kernel32.dll").MustFindProc("ExitProcess")
-		} else {
-			exitFunc = syscall.MustLoadDLL("kernel32.dll").MustFindProc("ExitThread")
-		}
-		exitFunc.Call(uintptr(0))
-		return nil
-	}
-	// {{else}}
-	// {{end}}
-	// {{end}}
-	// Cleanup connection
-	connection.Cleanup()
 	// {{if .Config.Debug}}
-	println("Let's exit!")
+	log.Println("Let's exit!")
 	// {{end}}
-	os.Exit(0)
+	go func() {
+		time.Sleep(time.Second)
+		os.Exit(0)
+	}()
 	return nil
 }

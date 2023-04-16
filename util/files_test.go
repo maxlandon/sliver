@@ -20,10 +20,11 @@ package util
 
 import (
 	"crypto/rand"
+	insecureRand "math/rand"
 )
 
-func randomData() []byte {
-	buf := make([]byte, 128)
+func randomDataRandomSize(maxSize int) []byte {
+	buf := make([]byte, insecureRand.Intn(maxSize))
 	rand.Read(buf)
 	return buf
 }

@@ -1,4 +1,4 @@
-// +build linux
+//go:build linux
 
 package hostuuid
 
@@ -22,20 +22,19 @@ package hostuuid
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 )
 
+// GetUUID - Get a system specific UUID
 func GetUUID() string {
-	uuid, err := ioutil.ReadFile("/etc/machine-id")
+	uuid, err := os.ReadFile("/etc/machine-id")
 	// UUID length is 32 plus newline
-	if (err != nil) || (len(uuid) != 33) {
-		uuid, err = ioutil.ReadFile("/var/lib/dbus/machine-id")
-		if (err != nil) || (len(uuid) != 33) {
-			// Randomized on the server
-			return ""
+	if err != nil || len(uuid) != 33 {
+		uuid, err = os.ReadFile("/var/lib/dbus/machine-id")
+		if err != nil || len(uuid) != 33 {
+			return UUIDFromMAC() // Failed, try to use MAC addresses
 		}
 	}
-
 	return fmt.Sprintf("%s-%s-%s-%s-%s",
 		uuid[0:8],
 		uuid[8:12], uuid[12:16], uuid[16:20],

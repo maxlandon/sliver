@@ -16,11 +16,13 @@ import (
 // UnixProcess is an implementation of Process
 // that contains Unix-specific fields and information.
 type UnixProcess struct {
-	pid   int
-	ppid  int
-	state rune
-	pgrp  int
-	sid   int
+	pid     int
+	ppid    int
+	state   rune
+	pgrp    int
+	sid     int
+	arch    string
+	cmdLine []string
 
 	binary string
 	owner  string
@@ -44,6 +46,14 @@ func (p *UnixProcess) Executable() string {
 // Owner returns the username the process belongs to
 func (p *UnixProcess) Owner() string {
 	return p.owner
+}
+
+func (p *UnixProcess) CmdLine() []string {
+	return p.cmdLine
+}
+
+func (p *UnixProcess) Architecture() string {
+	return p.arch
 }
 
 func getProcessOwnerUid(pid int) (uint32, error) {
@@ -72,6 +82,48 @@ func getProcessOwner(pid int) (string, error) {
 		return fmt.Sprintf("%d", uid), nil
 	}
 	return usr.Username, err
+}
+
+func getProcessCmdLine(pid int) ([]string, error) {
+	cmdLinePath := fmt.Sprintf("/proc/%d/cmdline", pid)
+	data, err := ioutil.ReadFile(cmdLinePath)
+	if err != nil {
+		return []string{""}, err
+	}
+	argv := strings.Split(string(data), "\x00")
+	return argv, nil
+}
+
+func getProcessArchitecture(pid int) (string, error) {
+	exePath := fmt.Sprintf("/proc/%d/exe", pid)
+
+	f, err := os.Open(exePath)
+	if err != nil {
+		return "", err
+	}
+	_, err = f.Seek(0x12, 0)
+	if err != nil {
+		return "", err
+	}
+	mach := make([]byte, 2)
+	n, err := io.ReadAtLeast(f, mach, 2)
+
+	f.Close()
+
+	if err != nil || n < 2 {
+		return "", nil
+	}
+
+	if mach[0] == 0xb3 {
+		return "aarch64", nil
+	}
+	if mach[0] == 0x03 {
+		return "x86", nil
+	}
+	if mach[0] == 0x3e {
+		return "x86_64", nil
+	}
+	return "", err
 }
 
 // Refresh reloads all the data associated with this process.
@@ -154,6 +206,14 @@ func processes() ([]Process, error) {
 			if err != nil {
 				continue
 			}
+			argv, err := getProcessCmdLine(int(pid))
+			if err == nil {
+				p.cmdLine = argv
+				if argv[0] != "" && len(argv[0]) > 0 {
+					p.binary = argv[0]
+				}
+			}
+			p.arch, err = getProcessArchitecture(int(pid))
 			results = append(results, p)
 		}
 	}

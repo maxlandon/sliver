@@ -64,7 +64,7 @@ func StartClientListener(host string, port uint16) (*grpc.Server, net.Listener, 
 		grpc.MaxRecvMsgSize(ServerMaxMessageSize),
 		grpc.MaxSendMsgSize(ServerMaxMessageSize),
 	}
-	options = append(options, initLoggerMiddleware()...)
+	options = append(options, initMiddleware(true)...)
 	grpcServer := grpc.NewServer(options...)
 	rpcpb.RegisterSliverRPCServer(grpcServer, rpc.NewServer())
 	go func() {
@@ -86,7 +86,6 @@ func StartClientListener(host string, port uint16) (*grpc.Server, net.Listener, 
 // getOperatorServerTLSConfig - Generate the TLS configuration, we do now allow the end user
 // to specify any TLS paramters, we choose sensible defaults instead
 func getOperatorServerTLSConfig(host string) *tls.Config {
-
 	caCertPtr, _, err := certs.GetCertificateAuthority(certs.OperatorCA)
 	if err != nil {
 		mtlsLog.Fatalf("Invalid ca type (%s): %v", certs.OperatorCA, host)
@@ -117,6 +116,10 @@ func getOperatorServerTLSConfig(host string) *tls.Config {
 		PreferServerCipherSuites: true,
 		MinVersion:               tls.VersionTLS13,
 	}
+	if certs.TLSKeyLogger != nil {
+		tlsConfig.KeyLogWriter = certs.TLSKeyLogger
+	}
+
 	tlsConfig.BuildNameToCertificate()
 	return tlsConfig
 }

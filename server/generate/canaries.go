@@ -22,7 +22,6 @@ import (
 	"fmt"
 	insecureRand "math/rand"
 	"strings"
-	"time"
 
 	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/db/models"
@@ -73,13 +72,10 @@ func (g *CanaryGenerator) GenerateCanary() string {
 	}
 
 	// Don't need secure random here
-	insecureRand.Seed(time.Now().UnixNano())
 	index := insecureRand.Intn(len(g.ParentDomains))
 
 	parentDomain := g.ParentDomains[index]
-	if strings.HasPrefix(parentDomain, ".") {
-		parentDomain = parentDomain[1:]
-	}
+	parentDomain = strings.TrimPrefix(parentDomain, ".")
 	if !strings.HasSuffix(parentDomain, ".") {
 		parentDomain += "." // Ensure we have the FQDN
 	}

@@ -55,8 +55,8 @@ type Command struct {
 	// Define all command flags within this function.
 	Flags func(f *Flags)
 
-	// Define if the command is allowed to get arguments.
-	AllowArgs bool
+	// Define all command arguments within this function.
+	Args func(a *Args)
 
 	// Function to execute for the command.
 	Run func(c *Context) error
@@ -67,9 +67,11 @@ type Command struct {
 	// A non-nil Completer overrides the default behaviour.
 	Completer func(prefix string, args []string) []string
 
-	parent   *Command
-	flags    Flags
-	commands Commands
+	parent    *Command
+	flags     Flags
+	args      Args
+	commands  Commands
+	isBuiltin bool // Whenever this is a build-in command not added by the user.
 }
 
 func (c *Command) validate() error {
@@ -83,7 +85,7 @@ func (c *Command) validate() error {
 	return nil
 }
 
-func (c *Command) registerFlags(addHelpFlag bool) {
+func (c *Command) registerFlagsAndArgs(addHelpFlag bool) {
 	if addHelpFlag {
 		// Add default help command.
 		c.flags.Bool("h", "help", false, "display help")
@@ -91,6 +93,9 @@ func (c *Command) registerFlags(addHelpFlag bool) {
 
 	if c.Flags != nil {
 		c.Flags(&c.flags)
+	}
+	if c.Args != nil {
+		c.Args(&c.args)
 	}
 }
 
@@ -108,7 +113,7 @@ func (c *Command) AddCommand(cmd *Command) {
 	}
 
 	cmd.parent = c
-	cmd.registerFlags(true)
+	cmd.registerFlagsAndArgs(true)
 
 	c.commands.Add(cmd)
 }

@@ -20,16 +20,26 @@ package constants
 
 // Meta
 const (
+	// KeepAliveStr - Keep alive constant
 	KeepAliveStr = "keepalive"
+)
+
+const (
+	// LastUpdateCheckFileName - Last update check file name
+	LastUpdateCheckFileName = "last_update_check"
 )
 
 // Events
 const (
-	UpdateStr  = "update"
+	// UpdateStr - "update"
+	UpdateStr = "update"
+	// VersionStr - "version"
 	VersionStr = "version"
 
+	// EventStr - "event"
 	EventStr = "event"
 
+	// ServersStr - "server-error"
 	ServerErrorStr = "server-error"
 
 	// ConnectedEvent - Sliver Connected
@@ -47,6 +57,9 @@ const (
 	// CanaryEvent - A DNS canary was triggered
 	CanaryEvent = "canary"
 
+	// WatchtowerEvent - An implant hash has been identified on a threat intel platform
+	WatchtowerEvent = "watchtower"
+
 	// StartedEvent - Job was started
 	JobStartedEvent = "job-started"
 	// StoppedEvent - Job was stopped
@@ -63,30 +76,80 @@ const (
 
 	// WebsiteEvent - Fires whenever there's a change to websites
 	WebsiteEvent = "website"
+
+	// LootAdded
+	LootAddedEvent = "loot-added"
+
+	// LootRemoved
+	LootRemovedEvent = "loot-removed"
+
+	// BeaconRegisteredEvent - First connection from a new beacon
+	BeaconRegisteredEvent = "beacon-registered"
+
+	// BeaconTaskResult - Beacon task completed with a result
+	BeaconTaskResultEvent = "beacon-taskresult"
+
+	// ExternalBuildEvent
+	ExternalBuildEvent          = "external-build"
+	AcknowledgeBuildEvent       = "external-acknowledge"
+	ExternalBuildFailedEvent    = "external-build-failed"
+	ExternalBuildCompletedEvent = "external-build-completed"
+
+	// WireGuardNewPeer - New Wireguard peer added
+	WireGuardNewPeer = "wireguard-newpeer"
 )
 
 // Commands
 const (
-	NewPlayerStr       = "new-player"
-	PlayersStr         = "players"
-	KickPlayerStr      = "kick-player"
+	OperatorsStr       = "operators"
+	NewOperatorStr     = "new-operator"
+	KickOperatorStr    = "kick-operator"
 	MultiplayerModeStr = "multiplayer"
 
-	SessionsStr   = "sessions"
-	BackgroundStr = "background"
-	InfoStr       = "info"
-	UseStr        = "use"
-	SetStr        = "set"
+	SessionsStr     = "sessions"
+	BackgroundStr   = "background"
+	InfoStr         = "info"
+	UseStr          = "use"
+	ReconfigStr     = "reconfig"
+	PruneStr        = "prune"
+	TasksStr        = "tasks"
+	CancelStr       = "cancel"
+	GenerateStr     = "generate"
+	RegenerateStr   = "regenerate"
+	CompilerInfoStr = "info"
+	StagerStr       = "stager"
+	ProfilesStr     = "profiles"
+	BeaconStr       = "beacon"
+	BeaconsStr      = "beacons"
+	WatchStr        = "watch"
+	SettingsStr     = "settings"
+	SearchStr       = "search"
 
-	GenerateStr        = "generate"
-	RegenerateStr      = "regenerate"
-	ProfileGenerateStr = "generate-profile"
-	StagerStr          = "stager"
-	ProfilesStr        = "profiles"
-	NewProfileStr      = "new-profile"
+	// Generic
+
+	// NewStr - "new"
+	NewStr     = "new"
+	AddStr     = "add"
+	StartStr   = "start"
+	StopStr    = "stop"
+	SetStr     = "set"
+	UnsetStr   = "unset"
+	SaveStr    = "save"
+	ReloadStr  = "reload"
+	LoadStr    = "load"
+	TablesStr  = "tables"
+	DetailsStr = "details"
+
+	LootStr       = "loot"
+	LootLocalStr  = "local"
+	LootRemoteStr = "remote"
+	FetchStr      = "fetch"
+	LootCredsStr  = "creds"
+
+	RenameStr = "rename"
 
 	ImplantBuildsStr = "implants"
-	ListCanariesStr  = "canaries"
+	CanariesStr      = "canaries"
 
 	JobsStr        = "jobs"
 	MtlsStr        = "mtls"
@@ -95,7 +158,7 @@ const (
 	HttpStr        = "http"
 	HttpsStr       = "https"
 	NamedPipeStr   = "named-pipe"
-	TCPListenerStr = "tcp-pivot"
+	TCPListenerStr = "tcp"
 
 	MsfStr       = "msf"
 	MsfInjectStr = "msf-inject"
@@ -114,6 +177,7 @@ const (
 	ExecuteStr = "execute"
 
 	LsStr       = "ls"
+	MvStr       = "mv"
 	RmStr       = "rm"
 	MkdirStr    = "mkdir"
 	CdStr       = "cd"
@@ -123,6 +187,9 @@ const (
 	UploadStr   = "upload"
 	IfconfigStr = "ifconfig"
 	NetstatStr  = "netstat"
+	ChmodStr       = "chmod"
+	ChownStr       = "chown"
+	ChtimesStr       = "chtimes"
 
 	ProcdumpStr         = "procdump"
 	ImpersonateStr      = "impersonate"
@@ -135,7 +202,11 @@ const (
 	MigrateStr          = "migrate"
 	SideloadStr         = "sideload"
 	SpawnDllStr         = "spawndll"
-	LoadExtensionStr    = "load-extension"
+	ExtensionsStr       = "extensions"
+	InstallStr          = "install"
+	ListStr             = "list"
+	ArmoryStr           = "armory"
+	AliasesStr          = "aliases"
 	StageListenerStr    = "stage-listener"
 
 	WebsitesStr       = "websites"
@@ -147,22 +218,49 @@ const (
 	PsExecStr             = "psexec"
 	BackdoorStr           = "backdoor"
 	MakeTokenStr          = "make-token"
-	GetEnvStr             = "getenv"
-	SetEnvStr             = "setenv"
+	EnvStr                = "env"
 	RegistryStr           = "registry"
 	RegistryReadStr       = "read"
 	RegistryWriteStr      = "write"
 	RegistryListSubStr    = "list-subkeys"
 	RegistryListValuesStr = "list-values"
 	RegistryCreateKeyStr  = "create"
-	PivotsListStr         = "pivots-list"
+	RegistryDeleteKeyStr  = "delete"
+	PivotsStr             = "pivots"
 	WgConfigStr           = "wg-config"
 	WgSocksStr            = "wg-socks"
 	WgPortFwdStr          = "wg-portfwd"
+	MonitorStr            = "monitor"
+	SSHStr                = "ssh"
+	DLLHijackStr          = "dllhijack"
+	InteractiveStr        = "interactive"
+	CloseStr              = "close"
 
-	PortfwdStr = "portfwd"
+	PortfwdStr  = "portfwd"
+	Socks5Str   = "socks5"
+	RportfwdStr = "rportfwd"
+
+	ReactionStr = "reaction"
+
+	HostsStr = "hosts"
+	IOCStr   = "ioc"
 
 	LicensesStr = "licenses"
+
+	GetPrivsStr        = "getprivs"
+	PreludeOperatorStr = "prelude-operator"
+	ConnectStr         = "connect"
+
+	ShikataGaNai = "shikata-ga-nai"
+
+	Cursed         = "cursed"
+	CursedChrome   = "chrome"
+	CursedConsole  = "console"
+	CursedElectron = "electron"
+	CursedEdge     = "edge"
+	CursedCookies  = "cookies"
+
+	BuildersStr = "builders"
 )
 
 // Groups
@@ -171,5 +269,6 @@ const (
 	SliverHelpGroup      = "Sliver:"
 	SliverWinHelpGroup   = "Sliver - Windows:"
 	MultiplayerHelpGroup = "Multiplayer:"
+	AliasHelpGroup       = "Sliver - 3rd Party macros:"
 	ExtensionHelpGroup   = "Sliver - 3rd Party extensions:"
 )

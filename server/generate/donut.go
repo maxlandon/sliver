@@ -2,28 +2,42 @@ package generate
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/binject/go-donut/donut"
+	"github.com/Binject/go-donut/donut"
 )
 
 // DonutShellcodeFromFile returns a Donut shellcode for the given PE file
 func DonutShellcodeFromFile(filePath string, arch string, dotnet bool, params string, className string, method string) (data []byte, err error) {
-	pe, err := ioutil.ReadFile(filePath)
+	pe, err := os.ReadFile(filePath)
 	if err != nil {
 		return
 	}
-	donutType := getDonutType(filepath.Ext(filePath), dotnet)
-	return DonutShellcodeFromPE(pe, arch, dotnet, params, className, method, donutType)
+	isDLL := (filepath.Ext(filePath) == ".dll")
+	return DonutShellcodeFromPE(pe, arch, dotnet, params, className, method, isDLL, false)
 }
 
 // DonutShellcodeFromPE returns a Donut shellcode for the given PE file
-func DonutShellcodeFromPE(pe []byte, arch string, dotnet bool, params string, className string, method string, donutType donut.ModuleType) (data []byte, err error) {
+func DonutShellcodeFromPE(pe []byte, arch string, dotnet bool, params string, className string, method string, isDLL bool, isUnicode bool) (data []byte, err error) {
+	ext := ".exe"
+	if isDLL {
+		ext = ".dll"
+	}
+	var isUnicodeVar uint32
+	if isUnicode {
+		isUnicodeVar = 1
+	}
 	donutArch := getDonutArch(arch)
+	// We don't use DonutConfig.Thread = 1 because we create our own remote thread
+	// in the task runner, and we're doing some housekeeping on it.
+	// Having DonutConfig.Thread = 1 means another thread will be created
+	// inside the one we created, and that will fuck up our monitoring
+	// since we can't grab a handle to the thread created by the Donut loader,
+	// and thus the waitForCompletion call will most of the time never complete.
 	config := donut.DonutConfig{
-		Type:       donutType,
+		Type:       getDonutType(ext, false),
 		InstType:   donut.DONUT_INSTANCE_PIC,
 		Parameters: params,
 		Class:      className,
@@ -33,9 +47,8 @@ func DonutShellcodeFromPE(pe []byte, arch string, dotnet bool, params string, cl
 		Arch:       donutArch,
 		Entropy:    0,         // 1=disable, 2=use random names, 3=random names + symmetric encryption (default)
 		Compress:   uint32(1), // 1=disable, 2=LZNT1, 3=Xpress, 4=Xpress Huffman
-		Thread:     1,         // start a new thread
 		ExitOpt:    1,         // exit thread
-		Unicode:    0,
+		Unicode:    isUnicodeVar,
 	}
 	return getDonut(pe, &config)
 }
@@ -69,6 +82,12 @@ func getDonut(data []byte, config *donut.DonutConfig) (shellcode []byte, err err
 		return
 	}
 	shellcode = res.Bytes()
+	stackCheckPrologue := []byte{
+		// Check stack is 8 byte but not 16 byte aligned or else errors in LoadLibrary
+		0x48, 0x83, 0xE4, 0xF0, // and rsp,0xfffffffffffffff0
+		0x48, 0x83, 0xC4, 0x08, // add rsp,0x8
+	}
+	shellcode = append(stackCheckPrologue, shellcode...)
 	return
 }
 

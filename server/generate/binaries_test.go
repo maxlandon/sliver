@@ -26,35 +26,53 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/db/models"
-	"github.com/bishopfox/sliver/server/log"
+)
+
+const (
+	otpTestSecret = "12345678901234567890"
 )
 
 var (
-	buildTestLog = log.NamedLogger("generate", "testbuild")
-	nonce        = 0
+	nonce = 0
 )
 
 func TestSliverExecutableWindows(t *testing.T) {
 
 	// Wireguard C2
-	wireguardExe(t, "windows", "amd64", false)
-	wireguardExe(t, "windows", "386", false)
-	wireguardExe(t, "windows", "amd64", true)
-	wireguardExe(t, "windows", "386", true)
+	wireguardExe(t, "windows", "amd64", false, false)
+	wireguardExe(t, "windows", "386", false, false)
+	wireguardExe(t, "windows", "amd64", false, true)
+	wireguardExe(t, "windows", "386", false, true)
+	// Wireguard beacon
+	wireguardExe(t, "windows", "amd64", true, false)
+	wireguardExe(t, "windows", "386", true, false)
+	wireguardExe(t, "windows", "amd64", true, true)
+	wireguardExe(t, "windows", "386", true, true)
 
 	// mTLS C2
-	mtlsExe(t, "windows", "amd64", false)
-	mtlsExe(t, "windows", "386", false)
-	mtlsExe(t, "windows", "amd64", true)
-	mtlsExe(t, "windows", "386", true)
+	mtlsExe(t, "windows", "amd64", false, false)
+	mtlsExe(t, "windows", "386", false, false)
+	mtlsExe(t, "windows", "amd64", false, true)
+	mtlsExe(t, "windows", "386", false, true)
+	// mTLS Beacon
+	mtlsExe(t, "windows", "amd64", true, false)
+	mtlsExe(t, "windows", "386", true, false)
+	mtlsExe(t, "windows", "amd64", true, true)
+	mtlsExe(t, "windows", "386", true, true)
 
 	// DNS C2
-	dnsExe(t, "windows", "amd64", false)
-	dnsExe(t, "windows", "amd64", true)
+	dnsExe(t, "windows", "amd64", false, false)
+	dnsExe(t, "windows", "amd64", false, true)
+	// DNS Beacon
+	dnsExe(t, "windows", "amd64", true, false)
+	dnsExe(t, "windows", "amd64", true, true)
 
 	// HTTP C2
-	httpExe(t, "windows", "amd64", false)
-	httpExe(t, "windows", "amd64", true)
+	httpExe(t, "windows", "amd64", false, false)
+	httpExe(t, "windows", "amd64", false, true)
+	// HTTP Beacon
+	httpExe(t, "windows", "amd64", true, false)
+	httpExe(t, "windows", "amd64", true, true)
 
 	// PIVOT TCP C2
 	tcpPivotExe(t, "windows", "amd64", false)
@@ -65,14 +83,20 @@ func TestSliverExecutableWindows(t *testing.T) {
 	namedPipeExe(t, "windows", "amd64", true)
 
 	// Multiple C2s
-	multiExe(t, "windows", "amd64", true)
-	multiExe(t, "windows", "amd64", false)
-	multiExe(t, "windows", "386", false)
-	multiExe(t, "windows", "386", false)
+	multiExe(t, "windows", "amd64", false, true)
+	multiExe(t, "windows", "amd64", false, false)
+	multiExe(t, "windows", "386", false, false)
+	multiExe(t, "windows", "386", false, false)
+
+	// Multiple Beacons
+	multiExe(t, "windows", "amd64", true, true)
+	multiExe(t, "windows", "amd64", true, false)
+	multiExe(t, "windows", "386", true, false)
+	multiExe(t, "windows", "386", true, false)
 
 	// Service
-	multiWindowsService(t, "windows", "amd64", true)
-	multiWindowsService(t, "windows", "amd64", false)
+	multiWindowsService(t, "windows", "amd64", false, true)
+	multiWindowsService(t, "windows", "amd64", false, false)
 }
 
 func TestSliverSharedLibWindows(t *testing.T) {
@@ -83,8 +107,12 @@ func TestSliverSharedLibWindows(t *testing.T) {
 }
 
 func TestSliverExecutableLinux(t *testing.T) {
-	multiExe(t, "linux", "amd64", true)
-	multiExe(t, "linux", "amd64", false)
+	multiExe(t, "linux", "amd64", false, true)
+	multiExe(t, "linux", "amd64", false, false)
+
+	multiExe(t, "linux", "amd64", true, true)
+	multiExe(t, "linux", "amd64", true, false)
+
 	tcpPivotExe(t, "linux", "amd64", false)
 }
 
@@ -98,18 +126,28 @@ func TestSliverSharedLibraryLinux(t *testing.T) {
 }
 
 func TestSliverExecutableDarwin(t *testing.T) {
-	multiExe(t, "darwin", "amd64", true)
-	multiExe(t, "darwin", "amd64", false)
+	multiExe(t, "darwin", "amd64", false, true)
+	multiExe(t, "darwin", "amd64", false, false)
+	multiExe(t, "darwin", "amd64", true, true)
+	multiExe(t, "darwin", "amd64", true, false)
+
 	tcpPivotExe(t, "darwin", "amd64", false)
 }
 
 func TestSliverDefaultBuild(t *testing.T) {
-	mtlsExe(t, "linux", "arm", true)
-	mtlsExe(t, "linux", "arm", false)
-	httpExe(t, "freebsd", "amd64", false)
-	httpExe(t, "freebsd", "amd64", true)
-	dnsExe(t, "plan9", "amd64", false)
-	dnsExe(t, "plan9", "amd64", true)
+	mtlsExe(t, "linux", "arm", false, true)
+	mtlsExe(t, "linux", "arm", false, false)
+	httpExe(t, "freebsd", "amd64", false, false)
+	httpExe(t, "freebsd", "amd64", false, true)
+	dnsExe(t, "plan9", "amd64", false, false)
+	dnsExe(t, "plan9", "amd64", false, true)
+
+	mtlsExe(t, "linux", "arm", true, true)
+	mtlsExe(t, "linux", "arm", true, false)
+	httpExe(t, "freebsd", "amd64", true, false)
+	httpExe(t, "freebsd", "amd64", true, true)
+	dnsExe(t, "plan9", "amd64", true, false)
+	dnsExe(t, "plan9", "amd64", true, true)
 }
 
 func TestSymbolObfuscation(t *testing.T) {
@@ -125,7 +163,7 @@ func TestSymbolObfuscation(t *testing.T) {
 	symbolObfuscation(t, "freebsd", "amd64")
 }
 
-func mtlsExe(t *testing.T, goos string, goarch string, debug bool) {
+func mtlsExe(t *testing.T, goos string, goarch string, beacon bool, debug bool) {
 	t.Logf("[mtls] EXE %s/%s - debug: %v", goos, goarch, debug)
 	config := &models.ImplantConfig{
 		GOOS:   goos,
@@ -136,15 +174,16 @@ func mtlsExe(t *testing.T, goos string, goarch string, debug bool) {
 		MTLSc2Enabled:    true,
 		Debug:            debug,
 		ObfuscateSymbols: false,
+		IsBeacon:         beacon,
 	}
 	nonce++
-	_, err := SliverExecutable(fmt.Sprintf("mtls_test%d", nonce), config)
+	_, err := SliverExecutable(fmt.Sprintf("mtls_test%d", nonce), otpTestSecret, config, true)
 	if err != nil {
-		t.Errorf(fmt.Sprintf("%v", err))
+		t.Fatalf("%v", err)
 	}
 }
 
-func dnsExe(t *testing.T, goos string, goarch string, debug bool) {
+func dnsExe(t *testing.T, goos string, goarch string, beacon bool, debug bool) {
 	t.Logf("[dns] EXE %s/%s - debug: %v", goos, goarch, debug)
 	config := &models.ImplantConfig{
 		GOOS:   goos,
@@ -155,15 +194,16 @@ func dnsExe(t *testing.T, goos string, goarch string, debug bool) {
 		DNSc2Enabled:     true,
 		Debug:            debug,
 		ObfuscateSymbols: false,
+		IsBeacon:         beacon,
 	}
 	nonce++
-	_, err := SliverExecutable(fmt.Sprintf("dns_test%d", nonce), config)
+	_, err := SliverExecutable(fmt.Sprintf("dns_test%d", nonce), otpTestSecret, config, true)
 	if err != nil {
-		t.Errorf(fmt.Sprintf("%v", err))
+		t.Fatalf("%v", err)
 	}
 }
 
-func httpExe(t *testing.T, goos string, goarch string, debug bool) {
+func httpExe(t *testing.T, goos string, goarch string, beacon bool, debug bool) {
 	t.Logf("[http] EXE %s/%s - debug: %v", goos, goarch, debug)
 	config := &models.ImplantConfig{
 		GOOS:   goos,
@@ -178,15 +218,16 @@ func httpExe(t *testing.T, goos string, goarch string, debug bool) {
 		HTTPc2Enabled:    true,
 		Debug:            debug,
 		ObfuscateSymbols: false,
+		IsBeacon:         beacon,
 	}
 	nonce++
-	_, err := SliverExecutable(fmt.Sprintf("http_test%d", nonce), config)
+	_, err := SliverExecutable(fmt.Sprintf("http_test%d", nonce), otpTestSecret, config, true)
 	if err != nil {
-		t.Errorf(fmt.Sprintf("%v", err))
+		t.Fatalf("%v", err)
 	}
 }
 
-func multiExe(t *testing.T, goos string, goarch string, debug bool) {
+func multiExe(t *testing.T, goos string, goarch string, beacon bool, debug bool) {
 	t.Logf("[multi] %s/%s - debug: %v", goos, goarch, debug)
 	config := &models.ImplantConfig{
 		GOOS:   goos,
@@ -205,20 +246,21 @@ func multiExe(t *testing.T, goos string, goarch string, debug bool) {
 		WGc2Enabled:      true,
 		Debug:            debug,
 		ObfuscateSymbols: false,
+		IsBeacon:         beacon,
 	}
 	nonce++
-	_, err := SliverExecutable(fmt.Sprintf("multi_test%d", nonce), config)
+	_, err := SliverExecutable(fmt.Sprintf("multi_test%d", nonce), otpTestSecret, config, true)
 	if err != nil {
-		t.Errorf(fmt.Sprintf("%v", err))
+		t.Fatalf("%v", err)
 	}
 }
 
-func multiWindowsService(t *testing.T, goos string, goarch string, debug bool) {
+func multiWindowsService(t *testing.T, goos string, goarch string, beacon bool, debug bool) {
 	t.Logf("[multi] %s/%s - debug: %v", goos, goarch, debug)
 	config := &models.ImplantConfig{
 		GOOS:   goos,
 		GOARCH: goarch,
-		Format: clientpb.ImplantConfig_SERVICE,
+		Format: clientpb.OutputFormat_SERVICE,
 
 		C2: []models.ImplantC2{
 			{URL: "mtls://1.example.com"},
@@ -231,14 +273,16 @@ func multiWindowsService(t *testing.T, goos string, goarch string, debug bool) {
 		DNSc2Enabled:     true,
 		Debug:            debug,
 		ObfuscateSymbols: false,
+		IsBeacon:         beacon,
 	}
 	nonce++
-	_, err := SliverExecutable(fmt.Sprintf("service_test%d", nonce), config)
+	_, err := SliverExecutable(fmt.Sprintf("service_test%d", nonce), otpTestSecret, config, true)
 	if err != nil {
-		t.Errorf(fmt.Sprintf("%v", err))
+		t.Fatalf("%v", err)
 	}
 }
 
+// Pivots do not support beacon mode
 func tcpPivotExe(t *testing.T, goos string, goarch string, debug bool) {
 	t.Logf("[tcppivot] EXE %s/%s - debug: %v", goos, goarch, debug)
 	config := &models.ImplantConfig{
@@ -256,9 +300,9 @@ func tcpPivotExe(t *testing.T, goos string, goarch string, debug bool) {
 		ObfuscateSymbols:  false,
 	}
 	nonce++
-	_, err := SliverExecutable(fmt.Sprintf("tcpPivot_test%d", nonce), config)
+	_, err := SliverExecutable(fmt.Sprintf("tcpPivot_test%d", nonce), otpTestSecret, config, true)
 	if err != nil {
-		t.Errorf(fmt.Sprintf("%v", err))
+		t.Fatalf("%v", err)
 	}
 }
 
@@ -279,13 +323,13 @@ func namedPipeExe(t *testing.T, goos string, goarch string, debug bool) {
 		ObfuscateSymbols:  false,
 	}
 	nonce++
-	_, err := SliverExecutable(fmt.Sprintf("namedpipe_test%d", nonce), config)
+	_, err := SliverExecutable(fmt.Sprintf("namedpipe_test%d", nonce), otpTestSecret, config, true)
 	if err != nil {
-		t.Errorf(fmt.Sprintf("%v", err))
+		t.Fatalf("%v", err)
 	}
 }
 
-func wireguardExe(t *testing.T, goos string, goarch string, debug bool) {
+func wireguardExe(t *testing.T, goos string, goarch string, beacon bool, debug bool) {
 	t.Logf("[wireguard] EXE %s/%s - debug: %v", goos, goarch, debug)
 	config := &models.ImplantConfig{
 		GOOS:   goos,
@@ -305,12 +349,13 @@ func wireguardExe(t *testing.T, goos string, goarch string, debug bool) {
 		WGPeerTunIP:       "100.64.0.2",
 		WGKeyExchangePort: 1234,
 		WGTcpCommsPort:    5678,
+		IsBeacon:          beacon,
 	}
 	nonce++
 	certs.SetupWGKeys()
-	_, err := SliverExecutable(fmt.Sprintf("wireguard_test%d", nonce), config)
+	_, err := SliverExecutable(fmt.Sprintf("wireguard_test%d", nonce), otpTestSecret, config, true)
 	if err != nil {
-		t.Errorf(fmt.Sprintf("%v", err))
+		t.Fatalf("%v", err)
 	}
 }
 
@@ -330,7 +375,7 @@ func multiLibrary(t *testing.T, goos string, goarch string, debug bool) {
 
 		Debug:             debug,
 		ObfuscateSymbols:  false,
-		Format:            clientpb.ImplantConfig_SHARED_LIB,
+		Format:            clientpb.OutputFormat_SHARED_LIB,
 		IsSharedLib:       true,
 		WGc2Enabled:       true,
 		WGImplantPrivKey:  "153be871d7e54545c01a9700880f86fc83087275669c9237b9bcd617ddbfa43f",
@@ -340,9 +385,9 @@ func multiLibrary(t *testing.T, goos string, goarch string, debug bool) {
 		WGTcpCommsPort:    5678,
 	}
 	nonce++
-	_, err := SliverSharedLibrary(fmt.Sprintf("multilibrary_test%d", nonce), config)
+	_, err := SliverSharedLibrary(fmt.Sprintf("multilibrary_test%d", nonce), otpTestSecret, config, true)
 	if err != nil {
-		t.Errorf(fmt.Sprintf("%v", err))
+		t.Fatalf("%v", err)
 	}
 }
 
@@ -358,13 +403,16 @@ func symbolObfuscation(t *testing.T, goos string, goarch string) {
 			{URL: "https://3.example.com"},
 			{URL: "dns://4.example.com", Options: "asdf"},
 		},
+		MTLSc2Enabled: true,
+		HTTPc2Enabled: true,
+		DNSc2Enabled:  true,
 
 		Debug:            false,
 		ObfuscateSymbols: true,
 	}
 	nonce++
-	_, err := SliverExecutable(fmt.Sprintf("symbol_test%d", nonce), config)
+	_, err := SliverExecutable(fmt.Sprintf("symbol_test%d", nonce), otpTestSecret, config, true)
 	if err != nil {
-		t.Errorf(fmt.Sprintf("%v", err))
+		t.Fatalf("%v", err)
 	}
 }

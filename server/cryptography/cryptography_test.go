@@ -21,14 +21,21 @@ package cryptography
 import (
 	"bytes"
 	"crypto/rand"
-	"crypto/rsa"
 	insecureRand "math/rand"
+	"os"
+	"sync"
 	"testing"
+
+	implantCrypto "github.com/bishopfox/sliver/implant/sliver/cryptography"
+	"github.com/bishopfox/sliver/server/cryptography/minisign"
 )
 
 var (
 	sample1 = randomData()
 	sample2 = randomData()
+
+	serverECCKeyPair  *ECCKeyPair
+	implantECCKeyPair *ECCKeyPair
 )
 
 func randomData() []byte {
@@ -37,137 +44,271 @@ func randomData() []byte {
 	return buf
 }
 
-// TestAESEncryptDecrypt - Test AES functions
-func TestAESEncryptDecrypt(t *testing.T) {
-	key := RandomAESKey()
-	cipher1, err := GCMEncrypt(key, sample1)
+func TestMain(m *testing.M) {
+	setup()
+	os.Exit(m.Run())
+}
+
+func setup() {
+	var err error
+	serverECCKeyPair, err = RandomECCKeyPair()
 	if err != nil {
-		t.Error(err)
+		panic(err)
 	}
-	data1, err := GCMDecrypt(key, cipher1)
+	implantECCKeyPair, err = RandomECCKeyPair()
 	if err != nil {
-		t.Error(err)
+		panic(err)
 	}
-	if !bytes.Equal(sample1, data1) {
-		t.Errorf("Sample does not match decrypted data")
+	totpSecret, err := TOTPServerSecret()
+	if err != nil {
+		panic(err)
 	}
 
-	key = RandomAESKey()
-	cipher2, err := GCMEncrypt(key, sample2)
+	implantCrypto.SetSecrets(
+		implantECCKeyPair.PublicBase64(),
+		implantECCKeyPair.PrivateBase64(),
+		MinisignServerSign(implantECCKeyPair.Public[:]),
+		serverECCKeyPair.PublicBase64(),
+		totpSecret,
+		MinisignServerPublicKey(),
+	)
+}
+
+// TestEncryptDecrypt - Test AEAD functions
+func TestEncryptDecrypt(t *testing.T) {
+	key := RandomKey()
+	cipher1, err := Encrypt(key, sample1)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	data2, err := GCMDecrypt(key, cipher2)
+	data1, err := Decrypt(key, cipher1)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	if !bytes.Equal(sample1, data1) {
+		t.Fatalf("Sample does not match decrypted data")
+	}
+
+	key = RandomKey()
+	cipher2, err := Encrypt(key, sample2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data2, err := Decrypt(key, cipher2)
+	if err != nil {
+		t.Fatal(err)
 	}
 	if !bytes.Equal(sample2, data2) {
-		t.Errorf("Sample does not match decrypted data")
+		t.Fatalf("Sample does not match decrypted data")
 	}
 }
 
-// TestAESTamperData - Detect tampered ciphertext
-func TestAESTamperData(t *testing.T) {
-	key := RandomAESKey()
-	cipher1, err := GCMEncrypt(key, sample1)
+// TestTamperData - Detect tampered ciphertext
+func TestTamperData(t *testing.T) {
+	key := RandomKey()
+	cipher1, err := Encrypt(key, sample1)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	index := insecureRand.Intn(len(cipher1))
 	cipher1[index]++
 
-	_, err = GCMDecrypt(key, cipher1)
+	_, err = Decrypt(key, cipher1)
 	if err == nil {
-		t.Errorf("Decrypted tampered data, should have resulted in error")
+		t.Fatalf("Decrypted tampered data, should have resulted in Fatal")
 	}
 }
 
-// TestAESWrongKey - Attempt to decrypt with wrong key
-func TestAESWrongKey(t *testing.T) {
-	key := RandomAESKey()
-	cipher1, err := GCMEncrypt(key, sample1)
+// TestWrongKey - Attempt to decrypt with wrong key
+func TestWrongKey(t *testing.T) {
+	key := RandomKey()
+	cipher1, err := Encrypt(key, sample1)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-
-	key2 := RandomAESKey()
-	_, err = GCMDecrypt(key2, cipher1)
+	key2 := RandomKey()
+	_, err = Decrypt(key2, cipher1)
 	if err == nil {
-		t.Errorf("Decrypted with wrong key, should have resulted in error")
+		t.Fatalf("Decrypted with wrong key, should have resulted in Fatal")
 	}
 }
 
-// TestRSAEncryptDecrypt - Test RSA functions
-func TestRSAEncryptDecrypt(t *testing.T) {
+// TestCipherContext - Test CipherContext
+func TestCipherContext(t *testing.T) {
+	testKey := RandomKey()
+	cipherCtx1 := &CipherContext{
+		Key:    testKey,
+		replay: &sync.Map{},
+	}
+	cipherCtx2 := &CipherContext{
+		Key:    testKey,
+		replay: &sync.Map{},
+	}
 
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	sample := randomData()
+
+	ciphertext, err := cipherCtx1.Encrypt(sample)
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("Failed to encrypt sample: %s", err)
 	}
-	cipher1, err := RSAEncrypt(sample1, &rsaKey.PublicKey)
-	if err != nil {
-		t.Error(err)
+	_, err = cipherCtx1.Decrypt(ciphertext)
+	if err != ErrReplayAttack {
+		t.Fatal("Failed to detect replay attack")
 	}
-	data1, err := RSADecrypt(cipher1, rsaKey)
+	_, err = cipherCtx1.Decrypt(ciphertext)
+	if err != ErrReplayAttack {
+		t.Fatal("Failed to detect replay attack")
+	}
+
+	plaintext, err := cipherCtx2.Decrypt(ciphertext)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	if !bytes.Equal(sample, plaintext) {
+		t.Fatalf("Sample does not match decrypted data")
+	}
+	_, err = cipherCtx2.Decrypt(ciphertext)
+	if err != ErrReplayAttack {
+		t.Fatal("Failed to detect replay attack")
+	}
+}
+
+func TestECCEncryptDecrypt(t *testing.T) {
+	sample := randomData()
+	sender, err := RandomECCKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiver, err := RandomECCKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ciphertext, err := ECCEncrypt(receiver.Public, sender.Private, sample)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plaintext, err := ECCDecrypt(sender.Public, receiver.Private, ciphertext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(plaintext, sample) {
+		t.Fatalf("Sample does not match decrypted data")
+	}
+}
+
+// TestEncryptDecrypt - Test AEAD functions
+func TestImplantEncryptDecrypt(t *testing.T) {
+	key := RandomKey()
+	cipher1, err := Encrypt(key, sample1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data1, err := implantCrypto.Decrypt(key, cipher1)
+	if err != nil {
+		t.Fatal(err)
 	}
 	if !bytes.Equal(sample1, data1) {
-		t.Errorf("Sample does not match decrypted data")
+		t.Fatalf("Sample does not match decrypted data")
 	}
 
-	rsaKey, err = rsa.GenerateKey(rand.Reader, 2048)
-	cipher2, err := RSAEncrypt(sample2, &rsaKey.PublicKey)
+	key = RandomKey()
+	cipher2, err := implantCrypto.Encrypt(key, sample2)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	data2, err := RSADecrypt(cipher2, rsaKey)
+	data2, err := Decrypt(key, cipher2)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if !bytes.Equal(sample2, data2) {
-		t.Errorf("Sample does not match decrypted data")
+		t.Fatalf("Sample does not match decrypted data")
 	}
 }
 
-// TestRSATamperData - Test RSA with tampered data
-func TestRSATamperData(t *testing.T) {
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+func TestImplantECCEncryptDecrypt(t *testing.T) {
+	sample := randomData()
+	ciphertext, err := implantCrypto.ECCEncryptToServer(sample)
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("encrypt to server failed: %s", err)
 	}
-	cipher1, err := RSAEncrypt(sample1, &rsaKey.PublicKey)
-	if err != nil {
-		t.Error(err)
+	if len(ciphertext) < 33 {
+		t.Fatalf("ciphertext too short (%d)", len(ciphertext))
 	}
 
-	index := insecureRand.Intn(len(cipher1))
-	cipher1[index]++
-
-	_, err = RSADecrypt(cipher1, rsaKey)
-	if err == nil {
-		t.Errorf("Decrypted tampered data, should have resulted in error")
+	// Ciphertext has sender public key digest prepended [:32]
+	plaintext, err := ECCDecrypt(implantECCKeyPair.Public, serverECCKeyPair.Private, ciphertext[32:])
+	if err != nil {
+		t.Fatalf("failed to decrypt implant ciphertext: %s", err)
+	}
+	if !bytes.Equal(plaintext, sample) {
+		t.Fatalf("Sample does not match decrypted data")
 	}
 }
 
-// TestRSAWrongKey - Test RSA with wrong key
-func TestRSAWrongKey(t *testing.T) {
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+func TestImplantECCEncryptDecryptTamperData(t *testing.T) {
+	sample := randomData()
+	ciphertext, err := implantCrypto.ECCEncryptToServer(sample)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	cipher1, err := RSAEncrypt(sample1, &rsaKey.PublicKey)
+	if len(ciphertext) < 34 {
+		t.Fatal("ciphertext too short")
+	}
+	ciphertext[33]++ // Change a byte in the ciphertext
+	_, err = ECCDecrypt(implantECCKeyPair.Public, serverECCKeyPair.Private, ciphertext[32:])
+	if err == nil {
+		t.Fatal("ecc decrypted tampered data without error")
+	}
+}
+
+func TestServerMinisign(t *testing.T) {
+	message := randomData()
+	privateKey := MinisignServerPrivateKey()
+	signature := minisign.Sign(*privateKey, message)
+	if !minisign.Verify(privateKey.Public().(minisign.PublicKey), message, signature) {
+		t.Fatalf("Failed to very message with server minisign")
+	}
+	message[0]++
+	if minisign.Verify(privateKey.Public().(minisign.PublicKey), message, signature) {
+		t.Fatalf("Minisign verified tampered message")
+	}
+}
+
+func TestImplantMinisign(t *testing.T) {
+	message := randomData()
+	privateKey := MinisignServerPrivateKey()
+	signature := minisign.Sign(*privateKey, message)
+
+	publicKey := privateKey.Public().(minisign.PublicKey)
+	publicKeyTxt, err := publicKey.MarshalText()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	rsaKey2, err := rsa.GenerateKey(rand.Reader, 2048)
+	implantPublicKey, err := implantCrypto.DecodeMinisignPublicKey(string(publicKeyTxt))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	_, err = RSADecrypt(cipher1, rsaKey2)
+	implantSig, err := implantCrypto.DecodeMinisignSignature(string(signature))
+	if err != nil {
+		t.Fatal(err)
+	}
+	valid, err := implantPublicKey.Verify(message, implantSig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !valid {
+		t.Fatal("Implant failed to verify minisign signature")
+	}
+	message[0]++
+	valid, err = implantPublicKey.Verify(message, implantSig)
 	if err == nil {
-		t.Errorf("Decrypted with wrong key, should have resulted in error")
+		t.Fatal("Expected invalid signature error")
 	}
+	if valid {
+		t.Fatal("Implant verified tampered message")
+	}
+
 }

