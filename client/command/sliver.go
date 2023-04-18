@@ -1,8 +1,12 @@
 package command
 
 import (
+	"github.com/bishopfox/sliver/client/assets"
+	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/help"
+	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/spf13/cobra"
 )
 
@@ -14,8 +18,47 @@ func SliverCommands() *cobra.Command {
 
 	groups := []*cobra.Group{
 		{ID: consts.SliverHelpGroup, Title: consts.SliverHelpGroup},
+		{ID: consts.AliasHelpGroup, Title: consts.AliasHelpGroup},
+		{ID: consts.ExtensionHelpGroup, Title: consts.ExtensionHelpGroup},
 	}
 	sliver.AddGroup(groups...)
+
+	// Load Aliases
+	aliasManifests := assets.GetInstalledAliasManifests()
+	n := 0
+	for _, manifest := range aliasManifests {
+		_, err := alias.LoadAlias(manifest, console.Client)
+		if err != nil {
+			log.PrintErrorf("Failed to load alias: %s\n", err)
+			continue
+		}
+		n++
+	}
+	if 0 < n {
+		if n == 1 {
+			log.PrintInfof("Loaded %d alias from disk\n", n)
+		} else {
+			log.PrintInfof("Loaded %d aliases from disk\n", n)
+		}
+	}
+
+	// // Load Extensions
+	// extensionManifests := assets.GetInstalledExtensionManifests()
+	// n = 0
+	// for _, manifest := range extensionManifests {
+	// 	ext, err := extensions.LoadExtensionManifest(manifest)
+	// 	// Absorb error in case there's no extensions manifest
+	// 	if err != nil {
+	// 		con.PrintErrorf("Failed to load extension: %s\n", err)
+	// 		continue
+	// 	}
+	// 	extensions.ExtensionRegisterCommand(ext, con)
+	// 	n++
+	// }
+	// if 0 < n {
+	// 	con.PrintInfof("Loaded %d extension(s) from disk\n", n)
+	// }
+	// con.App.SetPrintHelp(help.HelpCmd(con)) // Responsible for display long-form help templates, etc.
 
 	// [ Reconfig ] ---------------------------------------------------------------
 

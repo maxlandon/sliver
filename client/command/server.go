@@ -1,11 +1,17 @@
 package command
 
 import (
+	"os"
+
 	"github.com/bishopfox/sliver/client/command/alias"
+	"github.com/bishopfox/sliver/client/command/armory"
 	"github.com/bishopfox/sliver/client/command/help"
+	"github.com/bishopfox/sliver/client/command/reaction"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/reeflective/console"
 )
@@ -17,6 +23,14 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 	serverCommands := func() *cobra.Command {
 		server := &cobra.Command{
 			Short: "Server commands",
+		}
+
+		// Load Reactions
+		n, err := reaction.LoadReactions()
+		if err != nil && !os.IsNotExist(err) {
+			log.PrintErrorf("Failed to load reactions: %s\n", err)
+		} else if n > 0 {
+			log.PrintInfof("Loaded %d reaction(s) from disk\n", n)
 		}
 
 		// [ Groups ] ----------------------------------------------
@@ -42,18 +56,10 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.LoadStr + " [ALIAS]",
 			Short: "Load a command alias",
 			Long:  help.GetHelpFor([]string{consts.AliasesStr, consts.LoadStr}),
-			Run:   func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	alias.AliasesLoadCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// Args: func(a *grumble.Args) {
-			// 	a.String("dir-path", "path to the alias directory")
-			// },
+			Args:  cobra.ExactArgs(1), // 	a.String("dir-path", "path to the alias directory")
+			Run:   alias.AliasesLoadCmd,
 		}
-		carapace.Gen(aliasLoadCmd).PositionalCompletion(carapace.ActionFiles().Tag("alias file"))
+		carapace.Gen(aliasLoadCmd).PositionalCompletion(carapace.ActionDirectories().Tag("alias directory"))
 		aliasCmd.AddCommand(aliasLoadCmd)
 
 		aliasInstallCmd := &cobra.Command{
@@ -79,88 +85,58 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Armory ] ---------------------------------------------
 
 		armoryCmd := &cobra.Command{
-			Use:   consts.ArmoryStr,
-			Short: "Automatically download and install extensions/aliases",
-			Long:  help.GetHelpFor([]string{consts.ArmoryStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Bool("I", "insecure", false, "skip tls certificate validation")
-			// 	f.String("p", "proxy", "", "specify a proxy url (e.g. http://localhost:8080)")
-			// 	f.Bool("c", "ignore-cache", false, "ignore metadata cache, force refresh")
-			// 	f.String("t", "timeout", "15m", "download timeout")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	armory.ArmoryCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Use:     consts.ArmoryStr,
+			Short:   "Automatically download and install extensions/aliases",
+			Long:    help.GetHelpFor([]string{consts.ArmoryStr}),
+			Run:     armory.ArmoryCmd,
 			GroupID: consts.GenericHelpGroup,
 		}
+		Flags("armory", armoryCmd, func(f *pflag.FlagSet) {
+			f.BoolP("insecure", "I", false, "skip tls certificate validation")
+			f.StringP("proxy", "p", "", "specify a proxy url (e.g. http://localhost:8080)")
+			f.BoolP("ignore-cache", "c", false, "ignore metadata cache, force refresh")
+			f.StringP("timeout", "t", "15m", "download timeout")
+		})
 		server.AddCommand(armoryCmd)
 
-		armoryCmd.AddCommand(&cobra.Command{
+		armoryInstallCmd := &cobra.Command{
 			Use:   consts.InstallStr,
 			Short: "Install an alias or extension",
 			Long:  help.GetHelpFor([]string{consts.ArmoryStr, consts.InstallStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Bool("I", "insecure", false, "skip tls certificate validation")
-			// 	f.String("p", "proxy", "", "specify a proxy url (e.g. http://localhost:8080)")
-			// 	f.Bool("c", "ignore-cache", false, "ignore metadata cache, force refresh")
-			// 	f.String("t", "timeout", "15m", "download timeout")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	armory.ArmoryInstallCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// Args: func(a *grumble.Args) {
-			// 	a.String("name", "name of the extension or alias to install")
-			// },
-			// Completer: func(prefix string, args []string) []string {
-			// 	return armory.AliasExtensionOrBundleCompleter(prefix, args, con)
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Args:  cobra.ExactArgs(1), // 	a.String("name", "name of the extension or alias to install")
+			Run:   armory.ArmoryInstallCmd,
+		}
+		Flags("armory", armoryInstallCmd, func(f *pflag.FlagSet) {
+			f.BoolP("insecure", "I", false, "skip tls certificate validation")
+			f.StringP("proxy", "p", "", "specify a proxy url (e.g. http://localhost:8080)")
+			f.BoolP("ignore-cache", "c", false, "ignore metadata cache, force refresh")
+			f.StringP("timeout", "t", "15m", "download timeout")
 		})
+		carapace.Gen(armoryInstallCmd).PositionalCompletion(armory.AliasExtensionOrBundleCompleter())
+		armoryCmd.AddCommand(armoryInstallCmd)
 
-		armoryCmd.AddCommand(&cobra.Command{
+		armoryUpdateCmd := &cobra.Command{
 			Use:   consts.UpdateStr,
 			Short: "Update installed an aliases and extensions",
 			Long:  help.GetHelpFor([]string{consts.ArmoryStr, consts.UpdateStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Bool("I", "insecure", false, "skip tls certificate validation")
-			// 	f.String("p", "proxy", "", "specify a proxy url (e.g. http://localhost:8080)")
-			// 	f.Bool("c", "ignore-cache", false, "ignore metadata cache, force refresh")
-			// 	f.String("t", "timeout", "15m", "download timeout")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	armory.ArmoryUpdateCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   armory.ArmoryUpdateCmd,
+		}
+		Flags("armory", armoryInstallCmd, func(f *pflag.FlagSet) {
+			f.BoolP("insecure", "I", false, "skip tls certificate validation")
+			f.StringP("proxy", "p", "", "specify a proxy url (e.g. http://localhost:8080)")
+			f.BoolP("ignore-cache", "c", false, "ignore metadata cache, force refresh")
+			f.StringP("timeout", "t", "15m", "download timeout")
 		})
+		armoryCmd.AddCommand(armoryUpdateCmd)
 
-		armoryCmd.AddCommand(&cobra.Command{
+		armorySearchCmd := &cobra.Command{
 			Use:   consts.SearchStr,
 			Short: "Search for aliases and extensions by name (regex)",
 			Long:  help.GetHelpFor([]string{consts.ArmoryStr, consts.SearchStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.String("name", "a name regular expression")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	armory.ArmorySearchCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
-		})
+			Args:  cobra.ExactArgs(1), // 	a.String("name", "a name regular expression")
+			Run:   armory.ArmorySearchCmd,
+		}
+		armoryCmd.AddCommand(armorySearchCmd)
 
 		// [ Update ] --------------------------------------------------------------
 

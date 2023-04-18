@@ -29,7 +29,7 @@ import (
 )
 
 // SettingsCmd - The client settings command
-func SettingsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SettingsCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
@@ -52,7 +52,7 @@ func SettingsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // SettingsAlwaysOverflow - Toggle always overflow
-func SettingsAlwaysOverflow(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SettingsAlwaysOverflow(ctx *grumble.Context, con *console.SliverConsole) {
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
@@ -66,7 +66,7 @@ func SettingsAlwaysOverflow(ctx *grumble.Context, con *console.SliverConsoleClie
 }
 
 // SettingsSmallTerm - Modify small terminal width value
-func SettingsSmallTerm(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SettingsSmallTerm(ctx *grumble.Context, con *console.SliverConsole) {
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
@@ -96,7 +96,7 @@ func SettingsSmallTerm(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // SettingsTablesCmd - The client settings command
-func SettingsTablesCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SettingsTablesCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
@@ -128,7 +128,7 @@ func SettingsTablesCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // SettingsSaveCmd - The client settings command
-func SettingsSaveCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SettingsSaveCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()

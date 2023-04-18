@@ -600,51 +600,51 @@ func (con *SliverConsoleClient) FormatDateDelta(t time.Time, includeDate bool, c
 //
 
 // GetSessionInteractive - Get the active target(s)
-func (s *ActiveTarget) GetInteractive() (*clientpb.Session, *clientpb.Beacon) {
-	if s.session == nil && s.beacon == nil {
-		fmt.Printf(Warn + "Please select a session or beacon via `use`\n")
-		return nil, nil
-	}
-	return s.session, s.beacon
-}
-
-// GetSessionInteractive - Get the active target(s)
-func (s *ActiveTarget) Get() (*clientpb.Session, *clientpb.Beacon) {
-	return s.session, s.beacon
-}
-
-// GetSessionInteractive - GetSessionInteractive the active session
-func (s *ActiveTarget) GetSessionInteractive() *clientpb.Session {
-	if s.session == nil {
-		fmt.Printf(Warn + "Please select a session via `use`\n")
-		return nil
-	}
-	return s.session
-}
-
-// GetSession - Same as GetSession() but doesn't print a warning
-func (s *ActiveTarget) GetSession() *clientpb.Session {
-	return s.session
-}
-
-// GetBeaconInteractive - Get beacon interactive the active session
-func (s *ActiveTarget) GetBeaconInteractive() *clientpb.Beacon {
-	if s.beacon == nil {
-		fmt.Printf(Warn + "Please select a beacon via `use`\n")
-		return nil
-	}
-	return s.beacon
-}
-
-// GetBeacon - Same as GetBeacon() but doesn't print a warning
-func (s *ActiveTarget) GetBeacon() *clientpb.Beacon {
-	return s.beacon
-}
-
-// IsSession - Is the current target a session?
-func (s *ActiveTarget) IsSession() bool {
-	return s.session != nil
-}
+// func (s *ActiveTarget) GetInteractive() (*clientpb.Session, *clientpb.Beacon) {
+// 	if s.session == nil && s.beacon == nil {
+// 		fmt.Printf(Warn + "Please select a session or beacon via `use`\n")
+// 		return nil, nil
+// 	}
+// 	return s.session, s.beacon
+// }
+//
+// // GetSessionInteractive - Get the active target(s)
+// func (s *ActiveTarget) Get() (*clientpb.Session, *clientpb.Beacon) {
+// 	return s.session, s.beacon
+// }
+//
+// // GetSessionInteractive - GetSessionInteractive the active session
+// func (s *ActiveTarget) GetSessionInteractive() *clientpb.Session {
+// 	if s.session == nil {
+// 		fmt.Printf(Warn + "Please select a session via `use`\n")
+// 		return nil
+// 	}
+// 	return s.session
+// }
+//
+// // GetSession - Same as GetSession() but doesn't print a warning
+// func (s *ActiveTarget) GetSession() *clientpb.Session {
+// 	return s.session
+// }
+//
+// // GetBeaconInteractive - Get beacon interactive the active session
+// func (s *ActiveTarget) GetBeaconInteractive() *clientpb.Beacon {
+// 	if s.beacon == nil {
+// 		fmt.Printf(Warn + "Please select a beacon via `use`\n")
+// 		return nil
+// 	}
+// 	return s.beacon
+// }
+//
+// // GetBeacon - Same as GetBeacon() but doesn't print a warning
+// func (s *ActiveTarget) GetBeacon() *clientpb.Beacon {
+// 	return s.beacon
+// }
+//
+// // IsSession - Is the current target a session?
+// func (s *ActiveTarget) IsSession() bool {
+// 	return s.session != nil
+// }
 
 // AddObserver - Observers to notify when the active session changes
 func (s *ActiveTarget) AddObserver(observer Observer) int {
@@ -657,23 +657,23 @@ func (s *ActiveTarget) RemoveObserver(observerID int) {
 	delete(s.observers, observerID)
 }
 
-func (s *ActiveTarget) Request(ctx *grumble.Context) *commonpb.Request {
-	if s.session == nil && s.beacon == nil {
-		return nil
-	}
-	timeout := int(time.Second) * ctx.Flags.Int("timeout")
-	req := &commonpb.Request{}
-	req.Timeout = int64(timeout)
-	if s.session != nil {
-		req.Async = false
-		req.SessionID = s.session.ID
-	}
-	if s.beacon != nil {
-		req.Async = true
-		req.BeaconID = s.beacon.ID
-	}
-	return req
-}
+// func (s *ActiveTarget) Request(ctx *grumble.Context) *commonpb.Request {
+// 	if s.session == nil && s.beacon == nil {
+// 		return nil
+// 	}
+// 	timeout := int(time.Second) * ctx.Flags.Int("timeout")
+// 	req := &commonpb.Request{}
+// 	req.Timeout = int64(timeout)
+// 	if s.session != nil {
+// 		req.Async = false
+// 		req.SessionID = s.session.ID
+// 	}
+// 	if s.beacon != nil {
+// 		req.Async = true
+// 		req.BeaconID = s.beacon.ID
+// 	}
+// 	return req
+// }
 
 // Set - Change the active session
 func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {

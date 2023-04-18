@@ -127,7 +127,7 @@ var (
 )
 
 // GetTableStyle - Get the current table style
-func GetTableStyle(con *console.SliverConsoleClient) table.Style {
+func GetTableStyle(con *console.SliverConsole) table.Style {
 	if con.Settings == nil {
 		con.Settings, _ = assets.LoadSettings()
 	}
@@ -140,7 +140,7 @@ func GetTableStyle(con *console.SliverConsoleClient) table.Style {
 }
 
 // GetTableWithBordersStyle - Get the table style with borders
-func GetTableWithBordersStyle(con *console.SliverConsoleClient) table.Style {
+func GetTableWithBordersStyle(con *console.SliverConsole) table.Style {
 	if con.Settings == nil {
 		con.Settings, _ = assets.LoadSettings()
 	}
@@ -178,7 +178,7 @@ func PagesOf(renderedTable string) [][]string {
 }
 
 // PaginateTable - Render paginated table to console
-func PaginateTable(tw table.Writer, skipPages int, overflow bool, interactive bool, con *console.SliverConsoleClient) {
+func PaginateTable(tw table.Writer, skipPages int, overflow bool, interactive bool, con *console.SliverConsole) {
 	renderedTable := tw.Render()
 	lineCount := strings.Count(renderedTable, "\n")
 	if !overflow || con.Settings.AlwaysOverflow {

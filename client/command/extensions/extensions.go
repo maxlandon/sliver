@@ -33,7 +33,7 @@ import (
 )
 
 // ExtensionsCmd - List information about installed extensions
-func ExtensionsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ExtensionsCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	if 0 < len(getInstalledManifests()) {
 		PrintExtensions(con)
 	} else {
@@ -42,7 +42,7 @@ func ExtensionsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintExtensions - Print a list of loaded extensions
-func PrintExtensions(con *console.SliverConsoleClient) {
+func PrintExtensions(con *console.SliverConsole) {
 	tw := table.NewWriter()
 	tw.SetStyle(settings.GetTableStyle(con))
 	tw.AppendHeader(table.Row{
@@ -113,7 +113,7 @@ func getInstalledManifests() map[string]*ExtensionManifest {
 }
 
 // ExtensionsCommandNameCompleter - Completer for installed extensions command names
-func ExtensionsCommandNameCompleter(prefix string, args []string, con *console.SliverConsoleClient) []string {
+func ExtensionsCommandNameCompleter(prefix string, args []string, con *console.SliverConsole) []string {
 	installedManifests := getInstalledManifests()
 	results := []string{}
 	for _, manifest := range installedManifests {

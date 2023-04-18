@@ -23,18 +23,20 @@ import (
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // ExtensionsListCmd - List all extension loaded on the active session/beacon
-func ExtensionsListCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ExtensionsListCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
 
 	extList, err := con.Rpc.ListExtensions(context.Background(), &sliverpb.ListExtensionsReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

@@ -187,9 +187,9 @@ const (
 	UploadStr   = "upload"
 	IfconfigStr = "ifconfig"
 	NetstatStr  = "netstat"
-	ChmodStr       = "chmod"
-	ChownStr       = "chown"
-	ChtimesStr       = "chtimes"
+	ChmodStr    = "chmod"
+	ChownStr    = "chown"
+	ChtimesStr  = "chtimes"
 
 	ProcdumpStr         = "procdump"
 	ImpersonateStr      = "impersonate"
@@ -265,10 +265,10 @@ const (
 
 // Groups
 const (
-	GenericHelpGroup     = "Generic:"
-	SliverHelpGroup      = "Sliver:"
-	SliverWinHelpGroup   = "Sliver - Windows:"
-	MultiplayerHelpGroup = "Multiplayer:"
-	AliasHelpGroup       = "Sliver - 3rd Party macros:"
-	ExtensionHelpGroup   = "Sliver - 3rd Party extensions:"
+	GenericHelpGroup     = "Generic"
+	SliverHelpGroup      = "Sliver"
+	SliverWinHelpGroup   = "Sliver - Windows"
+	MultiplayerHelpGroup = "Multiplayer"
+	AliasHelpGroup       = "Sliver - 3rd Party macros"
+	ExtensionHelpGroup   = "Sliver - 3rd Party extensions"
 )

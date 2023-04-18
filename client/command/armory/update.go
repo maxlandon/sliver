@@ -26,13 +26,15 @@ import (
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/extensions"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // ArmoryUpdateCmd - Update all installed extensions/aliases
-func ArmoryUpdateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ArmoryUpdateCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	con.PrintInfof("Refreshing package cache ... ")
-	clientConfig := parseArmoryHTTPConfig(ctx)
+	clientConfig := parseArmoryHTTPConfig(cmd)
 	refresh(clientConfig)
 	con.Printf(console.Clearln + "\r")
 
@@ -65,7 +67,7 @@ func ArmoryUpdateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	}
 }
 
-func checkForAliasUpdates(clientConfig ArmoryHTTPConfig, con *console.SliverConsoleClient) []string {
+func checkForAliasUpdates(clientConfig ArmoryHTTPConfig, con *console.SliverConsole) []string {
 	cachedAliases, _ := packagesInCache()
 	results := []string{}
 	for _, aliasManifestPath := range assets.GetInstalledAliasManifests() {
@@ -88,7 +90,7 @@ func checkForAliasUpdates(clientConfig ArmoryHTTPConfig, con *console.SliverCons
 	return results
 }
 
-func checkForExtensionUpdates(clientConfig ArmoryHTTPConfig, con *console.SliverConsoleClient) []string {
+func checkForExtensionUpdates(clientConfig ArmoryHTTPConfig, con *console.SliverConsole) []string {
 	_, cachedExtensions := packagesInCache()
 	results := []string{}
 	for _, extManifestPath := range assets.GetInstalledExtensionManifests() {

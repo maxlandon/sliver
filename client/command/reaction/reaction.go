@@ -26,6 +26,7 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
 )
@@ -37,20 +38,20 @@ func ReactionCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		reactions := core.Reactions.On(eventType)
 		if 0 < len(reactions) {
 			if totalReactions != 0 {
-				con.Printf("\n") // Add newline between each table after the first
+				log.Printf("\n") // Add newline between each table after the first
 			}
 			displayReactionsTable(eventType, reactions, con)
 		}
 		totalReactions += len(reactions)
 	}
 	if totalReactions == 0 {
-		con.PrintInfof("No reactions set\n")
+		log.PrintInfof("No reactions set\n")
 	}
 }
 
 func displayReactionsTable(eventType string, reactions []core.Reaction, con *console.SliverConsoleClient) {
 	tw := table.NewWriter()
-	tw.SetStyle(settings.GetTableStyle(con))
+	tw.SetStyle(settings.GetTableStyle(console.Client))
 	tw.SetTitle(fmt.Sprintf(console.Bold+"%s"+console.Normal, EventTypeToTitle(eventType)))
 	tw.AppendSeparator()
 	slackSpace := len(EventTypeToTitle(eventType)) - len("Commands") - len("ID") - 3
