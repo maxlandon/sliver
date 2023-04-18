@@ -23,11 +23,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	insecureRand "math/rand"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -78,8 +76,10 @@ const (
 )
 
 // Observer - A function to call when the sessions changes
-type Observer func(*clientpb.Session, *clientpb.Beacon)
-type BeaconTaskCallback func(*clientpb.BeaconTask)
+type (
+	Observer           func(*clientpb.Session, *clientpb.Beacon)
+	BeaconTaskCallback func(*clientpb.BeaconTask)
+)
 
 type ActiveTarget struct {
 	session    *clientpb.Session
@@ -439,22 +439,22 @@ func (con *SliverConsoleClient) CheckLastUpdate() {
 	}
 }
 
-func getLastUpdateCheck() *time.Time {
-	appDir := assets.GetRootAppDir()
-	lastUpdateCheckPath := filepath.Join(appDir, consts.LastUpdateCheckFileName)
-	data, err := ioutil.ReadFile(lastUpdateCheckPath)
-	if err != nil {
-		log.Printf("Failed to read last update check %s", err)
-		return nil
-	}
-	unixTime, err := strconv.Atoi(string(data))
-	if err != nil {
-		log.Printf("Failed to parse last update check %s", err)
-		return nil
-	}
-	lastUpdate := time.Unix(int64(unixTime), 0)
-	return &lastUpdate
-}
+// func getLastUpdateCheck() *time.Time {
+// 	appDir := assets.GetRootAppDir()
+// 	lastUpdateCheckPath := filepath.Join(appDir, consts.LastUpdateCheckFileName)
+// 	data, err := ioutil.ReadFile(lastUpdateCheckPath)
+// 	if err != nil {
+// 		log.Printf("Failed to read last update check %s", err)
+// 		return nil
+// 	}
+// 	unixTime, err := strconv.Atoi(string(data))
+// 	if err != nil {
+// 		log.Printf("Failed to parse last update check %s", err)
+// 		return nil
+// 	}
+// 	lastUpdate := time.Unix(int64(unixTime), 0)
+// 	return &lastUpdate
+// }
 
 // GetSession - Get session by session ID or name
 func (con *SliverConsoleClient) GetSession(arg string) *clientpb.Session {

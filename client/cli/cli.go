@@ -37,14 +37,12 @@ const (
 	logFileName = "sliver-client.log"
 )
 
-var (
-	sliverServerVersion = fmt.Sprintf("v%s", version.FullVersion())
-)
+var sliverServerVersion = fmt.Sprintf("v%s", version.FullVersion())
 
 // Initialize logging
 func initLogging(appDir string) *os.File {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	logFile, err := os.OpenFile(path.Join(appDir, logFileName), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+	logFile, err := os.OpenFile(path.Join(appDir, logFileName), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o600)
 	if err != nil {
 		panic(fmt.Sprintf("[!] Error opening file: %s", err))
 	}
@@ -53,12 +51,14 @@ func initLogging(appDir string) *os.File {
 }
 
 func init() {
-
 	// Import
 	rootCmd.AddCommand(cmdImport)
 
 	// Version
 	rootCmd.AddCommand(cmdVersion)
+
+	// Console
+	rootCmd.AddCommand(cmdConsole)
 }
 
 var rootCmd = &cobra.Command{
