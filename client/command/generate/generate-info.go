@@ -5,11 +5,13 @@ import (
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // GenerateInfoCmd - Display information about the Sliver server's compiler configuration
-func GenerateInfoCmd(ctx *grumble.Context, con *console.SliverConsole) {
+func GenerateInfoCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	compiler, err := con.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("Failed to get compiler information: %s\n", err)

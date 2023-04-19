@@ -25,12 +25,18 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // ProfilesRmCmd - Delete an implant profile
-func ProfilesRmCmd(ctx *grumble.Context, con *console.SliverConsole) {
-	name := ctx.Args.String("name")
+func ProfilesRmCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	var name string
+	if len(args) > 0 {
+		name = args[0]
+	}
+	// name := ctx.Args.String("name")
 	if name == "" {
 		con.PrintErrorf("No profile name specified\n")
 		return

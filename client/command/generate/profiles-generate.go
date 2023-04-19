@@ -25,23 +25,30 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // ProfilesGenerateCmd - Generate an implant binary based on a profile
-func ProfilesGenerateCmd(ctx *grumble.Context, con *console.SliverConsole) {
-	name := ctx.Args.String("name")
+func ProfilesGenerateCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	var name string
+	if len(args) > 0 {
+		name = args[0]
+	}
+	// name := ctx.Args.String("name")
 	if name == "" {
 		con.PrintErrorf("No profile name specified\n")
 		return
 	}
-	save := ctx.Flags.String("save")
+	save, _ := cmd.Flags().GetString("save")
 	if save == "" {
 		save, _ = os.Getwd()
 	}
 	profile := GetImplantProfileByName(name, con)
 	if profile != nil {
-		implantFile, err := compile(profile.Config, ctx.Flags.Bool("disable-sgn"), save, con)
+		disableSGN, _ := cmd.Flags().GetBool("disable-sgn")
+		implantFile, err := compile(profile.Config, disableSGN, save, con)
 		if err != nil {
 			return
 		}

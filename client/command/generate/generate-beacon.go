@@ -7,7 +7,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -16,32 +16,38 @@ var (
 )
 
 // GenerateBeaconCmd - The main command used to generate implant binaries
-func GenerateBeaconCmd(ctx *grumble.Context, con *console.SliverConsole) {
-	config := parseCompileFlags(ctx, con)
+func GenerateBeaconCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	config := parseCompileFlags(cmd, con)
 	if config == nil {
 		return
 	}
 	config.IsBeacon = true
-	err := parseBeaconFlags(ctx, con, config)
+	err := parseBeaconFlags(cmd, con, config)
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
 		return
 	}
-	save := ctx.Flags.String("save")
+	save, _ := cmd.Flags().GetString("save")
 	if save == "" {
 		save, _ = os.Getwd()
 	}
-	if !ctx.Flags.Bool("external-builder") {
-		compile(config, ctx.Flags.Bool("disable-sgn"), save, con)
+	if external, _ := cmd.Flags().GetBool("external-builder"); !external {
+		disableSGN, _ := cmd.Flags().GetBool("disable-sgn")
+		compile(config, disableSGN, save, con)
 	} else {
 		externalBuild(config, save, con)
 	}
 }
 
-func parseBeaconFlags(ctx *grumble.Context, con *console.SliverConsole, config *clientpb.ImplantConfig) error {
-	interval := time.Duration(ctx.Flags.Int64("days")) * time.Hour * 24
-	interval += time.Duration(ctx.Flags.Int64("hours")) * time.Hour
-	interval += time.Duration(ctx.Flags.Int64("minutes")) * time.Minute
+func parseBeaconFlags(cmd *cobra.Command, con *console.SliverConsole, config *clientpb.ImplantConfig) error {
+	days, _ := cmd.Flags().GetInt64("days")
+	hours, _ := cmd.Flags().GetInt64("hours")
+	minutes, _ := cmd.Flags().GetInt64("minutes")
+	interval := time.Duration(days) * time.Hour * 24
+	interval += time.Duration(hours) * time.Hour
+	interval += time.Duration(minutes) * time.Minute
 
 	/*
 		If seconds has not been specified but any of the other time units have, then do not add
@@ -49,14 +55,18 @@ func parseBeaconFlags(ctx *grumble.Context, con *console.SliverConsole, config *
 
 		If seconds have been specified, then add them regardless.
 	*/
-	if (ctx.Flags["seconds"].IsDefault && interval.Seconds() == 0) || (!ctx.Flags["seconds"].IsDefault) {
-		interval += time.Duration(ctx.Flags.Int64("seconds")) * time.Second
+	if (!cmd.Flags().Changed("seconds") && interval.Seconds() == 0) || (cmd.Flags().Changed("seconds")) {
+		// if (ctx.Flags["seconds"].IsDefault && interval.Seconds() == 0) || (!ctx.Flags["seconds"].IsDefault) {
+		seconds, _ := cmd.Flags().GetInt64("seconds")
+		interval += time.Duration(seconds) * time.Second
 	}
 
 	if interval < minBeaconInterval {
 		return ErrBeaconIntervalTooShort
 	}
+
+	beaconJitter, _ := cmd.Flags().GetInt64("jitter")
 	config.BeaconInterval = int64(interval)
-	config.BeaconJitter = int64(time.Duration(ctx.Flags.Int64("jitter")) * time.Second)
+	config.BeaconJitter = int64(time.Duration(beaconJitter) * time.Second)
 	return nil
 }

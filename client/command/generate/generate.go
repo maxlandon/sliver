@@ -38,7 +38,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/util"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -87,17 +87,20 @@ var (
 )
 
 // GenerateCmd - The main command used to generate implant binaries
-func GenerateCmd(ctx *grumble.Context, con *console.SliverConsole) {
-	config := parseCompileFlags(ctx, con)
+func GenerateCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	config := parseCompileFlags(cmd, con)
 	if config == nil {
 		return
 	}
-	save := ctx.Flags.String("save")
+	save, _ := cmd.Flags().GetString("save")
 	if save == "" {
 		save, _ = os.Getwd()
 	}
-	if !ctx.Flags.Bool("external-builder") {
-		compile(config, ctx.Flags.Bool("disable-sgn"), save, con)
+	if external, _ := cmd.Flags().GetBool("external-builder"); !external {
+		disableSGN, _ := cmd.Flags().GetBool("disable-sgn")
+		compile(config, disableSGN, save, con)
 	} else {
 		_, err := externalBuild(config, save, con)
 		if err != nil {
@@ -182,10 +185,10 @@ func nameOfOutputFormat(value clientpb.OutputFormat) string {
 }
 
 // Shared function that extracts the compile flags from the grumble context
-func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *clientpb.ImplantConfig {
+func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb.ImplantConfig {
 	var name string
-	if ctx.Flags.String("name") != "" {
-		name = strings.ToLower(ctx.Flags.String("name"))
+	if nameF, _ := cmd.Flags().GetString("name"); nameF != "" {
+		name = strings.ToLower(nameF)
 
 		if err := util.AllowedName(name); err != nil {
 			con.PrintErrorf("%s\n", err)
@@ -195,42 +198,51 @@ func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *client
 
 	c2s := []*clientpb.ImplantC2{}
 
-	mtlsC2, err := ParseMTLSc2(ctx.Flags.String("mtls"))
+	mtlsC2F, _ := cmd.Flags().GetString("mtls")
+	mtlsC2, err := ParseMTLSc2(mtlsC2F)
 	if err != nil {
 		con.PrintErrorf("%s\n", err.Error())
 		return nil
 	}
 	c2s = append(c2s, mtlsC2...)
 
-	wgC2, err := ParseWGc2(ctx.Flags.String("wg"))
+	wgC2F, _ := cmd.Flags().GetString("wg")
+	wgC2, err := ParseWGc2(wgC2F)
 	if err != nil {
 		con.PrintErrorf("%s\n", err.Error())
 		return nil
 	}
+	wgKeyExchangePort, _ := cmd.Flags().GetUint32("key-exchange")
+	wgTcpCommsPort, _ := cmd.Flags().GetUint32("tcp-comms")
+
 	c2s = append(c2s, wgC2...)
 
-	httpC2, err := ParseHTTPc2(ctx.Flags.String("http"))
+	httpC2F, _ := cmd.Flags().GetString("http")
+	httpC2, err := ParseHTTPc2(httpC2F)
 	if err != nil {
 		con.PrintErrorf("%s\n", err.Error())
 		return nil
 	}
 	c2s = append(c2s, httpC2...)
 
-	dnsC2, err := ParseDNSc2(ctx.Flags.String("dns"))
+	dnsC2F, _ := cmd.Flags().GetString("dns")
+	dnsC2, err := ParseDNSc2(dnsC2F)
 	if err != nil {
 		con.PrintErrorf("%s\n", err.Error())
 		return nil
 	}
 	c2s = append(c2s, dnsC2...)
 
-	namedPipeC2, err := ParseNamedPipec2(ctx.Flags.String("named-pipe"))
+	namedPipeC2F, _ := cmd.Flags().GetString("named-pipe")
+	namedPipeC2, err := ParseNamedPipec2(namedPipeC2F)
 	if err != nil {
 		con.PrintErrorf("%s\n", err.Error())
 		return nil
 	}
 	c2s = append(c2s, namedPipeC2...)
 
-	tcpPivotC2, err := ParseTCPPivotc2(ctx.Flags.String("tcp-pivot"))
+	tcpPivotC2F, _ := cmd.Flags().GetString("tcp-pivot")
+	tcpPivotC2, err := ParseTCPPivotc2(tcpPivotC2F)
 	if err != nil {
 		con.PrintErrorf("%s\n", err.Error())
 		return nil
@@ -238,10 +250,11 @@ func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *client
 	c2s = append(c2s, tcpPivotC2...)
 
 	var symbolObfuscation bool
-	if ctx.Flags.Bool("debug") {
+	if debug, _ := cmd.Flags().GetBool("debug"); debug {
 		symbolObfuscation = false
 	} else {
-		symbolObfuscation = !ctx.Flags.Bool("skip-symbols")
+		symbolObfuscation, _ = cmd.Flags().GetBool("skip-symbols")
+		symbolObfuscation = !symbolObfuscation
 	}
 
 	if len(mtlsC2) == 0 && len(wgC2) == 0 && len(httpC2) == 0 && len(dnsC2) == 0 && len(namedPipeC2) == 0 && len(tcpPivotC2) == 0 {
@@ -249,7 +262,7 @@ func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *client
 		return nil
 	}
 
-	rawCanaries := ctx.Flags.String("canary")
+	rawCanaries, _ := cmd.Flags().GetString("canary")
 	canaryDomains := []string{}
 	if 0 < len(rawCanaries) {
 		for _, canaryDomain := range strings.Split(rawCanaries, ",") {
@@ -260,23 +273,27 @@ func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *client
 		}
 	}
 
-	reconnectInterval := ctx.Flags.Int("reconnect")
-	pollTimeout := ctx.Flags.Int("poll-timeout")
-	maxConnectionErrors := ctx.Flags.Int("max-errors")
+	debug, _ := cmd.Flags().GetBool("debug")
+	evasion, _ := cmd.Flags().GetBool("evasion")
+	templateName, _ := cmd.Flags().GetString("template")
 
-	limitDomainJoined := ctx.Flags.Bool("limit-domainjoined")
-	limitHostname := ctx.Flags.String("limit-hostname")
-	limitUsername := ctx.Flags.String("limit-username")
-	limitDatetime := ctx.Flags.String("limit-datetime")
-	limitFileExists := ctx.Flags.String("limit-fileexists")
-	limitLocale := ctx.Flags.String("limit-locale")
-	debugFile := ctx.Flags.String("debug-file")
+	reconnectInterval, _ := cmd.Flags().GetInt64("reconnect")
+	pollTimeout, _ := cmd.Flags().GetInt64("poll-timeout")
+	maxConnectionErrors, _ := cmd.Flags().GetUint32("max-errors")
+
+	limitDomainJoined, _ := cmd.Flags().GetBool("limit-domainjoined")
+	limitHostname, _ := cmd.Flags().GetString("limit-hostname")
+	limitUsername, _ := cmd.Flags().GetString("limit-username")
+	limitDatetime, _ := cmd.Flags().GetString("limit-datetime")
+	limitFileExists, _ := cmd.Flags().GetString("limit-fileexists")
+	limitLocale, _ := cmd.Flags().GetString("limit-locale")
+	debugFile, _ := cmd.Flags().GetString("debug-file")
 
 	isSharedLib := false
 	isService := false
 	isShellcode := false
 
-	format := ctx.Flags.String("format")
+	format, _ := cmd.Flags().GetString("format")
 	runAtLoad := false
 	var configFormat clientpb.OutputFormat
 	switch format {
@@ -285,7 +302,7 @@ func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *client
 	case "shared":
 		configFormat = clientpb.OutputFormat_SHARED_LIB
 		isSharedLib = true
-		runAtLoad = ctx.Flags.Bool("run-at-load")
+		runAtLoad, _ = cmd.Flags().GetBool("run-at-load")
 	case "shellcode":
 		configFormat = clientpb.OutputFormat_SHELLCODE
 		isShellcode = true
@@ -297,8 +314,10 @@ func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *client
 		configFormat = clientpb.OutputFormat_EXECUTABLE
 	}
 
-	targetOS := strings.ToLower(ctx.Flags.String("os"))
-	targetArch := strings.ToLower(ctx.Flags.String("arch"))
+	targetOSF, _ := cmd.Flags().GetString("os")
+	targetOS := strings.ToLower(targetOSF)
+	targetArchF, _ := cmd.Flags().GetString("arch")
+	targetArch := strings.ToLower(targetArchF)
 	targetOS, targetArch = getTargets(targetOS, targetArch, con)
 	if targetOS == "" || targetArch == "" {
 		return nil
@@ -318,7 +337,7 @@ func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *client
 	}
 
 	var tunIP net.IP
-	if wg := ctx.Flags.String("wg"); wg != "" {
+	if wg, _ := cmd.Flags().GetString("wg"); wg != "" {
 		uniqueWGIP, err := con.Rpc.GenerateUniqueIP(context.Background(), &commonpb.Empty{})
 		tunIP = net.ParseIP(uniqueWGIP.IP)
 		if err != nil {
@@ -329,7 +348,7 @@ func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *client
 	}
 
 	// TODO: Use generics or something to check in a slice
-	connectionStrategy := ctx.Flags.String("strategy")
+	connectionStrategy, _ := cmd.Flags().GetString("strategy")
 	if connectionStrategy != "" && connectionStrategy != "s" && connectionStrategy != "r" && connectionStrategy != "rd" {
 		con.PrintErrorf("Invalid connection strategy: %s\n", connectionStrategy)
 		return nil
@@ -339,21 +358,21 @@ func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *client
 		GOOS:             targetOS,
 		GOARCH:           targetArch,
 		Name:             name,
-		Debug:            ctx.Flags.Bool("debug"),
-		Evasion:          ctx.Flags.Bool("evasion"),
+		Debug:            debug,
+		Evasion:          evasion,
 		ObfuscateSymbols: symbolObfuscation,
 		C2:               c2s,
 		CanaryDomains:    canaryDomains,
-		TemplateName:     ctx.Flags.String("template"),
+		TemplateName:     templateName,
 
 		WGPeerTunIP:       tunIP.String(),
-		WGKeyExchangePort: uint32(ctx.Flags.Int("key-exchange")),
-		WGTcpCommsPort:    uint32(ctx.Flags.Int("tcp-comms")),
+		WGKeyExchangePort: wgKeyExchangePort,
+		WGTcpCommsPort:    wgTcpCommsPort,
 
 		ConnectionStrategy:  connectionStrategy,
-		ReconnectInterval:   int64(reconnectInterval) * int64(time.Second),
-		PollTimeout:         int64(pollTimeout) * int64(time.Second),
-		MaxConnectionErrors: uint32(maxConnectionErrors),
+		ReconnectInterval:   reconnectInterval * int64(time.Second),
+		PollTimeout:         pollTimeout * int64(time.Second),
+		MaxConnectionErrors: maxConnectionErrors,
 
 		LimitDomainJoined: limitDomainJoined,
 		LimitHostname:     limitHostname,

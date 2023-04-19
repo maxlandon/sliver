@@ -7,12 +7,15 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // ImplantsRmCmd - Deletes an archived implant build from the server
-func ImplantsRmCmd(ctx *grumble.Context, con *console.SliverConsole) {
-	name := ctx.Args.String("name")
+func ImplantsRmCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	name := args[0]
+	// name := ctx.Args.String("name")
 	if name == "" {
 		con.PrintErrorf("No name specified\n")
 		return

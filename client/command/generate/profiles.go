@@ -28,12 +28,14 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 )
 
 // ProfilesCmd - Display implant profiles
-func ProfilesCmd(ctx *grumble.Context, con *console.SliverConsole) {
+func ProfilesCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	profiles := getImplantProfiles(con)
 	if profiles == nil {
 		return

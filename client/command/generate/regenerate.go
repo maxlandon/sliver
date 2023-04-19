@@ -24,18 +24,25 @@ import (
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // RegenerateCmd - Download an archived implant build/binary
-func RegenerateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	save := ctx.Flags.String("save")
+func RegenerateCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	save, _ := cmd.Flags().GetString("save")
 	if save == "" {
 		save, _ = os.Getwd()
 	}
 
+	var name string
+	if len(args) > 0 {
+		name = args[0]
+	}
+
 	regenerate, err := con.Rpc.Regenerate(context.Background(), &clientpb.RegenerateReq{
-		ImplantName: ctx.Args.String("implant-name"),
+		ImplantName: name,
 	})
 	if err != nil {
 		con.PrintErrorf("Failed to regenerate implant %s\n", err)
@@ -50,7 +57,7 @@ func RegenerateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		con.PrintErrorf("%s\n", err)
 		return
 	}
-	err = os.WriteFile(saveTo, regenerate.File.Data, 0700)
+	err = os.WriteFile(saveTo, regenerate.File.Data, 0o700)
 	if err != nil {
 		con.PrintErrorf("Failed to write to %s\n", err)
 		return

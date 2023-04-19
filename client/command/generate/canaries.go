@@ -8,19 +8,22 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 )
 
 // CanariesCmd - Display canaries from the database and their status
-func CanariesCmd(ctx *grumble.Context, con *console.SliverConsole) {
+func CanariesCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	canaries, err := con.Rpc.Canaries(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("Failed to list canaries %s", err)
 		return
 	}
 	if 0 < len(canaries.Canaries) {
-		PrintCanaries(con, canaries.Canaries, ctx.Flags.Bool("burned"))
+		burnedOnly, _ := cmd.Flags().GetBool("burned")
+		PrintCanaries(con, canaries.Canaries, burnedOnly)
 	} else {
 		con.PrintInfof("No canaries in database\n")
 	}

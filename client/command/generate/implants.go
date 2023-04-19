@@ -28,8 +28,8 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 )
 
 // ImplantBuildFilter - Filter implant builds
@@ -43,7 +43,9 @@ type ImplantBuildFilter struct {
 }
 
 // ImplantsCmd - Displays archived implant builds
-func ImplantsCmd(ctx *grumble.Context, con *console.SliverConsole) {
+func ImplantsCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	builds, err := con.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
