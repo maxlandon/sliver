@@ -26,7 +26,7 @@ import (
 )
 
 // ProfilesNewCmd - Create a new implant profile
-func ProfilesNewCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ProfilesNewCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	name := ctx.Args.String("name")
 	config := parseCompileFlags(ctx, con)
 	if config == nil {
@@ -45,7 +45,7 @@ func ProfilesNewCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // ProfilesNewBeaconCmd - Create a new beacon profile
-func ProfilesNewBeaconCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ProfilesNewBeaconCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	name := ctx.Args.String("name")
 	if name == "" {
 		con.PrintErrorf("No profile name specified\n")

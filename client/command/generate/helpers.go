@@ -9,7 +9,7 @@ import (
 )
 
 // GetSliverBinary - Get the binary of an implant based on it's profile
-func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverConsoleClient) ([]byte, error) {
+func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverConsole) ([]byte, error) {
 	var data []byte
 	// get implant builds
 	builds, err := con.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
@@ -47,7 +47,6 @@ func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverConsol
 		regenerate, err := con.Rpc.Regenerate(context.Background(), &clientpb.RegenerateReq{
 			ImplantName: implantName,
 		})
-
 		if err != nil {
 			return data, err
 		}

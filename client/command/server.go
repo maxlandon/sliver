@@ -5,8 +5,11 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/armory"
+	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/command/help"
+	"github.com/bishopfox/sliver/client/command/jobs"
 	"github.com/bishopfox/sliver/client/command/reaction"
+	"github.com/bishopfox/sliver/client/command/update"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/rsteube/carapace"
@@ -140,207 +143,165 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 
 		// [ Update ] --------------------------------------------------------------
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.UpdateStr,
-			Short: "Check for updates",
-			Long:  help.GetHelpFor([]string{consts.UpdateStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Bool("P", "prereleases", false, "include pre-released (unstable) versions")
-			// 	f.String("p", "proxy", "", "specify a proxy url (e.g. http://localhost:8080)")
-			// 	f.String("s", "save", "", "save downloaded files to specific directory (default user home dir)")
-			// 	f.Bool("I", "insecure", false, "skip tls certificate validation")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	update.UpdateCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		updateCmd := &cobra.Command{
+			Use:     consts.UpdateStr,
+			Short:   "Check for updates",
+			Long:    help.GetHelpFor([]string{consts.UpdateStr}),
+			Run:     update.UpdateCmd,
 			GroupID: consts.GenericHelpGroup,
+		}
+		Flags("update", updateCmd, func(f *pflag.FlagSet) {
+			f.BoolP("prereleases", "P", false, "include pre-released (unstable) versions")
+			f.StringP("proxy", "p", "", "specify a proxy url (e.g. http://localhost:8080)")
+			f.StringP("save", "s", "", "save downloaded files to specific directory (default user home dir)")
+			f.BoolP("insecure", "I", false, "skip tls certificate validation")
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		server.AddCommand(updateCmd)
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.VersionStr,
-			Short: "Display version information",
-			Long:  help.GetHelpFor([]string{consts.VersionStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	update.VerboseVersionsCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		versionCmd := &cobra.Command{
+			Use:     consts.VersionStr,
+			Short:   "Display version information",
+			Long:    help.GetHelpFor([]string{consts.VersionStr}),
+			Run:     update.VerboseVersionsCmd,
 			GroupID: consts.GenericHelpGroup,
+		}
+		Flags("update", versionCmd, func(f *pflag.FlagSet) {
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		server.AddCommand(versionCmd)
 
 		// [ Jobs ] -----------------------------------------------------------------
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.JobsStr,
-			Short: "Job control",
-			Long:  help.GetHelpFor([]string{consts.JobsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("k", "kill", -1, "kill a background job")
-			// 	f.Bool("K", "kill-all", false, "kill all jobs")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	jobs.JobsCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		jobsCmd := &cobra.Command{
+			Use:     consts.JobsStr,
+			Short:   "Job control",
+			Long:    help.GetHelpFor([]string{consts.JobsStr}),
+			Run:     jobs.JobsCmd,
 			GroupID: consts.GenericHelpGroup,
+		}
+		Flags("jobs", jobsCmd, func(f *pflag.FlagSet) {
+			f.Int32P("kill", "k", -1, "kill a background job")
+			f.BoolP("kill-all", "K", false, "kill all jobs")
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		server.AddCommand(jobsCmd)
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.MtlsStr,
-			Short: "Start an mTLS listener",
-			Long:  help.GetHelpFor([]string{consts.MtlsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("L", "lhost", "", "interface to bind server to")
-			// 	f.Int("l", "lport", generate.DefaultMTLSLPort, "tcp listen port")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// 	f.Bool("p", "persistent", false, "make persistent across restarts")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	jobs.MTLSListenerCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		mtlsCmd := &cobra.Command{
+			Use:     consts.MtlsStr,
+			Short:   "Start an mTLS listener",
+			Long:    help.GetHelpFor([]string{consts.MtlsStr}),
+			Run:     jobs.MTLSListenerCmd,
 			GroupID: consts.GenericHelpGroup,
+		}
+		Flags("mTLS listener", mtlsCmd, func(f *pflag.FlagSet) {
+			f.StringP("lhost", "L", "", "interface to bind server to")
+			f.Uint32P("lport", "l", generate.DefaultMTLSLPort, "tcp listen port")
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
+			f.BoolP("persistent", "p", false, "make persistent across restarts")
 		})
+		server.AddCommand(mtlsCmd)
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.WGStr,
-			Short: "Start a WireGuard listener",
-			Long:  help.GetHelpFor([]string{consts.WGStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("L", "lhost", "", "interface to bind server to")
-			// 	f.Int("l", "lport", generate.DefaultWGLPort, "udp listen port")
-			// 	f.Int("n", "nport", generate.DefaultWGNPort, "virtual tun interface listen port")
-			// 	f.Int("x", "key-port", generate.DefaultWGKeyExPort, "virtual tun interface key exchange port")
-			// 	f.Bool("p", "persistent", false, "make persistent across restarts")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	jobs.WGListenerCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		wgCmd := &cobra.Command{
+			Use:     consts.WGStr,
+			Short:   "Start a WireGuard listener",
+			Long:    help.GetHelpFor([]string{consts.WGStr}),
+			Run:     jobs.WGListenerCmd,
 			GroupID: consts.GenericHelpGroup,
+		}
+		Flags("WireGuardlistener", wgCmd, func(f *pflag.FlagSet) {
+			f.StringP("lhost", "L", "", "interface to bind server to")
+			f.Uint32P("lport", "l", generate.DefaultWGLPort, "udp listen port")
+			f.Uint32P("nport", "n", generate.DefaultWGNPort, "virtual tun interface listen port")
+			f.Uint32P("key-port", "x", generate.DefaultWGKeyExPort, "virtual tun interface key exchange port")
+			f.BoolP("persistent", "p", false, "make persistent across restarts")
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		server.AddCommand(wgCmd)
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.DnsStr,
-			Short: "Start a DNS listener",
-			Long:  help.GetHelpFor([]string{consts.DnsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("d", "domains", "", "parent domain(s) to use for DNS c2")
-			// 	f.Bool("c", "no-canaries", false, "disable dns canary detection")
-			// 	f.String("L", "lhost", "", "interface to bind server to")
-			// 	f.Int("l", "lport", generate.DefaultDNSLPort, "udp listen port")
-			// 	f.Bool("D", "disable-otp", false, "disable otp authentication")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// 	f.Bool("p", "persistent", false, "make persistent across restarts")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	jobs.DNSListenerCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		dnsCmd := &cobra.Command{
+			Use:     consts.DnsStr,
+			Short:   "Start a DNS listener",
+			Long:    help.GetHelpFor([]string{consts.DnsStr}),
+			Run:     jobs.DNSListenerCmd,
 			GroupID: consts.GenericHelpGroup,
+		}
+		Flags("DNS listener", dnsCmd, func(f *pflag.FlagSet) {
+			f.StringP("domains", "d", "", "parent domain(s) to use for DNS c2")
+			f.BoolP("no-canaries", "c", false, "disable dns canary detection")
+			f.StringP("lhost", "L", "", "interface to bind server to")
+			f.Uint32P("lport", "l", generate.DefaultDNSLPort, "udp listen port")
+			f.BoolP("disable-otp", "D", false, "disable otp authentication")
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
+			f.BoolP("persistent", "p", false, "make persistent across restarts")
 		})
+		server.AddCommand(dnsCmd)
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.HttpStr,
-			Short: "Start an HTTP listener",
-			Long:  help.GetHelpFor([]string{consts.HttpStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("d", "domain", "", "limit responses to specific domain")
-			// 	f.String("w", "website", "", "website name (see websites cmd)")
-			// 	f.String("L", "lhost", "", "interface to bind server to")
-			// 	f.Int("l", "lport", generate.DefaultHTTPLPort, "tcp listen port")
-			// 	f.Bool("D", "disable-otp", false, "disable otp authentication")
-			// 	f.String("T", "long-poll-timeout", "1s", "server-side long poll timeout")
-			// 	f.String("J", "long-poll-jitter", "2s", "server-side long poll jitter")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// 	f.Bool("p", "persistent", false, "make persistent across restarts")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	jobs.HTTPListenerCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		httpCmd := &cobra.Command{
+			Use:     consts.HttpStr,
+			Short:   "Start an HTTP listener",
+			Long:    help.GetHelpFor([]string{consts.HttpStr}),
+			Run:     jobs.HTTPListenerCmd,
 			GroupID: consts.GenericHelpGroup,
+		}
+		Flags("HTTP listener", httpCmd, func(f *pflag.FlagSet) {
+			f.StringP("domain", "d", "", "limit responses to specific domain")
+			f.StringP("website", "w", "", "website name (see websites cmd)")
+			f.StringP("lhost", "L", "", "interface to bind server to")
+			f.Uint32P("lport", "l", generate.DefaultHTTPLPort, "tcp listen port")
+			f.BoolP("disable-otp", "D", false, "disable otp authentication")
+			f.StringP("long-poll-timeout", "T", "1s", "server-side long poll timeout")
+			f.StringP("long-poll-jitter", "J", "2s", "server-side long poll jitter")
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
+			f.BoolP("persistent", "p", false, "make persistent across restarts")
 		})
+		server.AddCommand(httpCmd)
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.HttpsStr,
-			Short: "Start an HTTPS listener",
-			Long:  help.GetHelpFor([]string{consts.HttpsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("d", "domain", "", "limit responses to specific domain")
-			// 	f.String("w", "website", "", "website name (see websites cmd)")
-			// 	f.String("L", "lhost", "", "interface to bind server to")
-			// 	f.Int("l", "lport", generate.DefaultHTTPSLPort, "tcp listen port")
-			// 	f.Bool("D", "disable-otp", false, "disable otp authentication")
-			// 	f.String("T", "long-poll-timeout", "1s", "server-side long poll timeout")
-			// 	f.String("J", "long-poll-jitter", "2s", "server-side long poll jitter")
-			//
-			// 	f.String("c", "cert", "", "PEM encoded certificate file")
-			// 	f.String("k", "key", "", "PEM encoded private key file")
-			// 	f.Bool("e", "lets-encrypt", false, "attempt to provision a let's encrypt certificate")
-			// 	f.Bool("E", "disable-randomized-jarm", false, "disable randomized jarm fingerprints")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// 	f.Bool("p", "persistent", false, "make persistent across restarts")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	jobs.HTTPSListenerCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		httpsCmd := &cobra.Command{
+			Use:     consts.HttpsStr,
+			Short:   "Start an HTTPS listener",
+			Long:    help.GetHelpFor([]string{consts.HttpsStr}),
+			Run:     jobs.HTTPSListenerCmd,
 			GroupID: consts.GenericHelpGroup,
-		})
+		}
+		Flags("HTTPS listener", httpsCmd, func(f *pflag.FlagSet) {
+			f.StringP("domain", "d", "", "limit responses to specific domain")
+			f.StringP("website", "w", "", "website name (see websites cmd)")
+			f.StringP("lhost", "L", "", "interface to bind server to")
+			f.Uint32P("lport", "l", generate.DefaultHTTPSLPort, "tcp listen port")
+			f.BoolP("disable-otp", "D", false, "disable otp authentication")
+			f.StringP("long-poll-timeout", "T", "1s", "server-side long poll timeout")
+			f.StringP("long-poll-jitter", "J", "2s", "server-side long poll jitter")
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.StageListenerStr,
-			Short: "Start a stager listener",
-			Long:  help.GetHelpFor([]string{consts.StageListenerStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("p", "profile", "", "implant profile name to link with the listener")
-			// 	f.String("u", "url", "", "URL to which the stager will call back to")
-			// 	f.String("c", "cert", "", "path to PEM encoded certificate file (HTTPS only)")
-			// 	f.String("k", "key", "", "path to PEM encoded private key file (HTTPS only)")
-			// 	f.Bool("e", "lets-encrypt", false, "attempt to provision a let's encrypt certificate (HTTPS only)")
-			// 	f.StringL("aes-encrypt-key", "", "encrypt stage with AES encryption key")
-			// 	f.StringL("aes-encrypt-iv", "", "encrypt stage with AES encryption iv")
-			// 	f.String("C", "compress", "none", "compress the stage before encrypting (zlib, gzip, deflate9, none)")
-			// 	f.Bool("P", "prepend-size", false, "prepend the size of the stage to the payload (to use with MSF stagers)")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	jobs.StageListenerCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			GroupID: consts.GenericHelpGroup,
+			f.StringP("cert", "c", "", "PEM encoded certificate file")
+			f.StringP("key", "k", "", "PEM encoded private key file")
+			f.BoolP("lets-encrypt", "e", false, "attempt to provision a let's encrypt certificate")
+			f.BoolP("disable-randomized-jarm", "E", false, "disable randomized jarm fingerprints")
+
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
+			f.BoolP("persistent", "p", false, "make persistent across restarts")
 		})
+		server.AddCommand(httpsCmd)
+
+		stageCmd := &cobra.Command{
+			Use:     consts.StageListenerStr,
+			Short:   "Start a stager listener",
+			Long:    help.GetHelpFor([]string{consts.StageListenerStr}),
+			Run:     jobs.StageListenerCmd,
+			GroupID: consts.GenericHelpGroup,
+		}
+		Flags("stage listener", stageCmd, func(f *pflag.FlagSet) {
+			f.StringP("profile", "p", "", "implant profile name to link with the listener")
+			f.StringP("url", "u", "", "URL to which the stager will call back to")
+			f.StringP("cert", "c", "", "path to PEM encoded certificate file (HTTPS only)")
+			f.StringP("key", "k", "", "path to PEM encoded private key file (HTTPS only)")
+			f.BoolP("lets-encrypt", "e", false, "attempt to provision a let's encrypt certificate (HTTPS only)")
+			f.String("aes-encrypt-key", "", "encrypt stage with AES encryption key")
+			f.String("aes-encrypt-iv", "", "encrypt stage with AES encryption iv")
+			f.StringP("compress", "C", "none", "compress the stage before encrypting (zlib, gzip, deflate9, none)")
+			f.BoolP("prepend-size", "P", false, "prepend the size of the stage to the payload (to use with MSF stagers)")
+		})
+		server.AddCommand(stageCmd)
 
 		// [ Operators ] --------------------------------------------------------------
 

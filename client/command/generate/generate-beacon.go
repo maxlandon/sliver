@@ -16,7 +16,7 @@ var (
 )
 
 // GenerateBeaconCmd - The main command used to generate implant binaries
-func GenerateBeaconCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func GenerateBeaconCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	config := parseCompileFlags(ctx, con)
 	if config == nil {
 		return
@@ -38,7 +38,7 @@ func GenerateBeaconCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	}
 }
 
-func parseBeaconFlags(ctx *grumble.Context, con *console.SliverConsoleClient, config *clientpb.ImplantConfig) error {
+func parseBeaconFlags(ctx *grumble.Context, con *console.SliverConsole, config *clientpb.ImplantConfig) error {
 	interval := time.Duration(ctx.Flags.Int64("days")) * time.Hour * 24
 	interval += time.Duration(ctx.Flags.Int64("hours")) * time.Hour
 	interval += time.Duration(ctx.Flags.Int64("minutes")) * time.Minute

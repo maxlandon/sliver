@@ -24,30 +24,35 @@ import (
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // DNSListenerCmd - Start a DNS lisenter
-func DNSListenerCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func DNSListenerCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
 
-	domains := strings.Split(ctx.Flags.String("domains"), ",")
+	domainsF, _ := cmd.Flags().GetString("domains")
+	domains := strings.Split(domainsF, ",")
 	for index, domain := range domains {
 		if !strings.HasSuffix(domain, ".") {
 			domains[index] += "."
 		}
 	}
 
-	lhost := ctx.Flags.String("lhost")
-	lport := uint16(ctx.Flags.Int("lport"))
+	lhost, _ := cmd.Flags().GetString("lhost")
+	lport, _ := cmd.Flags().GetInt("lport")
+	canaries, _ := cmd.Flags().GetBool("no-canaries")
+	persistent, _ := cmd.Flags().GetBool("persistent")
+	enforceOTP, _ := cmd.Flags().GetBool("disable-otp")
 
 	con.PrintInfof("Starting DNS listener with parent domain(s) %v ...\n", domains)
 	dns, err := con.Rpc.StartDNSListener(context.Background(), &clientpb.DNSListenerReq{
 		Domains:    domains,
 		Host:       lhost,
 		Port:       uint32(lport),
-		Canaries:   !ctx.Flags.Bool("no-canaries"),
-		Persistent: ctx.Flags.Bool("persistent"),
-		EnforceOTP: !ctx.Flags.Bool("disable-otp"),
+		Canaries:   !canaries,
+		Persistent: persistent,
+		EnforceOTP: !enforceOTP,
 	})
 	con.Println()
 	if err != nil {

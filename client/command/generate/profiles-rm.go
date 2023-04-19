@@ -29,7 +29,7 @@ import (
 )
 
 // ProfilesRmCmd - Delete an implant profile
-func ProfilesRmCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ProfilesRmCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	name := ctx.Args.String("name")
 	if name == "" {
 		con.PrintErrorf("No profile name specified\n")

@@ -44,16 +44,19 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/util"
 	"github.com/cheggaaa/pb/v3"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // UpdateCmd - Check for updates
-func UpdateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	VerboseVersionsCmd(ctx, con)
+func UpdateCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
 
-	timeout := time.Duration(ctx.Flags.Int("timeout")) * time.Second
+	VerboseVersionsCmd(cmd, args)
 
-	insecure := ctx.Flags.Bool("insecure")
+	timeoutF, _ := cmd.Flags().GetInt("timeout")
+	timeout := time.Duration(timeoutF) * time.Second
+
+	insecure, _ := cmd.Flags().GetBool("insecure")
 	if insecure {
 		con.Println()
 		con.Println(console.Warn + "You're trying to update over an insecure connection, this is a really bad idea!")
@@ -71,7 +74,7 @@ func UpdateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		}
 	}
 
-	proxy := ctx.Flags.String("proxy")
+	proxy, _ := cmd.Flags().GetString("proxy")
 	var proxyURL *url.URL = nil
 	var err error
 	if proxy != "" {
@@ -97,7 +100,7 @@ func UpdateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	}
 
 	con.Printf("\nChecking for updates ... ")
-	prereleases := ctx.Flags.Bool("prereleases")
+	prereleases, _ := cmd.Flags().GetBool("prereleases")
 	release, err := version.CheckForUpdates(client, prereleases)
 	con.Printf("done!\n\n")
 	if err != nil {
@@ -106,7 +109,7 @@ func UpdateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	}
 
 	if release != nil {
-		saveTo, err := updateSavePath(ctx)
+		saveTo, err := updateSavePath(cmd)
 		if err != nil {
 			con.PrintErrorf("%s\n", err)
 			return
@@ -119,14 +122,16 @@ func UpdateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	lastCheck := []byte(fmt.Sprintf("%d", now.Unix()))
 	appDir := assets.GetRootAppDir()
 	lastUpdateCheckPath := path.Join(appDir, consts.LastUpdateCheckFileName)
-	err = ioutil.WriteFile(lastUpdateCheckPath, lastCheck, 0600)
+	err = ioutil.WriteFile(lastUpdateCheckPath, lastCheck, 0o600)
 	if err != nil {
 		log.Printf("Failed to save update check time %s", err)
 	}
 }
 
 // VerboseVersionsCmd - Get verbose version information about the client and server
-func VerboseVersionsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func VerboseVersionsCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	clientVer := version.FullVersion()
 	serverVer, err := con.Rpc.GetVersion(context.Background(), &commonpb.Empty{})
 	if err != nil {
@@ -147,8 +152,8 @@ func VerboseVersionsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) 
 	con.Printf("    Compiled at %s\n", serverCompiledAt)
 }
 
-func updateSavePath(ctx *grumble.Context) (string, error) {
-	saveTo := ctx.Flags.String("save")
+func updateSavePath(cmd *cobra.Command) (string, error) {
+	saveTo, _ := cmd.Flags().GetString("save")
 	if saveTo != "" {
 		fi, err := os.Stat(saveTo)
 		if err != nil {
@@ -218,8 +223,7 @@ func clientAssetForGOOS(assets []version.Asset) *version.Asset {
 	return findAssetFor(prefix, suffixes, assets)
 }
 
-func updateAvailable(con *console.SliverConsoleClient, client *http.Client, release *version.Release, saveTo string) {
-
+func updateAvailable(con *console.SliverConsole, client *http.Client, release *version.Release, saveTo string) {
 	serverAsset := serverAssetForGOOS(release.Assets)
 	clientAsset := clientAssetForGOOS(release.Assets)
 

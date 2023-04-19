@@ -23,21 +23,24 @@ import (
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // WGListenerCmd - Start a WireGuard listener
-func WGListenerCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	lport := uint16(ctx.Flags.Int("lport"))
-	nport := uint16(ctx.Flags.Int("nport"))
-	keyExchangePort := uint16(ctx.Flags.Int("key-port"))
+func WGListenerCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	lport, _ := cmd.Flags().GetUint32("lport")
+	nport, _ := cmd.Flags().GetUint32("nport")
+	keyExchangePort, _ := cmd.Flags().GetUint32("key-port")
+	persistent, _ := cmd.Flags().GetBool("persistent")
 
 	con.PrintInfof("Starting Wireguard listener ...\n")
 	wg, err := con.Rpc.StartWGListener(context.Background(), &clientpb.WGListenerReq{
-		Port:       uint32(lport),
-		NPort:      uint32(nport),
-		KeyPort:    uint32(keyExchangePort),
-		Persistent: ctx.Flags.Bool("persistent"),
+		Port:       lport,
+		NPort:      nport,
+		KeyPort:    keyExchangePort,
+		Persistent: persistent,
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

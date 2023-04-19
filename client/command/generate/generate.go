@@ -30,13 +30,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
-	"github.com/bishopfox/sliver/client/spin"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/util"
@@ -89,7 +87,7 @@ var (
 )
 
 // GenerateCmd - The main command used to generate implant binaries
-func GenerateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func GenerateCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	config := parseCompileFlags(ctx, con)
 	if config == nil {
 		return
@@ -138,14 +136,14 @@ func saveLocation(save, DefaultName string) (string, error) {
 		log.Printf("%s does not exist\n", save)
 		if strings.HasSuffix(save, "/") {
 			log.Printf("%s is dir\n", save)
-			os.MkdirAll(save, 0700)
+			os.MkdirAll(save, 0o700)
 			saveTo, _ = filepath.Abs(filepath.Join(saveTo, DefaultName))
 		} else {
 			log.Printf("%s is not dir\n", save)
 			saveDir := filepath.Dir(save)
 			_, err := os.Stat(saveTo)
 			if os.IsNotExist(err) {
-				os.MkdirAll(saveDir, 0700)
+				os.MkdirAll(saveDir, 0o700)
 			}
 			saveTo, _ = filepath.Abs(save)
 		}
@@ -184,7 +182,7 @@ func nameOfOutputFormat(value clientpb.OutputFormat) string {
 }
 
 // Shared function that extracts the compile flags from the grumble context
-func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsoleClient) *clientpb.ImplantConfig {
+func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsole) *clientpb.ImplantConfig {
 	var name string
 	if ctx.Flags.String("name") != "" {
 		name = strings.ToLower(ctx.Flags.String("name"))
@@ -377,8 +375,7 @@ func parseCompileFlags(ctx *grumble.Context, con *console.SliverConsoleClient) *
 	return config
 }
 
-func getTargets(targetOS string, targetArch string, con *console.SliverConsoleClient) (string, string) {
-
+func getTargets(targetOS string, targetArch string, con *console.SliverConsole) (string, string) {
 	/* For UX we convert some synonymous terms */
 	if targetOS == "darwin" || targetOS == "mac" || targetOS == "macos" || targetOS == "osx" {
 		targetOS = "darwin"
@@ -633,8 +630,7 @@ func ParseTCPPivotc2(args string) ([]*clientpb.ImplantC2, error) {
 	return c2s, nil
 }
 
-func externalBuild(config *clientpb.ImplantConfig, save string, con *console.SliverConsoleClient) (*commonpb.File, error) {
-
+func externalBuild(config *clientpb.ImplantConfig, save string, con *console.SliverConsole) (*commonpb.File, error) {
 	potentialBuilders, err := findExternalBuilders(config, con)
 	if err != nil {
 		return nil, err
@@ -667,7 +663,7 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 	listenerID, listener := con.CreateEventListener()
 
 	waiting := true
-	spinner := spin.New()
+	// spinner := spin.New()
 
 	sigint := make(chan os.Signal, 1) // Catch keyboard interrupts
 	signal.Notify(sigint, os.Interrupt)
@@ -684,15 +680,15 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 	con.Printf("done\n")
 
 	var name string
-	msgF := "Waiting for external builder to acknowledge build (template: %s) ... %s"
+	// msgF := "Waiting for external builder to acknowledge build (template: %s) ... %s"
 	for waiting {
 		select {
 
-		case <-time.After(100 * time.Millisecond):
-			elapsed := time.Since(start)
-			msg := fmt.Sprintf(msgF, externalImplantConfig.Config.TemplateName, elapsed.Round(time.Second))
-			fmt.Fprintf(con.App.Stdout(), console.Clearln+" %s  %s", spinner.Next(), msg)
-
+		// case <-time.After(100 * time.Millisecond):
+		// 	elapsed := time.Since(start)
+		// 	msg := fmt.Sprintf(msgF, externalImplantConfig.Config.TemplateName, elapsed.Round(time.Second))
+		// 	fmt.Fprintf(con.App.CurrentMenu(), console.Clearln+" %s  %s", spinner.Next(), msg)
+		//
 		case event := <-listener:
 			switch event.EventType {
 
@@ -708,7 +704,7 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 
 			case consts.AcknowledgeBuildEvent:
 				if string(event.Data) == externalImplantConfig.Config.ID {
-					msgF = "External build acknowledged by builder (template: %s) ... %s"
+					// msgF = "External build acknowledged by builder (template: %s) ... %s"
 				}
 
 			case consts.ExternalBuildCompletedEvent:
@@ -747,7 +743,7 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 		return nil, err
 	}
 
-	err = os.WriteFile(saveTo, generated.File.Data, 0700)
+	err = os.WriteFile(saveTo, generated.File.Data, 0o700)
 	if err != nil {
 		con.PrintErrorf("Failed to write to: %s\n", saveTo)
 		return nil, err
@@ -757,7 +753,7 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 	return nil, nil
 }
 
-func compile(config *clientpb.ImplantConfig, disableSGN bool, save string, con *console.SliverConsoleClient) (*commonpb.File, error) {
+func compile(config *clientpb.ImplantConfig, disableSGN bool, save string, con *console.SliverConsole) (*commonpb.File, error) {
 	if config.IsBeacon {
 		interval := time.Duration(config.BeaconInterval)
 		con.PrintInfof("Generating new %s/%s beacon implant binary (%v)\n", config.GOOS, config.GOARCH, interval)
@@ -818,7 +814,7 @@ func compile(config *clientpb.ImplantConfig, disableSGN bool, save string, con *
 		return nil, err
 	}
 
-	err = os.WriteFile(saveTo, fileData, 0700)
+	err = os.WriteFile(saveTo, fileData, 0o700)
 	if err != nil {
 		con.PrintErrorf("Failed to write to: %s\n", saveTo)
 		return nil, err
@@ -850,7 +846,7 @@ func getLimitsString(config *clientpb.ImplantConfig) string {
 	return strings.Join(limits, "; ")
 }
 
-func checkBuildTargetCompatibility(format clientpb.OutputFormat, targetOS string, targetArch string, con *console.SliverConsoleClient) bool {
+func checkBuildTargetCompatibility(format clientpb.OutputFormat, targetOS string, targetArch string, con *console.SliverConsole) bool {
 	if format == clientpb.OutputFormat_EXECUTABLE {
 		return true // We don't need cross-compilers when targeting EXECUTABLE formats
 	}
@@ -891,7 +887,7 @@ func hasCC(targetOS string, targetArch string, crossCompilers []*clientpb.CrossC
 	return false
 }
 
-func warnMissingCrossCompiler(format clientpb.OutputFormat, targetOS string, targetArch string, con *console.SliverConsoleClient) bool {
+func warnMissingCrossCompiler(format clientpb.OutputFormat, targetOS string, targetArch string, con *console.SliverConsole) bool {
 	con.PrintWarnf("Missing cross-compiler for %s on %s/%s\n", nameOfOutputFormat(format), targetOS, targetArch)
 	switch targetOS {
 	case "windows":
@@ -909,7 +905,7 @@ func warnMissingCrossCompiler(format clientpb.OutputFormat, targetOS string, tar
 	return confirm
 }
 
-func findExternalBuilders(config *clientpb.ImplantConfig, con *console.SliverConsoleClient) ([]*clientpb.Builder, error) {
+func findExternalBuilders(config *clientpb.ImplantConfig, con *console.SliverConsole) ([]*clientpb.Builder, error) {
 	builders, err := con.Rpc.Builders(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return nil, err
@@ -935,7 +931,7 @@ func findExternalBuilders(config *clientpb.ImplantConfig, con *console.SliverCon
 	return validBuilders, nil
 }
 
-func selectExternalBuilder(builders []*clientpb.Builder, con *console.SliverConsoleClient) (*clientpb.Builder, error) {
+func selectExternalBuilder(builders []*clientpb.Builder, con *console.SliverConsole) (*clientpb.Builder, error) {
 	choices := []string{}
 	for _, builder := range builders {
 		choices = append(choices, builder.Name)

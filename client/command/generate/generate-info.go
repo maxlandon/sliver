@@ -9,7 +9,7 @@ import (
 )
 
 // GenerateInfoCmd - Display information about the Sliver server's compiler configuration
-func GenerateInfoCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func GenerateInfoCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	compiler, err := con.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("Failed to get compiler information: %s\n", err)

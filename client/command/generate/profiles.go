@@ -33,7 +33,7 @@ import (
 )
 
 // ProfilesCmd - Display implant profiles
-func ProfilesCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ProfilesCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	profiles := getImplantProfiles(con)
 	if profiles == nil {
 		return
@@ -47,7 +47,7 @@ func ProfilesCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintProfiles - Print the profiles
-func PrintProfiles(profiles []*clientpb.ImplantProfile, con *console.SliverConsoleClient) {
+func PrintProfiles(profiles []*clientpb.ImplantProfile, con *console.SliverConsole) {
 	tw := table.NewWriter()
 	tw.SetStyle(settings.GetTableStyle(con))
 	tw.AppendHeader(table.Row{
@@ -94,7 +94,7 @@ func PrintProfiles(profiles []*clientpb.ImplantProfile, con *console.SliverConso
 	con.Printf("%s\n", tw.Render())
 }
 
-func getImplantProfiles(con *console.SliverConsoleClient) []*clientpb.ImplantProfile {
+func getImplantProfiles(con *console.SliverConsole) []*clientpb.ImplantProfile {
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -104,7 +104,7 @@ func getImplantProfiles(con *console.SliverConsoleClient) []*clientpb.ImplantPro
 }
 
 // GetImplantProfileByName - Get an implant profile by a specific name
-func GetImplantProfileByName(name string, con *console.SliverConsoleClient) *clientpb.ImplantProfile {
+func GetImplantProfileByName(name string, con *console.SliverConsole) *clientpb.ImplantProfile {
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -119,7 +119,7 @@ func GetImplantProfileByName(name string, con *console.SliverConsoleClient) *cli
 }
 
 // ProfileNameCompleter - Completer for implant build names
-func ProfileNameCompleter(prefix string, args []string, con *console.SliverConsoleClient) []string {
+func ProfileNameCompleter(prefix string, args []string, con *console.SliverConsole) []string {
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return []string{}

@@ -43,7 +43,7 @@ type ImplantBuildFilter struct {
 }
 
 // ImplantsCmd - Displays archived implant builds
-func ImplantsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ImplantsCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	builds, err := con.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -59,7 +59,7 @@ func ImplantsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintImplantBuilds - Print the implant builds on the server
-func PrintImplantBuilds(configs map[string]*clientpb.ImplantConfig, filters ImplantBuildFilter, con *console.SliverConsoleClient) {
+func PrintImplantBuilds(configs map[string]*clientpb.ImplantConfig, filters ImplantBuildFilter, con *console.SliverConsole) {
 	tw := table.NewWriter()
 	tw.SetStyle(settings.GetTableStyle(con))
 	tw.AppendHeader(table.Row{
@@ -122,7 +122,7 @@ func PrintImplantBuilds(configs map[string]*clientpb.ImplantConfig, filters Impl
 }
 
 // ImplantBuildNameCompleter - Completer for implant build names
-func ImplantBuildNameCompleter(prefix string, args []string, filters ImplantBuildFilter, con *console.SliverConsoleClient) []string {
+func ImplantBuildNameCompleter(prefix string, args []string, filters ImplantBuildFilter, con *console.SliverConsole) []string {
 	builds, err := con.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return []string{}
@@ -157,7 +157,7 @@ func ImplantBuildNameCompleter(prefix string, args []string, filters ImplantBuil
 }
 
 // ImplantBuildByName - Get an implant build by name
-func ImplantBuildByName(name string, con *console.SliverConsoleClient) *clientpb.ImplantConfig {
+func ImplantBuildByName(name string, con *console.SliverConsole) *clientpb.ImplantConfig {
 	builds, err := con.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return nil

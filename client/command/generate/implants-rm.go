@@ -11,7 +11,7 @@ import (
 )
 
 // ImplantsRmCmd - Deletes an archived implant build from the server
-func ImplantsRmCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ImplantsRmCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	name := ctx.Args.String("name")
 	if name == "" {
 		con.PrintErrorf("No name specified\n")

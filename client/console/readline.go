@@ -3,6 +3,7 @@ package console
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	insecureRand "math/rand"
@@ -13,12 +14,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/reeflective/console"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/assets"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/prelude"
 	"github.com/bishopfox/sliver/client/spin"
 	"github.com/bishopfox/sliver/client/version"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -94,6 +98,233 @@ type SliverConsole struct {
 	BeaconTaskCallbacksMutex *sync.Mutex
 	IsServer                 bool
 	Settings                 *assets.ClientSettings
+}
+
+func (con *SliverConsole) startEventLoop() {
+	eventStream, err := con.Rpc.Events(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		fmt.Printf(Warn+"%s\n", err)
+		return
+	}
+	for {
+		event, err := eventStream.Recv()
+		if err == io.EOF || event == nil {
+			return
+		}
+
+		go con.triggerEventListeners(event)
+
+		// Trigger event based on type
+		echoed := false // Only echo the event once
+		switch event.EventType {
+
+		case consts.CanaryEvent:
+			eventMsg := fmt.Sprintf(Bold+"WARNING: %s%s has been burned (DNS Canary)\n", Normal, event.Session.Name)
+			sessions := con.GetSessionsByName(event.Session.Name)
+			for _, session := range sessions {
+				shortID := strings.Split(session.ID, "-")[0]
+				con.PrintEventErrorf(eventMsg+"\n"+Clearln+"\t🔥 Session %s is affected\n", shortID)
+			}
+			echoed = true
+
+		case consts.WatchtowerEvent:
+			msg := string(event.Data)
+			eventMsg := fmt.Sprintf(Bold+"WARNING: %s%s has been burned (seen on %s)\n", Normal, event.Session.Name, msg)
+			sessions := con.GetSessionsByName(event.Session.Name)
+			for _, session := range sessions {
+				shortID := strings.Split(session.ID, "-")[0]
+				con.PrintEventErrorf(eventMsg+"\n"+Clearln+"\t🔥 Session %s is affected", shortID)
+			}
+			echoed = true
+
+		case consts.JoinedEvent:
+			con.PrintEventInfof("%s has joined the game", event.Client.Operator.Name)
+			echoed = true
+		case consts.LeftEvent:
+			con.PrintEventInfof("%s left the game", event.Client.Operator.Name)
+			echoed = true
+
+		case consts.JobStoppedEvent:
+			job := event.Job
+			con.PrintEventErrorf("Job #%d stopped (%s/%s)", job.ID, job.Protocol, job.Name)
+			echoed = true
+
+		case consts.SessionOpenedEvent:
+			session := event.Session
+			currentTime := time.Now().Format(time.RFC1123)
+			shortID := strings.Split(session.ID, "-")[0]
+			con.PrintEventInfof("Session %s %s - %s (%s) - %s/%s - %v",
+				shortID, session.Name, session.RemoteAddress, session.Hostname, session.OS, session.Arch, currentTime)
+
+			// Prelude Operator
+			if prelude.ImplantMapper != nil {
+				err = prelude.ImplantMapper.AddImplant(session, nil)
+				if err != nil {
+					con.PrintEventErrorf("Could not add session to Operator: %s", err)
+				}
+			}
+			echoed = true
+
+		case consts.SessionUpdateEvent:
+			session := event.Session
+			currentTime := time.Now().Format(time.RFC1123)
+			shortID := strings.Split(session.ID, "-")[0]
+			con.PrintEventInfof("Session %s has been updated - %v", shortID, currentTime)
+			echoed = true
+
+		case consts.SessionClosedEvent:
+			session := event.Session
+			currentTime := time.Now().Format(time.RFC1123)
+			shortID := strings.Split(session.ID, "-")[0]
+			con.PrintEventErrorf("Lost session %s %s - %s (%s) - %s/%s - %v",
+				shortID, session.Name, session.RemoteAddress, session.Hostname, session.OS, session.Arch, currentTime)
+			activeSession := con.ActiveTarget.GetSession()
+			core.GetTunnels().CloseForSession(session.ID)
+			core.CloseCursedProcesses(session.ID)
+			if activeSession != nil && activeSession.ID == session.ID {
+				con.ActiveTarget.Set(nil, nil)
+				con.PrintEventErrorf("Active session disconnected")
+				// con.App.SetPrompt(con.GetPrompt())
+			}
+			if prelude.ImplantMapper != nil {
+				err = prelude.ImplantMapper.RemoveImplant(session)
+				if err != nil {
+					con.PrintEventErrorf("Could not remove session from Operator: %s", err)
+				}
+				con.PrintEventInfof("Removed session %s from Operator", session.Name)
+			}
+			echoed = true
+
+		case consts.BeaconRegisteredEvent:
+			beacon := &clientpb.Beacon{}
+			proto.Unmarshal(event.Data, beacon)
+			currentTime := time.Now().Format(time.RFC1123)
+			shortID := strings.Split(beacon.ID, "-")[0]
+			con.PrintEventInfof("Beacon %s %s - %s (%s) - %s/%s - %v",
+				shortID, beacon.Name, beacon.RemoteAddress, beacon.Hostname, beacon.OS, beacon.Arch, currentTime)
+
+			// Prelude Operator
+			if prelude.ImplantMapper != nil {
+				err = prelude.ImplantMapper.AddImplant(beacon, func(taskID string, cb func(*clientpb.BeaconTask)) {
+					con.AddBeaconCallback(taskID, cb)
+				})
+				if err != nil {
+					con.PrintEventErrorf("Could not add beacon to Operator: %s", err)
+				}
+			}
+			echoed = true
+
+		case consts.BeaconTaskResultEvent:
+			con.triggerBeaconTaskCallback(event.Data)
+			echoed = true
+
+		}
+
+		con.triggerReactions(event)
+
+		// Only render if we echoed the event
+		if echoed {
+			con.Printf(Clearln + con.GetPrompt())
+			// bufio.NewWriter(con.App.Stdout()).Flush()
+		}
+	}
+}
+
+func (con *SliverConsole) CreateEventListener() (string, <-chan *clientpb.Event) {
+	listener := make(chan *clientpb.Event, 100)
+	listenerID, _ := uuid.NewV4()
+	con.EventListeners.Store(listenerID.String(), listener)
+	return listenerID.String(), listener
+}
+
+func (con *SliverConsole) RemoveEventListener(listenerID string) {
+	value, ok := con.EventListeners.LoadAndDelete(listenerID)
+	if ok {
+		close(value.(chan *clientpb.Event))
+	}
+}
+
+func (con *SliverConsole) triggerEventListeners(event *clientpb.Event) {
+	con.EventListeners.Range(func(key, value interface{}) bool {
+		listener := value.(chan *clientpb.Event)
+		listener <- event // Do not block while sending the event to the listener
+		return true
+	})
+}
+
+func (con *SliverConsole) triggerReactions(event *clientpb.Event) {
+	reactions := core.Reactions.On(event.EventType)
+	if len(reactions) == 0 {
+		return
+	}
+
+	// We need some special handling for SessionOpenedEvent to
+	// set the new session as the active session
+	currentActiveSession, currentActiveBeacon := con.ActiveTarget.Get()
+	defer func() {
+		con.ActiveTarget.Set(currentActiveSession, currentActiveBeacon)
+	}()
+
+	con.ActiveTarget.Set(nil, nil)
+	if event.EventType == consts.SessionOpenedEvent {
+		con.ActiveTarget.Set(event.Session, nil)
+	} else if event.EventType == consts.BeaconRegisteredEvent {
+		beacon := &clientpb.Beacon{}
+		proto.Unmarshal(event.Data, beacon)
+		con.ActiveTarget.Set(nil, beacon)
+	}
+
+	for _, reaction := range reactions {
+		for _, line := range reaction.Commands {
+			con.PrintInfof("Execute reaction: '%s'\n", line)
+			// args, err := shlex.Split(line, true)
+			// if err != nil {
+			// 	con.PrintErrorf("Reaction command has invalid args: %s\n", err)
+			// 	continue
+			// }
+			// err = con.App.RunCommand(args)
+			// if err != nil {
+			// 	con.PrintErrorf("Reaction command error: %s\n", err)
+			// }
+		}
+	}
+}
+
+// triggerBeaconTaskCallback - Triggers the callback for a beacon task
+func (con *SliverConsole) triggerBeaconTaskCallback(data []byte) {
+	task := &clientpb.BeaconTask{}
+	err := proto.Unmarshal(data, task)
+	if err != nil {
+		con.PrintErrorf("\rCould not unmarshal beacon task: %s\n", err)
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	beacon, _ := con.Rpc.GetBeacon(ctx, &clientpb.Beacon{ID: task.BeaconID})
+
+	// If the callback is not in our map then we don't do anything, the beacon task
+	// was either issued by another operator in multiplayer mode or the client process
+	// was restarted between the time the task was created and when the server got the result
+	con.BeaconTaskCallbacksMutex.Lock()
+	defer con.BeaconTaskCallbacksMutex.Unlock()
+	if callback, ok := con.BeaconTaskCallbacks[task.ID]; ok {
+		if con.Settings.BeaconAutoResults {
+			if beacon != nil {
+				con.PrintEventSuccessf("%s completed task %s", beacon.Name, strings.Split(task.ID, "-")[0])
+			}
+			task, err = con.Rpc.GetBeaconTaskContent(ctx, &clientpb.BeaconTask{
+				ID: task.ID,
+			})
+			con.Printf(Clearln + "\r")
+			if err == nil {
+				callback(task)
+			} else {
+				con.PrintErrorf("Could not get beacon task content: %s\n", err)
+			}
+			con.Println()
+		}
+		delete(con.BeaconTaskCallbacks, task.ID)
+	}
 }
 
 func (con *SliverConsole) AddBeaconCallback(taskID string, callback BeaconTaskCallback) {
@@ -174,6 +405,64 @@ func getLastUpdateCheck() *time.Time {
 	}
 	lastUpdate := time.Unix(int64(unixTime), 0)
 	return &lastUpdate
+}
+
+func (con *SliverConsole) GetSession(arg string) *clientpb.Session {
+	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		con.PrintWarnf("%s\n", err)
+		return nil
+	}
+	for _, session := range sessions.GetSessions() {
+		if session.Name == arg || strings.HasPrefix(session.ID, arg) {
+			return session
+		}
+	}
+	return nil
+}
+
+// GetSessionsByName - Return all sessions for an Implant by name
+func (con *SliverConsole) GetSessionsByName(name string) []*clientpb.Session {
+	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		fmt.Printf(Warn+"%s\n", err)
+		return nil
+	}
+	matched := []*clientpb.Session{}
+	for _, session := range sessions.GetSessions() {
+		if session.Name == name {
+			matched = append(matched, session)
+		}
+	}
+	return matched
+}
+
+// GetActiveSessionConfig - Get the active sessions's config
+// TODO: Switch to query config based on ConfigID
+func (con *SliverConsole) GetActiveSessionConfig() *clientpb.ImplantConfig {
+	session := con.ActiveTarget.GetSession()
+	if session == nil {
+		return nil
+	}
+	c2s := []*clientpb.ImplantC2{}
+	c2s = append(c2s, &clientpb.ImplantC2{
+		URL:      session.GetActiveC2(),
+		Priority: uint32(0),
+	})
+	config := &clientpb.ImplantConfig{
+		Name:    session.GetName(),
+		GOOS:    session.GetOS(),
+		GOARCH:  session.GetArch(),
+		Debug:   true,
+		Evasion: session.GetEvasion(),
+
+		MaxConnectionErrors: uint32(1000),
+		ReconnectInterval:   int64(60),
+		Format:              clientpb.OutputFormat_SHELLCODE,
+		IsSharedLib:         true,
+		C2:                  c2s,
+	}
+	return config
 }
 
 // PrintAsyncResponse - Print the generic async response information

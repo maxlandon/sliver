@@ -13,7 +13,7 @@ import (
 )
 
 // CanariesCmd - Display canaries from the database and their status
-func CanariesCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func CanariesCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	canaries, err := con.Rpc.Canaries(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("Failed to list canaries %s", err)
@@ -27,7 +27,7 @@ func CanariesCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintCanaries - Print the canaries tracked by the server
-func PrintCanaries(con *console.SliverConsoleClient, canaries []*clientpb.DNSCanary, burnedOnly bool) {
+func PrintCanaries(con *console.SliverConsole, canaries []*clientpb.DNSCanary, burnedOnly bool) {
 	tw := table.NewWriter()
 	tw.SetStyle(settings.GetTableStyle(con))
 	tw.AppendHeader(table.Row{

@@ -33,7 +33,7 @@ import (
 )
 
 // GenerateStagerCmd - Generate a stager using Metasploit
-func GenerateStagerCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func GenerateStagerCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	var stageProto clientpb.StageProtocol
 	lhost := ctx.Flags.String("lhost")
 	if lhost == "" {
@@ -116,7 +116,7 @@ func GenerateStagerCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 			return
 		}
 
-		err = os.WriteFile(saveTo, stageFile.GetFile().GetData(), 0700)
+		err = os.WriteFile(saveTo, stageFile.GetFile().GetData(), 0o700)
 		if err != nil {
 			con.PrintErrorf("Failed to write to: %s\n", saveTo)
 			return
