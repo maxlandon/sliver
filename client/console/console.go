@@ -81,12 +81,12 @@ type (
 	BeaconTaskCallback func(*clientpb.BeaconTask)
 )
 
-type ActiveTarget struct {
-	session    *clientpb.Session
-	beacon     *clientpb.Beacon
-	observers  map[int]Observer
-	observerID int
-}
+// type ActiveTarget struct {
+// 	session    *clientpb.Session
+// 	beacon     *clientpb.Beacon
+// 	observers  map[int]Observer
+// 	observerID int
+// }
 
 type SliverConsoleClient struct {
 	App                      *grumble.App
@@ -676,42 +676,42 @@ func (s *ActiveTarget) RemoveObserver(observerID int) {
 // }
 
 // Set - Change the active session
-func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
-	if session != nil && beacon != nil {
-		panic("cannot set both an active beacon and an active session")
-	}
-	if session == nil && beacon == nil {
-		s.session = nil
-		s.beacon = nil
-		for _, observer := range s.observers {
-			observer(s.session, s.beacon)
-		}
-		return
-	}
-
-	if session != nil {
-		s.session = session
-		s.beacon = nil
-		for _, observer := range s.observers {
-			observer(s.session, s.beacon)
-		}
-	} else if beacon != nil {
-		s.beacon = beacon
-		s.session = nil
-		for _, observer := range s.observers {
-			observer(s.session, s.beacon)
-		}
-	}
-}
+// func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
+// 	if session != nil && beacon != nil {
+// 		panic("cannot set both an active beacon and an active session")
+// 	}
+// 	if session == nil && beacon == nil {
+// 		s.session = nil
+// 		s.beacon = nil
+// 		for _, observer := range s.observers {
+// 			observer(s.session, s.beacon)
+// 		}
+// 		return
+// 	}
+//
+// 	if session != nil {
+// 		s.session = session
+// 		s.beacon = nil
+// 		for _, observer := range s.observers {
+// 			observer(s.session, s.beacon)
+// 		}
+// 	} else if beacon != nil {
+// 		s.beacon = beacon
+// 		s.session = nil
+// 		for _, observer := range s.observers {
+// 			observer(s.session, s.beacon)
+// 		}
+// 	}
+// }
 
 // Background - Background the active session
-func (s *ActiveTarget) Background() {
-	s.session = nil
-	s.beacon = nil
-	for _, observer := range s.observers {
-		observer(nil, nil)
-	}
-}
+// func (s *ActiveTarget) Background() {
+// 	s.session = nil
+// 	s.beacon = nil
+// 	for _, observer := range s.observers {
+// 		observer(nil, nil)
+// 	}
+// }
 
 var abilities = []string{
 	"first strike",

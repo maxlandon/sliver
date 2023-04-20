@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	"github.com/jandedobbeleer/oh-my-posh/src/engine"
 	"github.com/reeflective/console"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
@@ -75,11 +76,25 @@ func StartReadline(rpc rpcpb.SliverRPCClient, isServer bool) error {
 
 	Client = con
 
+	// Prompt stuff
+	prompt := con.App.Menu("implant").Prompt()
+	prompt.LoadConfig("/home/user/sliver-test/prompt.omp.json")
+	prompt.Env.Flags().Shell = "sliver"
+
+	session := &SliverSession{con: con, Session: con.ActiveTarget.session}
+	beacon := &SliverBeacon{con: con, Beacon: con.ActiveTarget.beacon}
+
+	engine.Segments[engine.SegmentType("sliverSession")] = func() engine.SegmentWriter { return session }
+	engine.Segments[engine.SegmentType("sliverBeacon")] = func() engine.SegmentWriter { return beacon }
+
+	con.ActiveTarget.SessionPrompt = session
+	con.ActiveTarget.BeaconPrompt = beacon
+
 	// con.App.SetPrintASCIILogo(func(_ *grumble.App) {
 	con.PrintLogo()
 	// })
 
-	// go con.startEventLoop()
+	go con.startEventLoop()
 	go core.TunnelLoop(rpc)
 
 	err := con.App.Run()
@@ -224,7 +239,7 @@ func (con *SliverConsole) startEventLoop() {
 
 		// Only render if we echoed the event
 		if echoed {
-			con.Printf(Clearln + con.GetPrompt())
+			// con.Printf(Clearln + con.GetPrompt())
 			// bufio.NewWriter(con.App.Stdout()).Flush()
 		}
 	}
@@ -477,47 +492,48 @@ func (con *SliverConsole) PrintAsyncResponse(resp *commonpb.Response) {
 	con.PrintInfof("Tasked beacon %s (%s)\n", beacon.Name, strings.Split(resp.TaskID, "-")[0])
 }
 
-func (con *SliverConsole) Printf(format string, args ...interface{}) {
+func (con *SliverConsole) Printf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), format, args...)
-	con.App.LogTransient(format, args)
+	con.App.LogTransient(format, args...)
 }
 
-func (con *SliverConsole) Println(args ...interface{}) {
+func (con *SliverConsole) Println(args ...any) {
 	// return fmt.Fprintln(con.App.Stdout(), args...)
-	// con.App.LogTransient(args...)
+	format := strings.Repeat("%s", len(args))
+	con.App.LogTransient(format+"\n", args...)
 }
 
-func (con *SliverConsole) PrintInfof(format string, args ...interface{}) {
+func (con *SliverConsole) PrintInfof(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), Clearln+Info+format, args...)
 	con.App.LogTransient(Clearln+Info+format, args...)
 }
 
-func (con *SliverConsole) PrintSuccessf(format string, args ...interface{}) {
+func (con *SliverConsole) PrintSuccessf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), Clearln+Success+format, args...)
 	con.App.LogTransient(Clearln+Success+format, args...)
 }
 
-func (con *SliverConsole) PrintWarnf(format string, args ...interface{}) {
+func (con *SliverConsole) PrintWarnf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), Clearln+"⚠️  "+Normal+format, args...)
 	con.App.LogTransient(Clearln+"⚠️  "+Normal+format, args...)
 }
 
-func (con *SliverConsole) PrintErrorf(format string, args ...interface{}) {
+func (con *SliverConsole) PrintErrorf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stderr(), Clearln+Warn+format, args...)
 	con.App.LogTransient(Clearln+Warn+format, args...)
 }
 
-func (con *SliverConsole) PrintEventInfof(format string, args ...interface{}) {
+func (con *SliverConsole) PrintEventInfof(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), Clearln+Info+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 	con.App.LogTransient(Clearln+Info+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 }
 
-func (con *SliverConsole) PrintEventErrorf(format string, args ...interface{}) {
+func (con *SliverConsole) PrintEventErrorf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stderr(), Clearln+Warn+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 	con.App.LogTransient(Clearln+Warn+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 }
 
-func (con *SliverConsole) PrintEventSuccessf(format string, args ...interface{}) {
+func (con *SliverConsole) PrintEventSuccessf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), Clearln+Success+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 	con.App.LogTransient(Clearln+Success+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 }
@@ -526,9 +542,48 @@ func (con *SliverConsole) SpinUntil(message string, ctrl chan bool) {
 	go spin.Until(os.Stdout, message, ctrl)
 }
 
+// FormatDateDelta - Generate formatted date string of the time delta between then and now
+func (con *SliverConsole) FormatDateDelta(t time.Time, includeDate bool, color bool) string {
+	nextTime := t.Format(time.UnixDate)
+
+	var interval string
+
+	if t.Before(time.Now()) {
+		if includeDate {
+			interval = fmt.Sprintf("%s (%s ago)", nextTime, time.Since(t).Round(time.Second))
+		} else {
+			interval = time.Since(t).Round(time.Second).String()
+		}
+		if color {
+			interval = fmt.Sprintf("%s%s%s", Bold+Red, interval, Normal)
+		}
+	} else {
+		if includeDate {
+			interval = fmt.Sprintf("%s (in %s)", nextTime, time.Until(t).Round(time.Second))
+		} else {
+			interval = time.Until(t).Round(time.Second).String()
+		}
+		if color {
+			interval = fmt.Sprintf("%s%s%s", Bold+Green, interval, Normal)
+		}
+	}
+	return interval
+}
+
 //
 // -------------------------- [ Active Target ] --------------------------
 //
+
+type ActiveTarget struct {
+	session    *clientpb.Session
+	beacon     *clientpb.Beacon
+	observers  map[int]Observer
+	observerID int
+
+	// Prompts
+	SessionPrompt *SliverSession
+	BeaconPrompt  *SliverBeacon
+}
 
 // GetSessionInteractive - Get the active target(s)
 func (s *ActiveTarget) GetInteractive() (*clientpb.Session, *clientpb.Beacon) {
@@ -581,7 +636,12 @@ func (s *ActiveTarget) Request(cmd *cobra.Command) *commonpb.Request {
 	if s.session == nil && s.beacon == nil {
 		return nil
 	}
-	timeOutF, _ := cmd.Flags().GetInt("timeout")
+
+	timeOutF := 120
+	if cmd != nil {
+		timeOutF, _ = cmd.Flags().GetInt("timeout")
+	}
+
 	timeout := int(time.Second) * timeOutF
 	req := &commonpb.Request{}
 	req.Timeout = int64(timeout)
@@ -594,4 +654,69 @@ func (s *ActiveTarget) Request(cmd *cobra.Command) *commonpb.Request {
 		req.BeaconID = s.beacon.ID
 	}
 	return req
+}
+
+// Set - Change the active session
+func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
+	if session != nil && beacon != nil {
+		// panic("cannot set both an active beacon and an active session")
+		Client.PrintErrorf("cannot set both an active beacon and an active session")
+		return
+	}
+
+	// Backgrounding
+	if session == nil && beacon == nil {
+		s.session = nil
+		s.beacon = nil
+		for _, observer := range s.observers {
+			observer(s.session, s.beacon)
+		}
+
+		s.SessionPrompt.Session = nil
+		s.BeaconPrompt.Beacon = nil
+
+		// Switch back to server menu.
+		if Client.App.CurrentMenu().Name() == "implant" {
+			Client.App.SwitchMenu("")
+		}
+		return
+	}
+
+	// Foreground
+	if session != nil {
+		s.session = session
+		s.beacon = nil
+		for _, observer := range s.observers {
+			observer(s.session, s.beacon)
+		}
+
+		s.SessionPrompt.Session = session
+	} else if beacon != nil {
+		s.beacon = beacon
+		s.session = nil
+		for _, observer := range s.observers {
+			observer(s.session, s.beacon)
+		}
+
+		s.BeaconPrompt.Beacon = beacon
+	}
+
+	// Switch to implant menu.
+	if Client.App.CurrentMenu().Name() != "implant" {
+		Client.App.SwitchMenu("implant")
+	}
+}
+
+// Background - Background the active session
+func (s *ActiveTarget) Background() {
+	s.session = nil
+	s.beacon = nil
+	for _, observer := range s.observers {
+		observer(nil, nil)
+	}
+
+	// Switch back to server menu.
+	if Client.App.CurrentMenu().Name() == "implant" {
+		Client.App.SwitchMenu("")
+	}
 }
