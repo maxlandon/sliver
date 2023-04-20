@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
-	"github.com/jandedobbeleer/oh-my-posh/src/engine"
 	"github.com/reeflective/console"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
@@ -76,19 +75,7 @@ func StartReadline(rpc rpcpb.SliverRPCClient, isServer bool) error {
 
 	Client = con
 
-	// Prompt stuff
-	prompt := con.App.Menu("implant").Prompt()
-	prompt.LoadConfig("/home/user/sliver-test/prompt.omp.json")
-	prompt.Env.Flags().Shell = "sliver"
-
-	session := &SliverSession{con: con, Session: con.ActiveTarget.session}
-	beacon := &SliverBeacon{con: con, Beacon: con.ActiveTarget.beacon}
-
-	engine.Segments[engine.SegmentType("sliverSession")] = func() engine.SegmentWriter { return session }
-	engine.Segments[engine.SegmentType("sliverBeacon")] = func() engine.SegmentWriter { return beacon }
-
-	con.ActiveTarget.SessionPrompt = session
-	con.ActiveTarget.BeaconPrompt = beacon
+	SetupPrompt(con)
 
 	// con.App.SetPrintASCIILogo(func(_ *grumble.App) {
 	con.PrintLogo()
@@ -381,7 +368,6 @@ func (con *SliverConsole) PrintLogo() {
 		con.Printf(Info+"Client %s\n", version.FullVersion())
 	}
 	con.Println(Info + "Welcome to the sliver shell, please type 'help' for options")
-	con.Println()
 	if serverVer.Major != int32(version.SemanticVersion()[0]) {
 		con.Printf(Warn + "Warning: Client and server may be running incompatible versions.\n")
 	}
@@ -580,9 +566,7 @@ type ActiveTarget struct {
 	observers  map[int]Observer
 	observerID int
 
-	// Prompts
-	SessionPrompt *SliverSession
-	BeaconPrompt  *SliverBeacon
+	prompt *sliverPrompt
 }
 
 // GetSessionInteractive - Get the active target(s)
@@ -672,8 +656,7 @@ func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 			observer(s.session, s.beacon)
 		}
 
-		s.SessionPrompt.Session = nil
-		s.BeaconPrompt.Beacon = nil
+		s.prompt.loadProperties(nil, nil)
 
 		// Switch back to server menu.
 		if Client.App.CurrentMenu().Name() == "implant" {
@@ -690,7 +673,7 @@ func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 			observer(s.session, s.beacon)
 		}
 
-		s.SessionPrompt.Session = session
+		s.prompt.loadProperties(session, nil)
 	} else if beacon != nil {
 		s.beacon = beacon
 		s.session = nil
@@ -698,7 +681,7 @@ func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 			observer(s.session, s.beacon)
 		}
 
-		s.BeaconPrompt.Beacon = beacon
+		s.prompt.loadProperties(nil, beacon)
 	}
 
 	// Switch to implant menu.
