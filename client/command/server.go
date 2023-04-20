@@ -8,8 +8,11 @@ import (
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/command/help"
 	"github.com/bishopfox/sliver/client/command/jobs"
+	"github.com/bishopfox/sliver/client/command/operators"
 	"github.com/bishopfox/sliver/client/command/reaction"
+	"github.com/bishopfox/sliver/client/command/sessions"
 	"github.com/bishopfox/sliver/client/command/update"
+	"github.com/bishopfox/sliver/client/command/use"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/rsteube/carapace"
@@ -22,7 +25,6 @@ import (
 // ServerCommands returns all commands bound to the server menu, optionally
 // accepting a function returning a list of additional (admin) commands.
 func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
-	// serverCommands returns all commands bound to the server menu.
 	serverCommands := func() *cobra.Command {
 		server := &cobra.Command{
 			Short: "Server commands",
@@ -185,6 +187,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.BoolP("kill-all", "K", false, "kill all jobs")
 			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(jobsCmd, func(comp *carapace.ActionMap) {
+			(*comp)["kill"] = jobs.JobsIDCompleter()
+		})
 		server.AddCommand(jobsCmd)
 
 		mtlsCmd := &cobra.Command{
@@ -301,26 +306,27 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.StringP("compress", "C", "none", "compress the stage before encrypting (zlib, gzip, deflate9, none)")
 			f.BoolP("prepend-size", "P", false, "prepend the size of the stage to the payload (to use with MSF stagers)")
 		})
+		FlagComps(stageCmd, func(comp *carapace.ActionMap) {
+			(*comp)["profile"] = generate.ProfileNameCompleter()
+			(*comp)["cert"] = carapace.ActionFiles().Tag("certificate file")
+			(*comp)["key"] = carapace.ActionFiles().Tag("key file")
+			(*comp)["compress"] = carapace.ActionValues([]string{"zlib", "gzip", "deflate9", "none"}...).Tag("compression formats")
+		})
 		server.AddCommand(stageCmd)
 
 		// [ Operators ] --------------------------------------------------------------
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.OperatorsStr,
-			Short: "Manage operators",
-			Long:  help.GetHelpFor([]string{consts.OperatorsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	operators.OperatorsCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		operatorsCmd := &cobra.Command{
+			Use:     consts.OperatorsStr,
+			Short:   "Manage operators",
+			Long:    help.GetHelpFor([]string{consts.OperatorsStr}),
+			Run:     operators.OperatorsCmd,
 			GroupID: consts.MultiplayerHelpGroup,
+		}
+		Flags("operators", operatorsCmd, func(f *pflag.FlagSet) {
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		server.AddCommand(operatorsCmd)
 
 		// Server-only commands.
 		if serverCmds != nil {
@@ -330,48 +336,41 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Sessions ] --------------------------------------------------------------
 
 		sessionsCmd := &cobra.Command{
-			Use:   consts.SessionsStr,
-			Short: "Session management",
-			Long:  help.GetHelpFor([]string{consts.SessionsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("i", "interact", "", "interact with a session")
-			// 	f.String("k", "kill", "", "kill the designated session")
-			// 	f.Bool("K", "kill-all", false, "kill all the sessions")
-			// 	f.Bool("C", "clean", false, "clean out any sessions marked as [DEAD]")
-			// 	f.Bool("F", "force", false, "force session action without waiting for results")
-			//
-			// 	f.String("f", "filter", "", "filter sessions by substring")
-			// 	f.String("e", "filter-re", "", "filter sessions by regular expression")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	sessions.SessionsCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Use:     consts.SessionsStr,
+			Short:   "Session management",
+			Long:    help.GetHelpFor([]string{consts.SessionsStr}),
+			Run:     sessions.SessionsCmd,
 			GroupID: consts.SliverHelpGroup,
 		}
-		sessionsCmd.AddCommand(&cobra.Command{
+		Flags("sessions", sessionsCmd, func(f *pflag.FlagSet) {
+			f.StringP("interact", "i", "", "interact with a session")
+			f.StringP("kill", "k", "", "kill the designated session")
+			f.BoolP("kill-all", "K", false, "kill all the sessions")
+			f.BoolP("clean", "C", false, "clean out any sessions marked as [DEAD]")
+			f.BoolP("force", "F", false, "force session action without waiting for results")
+
+			f.StringP("filter", "f", "", "filter sessions by substring")
+			f.StringP("filter-re", "e", "", "filter sessions by regular expression")
+
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(sessionsCmd, func(comp *carapace.ActionMap) {
+			(*comp)["interact"] = use.BeaconAndSessionIDCompleter()
+			(*comp)["kill"] = use.BeaconAndSessionIDCompleter()
+		})
+		server.AddCommand(sessionsCmd)
+
+		sessionsPruneCmd := &cobra.Command{
 			Use:   consts.PruneStr,
 			Short: "Kill all stale/dead sessions",
 			Long:  help.GetHelpFor([]string{consts.SessionsStr, consts.PruneStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Bool("F", "force", false, "Force the killing of stale/dead sessions")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	sessions.SessionsPruneCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.SliverHelpGroup,
+			Run:   sessions.SessionsPruneCmd,
+		}
+		Flags("prune", sessionsCmd, func(f *pflag.FlagSet) {
+			f.BoolP("force", "F", false, "Force the killing of stale/dead sessions")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		server.AddCommand(sessionsCmd)
+		sessionsCmd.AddCommand(sessionsPruneCmd)
 
 		// [ Use ] --------------------------------------------------------------
 
@@ -379,61 +378,41 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.UseStr,
 			Short: "Switch the active session or beacon",
 			Long:  help.GetHelpFor([]string{consts.UseStr}),
-			Run:   func(cmd *cobra.Command, args []string) {},
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
 			// Args: func(a *grumble.Args) {
 			// 	a.String("id", "beacon or session ID", grumble.Default(""))
 			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	use.UseCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// Completer: func(prefix string, args []string) []string {
-			// 	return use.BeaconAndSessionIDCompleter(prefix, args, con)
-			// },
+			Run:     use.UseCmd,
 			GroupID: consts.SliverHelpGroup,
 		}
-		useCmd.AddCommand(&cobra.Command{
+		Flags("use", sessionsCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		carapace.Gen(useCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter())
+		server.AddCommand(useCmd)
+
+		useSessionCmd := &cobra.Command{
 			Use:   consts.SessionsStr,
 			Short: "Switch the active session",
 			Long:  help.GetHelpFor([]string{consts.UseStr, consts.SessionsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Args: func(a *grumble.Args) {
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	use.UseSessionCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   use.UseSessionCmd,
+		}
+		Flags("use", useSessionCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		useCmd.AddCommand(&cobra.Command{
+		carapace.Gen(useSessionCmd).PositionalCompletion(use.SessionIDCompleter())
+		useCmd.AddCommand(useSessionCmd)
+
+		useBeaconCmd := &cobra.Command{
 			Use:   consts.BeaconsStr,
 			Short: "Switch the active beacon",
 			Long:  help.GetHelpFor([]string{consts.UseStr, consts.BeaconsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Args: func(a *grumble.Args) {
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	use.UseBeaconCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   use.UseBeaconCmd,
+		}
+		Flags("use", useBeaconCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		server.AddCommand(useCmd)
+		carapace.Gen(useBeaconCmd).PositionalCompletion(use.BeaconIDCompleter())
+		useCmd.AddCommand(useBeaconCmd)
 
 		// [ Settings ] --------------------------------------------------------------
 
@@ -584,445 +563,421 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Generate ] --------------------------------------------------------------
 
 		generateCmd := &cobra.Command{
-			Use:   consts.GenerateStr,
-			Short: "Generate an implant binary",
-			Long:  help.GetHelpFor([]string{consts.GenerateStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("o", "os", "windows", "operating system")
-			// 	f.String("a", "arch", "amd64", "cpu architecture")
-			// 	f.String("N", "name", "", "agent name")
-			// 	f.Bool("d", "debug", false, "enable debug features")
-			// 	f.String("O", "debug-file", "", "path to debug output")
-			// 	f.Bool("e", "evasion", false, "enable evasion features (e.g. overwrite user space hooks)")
-			// 	f.Bool("l", "skip-symbols", false, "skip symbol obfuscation")
-			// 	f.String("I", "template", "sliver", "implant code template")
-			// 	f.Bool("E", "external-builder", false, "use an external builder")
-			// 	f.Bool("G", "disable-sgn", false, "disable shikata ga nai shellcode encoder")
-			//
-			// 	f.String("c", "canary", "", "canary domain(s)")
-			//
-			// 	f.String("m", "mtls", "", "mtls connection strings")
-			// 	f.String("g", "wg", "", "wg connection strings")
-			// 	f.String("b", "http", "", "http(s) connection strings")
-			// 	f.String("n", "dns", "", "dns connection strings")
-			// 	f.String("p", "named-pipe", "", "named-pipe connection strings")
-			// 	f.String("i", "tcp-pivot", "", "tcp-pivot connection strings")
-			//
-			// 	f.Int("X", "key-exchange", generate.DefaultWGKeyExPort, "wg key-exchange port")
-			// 	f.Int("T", "tcp-comms", generate.DefaultWGNPort, "wg c2 comms port")
-			//
-			// 	f.Bool("R", "run-at-load", false, "run the implant entrypoint from DllMain/Constructor (shared library only)")
-			//
-			// 	f.String("Z", "strategy", "", "specify a connection strategy (r = random, rd = random domain, s = sequential)")
-			// 	f.Int("j", "reconnect", generate.DefaultReconnect, "attempt to reconnect every n second(s)")
-			// 	f.Int("P", "poll-timeout", generate.DefaultPollTimeout, "long poll request timeout")
-			// 	f.Int("k", "max-errors", generate.DefaultMaxErrors, "max number of connection errors")
-			//
-			// 	f.String("w", "limit-datetime", "", "limit execution to before datetime")
-			// 	f.Bool("x", "limit-domainjoined", false, "limit execution to domain joined machines")
-			// 	f.String("y", "limit-username", "", "limit execution to specified username")
-			// 	f.String("z", "limit-hostname", "", "limit execution to specified hostname")
-			// 	f.String("F", "limit-fileexists", "", "limit execution to hosts with this file in the filesystem")
-			// 	f.String("L", "limit-locale", "", "limit execution to hosts that match this locale")
-			//
-			// 	f.String("f", "format", "exe", "Specifies the output formats, valid values are: 'exe', 'shared' (for dynamic libraries), 'service' (see `psexec` for more info) and 'shellcode' (windows only)")
-			// 	f.String("s", "save", "", "directory/file to the binary to")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.GenerateCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Use:     consts.GenerateStr,
+			Short:   "Generate an implant binary",
+			Long:    help.GetHelpFor([]string{consts.GenerateStr}),
+			Run:     generate.GenerateCmd,
 			GroupID: consts.GenericHelpGroup,
 		}
-		generateCmd.AddCommand(&cobra.Command{
-			Use:   consts.BeaconStr,
-			Short: "Generate a beacon binary",
-			Long:  help.GetHelpFor([]string{consts.GenerateStr, consts.BeaconStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int64("D", "days", 0, "beacon interval days")
-			// 	f.Int64("H", "hours", 0, "beacon interval hours")
-			// 	f.Int64("M", "minutes", 0, "beacon interval minutes")
-			// 	f.Int64("S", "seconds", 60, "beacon interval seconds")
-			// 	f.Int64("J", "jitter", 30, "beacon interval jitter in seconds")
-			//
-			// 	// Generate flags
-			// 	f.String("o", "os", "windows", "operating system")
-			// 	f.String("a", "arch", "amd64", "cpu architecture")
-			// 	f.String("N", "name", "", "agent name")
-			// 	f.Bool("d", "debug", false, "enable debug features")
-			// 	f.String("O", "debug-file", "", "path to debug output")
-			// 	f.Bool("e", "evasion", false, "enable evasion features  (e.g. overwrite user space hooks)")
-			// 	f.Bool("l", "skip-symbols", false, "skip symbol obfuscation")
-			// 	f.String("I", "template", "sliver", "implant code template")
-			// 	f.Bool("E", "external-builder", false, "use an external builder")
-			// 	f.Bool("G", "disable-sgn", false, "disable shikata ga nai shellcode encoder")
-			//
-			// 	f.String("c", "canary", "", "canary domain(s)")
-			//
-			// 	f.String("m", "mtls", "", "mtls connection strings")
-			// 	f.String("g", "wg", "", "wg connection strings")
-			// 	f.String("b", "http", "", "http(s) connection strings")
-			// 	f.String("n", "dns", "", "dns connection strings")
-			// 	f.String("p", "named-pipe", "", "named-pipe connection strings")
-			// 	f.String("i", "tcp-pivot", "", "tcp-pivot connection strings")
-			//
-			// 	f.Int("X", "key-exchange", generate.DefaultWGKeyExPort, "wg key-exchange port")
-			// 	f.Int("T", "tcp-comms", generate.DefaultWGNPort, "wg c2 comms port")
-			//
-			// 	f.Bool("R", "run-at-load", false, "run the implant entrypoint from DllMain/Constructor (shared library only)")
-			//
-			// 	f.String("Z", "strategy", "", "specify a connection strategy (r = random, rd = random domain, s = sequential)")
-			// 	f.Int("j", "reconnect", generate.DefaultReconnect, "attempt to reconnect every n second(s)")
-			// 	f.Int("P", "poll-timeout", generate.DefaultPollTimeout, "long poll request timeout")
-			// 	f.Int("k", "max-errors", generate.DefaultMaxErrors, "max number of connection errors")
-			//
-			// 	f.String("w", "limit-datetime", "", "limit execution to before datetime")
-			// 	f.Bool("x", "limit-domainjoined", false, "limit execution to domain joined machines")
-			// 	f.String("y", "limit-username", "", "limit execution to specified username")
-			// 	f.String("z", "limit-hostname", "", "limit execution to specified hostname")
-			// 	f.String("F", "limit-fileexists", "", "limit execution to hosts with this file in the filesystem")
-			// 	f.String("L", "limit-locale", "", "limit execution to hosts that match this locale")
-			//
-			// 	f.String("f", "format", "exe", "Specifies the output formats, valid values are: 'exe', 'shared' (for dynamic libraries), 'service' (see `psexec` for more info) and 'shellcode' (windows only)")
-			// 	f.String("s", "save", "", "directory/file to the binary to")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.GenerateBeaconCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		Flags("session", generateCmd, func(f *pflag.FlagSet) {
+			f.StringP("os", "o", "windows", "operating system")
+			f.StringP("arch", "a", "amd64", "cpu architecture")
+			f.StringP("name", "N", "", "agent name")
+			f.BoolP("debug", "d", false, "enable debug features")
+			f.StringP("debug-file", "O", "", "path to debug output")
+			f.BoolP("evasion", "e", false, "enable evasion features (e.g. overwrite user space hooks)")
+			f.BoolP("skip-symbols", "l", false, "skip symbol obfuscation")
+			f.StringP("template", "I", "sliver", "implant code template")
+			f.BoolP("external-builder", "E", false, "use an external builder")
+			f.BoolP("disable-sgn", "G", false, "disable shikata ga nai shellcode encoder")
+
+			f.StringP("canary", "c", "", "canary domain(s)")
+
+			f.StringP("mtls", "m", "", "mtls connection strings")
+			f.StringP("wg", "g", "", "wg connection strings")
+			f.StringP("http", "b", "", "http(s) connection strings")
+			f.StringP("dns", "n", "", "dns connection strings")
+			f.StringP("named-pipe", "p", "", "named-pipe connection strings")
+			f.StringP("tcp-pivot", "i", "", "tcp-pivot connection strings")
+
+			f.Uint32P("key-exchange", "X", generate.DefaultWGKeyExPort, "wg key-exchange port")
+			f.Uint32P("tcp-comms", "T", generate.DefaultWGNPort, "wg c2 comms port")
+
+			f.BoolP("run-at-load", "R", false, "run the implant entrypoint from DllMain/Constructor (shared library only)")
+
+			f.StringP("strategy", "Z", "", "specify a connection strategy (r = random, rd = random domain, s = sequential)")
+			f.Int64P("reconnect", "j", generate.DefaultReconnect, "attempt to reconnect every n second(s)")
+			f.Int64P("poll-timeout", "P", generate.DefaultPollTimeout, "long poll request timeout")
+			f.Uint32P("max-errors", "k", generate.DefaultMaxErrors, "max number of connection errors")
+
+			f.StringP("limit-datetime", "w", "", "limit execution to before datetime")
+			f.BoolP("limit-domainjoined", "x", false, "limit execution to domain joined machines")
+			f.StringP("limit-username", "y", "", "limit execution to specified username")
+			f.StringP("limit-hostname", "z", "", "limit execution to specified hostname")
+			f.StringP("limit-fileexists", "F", "", "limit execution to hosts with this file in the filesystem")
+			f.StringP("limit-locale", "L", "", "limit execution to hosts that match this locale")
+
+			f.StringP("format", "f", "exe", "Specifies the output formats, valid values are: 'exe', 'shared' (for dynamic libraries), 'service' (see `psexec` for more info) and 'shellcode' (windows only)")
+			f.StringP("save", "s", "", "directory/file to the binary to")
+
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		generateCmd.AddCommand(&cobra.Command{
-			Use:   consts.StagerStr,
-			Short: "Generate a stager using Metasploit (requires local Metasploit installation)",
-			Long:  help.GetHelpFor([]string{consts.StagerStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("o", "os", "windows", "operating system")
-			// 	f.String("a", "arch", "amd64", "cpu architecture")
-			// 	f.String("L", "lhost", "", "Listening host")
-			// 	f.Int("l", "lport", 8443, "Listening port")
-			// 	f.String("r", "protocol", "tcp", "Staging protocol (tcp/http/https)")
-			// 	f.String("f", "format", "raw", "Output format (msfvenom formats, see `help generate stager` for the list)")
-			// 	f.String("b", "badchars", "", "bytes to exclude from stage shellcode")
-			// 	f.String("s", "save", "", "directory to save the generated stager to")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.GenerateStagerCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
-		})
-		generateCmd.AddCommand(&cobra.Command{
-			Use:   consts.CompilerInfoStr,
-			Short: "Get information about the server's compiler",
-			Long:  help.GetHelpFor([]string{consts.CompilerInfoStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.GenerateInfoCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+		FlagComps(generateCmd, func(comp *carapace.ActionMap) {
+			(*comp)["os"] = generate.OSCompleter()
+			(*comp)["arch"] = generate.ArchCompleter()
+
+			// Todo: URL completer for C2s.
+			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["http"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["dns"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["tcp-pivot"] = use.BeaconAndSessionIDCompleter()
+
+			(*comp)["strategy"] = carapace.ActionValuesDescribed([]string{"r", "random", "rd", "random domain", "s", "sequential"}...).Tag("C2 strategy")
+			(*comp)["format"] = generate.FormatCompleter()
+			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
 		})
 		server.AddCommand(generateCmd)
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.RegenerateStr,
-			Short: "Regenerate an implant",
-			Long:  help.GetHelpFor([]string{consts.RegenerateStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.String("implant-name", "name of the implant")
-			// },
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("s", "save", "", "directory/file to the binary to")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.RegenerateCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			GroupID: consts.GenericHelpGroup,
-		})
+		generateBeaconCmd := &cobra.Command{
+			Use:   consts.BeaconStr,
+			Short: "Generate a beacon binary",
+			Long:  help.GetHelpFor([]string{consts.GenerateStr, consts.BeaconStr}),
+			Run:   generate.GenerateBeaconCmd,
+		}
+		Flags("beacon", generateBeaconCmd, func(f *pflag.FlagSet) {
+			f.Int64P("days", "D", 0, "beacon interval days")
+			f.Int64P("hours", "H", 0, "beacon interval hours")
+			f.Int64P("minutes", "M", 0, "beacon interval minutes")
+			f.Int64P("seconds", "S", 60, "beacon interval seconds")
+			f.Int64P("jitter", "J", 30, "beacon interval jitter in seconds")
 
-		profilesCmd := &cobra.Command{
-			Use:   consts.ProfilesStr,
-			Short: "List existing profiles",
-			Long:  help.GetHelpFor([]string{consts.ProfilesStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.ProfilesCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			// Generate flags
+			f.StringP("os", "o", "windows", "operating system")
+			f.StringP("arch", "a", "amd64", "cpu architecture")
+			f.StringP("name", "N", "", "agent name")
+			f.BoolP("debug", "d", false, "enable debug features")
+			f.StringP("debug-file", "O", "", "path to debug output")
+			f.BoolP("evasion", "e", false, "enable evasion features  (e.g. overwrite user space hooks)")
+			f.BoolP("skip-symbols", "l", false, "skip symbol obfuscation")
+			f.StringP("template", "I", "sliver", "implant code template")
+			f.BoolP("external-builder", "E", false, "use an external builder")
+			f.BoolP("disable-sgn", "G", false, "disable shikata ga nai shellcode encoder")
+
+			f.StringP("canary", "c", "", "canary domain(s)")
+
+			f.StringP("mtls", "m", "", "mtls connection strings")
+			f.StringP("wg", "g", "", "wg connection strings")
+			f.StringP("http", "b", "", "http(s) connection strings")
+			f.StringP("dns", "n", "", "dns connection strings")
+			f.StringP("named-pipe", "p", "", "named-pipe connection strings")
+			f.StringP("tcp-pivot", "i", "", "tcp-pivot connection strings")
+
+			f.Uint32P("key-exchange", "X", generate.DefaultWGKeyExPort, "wg key-exchange port")
+			f.Uint32P("tcp-comms", "T", generate.DefaultWGNPort, "wg c2 comms port")
+
+			f.BoolP("run-at-load", "R", false, "run the implant entrypoint from DllMain/Constructor (shared library only)")
+
+			f.StringP("strategy", "Z", "", "specify a connection strategy (r = random, rd = random domain, s = sequential)")
+			f.Int64P("reconnect", "j", generate.DefaultReconnect, "attempt to reconnect every n second(s)")
+			f.Int64P("poll-timeout", "P", generate.DefaultPollTimeout, "long poll request timeout")
+			f.Uint32P("max-errors", "k", generate.DefaultMaxErrors, "max number of connection errors")
+
+			f.StringP("limit-datetime", "w", "", "limit execution to before datetime")
+			f.BoolP("limit-domainjoined", "x", false, "limit execution to domain joined machines")
+			f.StringP("limit-username", "y", "", "limit execution to specified username")
+			f.StringP("limit-hostname", "z", "", "limit execution to specified hostname")
+			f.StringP("limit-fileexists", "F", "", "limit execution to hosts with this file in the filesystem")
+			f.StringP("limit-locale", "L", "", "limit execution to hosts that match this locale")
+
+			f.StringP("format", "f", "exe", "Specifies the output formats, valid values are: 'exe', 'shared' (for dynamic libraries), 'service' (see `psexec` for more info) and 'shellcode' (windows only)")
+			f.StringP("save", "s", "", "directory/file to the binary to")
+
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(generateBeaconCmd, func(comp *carapace.ActionMap) {
+			(*comp)["os"] = generate.OSCompleter()
+			(*comp)["arch"] = generate.ArchCompleter()
+
+			// Todo: URL completer for C2s.
+			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["http"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["dns"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["tcp-pivot"] = use.BeaconAndSessionIDCompleter()
+
+			(*comp)["strategy"] = carapace.ActionValuesDescribed([]string{"r", "random", "rd", "random domain", "s", "sequential"}...).Tag("C2 strategy")
+			(*comp)["format"] = generate.FormatCompleter()
+			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
+		})
+		generateCmd.AddCommand(generateBeaconCmd)
+
+		generateStagerCmd := &cobra.Command{
+			Use:   consts.StagerStr,
+			Short: "Generate a stager using Metasploit (requires local Metasploit installation)",
+			Long:  help.GetHelpFor([]string{consts.StagerStr}),
+			Run:   generate.GenerateStagerCmd,
+		}
+		Flags("stager", generateStagerCmd, func(f *pflag.FlagSet) {
+			f.StringP("os", "o", "windows", "operating system")
+			f.StringP("arch", "a", "amd64", "cpu architecture")
+			f.StringP("lhost", "L", "", "Listening host")
+			f.Uint32P("lport", "l", 8443, "Listening port")
+			f.StringP("protocol", "r", "tcp", "Staging protocol (tcp/http/https)")
+			f.StringP("format", "f", "raw", "Output format (msfvenom formats, see `help generate stager` for the list)")
+			f.StringP("badchars", "b", "", "bytes to exclude from stage shellcode")
+			f.StringP("save", "s", "", "directory to save the generated stager to")
+
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		generateCmd.AddCommand(generateStagerCmd)
+
+		generateInfoCmd := &cobra.Command{
+			Use:   consts.CompilerInfoStr,
+			Short: "Get information about the server's compiler",
+			Long:  help.GetHelpFor([]string{consts.CompilerInfoStr}),
+			Run:   generate.GenerateInfoCmd,
+		}
+		Flags("stager", generateStagerCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		generateCmd.AddCommand(generateInfoCmd)
+
+		regenerateCmd := &cobra.Command{
+			Use:     consts.RegenerateStr,
+			Short:   "Regenerate an implant",
+			Long:    help.GetHelpFor([]string{consts.RegenerateStr}),
+			Args:    cobra.ExactArgs(1), // 	a.String("implant-name", "name of the implant")
+			Run:     generate.RegenerateCmd,
 			GroupID: consts.GenericHelpGroup,
 		}
-		profilesCmd.AddCommand(&cobra.Command{
+		Flags("regenerate", regenerateCmd, func(f *pflag.FlagSet) {
+			f.StringP("save", "s", "", "directory/file to the binary to")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(regenerateCmd, func(comp *carapace.ActionMap) {
+			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
+		})
+		server.AddCommand(regenerateCmd)
+
+		profilesCmd := &cobra.Command{
+			Use:     consts.ProfilesStr,
+			Short:   "List existing profiles",
+			Long:    help.GetHelpFor([]string{consts.ProfilesStr}),
+			Run:     generate.ProfilesCmd,
+			GroupID: consts.GenericHelpGroup,
+		}
+		Flags("profiles", profilesCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		server.AddCommand(profilesCmd)
+
+		profilesGenerateCmd := &cobra.Command{
 			Use:   consts.GenerateStr,
 			Short: "Generate implant from a profile",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.GenerateStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("s", "save", "", "directory/file to the binary to")
-			// 	f.Bool("G", "disable-sgn", false, "disable shikata ga nai shellcode encoder")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Args: func(a *grumble.Args) {
-			// 	a.String("name", "name of the profile", grumble.Default(""))
-			// },
-			// Completer: func(prefix string, args []string) []string {
-			// 	return generate.ProfileNameCompleter(prefix, args, con)
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.ProfilesGenerateCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Args:  cobra.ExactArgs(1), // 	a.String("name", "name of the profile", grumble.Default(""))
+			Run:   generate.ProfilesGenerateCmd,
+		}
+		Flags("profiles", profilesGenerateCmd, func(f *pflag.FlagSet) {
+			f.StringP("save", "s", "", "directory/file to the binary to")
+			f.BoolP("disable-sgn", "G", false, "disable shikata ga nai shellcode encoder")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(profilesGenerateCmd, func(comp *carapace.ActionMap) {
+			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
+		})
+		carapace.Gen(profilesGenerateCmd).PositionalCompletion(generate.ProfileNameCompleter())
+		profilesCmd.AddCommand(profilesGenerateCmd)
+
 		profilesNewCmd := &cobra.Command{
 			Use:   consts.NewStr,
 			Short: "Create a new implant profile (interactive session)",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.NewStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	// Generate flags
-			// 	f.String("o", "os", "windows", "operating system")
-			// 	f.String("a", "arch", "amd64", "cpu architecture")
-			//
-			// 	f.Bool("d", "debug", false, "enable debug features")
-			// 	f.String("O", "debug-file", "", "path to debug output")
-			// 	f.Bool("e", "evasion", false, "enable evasion features")
-			// 	f.Bool("l", "skip-symbols", false, "skip symbol obfuscation")
-			// 	f.Bool("G", "disable-sgn", false, "disable shikata ga nai shellcode encoder")
-			//
-			// 	f.String("c", "canary", "", "canary domain(s)")
-			//
-			// 	f.String("N", "name", "", "implant name")
-			// 	f.String("m", "mtls", "", "mtls connection strings")
-			// 	f.String("g", "wg", "", "wg connection strings")
-			// 	f.String("b", "http", "", "http(s) connection strings")
-			// 	f.String("n", "dns", "", "dns connection strings")
-			// 	f.String("p", "named-pipe", "", "named-pipe connection strings")
-			// 	f.String("i", "tcp-pivot", "", "tcp-pivot connection strings")
-			//
-			// 	f.Int("X", "key-exchange", generate.DefaultWGKeyExPort, "wg key-exchange port")
-			// 	f.Int("T", "tcp-comms", generate.DefaultWGNPort, "wg c2 comms port")
-			//
-			// 	f.Bool("R", "run-at-load", false, "run the implant entrypoint from DllMain/Constructor (shared library only)")
-			// 	f.String("Z", "strategy", "", "specify a connection strategy (r = random, rd = random domain, s = sequential)")
-			//
-			// 	f.String("I", "template", "sliver", "implant code template")
-			//
-			// 	f.Int("j", "reconnect", generate.DefaultReconnect, "attempt to reconnect every n second(s)")
-			// 	f.Int("P", "poll-timeout", generate.DefaultPollTimeout, "long poll request timeout")
-			// 	f.Int("k", "max-errors", generate.DefaultMaxErrors, "max number of connection errors")
-			//
-			// 	f.String("w", "limit-datetime", "", "limit execution to before datetime")
-			// 	f.Bool("x", "limit-domainjoined", false, "limit execution to domain joined machines")
-			// 	f.String("y", "limit-username", "", "limit execution to specified username")
-			// 	f.String("z", "limit-hostname", "", "limit execution to specified hostname")
-			// 	f.String("F", "limit-fileexists", "", "limit execution to hosts with this file in the filesystem")
-			// 	f.String("L", "limit-locale", "", "limit execution to hosts that match this locale")
-			//
-			// 	f.String("f", "format", "exe", "Specifies the output formats, valid values are: 'exe', 'shared' (for dynamic libraries), 'service' (see `psexec` for more info) and 'shellcode' (windows only)")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Args: func(a *grumble.Args) {
-			// 	a.String("name", "name of the profile", grumble.Default(""))
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.ProfilesNewCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			// Args: cobra.ExactArgs(1), // 	a.String("name", "name of the profile", grumble.Default(""))
+			Run: generate.ProfilesNewCmd,
 		}
+		Flags("session", profilesNewCmd, func(f *pflag.FlagSet) {
+			f.StringP("os", "o", "windows", "operating system")
+			f.StringP("arch", "a", "amd64", "cpu architecture")
+
+			f.BoolP("debug", "d", false, "enable debug features")
+			f.StringP("debug-file", "O", "", "path to debug output")
+			f.BoolP("evasion", "e", false, "enable evasion features (e.g. overwrite user space hooks)")
+			f.BoolP("skip-symbols", "l", false, "skip symbol obfuscation")
+			f.BoolP("disable-sgn", "G", false, "disable shikata ga nai shellcode encoder")
+
+			f.StringP("canary", "c", "", "canary domain(s)")
+
+			f.StringP("name", "N", "", "agent name")
+			f.StringP("mtls", "m", "", "mtls connection strings")
+			f.StringP("wg", "g", "", "wg connection strings")
+			f.StringP("http", "b", "", "http(s) connection strings")
+			f.StringP("dns", "n", "", "dns connection strings")
+			f.StringP("named-pipe", "p", "", "named-pipe connection strings")
+			f.StringP("tcp-pivot", "i", "", "tcp-pivot connection strings")
+
+			f.Uint32P("key-exchange", "X", generate.DefaultWGKeyExPort, "wg key-exchange port")
+			f.Uint32P("tcp-comms", "T", generate.DefaultWGNPort, "wg c2 comms port")
+
+			f.BoolP("run-at-load", "R", false, "run the implant entrypoint from DllMain/Constructor (shared library only)")
+			f.StringP("strategy", "Z", "", "specify a connection strategy (r = random, rd = random domain, s = sequential)")
+
+			f.StringP("template", "I", "sliver", "implant code template")
+
+			f.Int64P("reconnect", "j", generate.DefaultReconnect, "attempt to reconnect every n second(s)")
+			f.Int64P("poll-timeout", "P", generate.DefaultPollTimeout, "long poll request timeout")
+			f.Uint32P("max-errors", "k", generate.DefaultMaxErrors, "max number of connection errors")
+
+			f.StringP("limit-datetime", "w", "", "limit execution to before datetime")
+			f.BoolP("limit-domainjoined", "x", false, "limit execution to domain joined machines")
+			f.StringP("limit-username", "y", "", "limit execution to specified username")
+			f.StringP("limit-hostname", "z", "", "limit execution to specified hostname")
+			f.StringP("limit-fileexists", "F", "", "limit execution to hosts with this file in the filesystem")
+			f.StringP("limit-locale", "L", "", "limit execution to hosts that match this locale")
+
+			f.StringP("format", "f", "exe", "Specifies the output formats, valid values are: 'exe', 'shared' (for dynamic libraries), 'service' (see `psexec` for more info) and 'shellcode' (windows only)")
+
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(profilesNewCmd, func(comp *carapace.ActionMap) {
+			(*comp)["os"] = generate.OSCompleter()
+			(*comp)["arch"] = generate.ArchCompleter()
+
+			// Todo: URL completer for C2s.
+			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["http"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["dns"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["tcp-pivot"] = use.BeaconAndSessionIDCompleter()
+
+			(*comp)["strategy"] = carapace.ActionValuesDescribed([]string{"r", "random", "rd", "random domain", "s", "sequential"}...).Tag("C2 strategy")
+			(*comp)["format"] = generate.FormatCompleter()
+			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
+		})
 		profilesCmd.AddCommand(profilesNewCmd)
 
 		// New Beacon Profile Command
-		profilesNewCmd.AddCommand(&cobra.Command{
+		profilesNewBeaconCmd := &cobra.Command{
 			Use:   consts.BeaconStr,
 			Short: "Create a new implant profile (beacon)",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.NewStr, consts.BeaconStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int64("D", "days", 0, "beacon interval days")
-			// 	f.Int64("H", "hours", 0, "beacon interval hours")
-			// 	f.Int64("M", "minutes", 0, "beacon interval minutes")
-			// 	f.Int64("S", "seconds", 60, "beacon interval seconds")
-			// 	f.Int64("J", "jitter", 30, "beacon interval jitter in seconds")
-			// 	f.Bool("G", "disable-sgn", false, "disable shikata ga nai shellcode encoder")
-			//
-			// 	// Generate flags
-			// 	f.String("o", "os", "windows", "operating system")
-			// 	f.String("a", "arch", "amd64", "cpu architecture")
-			//
-			// 	f.Bool("d", "debug", false, "enable debug features")
-			// 	f.String("O", "debug-file", "", "path to debug output")
-			// 	f.Bool("e", "evasion", false, "enable evasion features")
-			// 	f.Bool("l", "skip-symbols", false, "skip symbol obfuscation")
-			//
-			// 	f.String("c", "canary", "", "canary domain(s)")
-			//
-			// 	f.String("N", "name", "", "implant name")
-			// 	f.String("m", "mtls", "", "mtls connection strings")
-			// 	f.String("g", "wg", "", "wg connection strings")
-			// 	f.String("b", "http", "", "http(s) connection strings")
-			// 	f.String("n", "dns", "", "dns connection strings")
-			// 	f.String("p", "named-pipe", "", "named-pipe connection strings")
-			// 	f.String("i", "tcp-pivot", "", "tcp-pivot connection strings")
-			// 	f.String("Z", "strategy", "", "specify a connection strategy (r = random, rd = random domain, s = sequential)")
-			//
-			// 	f.Int("X", "key-exchange", generate.DefaultWGKeyExPort, "wg key-exchange port")
-			// 	f.Int("T", "tcp-comms", generate.DefaultWGNPort, "wg c2 comms port")
-			//
-			// 	f.Bool("R", "run-at-load", false, "run the implant entrypoint from DllMain/Constructor (shared library only)")
-			//
-			// 	f.String("I", "template", "sliver", "implant code template")
-			//
-			// 	f.Int("j", "reconnect", generate.DefaultReconnect, "attempt to reconnect every n second(s)")
-			// 	f.Int("P", "poll-timeout", generate.DefaultPollTimeout, "long poll request timeout")
-			// 	f.Int("k", "max-errors", generate.DefaultMaxErrors, "max number of connection errors")
-			//
-			// 	f.String("w", "limit-datetime", "", "limit execution to before datetime")
-			// 	f.Bool("x", "limit-domainjoined", false, "limit execution to domain joined machines")
-			// 	f.String("y", "limit-username", "", "limit execution to specified username")
-			// 	f.String("z", "limit-hostname", "", "limit execution to specified hostname")
-			// 	f.String("F", "limit-fileexists", "", "limit execution to hosts with this file in the filesystem")
-			// 	f.String("L", "limit-locale", "", "limit execution to hosts that match this locale")
-			//
-			// 	f.String("f", "format", "exe", "Specifies the output formats, valid values are: 'exe', 'shared' (for dynamic libraries), 'service' (see `psexec` for more info) and 'shellcode' (windows only)")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Args: func(a *grumble.Args) {
-			// 	a.String("name", "name of the profile", grumble.Default(""))
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.ProfilesNewBeaconCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
-		})
+			// Args: cobra.ExactArgs(1), // 	a.String("name", "name of the profile", grumble.Default(""))
+			Run: generate.ProfilesNewBeaconCmd,
+		}
+		Flags("beacon", profilesNewBeaconCmd, func(f *pflag.FlagSet) {
+			f.Int64P("days", "D", 0, "beacon interval days")
+			f.Int64P("hours", "H", 0, "beacon interval hours")
+			f.Int64P("minutes", "M", 0, "beacon interval minutes")
+			f.Int64P("seconds", "S", 60, "beacon interval seconds")
+			f.Int64P("jitter", "J", 30, "beacon interval jitter in seconds")
+			f.BoolP("disable-sgn", "G", false, "disable shikata ga nai shellcode encoder")
 
-		profilesCmd.AddCommand(&cobra.Command{
+			// Generate flags
+			f.StringP("os", "o", "windows", "operating system")
+			f.StringP("arch", "a", "amd64", "cpu architecture")
+
+			f.BoolP("debug", "d", false, "enable debug features")
+			f.StringP("debug-file", "O", "", "path to debug output")
+			f.BoolP("evasion", "e", false, "enable evasion features  (e.g. overwrite user space hooks)")
+			f.BoolP("skip-symbols", "l", false, "skip symbol obfuscation")
+
+			f.StringP("canary", "c", "", "canary domain(s)")
+
+			f.StringP("name", "N", "", "agent name")
+			f.StringP("mtls", "m", "", "mtls connection strings")
+			f.StringP("wg", "g", "", "wg connection strings")
+			f.StringP("http", "b", "", "http(s) connection strings")
+			f.StringP("dns", "n", "", "dns connection strings")
+			f.StringP("named-pipe", "p", "", "named-pipe connection strings")
+			f.StringP("tcp-pivot", "i", "", "tcp-pivot connection strings")
+			f.StringP("strategy", "Z", "", "specify a connection strategy (r = random, rd = random domain, s = sequential)")
+
+			f.Uint32P("key-exchange", "X", generate.DefaultWGKeyExPort, "wg key-exchange port")
+			f.Uint32P("tcp-comms", "T", generate.DefaultWGNPort, "wg c2 comms port")
+
+			f.BoolP("run-at-load", "R", false, "run the implant entrypoint from DllMain/Constructor (shared library only)")
+
+			f.StringP("template", "I", "sliver", "implant code template")
+
+			f.Int64P("reconnect", "j", generate.DefaultReconnect, "attempt to reconnect every n second(s)")
+			f.Int64P("poll-timeout", "P", generate.DefaultPollTimeout, "long poll request timeout")
+			f.Uint32P("max-errors", "k", generate.DefaultMaxErrors, "max number of connection errors")
+
+			f.StringP("limit-datetime", "w", "", "limit execution to before datetime")
+			f.BoolP("limit-domainjoined", "x", false, "limit execution to domain joined machines")
+			f.StringP("limit-username", "y", "", "limit execution to specified username")
+			f.StringP("limit-hostname", "z", "", "limit execution to specified hostname")
+			f.StringP("limit-fileexists", "F", "", "limit execution to hosts with this file in the filesystem")
+			f.StringP("limit-locale", "L", "", "limit execution to hosts that match this locale")
+
+			f.StringP("format", "f", "exe", "Specifies the output formats, valid values are: 'exe', 'shared' (for dynamic libraries), 'service' (see `psexec` for more info) and 'shellcode' (windows only)")
+
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(profilesNewBeaconCmd, func(comp *carapace.ActionMap) {
+			(*comp)["os"] = generate.OSCompleter()
+			(*comp)["arch"] = generate.ArchCompleter()
+
+			// Todo: URL completer for C2s.
+			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["http"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["dns"] = use.BeaconAndSessionIDCompleter()
+			// (*comp)["tcp-pivot"] = use.BeaconAndSessionIDCompleter()
+
+			(*comp)["strategy"] = carapace.ActionValuesDescribed([]string{"r", "random", "rd", "random domain", "s", "sequential"}...).Tag("C2 strategy")
+			(*comp)["format"] = generate.FormatCompleter()
+			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
+		})
+		profilesNewCmd.AddCommand(profilesNewBeaconCmd)
+
+		profilesRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
 			Short: "Remove a profile",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.RmStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Args: func(a *grumble.Args) {
-			// 	a.String("name", "name of the profile", grumble.Default(""))
-			// },
-			// Completer: func(prefix string, args []string) []string {
-			// 	return generate.ProfileNameCompleter(prefix, args, con)
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.ProfilesRmCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Args:  cobra.ExactArgs(1), // 	a.String("name", "name of the profile", grumble.Default(""))
+			Run:   generate.ProfilesRmCmd,
+		}
+		Flags("profiles", profilesRmCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		server.AddCommand(profilesCmd)
+		carapace.Gen(profilesRmCmd).PositionalCompletion(generate.ProfileNameCompleter())
+		profilesCmd.AddCommand(profilesRmCmd)
 
 		implantBuildsCmd := &cobra.Command{
-			Use:   consts.ImplantBuildsStr,
-			Short: "List implant builds",
-			Long:  help.GetHelpFor([]string{consts.ImplantBuildsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("o", "os", "", "filter builds by operating system")
-			// 	f.String("a", "arch", "", "filter builds by cpu architecture")
-			// 	f.String("f", "format", "", "filter builds by artifact format")
-			// 	f.Bool("s", "only-sessions", false, "filter interactive sessions")
-			// 	f.Bool("b", "only-beacons", false, "filter beacons")
-			// 	f.Bool("d", "no-debug", false, "filter builds by debug flag")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.ImplantsCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Use:     consts.ImplantBuildsStr,
+			Short:   "List implant builds",
+			Long:    help.GetHelpFor([]string{consts.ImplantBuildsStr}),
+			Run:     generate.ImplantsCmd,
 			GroupID: consts.GenericHelpGroup,
 		}
-		implantBuildsCmd.AddCommand(&cobra.Command{
-			Use:   consts.RmStr,
-			Short: "Remove implant build",
-			Long:  help.GetHelpFor([]string{consts.ImplantBuildsStr, consts.RmStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Args: func(a *grumble.Args) {
-			// 	a.String("name", "implant name", grumble.Default(""))
-			// },
-			// Completer: func(prefix string, args []string) []string {
-			// 	return generate.ImplantBuildNameCompleter(prefix, args, generate.ImplantBuildFilter{}, con)
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.ImplantsRmCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+		Flags("implants", implantBuildsCmd, func(f *pflag.FlagSet) {
+			f.StringP("os", "o", "", "filter builds by operating system")
+			f.StringP("arch", "a", "", "filter builds by cpu architecture")
+			f.StringP("format", "f", "", "filter builds by artifact format")
+			f.BoolP("only-sessions", "s", false, "filter interactive sessions")
+			f.BoolP("only-beacons", "b", false, "filter beacons")
+			f.BoolP("no-debug", "d", false, "filter builds by debug flag")
+
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(profilesNewBeaconCmd, func(comp *carapace.ActionMap) {
+			(*comp)["os"] = generate.OSCompleter()
+			(*comp)["arch"] = generate.ArchCompleter()
+			(*comp)["format"] = generate.FormatCompleter()
 		})
 		server.AddCommand(implantBuildsCmd)
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.CanariesStr,
-			Short: "List previously generated canaries",
-			Long:  help.GetHelpFor([]string{consts.CanariesStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Bool("b", "burned", false, "show only triggered/burned canaries")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			Run: func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	generate.CanariesCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		implantsRmCmd := &cobra.Command{
+			Use:   consts.RmStr,
+			Short: "Remove implant build",
+			Long:  help.GetHelpFor([]string{consts.ImplantBuildsStr, consts.RmStr}),
+			Args:  cobra.ExactArgs(1), // 	a.String("name", "implant name", grumble.Default(""))
+			Run:   generate.ImplantsRmCmd,
+		}
+		Flags("implants", implantsRmCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		carapace.Gen(implantsRmCmd).PositionalCompletion(generate.ImplantBuildNameCompleter())
+		implantBuildsCmd.AddCommand(implantsRmCmd)
+
+		canariesCmd := &cobra.Command{
+			Use:     consts.CanariesStr,
+			Short:   "List previously generated canaries",
+			Long:    help.GetHelpFor([]string{consts.CanariesStr}),
+			Run:     generate.CanariesCmd,
 			GroupID: consts.SliverHelpGroup,
+		}
+		Flags("canaries", canariesCmd, func(f *pflag.FlagSet) {
+			f.BoolP("burned", "b", false, "show only triggered/burned canaries")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
 		// [ Websites ] ---------------------------------------------

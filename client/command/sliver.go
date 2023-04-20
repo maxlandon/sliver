@@ -3,11 +3,13 @@ package command
 import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command/alias"
+	"github.com/bishopfox/sliver/client/command/extensions"
 	"github.com/bishopfox/sliver/client/command/help"
+	"github.com/bishopfox/sliver/client/command/sessions"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // SliverCommands returns all commands bound to the implant menu.
@@ -17,9 +19,11 @@ func SliverCommands() *cobra.Command {
 	}
 
 	groups := []*cobra.Group{
+		{ID: consts.GenericHelpGroup, Title: consts.GenericHelpGroup},
 		{ID: consts.SliverHelpGroup, Title: consts.SliverHelpGroup},
 		{ID: consts.AliasHelpGroup, Title: consts.AliasHelpGroup},
 		{ID: consts.ExtensionHelpGroup, Title: consts.ExtensionHelpGroup},
+		{ID: consts.SliverWinHelpGroup, Title: consts.SliverWinHelpGroup},
 	}
 	sliver.AddGroup(groups...)
 
@@ -27,34 +31,34 @@ func SliverCommands() *cobra.Command {
 	aliasManifests := assets.GetInstalledAliasManifests()
 	n := 0
 	for _, manifest := range aliasManifests {
-		_, err := alias.LoadAlias(manifest, console.Client)
+		_, err := alias.LoadAlias(manifest, sliver)
 		if err != nil {
-			log.PrintErrorf("Failed to load alias: %s\n", err)
+			console.Client.PrintErrorf("Failed to load alias: %s\n", err)
 			continue
 		}
 		n++
 	}
-	if 0 < n {
-		if n == 1 {
-			log.PrintInfof("Loaded %d alias from disk\n", n)
-		} else {
-			log.PrintInfof("Loaded %d aliases from disk\n", n)
-		}
-	}
-
-	// // Load Extensions
-	// extensionManifests := assets.GetInstalledExtensionManifests()
-	// n = 0
-	// for _, manifest := range extensionManifests {
-	// 	ext, err := extensions.LoadExtensionManifest(manifest)
-	// 	// Absorb error in case there's no extensions manifest
-	// 	if err != nil {
-	// 		con.PrintErrorf("Failed to load extension: %s\n", err)
-	// 		continue
+	// if 0 < n {
+	// 	if n == 1 {
+	// 		console.Client.PrintInfof("Loaded %d alias from disk\n", n)
+	// 	} else {
+	// 		console.Client.PrintInfof("Loaded %d aliases from disk\n", n)
 	// 	}
-	// 	extensions.ExtensionRegisterCommand(ext, con)
-	// 	n++
 	// }
+
+	// Load Extensions
+	extensionManifests := assets.GetInstalledExtensionManifests()
+	n = 0
+	for _, manifest := range extensionManifests {
+		ext, err := extensions.LoadExtensionManifest(manifest)
+		// Absorb error in case there's no extensions manifest
+		if err != nil {
+			console.Client.PrintErrorf("Failed to load extension: %s\n", err)
+			continue
+		}
+		extensions.ExtensionRegisterCommand(ext, sliver)
+		n++
+	}
 	// if 0 < n {
 	// 	con.PrintInfof("Loaded %d extension(s) from disk\n", n)
 	// }
@@ -145,21 +149,17 @@ func SliverCommands() *cobra.Command {
 	// })
 	// sliver.AddCommand(sessionsCmd)
 
-	sliver.AddCommand(&cobra.Command{
-		Use:   consts.BackgroundStr,
-		Short: "Background an active session",
-		Long:  help.GetHelpFor([]string{consts.BackgroundStr}),
-		// Flags: func(f *grumble.Flags) {
-		// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-		// },
-		// Run: func(ctx *grumble.Context) error {
-		// 	con.Println()
-		// 	sessions.BackgroundCmd(ctx, con)
-		// 	con.Println()
-		// 	return nil
-		// },
+	backgroundCmd := &cobra.Command{
+		Use:     consts.BackgroundStr,
+		Short:   "Background an active session",
+		Long:    help.GetHelpFor([]string{consts.BackgroundStr}),
+		Run:     sessions.BackgroundCmd,
 		GroupID: consts.GenericHelpGroup,
+	}
+	Flags("use", backgroundCmd, func(f *pflag.FlagSet) {
+		f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 	})
+	sliver.AddCommand(backgroundCmd)
 
 	sliver.AddCommand(&cobra.Command{
 		Use:   consts.KillStr,
@@ -219,7 +219,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		// GroupID: consts.SliverHelpGroup,
+		GroupID: consts.GenericHelpGroup,
 	}
 	sliver.AddCommand(closeSessionCmd)
 
@@ -1732,10 +1732,10 @@ func SliverCommands() *cobra.Command {
 		// },
 	})
 	cursedCmd.AddCommand(&cobra.Command{
-		Use:     consts.CursedEdge,
-		Short:   "Automatically inject a Cursed Chrome payload into a remote Edge extension",
-		Long:    help.GetHelpFor([]string{consts.Cursed, consts.CursedEdge}),
-		GroupID: consts.GenericHelpGroup,
+		Use:   consts.CursedEdge,
+		Short: "Automatically inject a Cursed Chrome payload into a remote Edge extension",
+		Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedEdge}),
+		// GroupID: consts.GenericHelpGroup,
 		// Flags: func(f *grumble.Flags) {
 		// 	f.Int("r", "remote-debugging-port", 0, "remote debugging tcp port (0 = random)")
 		// 	f.Bool("R", "restore", true, "restore the user's session after process termination")
@@ -1796,10 +1796,10 @@ func SliverCommands() *cobra.Command {
 		// },
 	})
 	cursedCmd.AddCommand(&cobra.Command{
-		Use:     consts.ScreenshotStr,
-		Short:   "Take a screenshot of a cursed process debug target",
-		Long:    help.GetHelpFor([]string{consts.Cursed, consts.ScreenshotStr}),
-		GroupID: consts.GenericHelpGroup,
+		Use:   consts.ScreenshotStr,
+		Short: "Take a screenshot of a cursed process debug target",
+		Long:  help.GetHelpFor([]string{consts.Cursed, consts.ScreenshotStr}),
+		// GroupID: consts.GenericHelpGroup,
 		// Flags: func(f *grumble.Flags) {
 		// 	f.Int64("q", "quality", 100, "screenshot quality (1 - 100)")
 		// 	f.String("s", "save", "", "save to file")

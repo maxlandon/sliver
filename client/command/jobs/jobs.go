@@ -22,11 +22,14 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -36,8 +39,8 @@ import (
 func JobsCmd(cmd *cobra.Command, args []string) {
 	con := console.Client
 
-	if pid, _ := cmd.Flags().GetUint32("kill"); int32(pid) != -1 {
-		jobKill(pid, con)
+	if pid, _ := cmd.Flags().GetInt32("kill"); pid != -1 {
+		jobKill(uint32(pid), con)
 	} else if all, _ := cmd.Flags().GetBool("kill-all"); all {
 		killAllJobs(con)
 	} else {
@@ -86,6 +89,24 @@ func PrintJobs(jobs map[uint32]*clientpb.Job, con *console.SliverConsole) {
 		})
 	}
 	con.Printf("%s\n", tw.Render())
+}
+
+// JobsIDCompleter completes jobs IDs with descriptions.
+func JobsIDCompleter() carapace.Action {
+	jobs, err := console.Client.Rpc.GetJobs(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		return carapace.ActionMessage("No active jobs")
+	}
+
+	results := make([]string, 0)
+
+	for _, job := range jobs.Active {
+		results = append(results, strconv.Itoa(int(job.ID)))
+		desc := fmt.Sprintf("%s  %s %d", job.Protocol, strings.Join(job.Domains, ","), job.Port)
+		results = append(results, desc)
+	}
+
+	return carapace.ActionValuesDescribed(results...).Tag("jobs")
 }
 
 func jobKill(jobID uint32, con *console.SliverConsole) {
