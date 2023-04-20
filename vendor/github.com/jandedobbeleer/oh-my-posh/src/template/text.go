@@ -88,6 +88,8 @@ func (t *Text) cleanTemplate() {
 		"WSL",
 		"Segments",
 		"Templates",
+		"PromptCount",
+		"Var",
 	}
 
 	knownVariable := func(variable string) bool {

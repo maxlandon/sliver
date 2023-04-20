@@ -53,6 +53,8 @@ func (s *GitStatus) add(code string) {
 const (
 	// FetchStatus fetches the status of the repository
 	FetchStatus properties.Property = "fetch_status"
+	// IgnoreStatus allows to ignore certain repo's for status information
+	IgnoreStatus properties.Property = "ignore_status"
 	// FetchStashCount fetches the stash count
 	FetchStashCount properties.Property = "fetch_stash_count"
 	// FetchWorktreeCount fetches the worktree count
@@ -126,7 +128,6 @@ type Git struct {
 	RawUpstreamURL string
 	UpstreamGone   bool
 	IsWorkTree     bool
-	RepoName       string
 	IsBare         bool
 
 	// needed for posh-git support
@@ -161,6 +162,9 @@ func (g *Git) Enabled() bool {
 	}
 
 	displayStatus := g.props.GetBool(FetchStatus, false)
+	if g.shouldIgnoreStatus() {
+		displayStatus = false
+	}
 	if displayStatus {
 		g.setGitStatus()
 		g.setGitHEADContext()
@@ -357,6 +361,11 @@ func (g *Git) hasWorktree(gitdir *platform.FileInfo) bool {
 	return false
 }
 
+func (g *Git) shouldIgnoreStatus() bool {
+	list := g.props.GetStringArray(IgnoreStatus, []string{})
+	return g.env.DirMatchesOneOf(g.realDir, list)
+}
+
 func (g *Git) setBranchStatus() {
 	getBranchStatus := func() string {
 		if g.Ahead > 0 && g.Behind > 0 {
@@ -379,19 +388,42 @@ func (g *Git) setBranchStatus() {
 	g.BranchStatus = getBranchStatus()
 }
 
-func (g *Git) getUpstreamIcon() string {
-	cleanSSHURL := func(url string) string {
-		if strings.HasPrefix(url, "http") {
-			return url
-		}
-		url = strings.TrimPrefix(url, "git://")
-		url = strings.TrimPrefix(url, "git@")
-		url = strings.TrimSuffix(url, ".git")
-		url = strings.ReplaceAll(url, ":", "/")
-		return fmt.Sprintf("https://%s", url)
+func (g *Git) cleanUpstreamURL(url string) string {
+	if strings.HasPrefix(url, "http") {
+		return url
 	}
+	// /path/to/repo.git/
+	match := regex.FindNamedRegexMatch(`^(?P<URL>[a-z0-9./]+)$`, url)
+	if len(match) != 0 {
+		url := strings.Trim(match["URL"], "/")
+		url = strings.TrimSuffix(url, ".git")
+		return fmt.Sprintf("https://%s", strings.TrimPrefix(url, "/"))
+	}
+	// ssh://user@host.xz:1234/path/to/repo.git/
+	match = regex.FindNamedRegexMatch(`(ssh|ftp|git|rsync)://(.*@)?(?P<URL>[a-z0-9.]+)(:[0-9]{4})?/(?P<PATH>.*).git`, url)
+	if len(match) == 0 {
+		// host.xz:/path/to/repo.git/
+		match = regex.FindNamedRegexMatch(`^(?P<URL>[a-z0-9./]+):(?P<PATH>[a-z0-9./]+)$`, url)
+	}
+	if len(match) != 0 {
+		path := strings.Trim(match["PATH"], "/")
+		path = strings.TrimSuffix(path, ".git")
+		return fmt.Sprintf("https://%s/%s", match["URL"], path)
+	}
+	// user@host.xz:/path/to/repo.git
+	match = regex.FindNamedRegexMatch(`.*@(?P<URL>.*):(?P<PATH>.*).git`, url)
+	if len(match) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("https://%s/%s", match["URL"], match["PATH"])
+}
+
+func (g *Git) getUpstreamIcon() string {
 	g.RawUpstreamURL = g.getRemoteURL()
-	g.UpstreamURL = cleanSSHURL(g.RawUpstreamURL)
+	if len(g.RawUpstreamURL) == 0 {
+		return ""
+	}
+	g.UpstreamURL = g.cleanUpstreamURL(g.RawUpstreamURL)
 
 	// allow overrides first
 	custom := g.props.GetKeyValueMap(UpstreamIcons, map[string]string{})

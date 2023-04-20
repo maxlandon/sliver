@@ -39,6 +39,7 @@ type Segment struct {
 	Alias               string         `json:"alias,omitempty"`
 	MaxWidth            int            `json:"max_width,omitempty"`
 	MinWidth            int            `json:"min_width,omitempty"`
+	Filler              string         `json:"filler,omitempty"`
 
 	Enabled bool `json:"-"`
 
@@ -47,6 +48,7 @@ type Segment struct {
 	writer     SegmentWriter
 	text       string
 	styleCache SegmentStyle
+	name       string
 }
 
 // SegmentTiming holds the timing context for a segment
@@ -97,6 +99,8 @@ const (
 
 	// ANGULAR writes which angular cli version us currently active
 	ANGULAR SegmentType = "angular"
+	// ARGOCD writes the current argocd context
+	ARGOCD SegmentType = "argocd"
 	// AWS writes the active aws context
 	AWS SegmentType = "aws"
 	// AZ writes the Azure subscription info we're currently in
@@ -107,6 +111,8 @@ const (
 	BATTERY SegmentType = "battery"
 	// Brewfather segment
 	BREWFATHER SegmentType = "brewfather"
+	// Buf segment writes the active buf version
+	BUF SegmentType = "buf"
 	// cds (SAP CAP) version
 	CDS SegmentType = "cds"
 	// Cloud Foundry segment
@@ -125,6 +131,8 @@ const (
 	DART SegmentType = "dart"
 	// DENO writes the active deno version
 	DENO SegmentType = "deno"
+	// DOCKER writes the docker context
+	DOCKER SegmentType = "docker"
 	// DOTNET writes which dotnet version is currently active
 	DOTNET SegmentType = "dotnet"
 	// ELIXIR writes the elixir version
@@ -197,6 +205,8 @@ const (
 	RUBY SegmentType = "ruby"
 	// RUST writes the cargo version information if cargo.toml is present
 	RUST SegmentType = "rust"
+	// SAPLING represents the sapling segment
+	SAPLING SegmentType = "sapling"
 	// SESSION represents the user info segment
 	SESSION SegmentType = "session"
 	// SHELL writes which shell we're currently in
@@ -219,6 +229,8 @@ const (
 	TIME SegmentType = "time"
 	// UI5 Tooling segment
 	UI5TOOLING SegmentType = "ui5tooling"
+	// UNITY writes which Unity version is currently active
+	UNITY SegmentType = "unity"
 	// VALA writes the active vala version
 	VALA SegmentType = "vala"
 	// WAKATIME writes tracked time spend in dev editors
@@ -237,11 +249,13 @@ const (
 // Consumers of the library can also add their own segment writer.
 var Segments = map[SegmentType]func() SegmentWriter{
 	ANGULAR:       func() SegmentWriter { return &segments.Angular{} },
+	ARGOCD:        func() SegmentWriter { return &segments.Argocd{} },
 	AWS:           func() SegmentWriter { return &segments.Aws{} },
 	AZ:            func() SegmentWriter { return &segments.Az{} },
 	AZFUNC:        func() SegmentWriter { return &segments.AzFunc{} },
 	BATTERY:       func() SegmentWriter { return &segments.Battery{} },
 	BREWFATHER:    func() SegmentWriter { return &segments.Brewfather{} },
+	BUF:           func() SegmentWriter { return &segments.Buf{} },
 	CDS:           func() SegmentWriter { return &segments.Cds{} },
 	CF:            func() SegmentWriter { return &segments.Cf{} },
 	CFTARGET:      func() SegmentWriter { return &segments.CfTarget{} },
@@ -251,6 +265,7 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	CMAKE:         func() SegmentWriter { return &segments.Cmake{} },
 	DART:          func() SegmentWriter { return &segments.Dart{} },
 	DENO:          func() SegmentWriter { return &segments.Deno{} },
+	DOCKER:        func() SegmentWriter { return &segments.Docker{} },
 	DOTNET:        func() SegmentWriter { return &segments.Dotnet{} },
 	EXECUTIONTIME: func() SegmentWriter { return &segments.Executiontime{} },
 	ELIXIR:        func() SegmentWriter { return &segments.Elixir{} },
@@ -287,6 +302,7 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	ROOT:          func() SegmentWriter { return &segments.Root{} },
 	RUBY:          func() SegmentWriter { return &segments.Ruby{} },
 	RUST:          func() SegmentWriter { return &segments.Rust{} },
+	SAPLING:       func() SegmentWriter { return &segments.Sapling{} },
 	SESSION:       func() SegmentWriter { return &segments.Session{} },
 	SHELL:         func() SegmentWriter { return &segments.Shell{} },
 	SPOTIFY:       func() SegmentWriter { return &segments.Spotify{} },
@@ -298,6 +314,7 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	TEXT:          func() SegmentWriter { return &segments.Text{} },
 	TIME:          func() SegmentWriter { return &segments.Time{} },
 	UI5TOOLING:    func() SegmentWriter { return &segments.UI5Tooling{} },
+	UNITY:         func() SegmentWriter { return &segments.Unity{} },
 	VALA:          func() SegmentWriter { return &segments.Vala{} },
 	WAKATIME:      func() SegmentWriter { return &segments.Wakatime{} },
 	WINREG:        func() SegmentWriter { return &segments.WindowsRegistry{} },
@@ -392,7 +409,11 @@ func (segment *Segment) mapSegmentWithWriter(env platform.Environment) error {
 
 	if f, ok := Segments[segment.Type]; ok {
 		writer := f()
-		writer.Init(segment.Properties, env)
+		wrapper := &properties.Wrapper{
+			Properties: segment.Properties,
+			Env:        env,
+		}
+		writer.Init(wrapper, env)
 		segment.writer = writer
 		return nil
 	}
@@ -424,6 +445,18 @@ func (segment *Segment) string() string {
 	return text
 }
 
+func (segment *Segment) Name() string {
+	if len(segment.name) != 0 {
+		return segment.name
+	}
+	name := segment.Alias
+	if len(name) == 0 {
+		name = c.Title(language.English).String(string(segment.Type))
+	}
+	segment.name = name
+	return name
+}
+
 func (segment *Segment) SetEnabled(env platform.Environment) {
 	defer func() {
 		err := recover()
@@ -443,7 +476,7 @@ func (segment *Segment) SetEnabled(env platform.Environment) {
 	if toggles, OK := segment.env.Cache().Get(platform.TOGGLECACHE); OK && len(toggles) > 0 {
 		list := strings.Split(toggles, ",")
 		for _, toggle := range list {
-			if SegmentType(toggle) == segment.Type {
+			if SegmentType(toggle) == segment.Type || toggle == segment.Alias {
 				return
 			}
 		}
@@ -453,11 +486,7 @@ func (segment *Segment) SetEnabled(env platform.Environment) {
 	}
 	if segment.writer.Enabled() {
 		segment.Enabled = true
-		name := segment.Alias
-		if len(name) == 0 {
-			name = c.Title(language.English).String(string(segment.Type))
-		}
-		env.TemplateCache().AddSegmentData(name, segment.writer)
+		env.TemplateCache().AddSegmentData(segment.Name(), segment.writer)
 	}
 }
 
@@ -467,6 +496,10 @@ func (segment *Segment) SetText() {
 	}
 	segment.text = segment.string()
 	segment.Enabled = len(strings.ReplaceAll(segment.text, " ", "")) > 0
+	if !segment.Enabled {
+		segment.env.TemplateCache().RemoveSegmentData(segment.Name())
+	}
+
 	if segment.Interactive {
 		return
 	}

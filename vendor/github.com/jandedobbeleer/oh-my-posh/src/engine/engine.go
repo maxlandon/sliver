@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/ansi"
+	"github.com/jandedobbeleer/oh-my-posh/src/log"
 	"github.com/jandedobbeleer/oh-my-posh/src/platform"
 	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 	"github.com/jandedobbeleer/oh-my-posh/src/template"
@@ -63,8 +64,13 @@ func (e *Engine) canWriteRightBlock(rprompt bool) bool {
 func (e *Engine) PrintPrimary() string {
 	// cache a pointer to the color cycle
 	cycle = &e.Config.Cycle
-	for _, block := range e.Config.Blocks {
-		e.renderBlock(block)
+	for i, block := range e.Config.Blocks {
+		var cancelNewline bool
+		if i == 0 {
+			row, _ := e.Env.CursorPosition()
+			cancelNewline = e.Env.Flags().Cleared || e.Env.Flags().PromptCount == 1 || row == 1
+		}
+		e.renderBlock(block, cancelNewline)
 	}
 	if len(e.Config.ConsoleTitleTemplate) > 0 {
 		title := e.getTitleTemplateText()
@@ -78,9 +84,16 @@ func (e *Engine) PrintPrimary() string {
 }
 
 func (e *Engine) printPWD() {
+	// only print when supported
+	sh := e.Env.Shell()
+	if sh == shell.ELVISH || sh == shell.XONSH {
+		return
+	}
+	// only print when relevant
 	if len(e.Config.PWD) == 0 && !e.Config.OSC99 {
 		return
 	}
+
 	cwd := e.Env.Pwd()
 	// Backwards compatibility for deprecated OSC99
 	if e.Config.OSC99 {
@@ -92,10 +105,12 @@ func (e *Engine) printPWD() {
 		Template: e.Config.PWD,
 		Env:      e.Env,
 	}
+
 	pwdType, err := tmpl.Render()
 	if err != nil || len(pwdType) == 0 {
 		return
 	}
+
 	user := e.Env.User()
 	host, _ := e.Env.Host()
 	e.write(e.Writer.ConsolePwd(pwdType, user, host, cwd))
@@ -115,8 +130,8 @@ func (e *Engine) isWarp() bool {
 	return e.Env.Getenv("TERM_PROGRAM") == "WarpTerminal"
 }
 
-func (e *Engine) shouldFill(block *Block, length int) (string, bool) {
-	if len(block.Filler) == 0 {
+func (e *Engine) shouldFill(filler string, length int) (string, bool) {
+	if len(filler) == 0 {
 		return "", false
 	}
 	terminalWidth, err := e.Env.TerminalWidth()
@@ -127,7 +142,7 @@ func (e *Engine) shouldFill(block *Block, length int) (string, bool) {
 	if padLength <= 0 {
 		return "", false
 	}
-	e.Writer.Write("", "", block.Filler)
+	e.Writer.Write("", "", filler)
 	filler, lenFiller := e.Writer.String()
 	if lenFiller == 0 {
 		return "", false
@@ -147,9 +162,15 @@ func (e *Engine) getTitleTemplateText() string {
 	return ""
 }
 
-func (e *Engine) renderBlock(block *Block) {
+func (e *Engine) renderBlock(block *Block, cancelNewline bool) {
 	defer func() {
-		e.write(e.Writer.ClearAfter())
+		// when in PowerShell, we need to clear the line after the prompt
+		// to avoid the background being printed on the next line
+		// when at the end of the buffer.
+		// See https://github.com/JanDeDobbeleer/oh-my-posh/issues/65
+		if e.Env.Shell() == shell.PWSH || e.Env.Shell() == shell.PWSH5 {
+			e.write(e.Writer.ClearAfter())
+		}
 	}()
 	// when in bash, for rprompt blocks we need to write plain
 	// and wrap in escaped mode or the prompt will not render correctly
@@ -158,17 +179,29 @@ func (e *Engine) renderBlock(block *Block) {
 	} else {
 		block.Init(e.Env, e.Writer)
 	}
+
 	if !block.Enabled() {
 		return
 	}
-	if block.Newline {
+
+	// do not print a newline to avoid a leading space
+	// when we're printin the first primary prompt in
+	// the shell
+	if block.Newline && !cancelNewline {
 		e.newline()
 	}
+
 	switch block.Type {
-	// This is deprecated but leave if to not break current configs
+	// This is deprecated but we leave it in to not break configs
 	// It is encouraged to used "newline": true on block level
 	// rather than the standalone the linebreak block
 	case LineBreak:
+		// do not print a newline to avoid a leading space
+		// when we're printin the first primary prompt in
+		// the shell
+		if !cancelNewline {
+			return
+		}
 		e.newline()
 	case Prompt:
 		if block.VerticalOffset != 0 {
@@ -195,14 +228,14 @@ func (e *Engine) renderBlock(block *Block) {
 				e.newline()
 			case Hide:
 				// make sure to fill if needed
-				if padText, OK := e.shouldFill(block, 0); OK {
+				if padText, OK := e.shouldFill(block.Filler, 0); OK {
 					e.write(padText)
 				}
 				return
 			}
 		}
 
-		if padText, OK := e.shouldFill(block, length); OK {
+		if padText, OK := e.shouldFill(block.Filler, length); OK {
 			// in this case we can print plain
 			e.write(padText)
 			e.write(text)
@@ -220,11 +253,17 @@ func (e *Engine) renderBlock(block *Block) {
 
 // debug will loop through your config file and output the timings for each segments
 func (e *Engine) PrintDebug(startTime time.Time, version string) string {
-	var segmentTimings []*SegmentTiming
-	e.write(fmt.Sprintf("\n\x1b[38;2;191;207;240m\x1b[1mVersion:\x1b[0m %s\n", version))
-	e.write("\n\x1b[38;2;191;207;240m\x1b[1mSegments:\x1b[0m\n\n")
+	e.write(fmt.Sprintf("\n%s %s\n", log.Text("Version:").Green().Bold().Plain(), version))
+	sh := e.Env.Shell()
+	shellVersion := e.Env.Getenv("POSH_SHELL_VERSION")
+	if len(shellVersion) != 0 {
+		sh += fmt.Sprintf(" (%s)", shellVersion)
+	}
+	e.write(fmt.Sprintf("\n%s %s\n", log.Text("Shell:").Green().Bold().Plain(), sh))
+	e.write(log.Text("\nSegments:\n\n").Green().Bold().Plain().String())
 	// console title timing
 	titleStartTime := time.Now()
+	e.Env.Debug("Segment: Title")
 	title := e.getTitleTemplateText()
 	consoleTitleTiming := &SegmentTiming{
 		name:       "ConsoleTitle",
@@ -234,6 +273,7 @@ func (e *Engine) PrintDebug(startTime time.Time, version string) string {
 		duration:   time.Since(titleStartTime),
 	}
 	largestSegmentNameLength := consoleTitleTiming.nameLength
+	var segmentTimings []*SegmentTiming
 	segmentTimings = append(segmentTimings, consoleTitleTiming)
 	// cache a pointer to the color cycle
 	cycle = &e.Config.Cycle
@@ -251,19 +291,19 @@ func (e *Engine) PrintDebug(startTime time.Time, version string) string {
 	largestSegmentNameLength += 22 + 7
 	for _, segment := range segmentTimings {
 		duration := segment.duration.Milliseconds()
-		var active string
+		var active log.Text
 		if segment.active {
-			active = "\x1b[38;2;156;231;201mtrue\x1b[0m"
+			active = log.Text("true").Yellow()
 		} else {
-			active = "\x1b[38;2;204;137;214mfalse\x1b[0m"
+			active = log.Text("false").Purple()
 		}
-		segmentName := fmt.Sprintf("%s(%s)", segment.name, active)
+		segmentName := fmt.Sprintf("%s(%s)", segment.name, active.Plain())
 		e.write(fmt.Sprintf("%-*s - %3d ms - %s\n", largestSegmentNameLength, segmentName, duration, segment.text))
 	}
-	e.write(fmt.Sprintf("\n\x1b[38;2;191;207;240m\x1b[1mRun duration:\x1b[0m %s\n", time.Since(startTime)))
-	e.write(fmt.Sprintf("\n\x1b[38;2;191;207;240m\x1b[1mCache path:\x1b[0m %s\n", e.Env.CachePath()))
-	e.write(fmt.Sprintf("\n\x1b[38;2;191;207;240m\x1b[1mConfig path:\x1b[0m %s\n", e.Env.Flags().Config))
-	e.write("\n\x1b[38;2;191;207;240m\x1b[1mLogs:\x1b[0m\n\n")
+	e.write(fmt.Sprintf("\n%s %s\n", log.Text("Run duration:").Green().Bold().Plain(), time.Since(startTime)))
+	e.write(fmt.Sprintf("\n%s %s\n", log.Text("Cache path:").Green().Bold().Plain(), e.Env.CachePath()))
+	e.write(fmt.Sprintf("\n%s %s\n", log.Text("Config path:").Green().Bold().Plain(), e.Env.Flags().Config))
+	e.write(log.Text("\nLogs:\n\n").Green().Bold().Plain().String())
 	e.write(e.Env.Logs())
 	return e.string()
 }
@@ -304,7 +344,9 @@ func (e *Engine) print() string {
 		}
 		// in bash, the entire rprompt needs to be escaped for the prompt to be interpreted correctly
 		// see https://github.com/jandedobbeleer/oh-my-posh/pull/2398
-		writer := &ansi.Writer{}
+		writer := &ansi.Writer{
+			TrueColor: e.Env.Flags().TrueColor,
+		}
 		writer.Init(shell.GENERIC)
 		prompt := writer.SaveCursorPosition()
 		prompt += writer.CarriageForward()
@@ -356,7 +398,6 @@ func (e *Engine) PrintTooltip(tip string) string {
 			return ""
 		}
 		text, length := block.RenderSegments()
-		e.write(e.Writer.ClearAfter())
 		e.write(e.Writer.CarriageForward())
 		e.write(e.Writer.GetCursorForRightWrite(length, 0))
 		e.write(text)
@@ -421,10 +462,15 @@ func (e *Engine) PrintExtraPrompt(promptType ExtraPromptType) string {
 	background := prompt.BackgroundTemplates.FirstMatch(nil, e.Env, prompt.Background)
 	e.Writer.SetColors(background, foreground)
 	e.Writer.Write(background, foreground, promptText)
+	str, length := e.Writer.String()
+	if promptType == Transient {
+		if padText, OK := e.shouldFill(prompt.Filler, length); OK {
+			str += padText
+		}
+	}
 	switch e.Env.Shell() {
 	case shell.ZSH:
 		// escape double quotes contained in the prompt
-		str, _ := e.Writer.String()
 		if promptType == Transient {
 			prompt := fmt.Sprintf("PS1=\"%s\"", strings.ReplaceAll(str, "\"", "\"\""))
 			// empty RPROMPT
@@ -432,9 +478,13 @@ func (e *Engine) PrintExtraPrompt(promptType ExtraPromptType) string {
 			return prompt
 		}
 		return str
-	case shell.PWSH, shell.PWSH5, shell.CMD, shell.BASH, shell.FISH, shell.NU, shell.GENERIC:
+	case shell.PWSH, shell.PWSH5:
 		// Return the string and empty our buffer
-		str, _ := e.Writer.String()
+		// clear the line afterwards to prevent text from being written on the same line
+		// see https://github.com/JanDeDobbeleer/oh-my-posh/issues/3628
+		return str + e.Writer.ClearAfter()
+	case shell.CMD, shell.BASH, shell.FISH, shell.NU, shell.GENERIC:
+		// Return the string and empty our buffer
 		return str
 	}
 	return ""

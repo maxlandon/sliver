@@ -24,6 +24,9 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/src/platform/cmd"
 	"github.com/jandedobbeleer/oh-my-posh/src/regex"
 
+	cpu "github.com/shirou/gopsutil/v3/cpu"
+	disk "github.com/shirou/gopsutil/v3/disk"
+	load "github.com/shirou/gopsutil/v3/load"
 	process "github.com/shirou/gopsutil/v3/process"
 )
 
@@ -34,7 +37,7 @@ const (
 	LINUX   = "linux"
 )
 
-func getPID() string {
+func pid() string {
 	pid := os.Getenv("POSH_PID")
 	if len(pid) == 0 {
 		pid = strconv.Itoa(os.Getppid())
@@ -43,8 +46,9 @@ func getPID() string {
 }
 
 var (
-	TEMPLATECACHE = fmt.Sprintf("template_cache_%s", getPID())
-	TOGGLECACHE   = fmt.Sprintf("toggle_cache_%s", getPID())
+	TEMPLATECACHE    = fmt.Sprintf("template_cache_%s", pid())
+	TOGGLECACHE      = fmt.Sprintf("toggle_cache_%s", pid())
+	PROMPTCOUNTCACHE = fmt.Sprintf("prompt_count_cache_%s", pid())
 )
 
 type Flags struct {
@@ -63,6 +67,11 @@ type Flags struct {
 	Debug         bool
 	Manual        bool
 	Plain         bool
+	Primary       bool
+	PromptCount   int
+	Cleared       bool
+	Version       string
+	TrueColor     bool
 }
 
 type CommandError struct {
@@ -83,9 +92,15 @@ type FileInfo struct {
 type Cache interface {
 	Init(home string)
 	Close()
+	// Gets the value for a given key.
+	// Returns the value and a boolean indicating if the key was found.
+	// In case the ttl expired, the function returns false.
 	Get(key string) (string, bool)
-	// ttl in minutes
+	// Sets a value for a given key.
+	// The ttl indicates how may minutes to cache the value.
 	Set(key, value string, ttl int)
+	// Deletes a key from the cache.
+	Delete(key string)
 }
 
 type HTTPRequestModifier func(request *http.Request)
@@ -129,6 +144,30 @@ type Connection struct {
 	SSID         string // Wi-Fi only
 }
 
+type Memory struct {
+	PhysicalTotalMemory     uint64
+	PhysicalAvailableMemory uint64
+	PhysicalFreeMemory      uint64
+	PhysicalPercentUsed     float64
+	SwapTotalMemory         uint64
+	SwapFreeMemory          uint64
+	SwapPercentUsed         float64
+}
+
+type SystemInfo struct {
+	// mem
+	Memory
+	// cpu
+	Times float64
+	CPU   []cpu.InfoStat
+	// load
+	Load1  float64
+	Load5  float64
+	Load15 float64
+	// disk
+	Disks map[string]disk.IOCountersStat
+}
+
 type SegmentsCache map[string]interface{}
 
 func (s *SegmentsCache) Contains(key string) bool {
@@ -146,8 +185,11 @@ type TemplateCache struct {
 	HostName     string
 	Code         int
 	Env          map[string]string
+	Var          map[string]interface{}
 	OS           string
 	WSL          bool
+	PromptCount  int
+	SHLVL        int
 	Segments     SegmentsCache
 
 	sync.RWMutex
@@ -156,6 +198,12 @@ type TemplateCache struct {
 func (t *TemplateCache) AddSegmentData(key string, value interface{}) {
 	t.Lock()
 	t.Segments[key] = value
+	t.Unlock()
+}
+
+func (t *TemplateCache) RemoveSegmentData(key string) {
+	t.Lock()
+	delete(t.Segments, key)
 	t.Unlock()
 }
 
@@ -205,7 +253,11 @@ type Environment interface {
 	Connection(connectionType ConnectionType) (*Connection, error)
 	TemplateCache() *TemplateCache
 	LoadTemplateCache()
+	SetPromptCount()
+	CursorPosition() (row, col int)
+	SystemInfo() (*SystemInfo, error)
 	Debug(message string)
+	DebugF(format string, a ...any)
 	Error(err error)
 	Trace(start time.Time, args ...string)
 }
@@ -229,7 +281,7 @@ func (c *commandCache) get(command string) (string, bool) {
 
 type Shell struct {
 	CmdFlags *Flags
-	Version  string
+	Var      map[string]interface{}
 
 	cwd       string
 	cmdCache  *commandCache
@@ -248,12 +300,21 @@ func (env *Shell) Init() {
 	if env.CmdFlags.Debug {
 		log.Enable()
 	}
+	if env.CmdFlags.Plain {
+		log.Plain()
+	}
+	trueColor := true
+	if env.Getenv("TERM_PROGRAM") == "Apple_Terminal" {
+		trueColor = false
+	}
+	env.CmdFlags.TrueColor = trueColor
 	env.fileCache = &fileCache{}
 	env.fileCache.Init(env.CachePath())
 	env.resolveConfigPath()
 	env.cmdCache = &commandCache{
 		commands: NewConcurrentMap(),
 	}
+	env.SetPromptCount()
 }
 
 func (env *Shell) resolveConfigPath() {
@@ -262,11 +323,13 @@ func (env *Shell) resolveConfigPath() {
 		env.CmdFlags.Config = env.Getenv("POSH_THEME")
 	}
 	if len(env.CmdFlags.Config) == 0 {
+		env.Debug("No config set, fallback to default config")
 		return
 	}
 	if strings.HasPrefix(env.CmdFlags.Config, "https://") {
 		if err := env.downloadConfig(env.CmdFlags.Config); err != nil {
 			// make it use default config when download fails
+			env.Error(err)
 			env.CmdFlags.Config = ""
 			return
 		}
@@ -274,6 +337,7 @@ func (env *Shell) resolveConfigPath() {
 	// Cygwin path always needs the full path as we're on Windows but not really.
 	// Doing filepath actions will convert it to a Windows path and break the init script.
 	if env.Platform() == WINDOWS && env.Shell() == "bash" {
+		env.Debug("Cygwin detected, using full path for config")
 		return
 	}
 	configFile := env.CmdFlags.Config
@@ -316,12 +380,16 @@ func (env *Shell) Debug(message string) {
 	log.Debug(message)
 }
 
-func (env *Shell) Error(err error) {
-	log.Error(err)
+func (env *Shell) DebugF(format string, a ...any) {
+	if !env.CmdFlags.Debug {
+		return
+	}
+	message := fmt.Sprintf(format, a...)
+	log.Debug(message)
 }
 
-func (env *Shell) debugF(fn func() string) {
-	log.DebugF(fn)
+func (env *Shell) Error(err error) {
+	log.Error(err)
 }
 
 func (env *Shell) Getenv(key string) string {
@@ -332,8 +400,9 @@ func (env *Shell) Getenv(key string) string {
 }
 
 func (env *Shell) Pwd() string {
+	env.Lock()
 	defer env.Trace(time.Now())
-	defer env.Debug(env.cwd)
+	defer env.Unlock()
 	if env.cwd != "" {
 		return env.cwd
 	}
@@ -347,6 +416,7 @@ func (env *Shell) Pwd() string {
 	}
 	if env.CmdFlags != nil && env.CmdFlags.PWD != "" {
 		env.cwd = correctPath(env.CmdFlags.PWD)
+		env.Debug(env.cwd)
 		return env.cwd
 	}
 	dir, err := os.Getwd()
@@ -355,6 +425,7 @@ func (env *Shell) Pwd() string {
 		return ""
 	}
 	env.cwd = correctPath(dir)
+	env.Debug(env.cwd)
 	return env.cwd
 }
 
@@ -365,6 +436,7 @@ func (env *Shell) HasFiles(pattern string) bool {
 	matches, err := fs.Glob(fileSystem, pattern)
 	if err != nil {
 		env.Error(err)
+		env.Debug("false")
 		return false
 	}
 	for _, match := range matches {
@@ -372,8 +444,10 @@ func (env *Shell) HasFiles(pattern string) bool {
 		if err != nil || file.IsDir() {
 			continue
 		}
+		env.Debug("true")
 		return true
 	}
+	env.Debug("false")
 	return false
 }
 
@@ -383,10 +457,11 @@ func (env *Shell) HasFilesInDir(dir, pattern string) bool {
 	matches, err := fs.Glob(fileSystem, pattern)
 	if err != nil {
 		env.Error(err)
+		env.Debug("false")
 		return false
 	}
 	hasFilesInDir := len(matches) > 0
-	env.debugF(func() string { return strconv.FormatBool(hasFilesInDir) })
+	env.DebugF("%t", hasFilesInDir)
 	return hasFilesInDir
 }
 
@@ -418,8 +493,9 @@ func (env *Shell) HasFolder(folder string) bool {
 		env.Debug("false")
 		return false
 	}
-	env.debugF(func() string { return strconv.FormatBool(f.IsDir()) })
-	return f.IsDir()
+	isDir := f.IsDir()
+	env.DebugF("%t", isDir)
+	return isDir
 }
 
 func (env *Shell) ResolveSymlink(path string) (string, error) {
@@ -455,13 +531,7 @@ func (env *Shell) LsDir(path string) []fs.DirEntry {
 		env.Error(err)
 		return nil
 	}
-	env.debugF(func() string {
-		var entriesStr string
-		for _, entry := range entries {
-			entriesStr += entry.Name() + "\n"
-		}
-		return entriesStr
-	})
+	env.DebugF("%v", entries)
 	return entries
 }
 
@@ -576,7 +646,7 @@ func (env *Shell) Shell() string {
 	// this is used for when scoop creates a shim, see
 	// https://github.com/jandedobbeleer/oh-my-posh/issues/2806
 	executable, _ := os.Executable()
-	if name == "cmd.exe" || name == executable {
+	if name == executable {
 		p, _ = p.Parent()
 		name, err = p.Name()
 		env.Debug("parent process name: " + name)
@@ -706,12 +776,11 @@ func (env *Shell) Logs() string {
 }
 
 func (env *Shell) TemplateCache() *TemplateCache {
-	env.Lock()
 	defer env.Trace(time.Now())
-	defer env.Unlock()
 	if env.tmplCache != nil {
 		return env.tmplCache
 	}
+
 	tmplCache := &TemplateCache{
 		Root:         env.Root(),
 		Shell:        env.Shell(),
@@ -719,8 +788,15 @@ func (env *Shell) TemplateCache() *TemplateCache {
 		Code:         env.ErrorCode(),
 		WSL:          env.IsWsl(),
 		Segments:     make(map[string]interface{}),
+		PromptCount:  env.CmdFlags.PromptCount,
 	}
 	tmplCache.Env = make(map[string]string)
+	tmplCache.Var = make(map[string]interface{})
+
+	if env.Var != nil {
+		tmplCache.Var = env.Var
+	}
+
 	const separator = "="
 	values := os.Environ()
 	for value := range values {
@@ -730,21 +806,30 @@ func (env *Shell) TemplateCache() *TemplateCache {
 		}
 		tmplCache.Env[key] = val
 	}
+
 	pwd := env.Pwd()
 	tmplCache.PWD = ReplaceHomeDirPrefixWithTilde(env, pwd)
 	tmplCache.Folder = Base(env, pwd)
 	if env.GOOS() == WINDOWS && strings.HasSuffix(tmplCache.Folder, ":") {
 		tmplCache.Folder += `\`
 	}
+
 	tmplCache.UserName = env.User()
 	if host, err := env.Host(); err == nil {
 		tmplCache.HostName = host
 	}
+
 	goos := env.GOOS()
 	tmplCache.OS = goos
 	if goos == LINUX {
 		tmplCache.OS = env.Platform()
 	}
+
+	val := env.Getenv("SHLVL")
+	if shlvl, err := strconv.Atoi(val); err == nil {
+		tmplCache.SHLVL = shlvl
+	}
+
 	env.tmplCache = tmplCache
 	return tmplCache
 }
@@ -764,6 +849,10 @@ func (env *Shell) DirMatchesOneOf(dir string, regexes []string) (match bool) {
 }
 
 func dirMatchesOneOf(dir, home, goos string, regexes []string) bool {
+	if len(regexes) == 0 {
+		return false
+	}
+
 	if goos == WINDOWS {
 		dir = strings.ReplaceAll(dir, "\\", "/")
 		home = strings.ReplaceAll(home, "\\", "/")
@@ -784,6 +873,71 @@ func dirMatchesOneOf(dir, home, goos string, regexes []string) bool {
 		}
 	}
 	return false
+}
+
+func (env *Shell) SetPromptCount() {
+	countStr := os.Getenv("POSH_PROMPT_COUNT")
+	if len(countStr) > 0 {
+		// this counter is incremented by the shell
+		count, err := strconv.Atoi(countStr)
+		if err == nil {
+			env.CmdFlags.PromptCount = count
+			return
+		}
+	}
+	var count int
+	if val, found := env.Cache().Get(PROMPTCOUNTCACHE); found {
+		count, _ = strconv.Atoi(val)
+	}
+	// only write to cache if we're the primary prompt
+	if env.CmdFlags.Primary {
+		count++
+		env.Cache().Set(PROMPTCOUNTCACHE, strconv.Itoa(count), 1440)
+	}
+	env.CmdFlags.PromptCount = count
+}
+
+func (env *Shell) CursorPosition() (row, col int) {
+	if number, err := strconv.Atoi(env.Getenv("POSH_CURSOR_LINE")); err == nil {
+		row = number
+	}
+	if number, err := strconv.Atoi(env.Getenv("POSH_CURSOR_COLUMN")); err != nil {
+		col = number
+	}
+	return
+}
+
+func (env *Shell) SystemInfo() (*SystemInfo, error) {
+	s := &SystemInfo{}
+
+	mem, err := env.Memory()
+	if err != nil {
+		return nil, err
+	}
+	s.Memory = *mem
+
+	loadStat, err := load.Avg()
+	if err == nil {
+		s.Load1 = loadStat.Load1
+		s.Load5 = loadStat.Load5
+		s.Load15 = loadStat.Load15
+	}
+
+	processorTimes, err := cpu.Percent(0, false)
+	if err == nil && len(processorTimes) > 0 {
+		s.Times = processorTimes[0]
+	}
+
+	processors, err := cpu.Info()
+	if err == nil {
+		s.CPU = processors
+	}
+
+	diskIO, err := disk.IOCounters()
+	if err == nil {
+		s.Disks = diskIO
+	}
+	return s, nil
 }
 
 func IsPathSeparator(env Environment, c uint8) bool {

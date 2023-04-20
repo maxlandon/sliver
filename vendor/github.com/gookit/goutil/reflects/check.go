@@ -14,6 +14,26 @@ func HasChild(v reflect.Value) bool {
 	return false
 }
 
+// IsArrayOrSlice check. eg: array, slice
+func IsArrayOrSlice(k reflect.Kind) bool {
+	return k == reflect.Slice || k == reflect.Array
+}
+
+// IsAnyInt check is intX or uintX type
+func IsAnyInt(k reflect.Kind) bool {
+	return k >= reflect.Int && k <= reflect.Uintptr
+}
+
+// IsIntx check is intX or uintX type
+func IsIntx(k reflect.Kind) bool {
+	return k >= reflect.Int && k <= reflect.Int64
+}
+
+// IsUintX check is intX or uintX type
+func IsUintX(k reflect.Kind) bool {
+	return k >= reflect.Uint && k <= reflect.Uintptr
+}
+
 // IsNil reflect value
 func IsNil(v reflect.Value) bool {
 	switch v.Kind() {

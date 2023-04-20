@@ -1,4 +1,5 @@
 set --export POSH_THEME ::CONFIG::
+set --export POSH_SHELL_VERSION $FISH_VERSION
 set --global POWERLINE_COMMAND "oh-my-posh"
 set --global POSH_PID $fish_pid
 set --global CONDA_PROMPT_MODIFIER false
@@ -36,7 +37,12 @@ function fish_prompt
       set --global --export omp_last_status_generation $status_generation
     end
     set_poshcontext
-    ::OMP:: print primary --config $POSH_THEME --shell fish --error $omp_status_cache --execution-time $omp_duration --stack-count $omp_stack_count --shell-version $FISH_VERSION
+    # validate if the user cleared the screen
+    set --local omp_cleared false
+    if test (history | head -1) = "clear"
+      set omp_cleared true
+    end
+    ::OMP:: print primary --config $POSH_THEME --shell fish --error $omp_status_cache --execution-time $omp_duration --stack-count $omp_stack_count --shell-version $FISH_VERSION --cleared=$omp_cleared
 end
 
 function fish_right_prompt
@@ -95,7 +101,8 @@ function _render_tooltip
 end
 
 if test "::TOOLTIPS::" = "true"
-  bind \x20 _render_tooltip
+  bind \x20 _render_tooltip -M default
+  bind \x20 _render_tooltip -M insert
 end
 
 # transient prompt
@@ -111,7 +118,9 @@ function _render_transient
 end
 
 if test "::TRANSIENT::" = "true"
-  bind \r _render_transient
+  bind \r _render_transient -M default
+  bind \r _render_transient -M insert
+  bind \r _render_transient -M visual
 end
 
 # legacy functions
@@ -120,4 +129,8 @@ function enable_poshtooltips
 end
 function enable_poshtransientprompt
   return
+end
+
+if test "::UPGRADE::" = "true"
+  echo "::UPGRADENOTICE::"
 end

@@ -4,7 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -42,6 +43,10 @@ func LoadExists(sourceFiles ...string) error { return dc.LoadExists(sourceFiles.
 // LoadExists load and parse config files, but will ignore not exists file.
 func (c *Config) LoadExists(sourceFiles ...string) (err error) {
 	for _, file := range sourceFiles {
+		if file == "" {
+			continue
+		}
+
 		if err = c.loadFile(file, true, ""); err != nil {
 			return
 		}
@@ -72,7 +77,7 @@ func (c *Config) LoadRemote(format, url string) (err error) {
 	}
 
 	// read response content
-	bts, err := ioutil.ReadAll(resp.Body)
+	bts, err := io.ReadAll(resp.Body)
 	if err == nil {
 		if err = c.parseSourceCode(format, bts); err != nil {
 			return
@@ -314,9 +319,8 @@ func (c *Config) LoadFromDir(dirPath, format string) (err error) {
 	extName := "." + format
 	extLen := len(extName)
 
-	return fsutil.FindInDir(dirPath, func(fPath string, fi os.FileInfo) error {
-		baseName := fi.Name()
-
+	return fsutil.FindInDir(dirPath, func(fPath string, ent fs.DirEntry) error {
+		baseName := ent.Name()
 		if strings.HasSuffix(baseName, extName) {
 			data, err := c.parseSourceToMap(format, fsutil.MustReadFile(fPath))
 			if err != nil {
@@ -386,7 +390,7 @@ func (c *Config) loadFile(file string, loadExist bool, format string) (err error
 	defer fd.Close()
 
 	// read file content
-	bts, err := ioutil.ReadAll(fd)
+	bts, err := io.ReadAll(fd)
 	if err == nil {
 		// get format for file ext
 		if format == "" {
@@ -431,7 +435,7 @@ func (c *Config) loadDataMap(data map[string]any) (err error) {
 }
 
 // parse config source code to Config.
-func (c *Config) parseSourceToMap(format string, blob []byte) (map[string]interface{}, error) {
+func (c *Config) parseSourceToMap(format string, blob []byte) (map[string]any, error) {
 	format = fixFormat(format)
 	decode := c.decoders[format]
 	if decode == nil {

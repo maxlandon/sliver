@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 // perm for create dir or file
@@ -72,7 +73,13 @@ func IsFile(path string) bool {
 
 // IsAbsPath is abs path.
 func IsAbsPath(aPath string) bool {
-	return path.IsAbs(aPath)
+	if len(aPath) > 0 {
+		if aPath[0] == '/' {
+			return true
+		}
+		return filepath.IsAbs(aPath)
+	}
+	return false
 }
 
 // ImageMimeTypes refer net/http package
@@ -119,4 +126,13 @@ func IsZipFile(filepath string) bool {
 	}
 
 	return bytes.Equal(buf, []byte("PK\x03\x04"))
+}
+
+// PathMatch check for a string.
+func PathMatch(pattern, s string) bool {
+	ok, err := path.Match(pattern, s)
+	if err != nil {
+		ok = false
+	}
+	return ok
 }

@@ -267,7 +267,7 @@ nextValue:
 
 	if g.aliased {
 		g.maxX = len(g.columnsWidth)
-		g.tcMaxLength = sum(g.columnsWidth) + len(g.columnsWidth)
+		g.tcMaxLength = sum(g.columnsWidth) + len(g.columnsWidth) + 1
 	}
 
 	g.maxY = len(g.values)
@@ -654,7 +654,11 @@ func (g *group) descriptionTrimmed(desc string) string {
 	g.maxDescWidth = termWidth - g.tcMaxLength - len(g.listSeparator) - 1
 
 	if len(desc) > g.maxDescWidth {
-		desc = desc[:g.maxDescWidth-4] + "..."
+		offset := 4
+		if !g.aliased {
+			offset++
+		}
+		desc = desc[:g.maxDescWidth-offset] + "..."
 	}
 
 	desc = sanitizer.Replace(desc)

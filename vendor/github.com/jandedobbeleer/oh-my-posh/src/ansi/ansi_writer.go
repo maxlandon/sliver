@@ -24,7 +24,8 @@ var (
 		{AnchorStart: `<f>`, AnchorEnd: `</f>`, Start: "\x1b[5m", End: "\x1b[25m"},
 		{AnchorStart: `<r>`, AnchorEnd: `</r>`, Start: "\x1b[7m", End: "\x1b[27m"},
 	}
-	colorStyle = &style{AnchorStart: "COLOR", AnchorEnd: `</>`, End: "\x1b[0m"}
+	resetStyle      = &style{AnchorStart: "RESET", AnchorEnd: `</>`, End: "\x1b[0m"}
+	backgroundStyle = &style{AnchorStart: "BACKGROUND", AnchorEnd: `</>`, End: "\x1b[49m"}
 )
 
 type style struct {
@@ -80,6 +81,7 @@ type Writer struct {
 	ParentColors       []*Colors
 	AnsiColors         ColorString
 	Plain              bool
+	TrueColor          bool
 
 	builder strings.Builder
 	length  int
@@ -138,7 +140,7 @@ func (w *Writer) Init(shellName string) {
 		w.osc99 = "\\[\x1b]9;9;%s\x1b\\\\\\]"
 		w.osc7 = "\\[\x1b]7;file://%s/%s\x1b\\\\\\]"
 		w.osc51 = "\\[\x1b]51;A;%s@%s:%s\x1b\\\\\\]"
-	case "zsh":
+	case shell.ZSH, shell.TCSH:
 		w.format = "%%{%s%%}"
 		w.linechange = "%%{\x1b[%d%s%%}"
 		w.right = "%%{\x1b[%dC%%}"
@@ -250,6 +252,9 @@ func (w *Writer) FormatTitle(title string) string {
 		title = strings.NewReplacer("`", "\\`", `\`, `\\`).Replace(title)
 	case shell.ZSH:
 		title = strings.NewReplacer("`", "\\`", `%`, `%%`).Replace(title)
+	case shell.ELVISH, shell.XONSH:
+		// these shells don't support setting the title
+		return ""
 	}
 	return fmt.Sprintf(w.title, title)
 }
@@ -280,7 +285,7 @@ func (w *Writer) Write(background, foreground, text string) {
 	w.background, w.foreground = w.asAnsiColors(background, foreground)
 	// default to white foreground
 	if w.foreground.IsEmpty() {
-		w.foreground = w.AnsiColors.ToColor("white", false)
+		w.foreground = w.AnsiColors.ToColor("white", false, w.TrueColor)
 	}
 	// validate if we start with a color override
 	match := regex.FindNamedRegexMatch(anchorRegex, text)
@@ -331,7 +336,7 @@ func (w *Writer) Write(background, foreground, text string) {
 	w.hyperlinkState = OTHER
 
 	// reset colors
-	w.writeEscapedAnsiString(colorStyle.End)
+	w.writeEscapedAnsiString(resetStyle.End)
 
 	// reset current
 	w.currentBackground = ""
@@ -362,7 +367,7 @@ func (w *Writer) writeEscapedAnsiString(text string) {
 }
 
 func (w *Writer) getAnsiFromColorString(colorString string, isBackground bool) Color {
-	return w.AnsiColors.ToColor(colorString, isBackground)
+	return w.AnsiColors.ToColor(colorString, isBackground, w.TrueColor)
 }
 
 func (w *Writer) writeSegmentColors() {
@@ -406,9 +411,9 @@ func (w *Writer) writeSegmentColors() {
 func (w *Writer) writeColorOverrides(match map[string]string, background string, i int) (position int) {
 	position = i
 	// check color reset first
-	if match[ANCHOR] == colorStyle.AnchorEnd {
+	if match[ANCHOR] == resetStyle.AnchorEnd {
 		// make sure to reset the colors if needed
-		position += len([]rune(colorStyle.AnchorEnd)) - 1
+		position += len([]rune(resetStyle.AnchorEnd)) - 1
 
 		// do not reset when colors are identical
 		if w.currentBackground == w.background && w.currentForeground == w.foreground {
@@ -425,7 +430,7 @@ func (w *Writer) writeColorOverrides(match map[string]string, background string,
 		}
 
 		if w.background.IsClear() {
-			w.writeEscapedAnsiString(colorStyle.End)
+			w.writeEscapedAnsiString(backgroundStyle.End)
 		}
 
 		if w.currentBackground != w.background && !w.background.IsClear() {

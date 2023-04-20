@@ -33,29 +33,31 @@ const (
 
 // Config holds all the theme for rendering the prompt
 type Config struct {
-	Version              int            `json:"version"`
-	FinalSpace           bool           `json:"final_space,omitempty"`
-	ConsoleTitleTemplate string         `json:"console_title_template,omitempty"`
-	TerminalBackground   string         `json:"terminal_background,omitempty"`
-	AccentColor          string         `json:"accent_color,omitempty"`
-	Blocks               []*Block       `json:"blocks,omitempty"`
-	Tooltips             []*Segment     `json:"tooltips,omitempty"`
-	TransientPrompt      *Segment       `json:"transient_prompt,omitempty"`
-	ValidLine            *Segment       `json:"valid_line,omitempty"`
-	ErrorLine            *Segment       `json:"error_line,omitempty"`
-	SecondaryPrompt      *Segment       `json:"secondary_prompt,omitempty"`
-	DebugPrompt          *Segment       `json:"debug_prompt,omitempty"`
-	Palette              ansi.Palette   `json:"palette,omitempty"`
-	Palettes             *ansi.Palettes `json:"palettes,omitempty"`
-	Cycle                ansi.Cycle     `json:"cycle,omitempty"`
-	PWD                  string         `json:"pwd,omitempty"`
+	Version              int                    `json:"version"`
+	FinalSpace           bool                   `json:"final_space,omitempty"`
+	ConsoleTitleTemplate string                 `json:"console_title_template,omitempty"`
+	TerminalBackground   string                 `json:"terminal_background,omitempty"`
+	AccentColor          string                 `json:"accent_color,omitempty"`
+	Blocks               []*Block               `json:"blocks,omitempty"`
+	Tooltips             []*Segment             `json:"tooltips,omitempty"`
+	TransientPrompt      *Segment               `json:"transient_prompt,omitempty"`
+	ValidLine            *Segment               `json:"valid_line,omitempty"`
+	ErrorLine            *Segment               `json:"error_line,omitempty"`
+	SecondaryPrompt      *Segment               `json:"secondary_prompt,omitempty"`
+	DebugPrompt          *Segment               `json:"debug_prompt,omitempty"`
+	Palette              ansi.Palette           `json:"palette,omitempty"`
+	Palettes             *ansi.Palettes         `json:"palettes,omitempty"`
+	Cycle                ansi.Cycle             `json:"cycle,omitempty"`
+	PWD                  string                 `json:"pwd,omitempty"`
+	Var                  map[string]interface{} `json:"var,omitempty"`
 
 	// Deprecated
 	OSC99 bool `json:"osc99,omitempty"`
 
-	Output string `json:"-"`
+	Output        string `json:"-"`
+	MigrateGlyphs bool   `json:"-"`
+	Format        string `json:"-"`
 
-	format string
 	origin string
 	// eval    bool
 	updated bool
@@ -88,10 +90,9 @@ func (cfg *Config) getPalette() ansi.Palette {
 // LoadConfig returns the default configuration including possible user overrides
 func LoadConfig(env platform.Environment) *Config {
 	cfg := loadConfig(env)
-	cfg.env = env
 	// only migrate automatically when the switch isn't set
 	if !env.Flags().Migrate && cfg.Version < configVersion {
-		cfg.BackupAndMigrate(env)
+		cfg.BackupAndMigrate()
 	}
 	return cfg
 }
@@ -101,14 +102,16 @@ func loadConfig(env platform.Environment) *Config {
 	configFile := env.Flags().Config
 
 	if len(configFile) == 0 {
-		return defaultConfig(false)
+		env.Debug("no config file specified, using default")
+		return defaultConfig(env, false)
 	}
 
 	var cfg Config
 	cfg.origin = configFile
-	cfg.format = strings.TrimPrefix(filepath.Ext(configFile), ".")
-	if cfg.format == "yml" {
-		cfg.format = YAML
+	cfg.Format = strings.TrimPrefix(filepath.Ext(configFile), ".")
+	cfg.env = env
+	if cfg.Format == "yml" {
+		cfg.Format = YAML
 	}
 
 	config.AddDriver(yaml.Driver)
@@ -125,12 +128,14 @@ func loadConfig(env platform.Environment) *Config {
 
 	err := config.LoadFiles(configFile)
 	if err != nil {
-		return defaultConfig(true)
+		env.Error(err)
+		return defaultConfig(env, true)
 	}
 
 	err = config.BindStruct("", &cfg)
 	if err != nil {
-		return defaultConfig(true)
+		env.Error(err)
+		return defaultConfig(env, true)
 	}
 
 	return &cfg
@@ -162,7 +167,7 @@ func (cfg *Config) Export(format string) string {
 	cfg.sync()
 
 	if len(format) != 0 {
-		cfg.format = format
+		cfg.Format = format
 	}
 
 	config.AddDriver(yaml.Driver)
@@ -170,33 +175,31 @@ func (cfg *Config) Export(format string) string {
 
 	var result bytes.Buffer
 
-	if cfg.format == JSON {
+	if cfg.Format == JSON {
 		jsonEncoder := json2.NewEncoder(&result)
 		jsonEncoder.SetEscapeHTML(false)
 		jsonEncoder.SetIndent("", "  ")
 		_ = jsonEncoder.Encode(cfg)
 		prefix := "{\n  \"$schema\": \"https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json\","
 		data := strings.Replace(result.String(), "{", prefix, 1)
-		return escapeGlyphs(data)
+		return escapeGlyphs(data, cfg.MigrateGlyphs)
 	}
 
-	_, _ = config.DumpTo(&result, cfg.format)
-	switch cfg.format {
+	_, _ = config.DumpTo(&result, cfg.Format)
+	var prefix string
+	switch cfg.Format {
 	case YAML:
-		prefix := "# yaml-language-server: $schema=https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json\n\n"
-		return prefix + result.String()
+		prefix = "# yaml-language-server: $schema=https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json\n\n"
 	case TOML:
-		prefix := "#:schema https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json\n\n"
-		return prefix + escapeGlyphs(result.String())
-	default:
-		return result.String()
+		prefix = "#:schema https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json\n\n"
 	}
+	return prefix + escapeGlyphs(result.String(), cfg.MigrateGlyphs)
 }
 
-func (cfg *Config) BackupAndMigrate(env platform.Environment) {
-	cfg.backup()
-	cfg.Migrate(env)
-	cfg.Write(cfg.format)
+func (cfg *Config) BackupAndMigrate() {
+	cfg.Backup()
+	cfg.Migrate()
+	cfg.Write(cfg.Format)
 }
 
 func (cfg *Config) Write(format string) {
@@ -216,7 +219,7 @@ func (cfg *Config) Write(format string) {
 	_ = f.Close()
 }
 
-func (cfg *Config) backup() {
+func (cfg *Config) Backup() {
 	dst := cfg.origin + ".bak"
 	source, err := os.Open(cfg.origin)
 	if err != nil {
@@ -234,21 +237,73 @@ func (cfg *Config) backup() {
 	}
 }
 
-func escapeGlyphs(s string) string {
+func escapeGlyphs(s string, migrate bool) string {
+	shouldExclude := func(r rune) bool {
+		if r < 0x1000 { // Basic Multilingual Plane
+			return true
+		}
+		if r > 0x1F600 && r < 0x1F64F { // Emoticons
+			return true
+		}
+		if r > 0x1F300 && r < 0x1F5FF { // Misc Symbols and Pictographs
+			return true
+		}
+		if r > 0x1F680 && r < 0x1F6FF { // Transport and Map
+			return true
+		}
+		if r > 0x2600 && r < 0x26FF { // Misc symbols
+			return true
+		}
+		if r > 0x2700 && r < 0x27BF { // Dingbats
+			return true
+		}
+		if r > 0xFE00 && r < 0xFE0F { // Variation Selectors
+			return true
+		}
+		if r > 0x1F900 && r < 0x1F9FF { // Supplemental Symbols and Pictographs
+			return true
+		}
+		if r > 0x1F1E6 && r < 0x1F1FF { // Flags
+			return true
+		}
+		return false
+	}
+
+	var cp codePoints
+	if migrate {
+		cp = getGlyphCodePoints()
+	}
+
 	var builder strings.Builder
 	for _, r := range s {
-		// exclude regular characters and emoji
-		if r < 0x1000 || r > 0x10000 {
+		// exclude regular characters and emojis
+		if shouldExclude(r) {
 			builder.WriteRune(r)
 			continue
 		}
+
+		if migrate {
+			if val, OK := cp[int(r)]; OK {
+				r = rune(val)
+			}
+		}
+
+		if r > 0x10000 {
+			// calculate surrogate pairs
+			one := 0xd800 + (((r - 0x10000) >> 10) & 0x3ff)
+			two := 0xdc00 + ((r - 0x10000) & 0x3ff)
+			quoted := fmt.Sprintf("\\u%04x\\u%04x", one, two)
+			builder.WriteString(quoted)
+			continue
+		}
+
 		quoted := fmt.Sprintf("\\u%04x", r)
 		builder.WriteString(quoted)
 	}
 	return builder.String()
 }
 
-func defaultConfig(warning bool) *Config {
+func defaultConfig(env platform.Environment, warning bool) *Config {
 	exitBackgroundTemplate := "{{ if gt .Code 0 }}p:red{{ end }}"
 	exitTemplate := " {{ if gt .Code 0 }}\uf00d{{ else }}\uf00c{{ end }} "
 	if warning {
@@ -436,5 +491,6 @@ func defaultConfig(warning bool) *Config {
 			},
 		},
 	}
+	cfg.env = env
 	return cfg
 }

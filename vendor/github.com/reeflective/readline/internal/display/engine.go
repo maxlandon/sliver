@@ -79,7 +79,7 @@ func (e *Engine) Refresh() {
 	e.computeCoordinates(suggested)
 
 	term.MoveCursorBackwards(e.startAt)
-	e.prompt.LastPrint()
+	// e.prompt.LastPrint()
 	term.MoveCursorBackwards(term.GetWidth())
 	term.MoveCursorForwards(e.startAt)
 

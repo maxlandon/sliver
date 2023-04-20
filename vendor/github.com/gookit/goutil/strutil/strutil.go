@@ -10,6 +10,40 @@ import (
 	"text/template"
 )
 
+// OrCond return s1 on cond is True, OR return s2.
+func OrCond(cond bool, s1, s2 string) string {
+	if cond {
+		return s1
+	}
+	return s2
+}
+
+// OrElse return s OR nv(new-value) on s is empty
+func OrElse(s, orVal string) string {
+	if s != "" {
+		return s
+	}
+	return orVal
+}
+
+// OrHandle return fn(s) on s is not empty.
+func OrHandle(s string, fn func(s string) string) string {
+	if s != "" {
+		return fn(s)
+	}
+	return s
+}
+
+// Valid return first not empty element.
+func Valid(ss ...string) string {
+	for _, s := range ss {
+		if s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
 // Replaces replace multi strings
 //
 //	pairs: {old1: new1, old2: new2, ...}
@@ -18,12 +52,16 @@ import (
 //
 //	strings.NewReplacer("old1", "new1", "old2", "new2").Replace(str)
 func Replaces(str string, pairs map[string]string) string {
+	return NewReplacer(pairs).Replace(str)
+}
+
+// NewReplacer instance
+func NewReplacer(pairs map[string]string) *strings.Replacer {
 	ss := make([]string, len(pairs)*2)
 	for old, newVal := range pairs {
 		ss = append(ss, old, newVal)
 	}
-
-	return strings.NewReplacer(ss...).Replace(str)
+	return strings.NewReplacer(ss...)
 }
 
 // PrettyJSON get pretty Json string
