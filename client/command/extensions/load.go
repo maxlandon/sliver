@@ -117,7 +117,7 @@ func ExtensionLoadCmd(cmd *cobra.Command, args []string) {
 		log.PrintErrorf("%s command already exists\n", extCmd.CommandName)
 		return
 	}
-	ExtensionRegisterCommand(extCmd, console.Client)
+	ExtensionRegisterCommand(extCmd, cmd.Root())
 	log.PrintInfof("Added %s command: %s\n", extCmd.CommandName, extCmd.Help)
 }
 
@@ -173,19 +173,14 @@ func ParseExtensionManifest(data []byte) (*ExtensionManifest, error) {
 }
 
 // ExtensionRegisterCommand - Register a new extension command
-func ExtensionRegisterCommand(extCmd *ExtensionManifest, con *console.SliverConsole) {
+func ExtensionRegisterCommand(extCmd *ExtensionManifest, cmd *cobra.Command) {
 	loadedExtensions[extCmd.CommandName] = extCmd
 	helpMsg := extCmd.Help
 	extensionCmd := &cobra.Command{
 		Use:   extCmd.CommandName,
 		Short: helpMsg,
 		Long:  help.FormatHelpTmpl(extCmd.LongHelp),
-		// Run: func(extCtx *grumble.Context) error {
-		// 	con.Println()
-		// 	runExtensionCmd(extCtx, con)
-		// 	con.Println()
-		// 	return nil
-		// },
+		Run:   runExtensionCmd,
 		// Args: func(a *grumble.Args) {
 		// 	if 0 < len(extCmd.Arguments) {
 		// 		// BOF specific
@@ -218,12 +213,11 @@ func ExtensionRegisterCommand(extCmd *ExtensionManifest, con *console.SliverCons
 		GroupID: consts.ExtensionHelpGroup,
 	}
 	f := pflag.NewFlagSet(extCmd.Name, pflag.ContinueOnError)
-	// 	// f.Bool("s", "save", false, "Save output to disk")
+	f.BoolP("save", "s", false, "Save output to disk")
 	f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 	extensionCmd.Flags().AddFlagSet(f)
 
-	sliverMenu := con.App.Menu("implant")
-	sliverMenu.AddCommand(extensionCmd)
+	cmd.AddCommand(extensionCmd)
 }
 
 func loadExtension(goos string, goarch string, checkCache bool, ext *ExtensionManifest, cmd *cobra.Command, con *console.SliverConsole) error {

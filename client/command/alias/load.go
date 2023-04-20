@@ -126,7 +126,7 @@ func (a *AliasManifest) getFileForTarget(cmdName string, targetOS string, target
 func AliasesLoadCmd(cmd *cobra.Command, args []string) {
 	dirPath := args[0]
 	// dirPath := ctx.Args.String("dir-path")
-	alias, err := LoadAlias(dirPath, console.Client)
+	alias, err := LoadAlias(dirPath, cmd.Root())
 	if err != nil {
 		log.PrintErrorf("Failed to load alias: %s\n", err)
 	} else {
@@ -135,7 +135,7 @@ func AliasesLoadCmd(cmd *cobra.Command, args []string) {
 }
 
 // LoadAlias - Load an alias into the Sliver shell from a given directory
-func LoadAlias(manifestPath string, con *console.SliverConsole) (*AliasManifest, error) {
+func LoadAlias(manifestPath string, cmd *cobra.Command) (*AliasManifest, error) {
 	// retrieve alias manifest
 	var err error
 	manifestPath, err = filepath.Abs(manifestPath)
@@ -156,10 +156,9 @@ func LoadAlias(manifestPath string, con *console.SliverConsole) (*AliasManifest,
 	// for each alias command, add a new app command
 
 	// do not add if the command already exists
-	sliverMenu := con.App.Menu("implant")
-	if cmdExists(aliasManifest.CommandName, sliverMenu.Command) {
-		return nil, fmt.Errorf("'%s' command already exists", aliasManifest.CommandName)
-	}
+	// if cmdExists(aliasManifest.CommandName, sliverMenu.Command) {
+	// 	return nil, fmt.Errorf("'%s' command already exists", aliasManifest.CommandName)
+	// }
 
 	helpMsg := fmt.Sprintf("[%s] %s", aliasManifest.Name, aliasManifest.Help)
 	longHelpMsg := help.FormatHelpTmpl(aliasManifest.LongHelp)
@@ -195,7 +194,7 @@ func LoadAlias(manifestPath string, con *console.SliverConsole) (*AliasManifest,
 	f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 	addAliasCmd.Flags().AddFlagSet(f)
 
-	sliverMenu.AddCommand(addAliasCmd)
+	cmd.AddCommand(addAliasCmd)
 
 	// Have to use a global map here, as passing the aliasCmd
 	// either by value or by ref fucks things up

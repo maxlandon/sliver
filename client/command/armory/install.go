@@ -177,7 +177,10 @@ func installAliasPackageByName(name string, clientConfig ArmoryHTTPConfig, con *
 	if installPath == nil {
 		return errors.New("failed to install alias")
 	}
-	_, err = alias.LoadAlias(filepath.Join(*installPath, alias.ManifestFileName), con)
+
+	menuCmd := con.App.Menu("implant").Root()
+
+	_, err = alias.LoadAlias(filepath.Join(*installPath, alias.ManifestFileName), menuCmd)
 	if err != nil {
 		return err
 	}
@@ -304,11 +307,11 @@ func installExtensionPackageByName(name string, clientConfig ArmoryHTTPConfig, c
 		return err
 	}
 
-	//    sliverMenu := con.App.Menu("implant")
+	sliverMenu := con.App.Menu("implant")
 	//
 	// if extensions.CmdExists(extCmd.Name, sliverMenu.Command) {
 	// 	con.App.Commands().Remove(extCmd.Name)
 	// }
-	extensions.ExtensionRegisterCommand(extCmd, con)
+	extensions.ExtensionRegisterCommand(extCmd, sliverMenu.Command)
 	return nil
 }
