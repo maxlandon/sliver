@@ -29,6 +29,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 )
 
@@ -121,16 +122,57 @@ func GetImplantProfileByName(name string, con *console.SliverConsole) *clientpb.
 }
 
 // ProfileNameCompleter - Completer for implant build names
-func ProfileNameCompleter(prefix string, args []string, con *console.SliverConsole) []string {
+func ProfileNameCompleter() carapace.Action {
+	con := console.Client
+
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		return []string{}
+		return carapace.ActionMessage(fmt.Sprintf("No profiles, err: %s", err.Error()))
 	}
-	results := []string{}
-	for _, profile := range pbProfiles.Profiles {
-		if strings.HasPrefix(profile.Name, prefix) {
-			results = append(results, profile.Name)
+
+	if len(pbProfiles.Profiles) == 0 {
+		return carapace.ActionMessage("No saved implant profiles")
+	}
+
+	comps := func(ctx carapace.Context) carapace.Action {
+		var action carapace.Action
+
+		results := []string{}
+		sessions := []string{}
+
+		for _, profile := range pbProfiles.Profiles {
+
+			osArch := fmt.Sprintf("[%s/%s]", profile.Config.GOOS, profile.Config.GOARCH)
+			buildFormat := profile.Config.Format.String()
+
+			profileType := ""
+			if profile.Config.IsBeacon {
+				profileType = "(B)"
+			} else {
+				profileType = "(S)"
+			}
+
+			var domains []string
+			for _, c2 := range profile.Config.C2 {
+				domains = append(domains, c2.GetURL())
+			}
+
+			desc := fmt.Sprintf("%s %s %s %s", profileType, osArch, buildFormat, strings.Join(domains, ","))
+
+			if profile.Config.IsBeacon {
+				results = append(results, profile.Name)
+				results = append(results, desc)
+			} else {
+				sessions = append(sessions, profile.Name)
+				sessions = append(sessions, desc)
+			}
 		}
+
+		return action.Invoke(ctx).Merge(
+			carapace.ActionValuesDescribed(sessions...).Tag("sessions").Invoke(ctx),
+			carapace.ActionValuesDescribed(results...).Tag("beacons").Invoke(ctx),
+		).ToA()
 	}
-	return results
+
+	return carapace.ActionCallback(comps)
 }

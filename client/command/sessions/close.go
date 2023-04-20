@@ -23,11 +23,12 @@ import (
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // CloseSessionCmd - Close an interactive session but do not kill the remote process
-func CloseSessionCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func CloseSessionCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
 
 	// Get the active session
 	session := con.ActiveTarget.GetSessionInteractive()
@@ -38,7 +39,7 @@ func CloseSessionCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 
 	// Close the session
 	_, err := con.Rpc.CloseSession(context.Background(), &sliverpb.CloseSession{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err.Error())
@@ -46,5 +47,4 @@ func CloseSessionCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	}
 
 	con.ActiveTarget.Set(nil, nil)
-
 }

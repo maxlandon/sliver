@@ -30,15 +30,17 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
 
 // BeaconsCmd - Display/interact with beacons
-func BeaconsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	killFlag := ctx.Flags.String("kill")
-	killAll := ctx.Flags.Bool("kill-all")
+func BeaconsCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	killFlag, _ := cmd.Flags().GetString("kill")
+	killAll, _ := cmd.Flags().GetBool("kill-all")
 
 	// Handle kill
 	if killFlag != "" {
@@ -47,7 +49,7 @@ func BeaconsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 			con.PrintErrorf("%s\n", err)
 			return
 		}
-		err = kill.KillBeacon(beacon, ctx, con)
+		err = kill.KillBeacon(beacon, cmd, con)
 		if err != nil {
 			con.PrintErrorf("%s\n", err)
 			return
@@ -63,7 +65,7 @@ func BeaconsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 			return
 		}
 		for _, beacon := range beacons.Beacons {
-			err = kill.KillBeacon(beacon, ctx, con)
+			err = kill.KillBeacon(beacon, cmd, con)
 			if err != nil {
 				con.PrintErrorf("%s\n", err)
 				return
@@ -72,11 +74,11 @@ func BeaconsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 			con.PrintInfof("Killed %s (%s)\n", beacon.Name, beacon.ID)
 		}
 	}
-	filter := ctx.Flags.String("filter")
+	filter, _ := cmd.Flags().GetString("filter")
 	var filterRegex *regexp.Regexp
-	if ctx.Flags.String("filter-re") != "" {
+	if filterRe, _ := cmd.Flags().GetString("filter-re"); filterRe != "" {
 		var err error
-		filterRegex, err = regexp.Compile(ctx.Flags.String("filter-re"))
+		filterRegex, err = regexp.Compile(filterRe)
 		if err != nil {
 			con.PrintErrorf("%s\n", err)
 			return
@@ -92,7 +94,7 @@ func BeaconsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintBeacons - Display a list of beacons
-func PrintBeacons(beacons []*clientpb.Beacon, filter string, filterRegex *regexp.Regexp, con *console.SliverConsoleClient) {
+func PrintBeacons(beacons []*clientpb.Beacon, filter string, filterRegex *regexp.Regexp, con *console.SliverConsole) {
 	if len(beacons) == 0 {
 		con.PrintInfof("No beacons 🙁\n")
 		return
@@ -101,7 +103,7 @@ func PrintBeacons(beacons []*clientpb.Beacon, filter string, filterRegex *regexp
 	con.Printf("%s\n", tw.Render())
 }
 
-func renderBeacons(beacons []*clientpb.Beacon, filter string, filterRegex *regexp.Regexp, con *console.SliverConsoleClient) table.Writer {
+func renderBeacons(beacons []*clientpb.Beacon, filter string, filterRegex *regexp.Regexp, con *console.SliverConsole) table.Writer {
 	width, _, err := term.GetSize(0)
 	if err != nil {
 		width = 999

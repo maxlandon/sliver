@@ -43,7 +43,7 @@ var (
 )
 
 // SelectBeacon - Interactive menu for the user to select an session, optionally only display live sessions
-func SelectBeacon(con *console.SliverConsoleClient) (*clientpb.Beacon, error) {
+func SelectBeacon(con *console.SliverConsole) (*clientpb.Beacon, error) {
 	beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func SelectBeacon(con *console.SliverConsoleClient) (*clientpb.Beacon, error) {
 	return nil, ErrNoSelection
 }
 
-func GetBeacon(con *console.SliverConsoleClient, beaconID string) (*clientpb.Beacon, error) {
+func GetBeacon(con *console.SliverConsole, beaconID string) (*clientpb.Beacon, error) {
 	beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func GetBeacon(con *console.SliverConsoleClient, beaconID string) (*clientpb.Bea
 	return nil, ErrBeaconNotFound
 }
 
-func GetBeacons(con *console.SliverConsoleClient) (*clientpb.Beacons, error) {
+func GetBeacons(con *console.SliverConsole) (*clientpb.Beacons, error) {
 	beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return nil, err

@@ -6,6 +6,7 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/rsteube/carapace"
 )
 
 // GetSliverBinary - Get the binary of an implant based on it's profile
@@ -53,4 +54,75 @@ func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverConsol
 		data = regenerate.GetFile().GetData()
 	}
 	return data, err
+}
+
+// FormatCompleter completes builds' architectures.
+func ArchCompleter() carapace.Action {
+	compiler, err := console.Client.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		return carapace.ActionMessage("No compiler info: %s", err.Error())
+	}
+
+	var results []string
+
+nextTarget:
+	for _, target := range compiler.Targets {
+		for _, res := range results {
+			if res == target.GOARCH {
+				continue nextTarget
+			}
+		}
+		results = append(results, target.GOARCH)
+	}
+
+nextUnsupported:
+	for _, target := range compiler.UnsupportedTargets {
+		for _, res := range results {
+			if res == target.GOARCH {
+				continue nextUnsupported
+			}
+		}
+		results = append(results, target.GOARCH)
+	}
+
+	return carapace.ActionValues(results...).Tag("architectures")
+}
+
+// FormatCompleter completes build operating systems
+func OSCompleter() carapace.Action {
+	compiler, err := console.Client.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		return carapace.ActionMessage("No compiler info: %s", err.Error())
+	}
+
+	var results []string
+
+nextTarget:
+	for _, target := range compiler.Targets {
+		for _, res := range results {
+			if res == target.GOOS {
+				continue nextTarget
+			}
+		}
+		results = append(results, target.GOOS)
+	}
+
+nextUnsupported:
+	for _, target := range compiler.UnsupportedTargets {
+		for _, res := range results {
+			if res == target.GOOS {
+				continue nextUnsupported
+			}
+		}
+		results = append(results, target.GOOS)
+	}
+
+	return carapace.ActionValues(results...).Tag("operating systems")
+}
+
+// FormatCompleter completes build formats
+func FormatCompleter() carapace.Action {
+	return carapace.ActionValues([]string{
+		"exe", "shared", "service", "shellcode",
+	}...).Tag("implant format")
 }

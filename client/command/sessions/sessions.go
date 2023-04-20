@@ -30,18 +30,19 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
 
 // SessionsCmd - Display/interact with sessions
-func SessionsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SessionsCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
 
-	interact := ctx.Flags.String("interact")
-	killFlag := ctx.Flags.String("kill")
-	killAll := ctx.Flags.Bool("kill-all")
-	clean := ctx.Flags.Bool("clean")
+	interact, _ := cmd.Flags().GetString("interact")
+	killFlag, _ := cmd.Flags().GetString("kill")
+	killAll, _ := cmd.Flags().GetBool("kill-all")
+	clean, _ := cmd.Flags().GetBool("clean")
 
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
@@ -52,7 +53,7 @@ func SessionsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	if killAll {
 		con.ActiveTarget.Background()
 		for _, session := range sessions.Sessions {
-			err := kill.KillSession(session, ctx, con)
+			err := kill.KillSession(session, cmd, con)
 			if err != nil {
 				con.PrintErrorf("%s\n", err)
 			}
@@ -66,7 +67,7 @@ func SessionsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		con.ActiveTarget.Background()
 		for _, session := range sessions.Sessions {
 			if session.IsDead {
-				err := kill.KillSession(session, ctx, con)
+				err := kill.KillSession(session, cmd, con)
 				if err != nil {
 					con.PrintErrorf("%s\n", err)
 				}
@@ -82,7 +83,7 @@ func SessionsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		if activeSession != nil && session.ID == activeSession.ID {
 			con.ActiveTarget.Background()
 		}
-		err := kill.KillSession(session, ctx, con)
+		err := kill.KillSession(session, cmd, con)
 		if err != nil {
 			con.PrintErrorf("%s\n", err)
 		}
@@ -98,11 +99,12 @@ func SessionsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 			con.PrintErrorf("Invalid session name or session number: %s\n", interact)
 		}
 	} else {
-		filter := ctx.Flags.String("filter")
+		filter, _ := cmd.Flags().GetString("filter")
 		var filterRegex *regexp.Regexp
-		if ctx.Flags.String("filter-re") != "" {
+		if filter != "" {
 			var err error
-			filterRegex, err = regexp.Compile(ctx.Flags.String("filter-re"))
+
+			filterRegex, err = regexp.Compile(filter)
 			if err != nil {
 				con.PrintErrorf("%s\n", err)
 				return
@@ -122,7 +124,7 @@ func SessionsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintSessions - Print the current sessions
-func PrintSessions(sessions map[string]*clientpb.Session, filter string, filterRegex *regexp.Regexp, con *console.SliverConsoleClient) {
+func PrintSessions(sessions map[string]*clientpb.Session, filter string, filterRegex *regexp.Regexp, con *console.SliverConsole) {
 	width, _, err := term.GetSize(0)
 	if err != nil {
 		width = 999

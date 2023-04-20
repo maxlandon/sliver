@@ -21,7 +21,6 @@ package generate
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/bishopfox/sliver/client/command/settings"
@@ -29,6 +28,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 )
 
@@ -124,38 +124,73 @@ func PrintImplantBuilds(configs map[string]*clientpb.ImplantConfig, filters Impl
 }
 
 // ImplantBuildNameCompleter - Completer for implant build names
-func ImplantBuildNameCompleter(prefix string, args []string, filters ImplantBuildFilter, con *console.SliverConsole) []string {
-	builds, err := con.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
+func ImplantBuildNameCompleter() carapace.Action {
+	builds, err := console.Client.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		return []string{}
+		return carapace.ActionMessage("No implant builds: %s", err.Error())
 	}
-	results := []string{}
-	for name, config := range builds.Configs {
-		if filters.GOOS != "" && config.GOOS != filters.GOOS {
-			continue
-		}
-		if filters.GOARCH != "" && config.GOARCH != filters.GOARCH {
-			continue
-		}
-		if filters.Beacon && !config.IsBeacon {
-			continue
-		}
-		if filters.Session && config.IsBeacon {
-			continue
-		}
-		if filters.Debug && config.Debug {
-			continue
-		}
-		if filters.Format != "" && !strings.EqualFold(config.Format.String(), filters.Format) {
-			continue
+
+	filters := &ImplantBuildFilter{}
+
+	comps := func(ctx carapace.Context) carapace.Action {
+		var action carapace.Action
+
+		results := []string{}
+		sessions := []string{}
+
+		for name, config := range builds.Configs {
+			if filters.GOOS != "" && config.GOOS != filters.GOOS {
+				continue
+			}
+			if filters.GOARCH != "" && config.GOARCH != filters.GOARCH {
+				continue
+			}
+			if filters.Beacon && !config.IsBeacon {
+				continue
+			}
+			if filters.Session && config.IsBeacon {
+				continue
+			}
+			if filters.Debug && config.Debug {
+				continue
+			}
+			if filters.Format != "" && !strings.EqualFold(config.Format.String(), filters.Format) {
+				continue
+			}
+
+			osArch := fmt.Sprintf("[%s/%s]", config.GOOS, config.GOARCH)
+			buildFormat := config.Format.String()
+
+			profileType := ""
+			if config.IsBeacon {
+				profileType = "(B)"
+			} else {
+				profileType = "(S)"
+			}
+
+			var domains []string
+			for _, c2 := range config.C2 {
+				domains = append(domains, c2.GetURL())
+			}
+
+			desc := fmt.Sprintf("%s %s %s %s", profileType, osArch, buildFormat, strings.Join(domains, ","))
+
+			if config.IsBeacon {
+				results = append(results, name)
+				results = append(results, desc)
+			} else {
+				sessions = append(sessions, name)
+				sessions = append(sessions, desc)
+			}
 		}
 
-		if strings.HasPrefix(name, prefix) {
-			results = append(results, name)
-		}
+		return action.Invoke(ctx).Merge(
+			carapace.ActionValuesDescribed(sessions...).Tag("session builds").Invoke(ctx),
+			carapace.ActionValuesDescribed(results...).Tag("beacon builds").Invoke(ctx),
+		).ToA()
 	}
-	sort.StringSlice(results).Sort()
-	return results
+
+	return carapace.ActionCallback(comps)
 }
 
 // ImplantBuildByName - Get an implant build by name

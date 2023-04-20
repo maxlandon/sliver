@@ -31,19 +31,26 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
+	"github.com/rsteube/carapace"
+	"github.com/spf13/cobra"
 )
 
-var (
-	ErrNoSelection = errors.New("no selection")
-)
+var ErrNoSelection = errors.New("no selection")
 
 // UseCmd - Change the active session
-func UseCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func UseCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	var session *clientpb.Session
 	var beacon *clientpb.Beacon
 	var err error
-	idArg := ctx.Args.String("id")
+
+	var idArg string
+	if len(args) > 0 {
+		idArg = args[0]
+	}
+
+	// idArg := ctx.Args.String("id")
 	if idArg != "" {
 		session, beacon, err = SessionOrBeaconByID(idArg, con)
 	} else {
@@ -54,16 +61,16 @@ func UseCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		return
 	}
 	if session != nil {
-		con.ActiveTarget.Set(session, nil)
 		con.PrintInfof("Active session %s (%s)\n", session.Name, session.ID)
+		con.ActiveTarget.Set(session, nil)
 	} else if beacon != nil {
-		con.ActiveTarget.Set(nil, beacon)
 		con.PrintInfof("Active beacon %s (%s)\n", beacon.Name, beacon.ID)
+		con.ActiveTarget.Set(nil, beacon)
 	}
 }
 
 // SessionOrBeaconByID - Select a session or beacon by ID
-func SessionOrBeaconByID(id string, con *console.SliverConsoleClient) (*clientpb.Session, *clientpb.Beacon, error) {
+func SessionOrBeaconByID(id string, con *console.SliverConsole) (*clientpb.Session, *clientpb.Beacon, error) {
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return nil, nil, err
@@ -88,7 +95,7 @@ func SessionOrBeaconByID(id string, con *console.SliverConsoleClient) (*clientpb
 }
 
 // SelectSessionOrBeacon - Select a session or beacon
-func SelectSessionOrBeacon(con *console.SliverConsoleClient) (*clientpb.Session, *clientpb.Beacon, error) {
+func SelectSessionOrBeacon(con *console.SliverConsole) (*clientpb.Session, *clientpb.Beacon, error) {
 	// Get and sort sessions
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
@@ -176,25 +183,45 @@ func SelectSessionOrBeacon(con *console.SliverConsoleClient) (*clientpb.Session,
 }
 
 // BeaconAndSessionIDCompleter - BeaconAndSessionIDCompleter for beacon / session ids
-func BeaconAndSessionIDCompleter(prefix string, args []string, con *console.SliverConsoleClient) (results []string) {
-	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
-	if err != nil {
-		return
+func BeaconAndSessionIDCompleter() carapace.Action {
+	comps := func(ctx carapace.Context) carapace.Action {
+		var action carapace.Action
+
+		return action.Invoke(ctx).Merge(
+			SessionIDCompleter().Invoke(ctx),
+			BeaconIDCompleter().Invoke(ctx),
+		).ToA()
 	}
-	for _, s := range sessions.Sessions {
-		sid := s.ID
-		if strings.HasPrefix(sid, prefix) {
+
+	return carapace.ActionCallback(comps)
+}
+
+// SessionIDCompleter completes session IDs
+func SessionIDCompleter() carapace.Action {
+	con := console.Client
+
+	results := make([]string, 0)
+
+	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
+	if err == nil {
+		for _, s := range sessions.Sessions {
 			results = append(results, s.ID)
 		}
 	}
+	return carapace.ActionValues(results...).Tag("sessions")
+}
+
+// BeaconIDCompleter completes beacon IDs
+func BeaconIDCompleter() carapace.Action {
+	con := console.Client
+
+	results := make([]string, 0)
+
 	beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
-	if err != nil {
-		return
-	}
-	for _, b := range beacons.Beacons {
-		if strings.HasPrefix(b.ID, prefix) {
+	if err == nil {
+		for _, b := range beacons.Beacons {
 			results = append(results, b.ID)
 		}
 	}
-	return
+	return carapace.ActionValues(results...).Tag("beacons")
 }

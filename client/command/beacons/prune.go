@@ -26,12 +26,15 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // BeaconsPruneCmd - Prune stale beacons automatically
-func BeaconsPruneCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	pruneDuration, err := time.ParseDuration(ctx.Flags.String("duration"))
+func BeaconsPruneCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	duration, _ := cmd.Flags().GetString("duration")
+	pruneDuration, err := time.ParseDuration(duration)
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
 		return

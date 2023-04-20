@@ -21,11 +21,13 @@ package use
 import (
 	"github.com/bishopfox/sliver/client/command/sessions"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // UseSessionCmd - Change the active session
-func UseSessionCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func UseSessionCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	session, err := sessions.SelectSession(false, con)
 	if session != nil {
 		con.ActiveTarget.Set(session, nil)

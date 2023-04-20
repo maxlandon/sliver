@@ -22,11 +22,13 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // BeaconsRmCmd - Display/interact with beacons
-func BeaconsRmCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func BeaconsRmCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	beacon, err := SelectBeacon(con)
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

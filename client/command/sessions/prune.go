@@ -24,11 +24,13 @@ import (
 	"github.com/bishopfox/sliver/client/command/kill"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // SessionsPruneCmd - Forcefully kill stale sessions
-func SessionsPruneCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SessionsPruneCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -41,7 +43,7 @@ func SessionsPruneCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	for _, session := range sessions.GetSessions() {
 		if session.IsDead {
 			con.Printf("Pruning session %s ... ", session.ID)
-			err = kill.KillSession(session, ctx, con)
+			err = kill.KillSession(session, cmd, con)
 			if err != nil {
 				con.Printf("failed!\n")
 				con.PrintErrorf("%s\n", err)
