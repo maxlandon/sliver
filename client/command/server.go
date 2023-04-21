@@ -53,7 +53,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Groups ] ----------------------------------------------
 		groups := []*cobra.Group{
 			{ID: consts.GenericHelpGroup, Title: consts.GenericHelpGroup},
-			{ID: consts.MultiplayerHelpGroup, Title: consts.MultiplayerHelpGroup},
+			{ID: consts.NetworkHelpGroup, Title: consts.NetworkHelpGroup},
+			{ID: consts.PayloadsHelpGroup, Title: consts.PayloadsHelpGroup},
+			{ID: consts.DataHelpGroup, Title: consts.DataHelpGroup},
 			{ID: consts.SliverHelpGroup, Title: consts.SliverHelpGroup},
 		}
 		server.AddGroup(groups...)
@@ -73,10 +75,11 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.LoadStr + " [ALIAS]",
 			Short: "Load a command alias",
 			Long:  help.GetHelpFor([]string{consts.AliasesStr, consts.LoadStr}),
-			Args:  cobra.ExactArgs(1), // 	a.String("dir-path", "path to the alias directory")
+			Args:  cobra.ExactArgs(1),
 			Run:   alias.AliasesLoadCmd,
 		}
-		carapace.Gen(aliasLoadCmd).PositionalCompletion(carapace.ActionDirectories().Tag("alias directory"))
+		carapace.Gen(aliasLoadCmd).PositionalCompletion(
+			carapace.ActionDirectories().Tag("alias directory").Usage("path to the alias directory"))
 		aliasCmd.AddCommand(aliasLoadCmd)
 
 		aliasInstallCmd := &cobra.Command{
@@ -120,7 +123,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.InstallStr,
 			Short: "Install an alias or extension",
 			Long:  help.GetHelpFor([]string{consts.ArmoryStr, consts.InstallStr}),
-			Args:  cobra.ExactArgs(1), // 	a.String("name", "name of the extension or alias to install")
+			Args:  cobra.ExactArgs(1),
 			Run:   armory.ArmoryInstallCmd,
 		}
 		Flags("armory", armoryInstallCmd, func(f *pflag.FlagSet) {
@@ -129,7 +132,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.BoolP("ignore-cache", "c", false, "ignore metadata cache, force refresh")
 			f.StringP("timeout", "t", "15m", "download timeout")
 		})
-		carapace.Gen(armoryInstallCmd).PositionalCompletion(armory.AliasExtensionOrBundleCompleter())
+		carapace.Gen(armoryInstallCmd).PositionalCompletion(
+			armory.AliasExtensionOrBundleCompleter().Usage("name of the extension or alias to install"))
 		armoryCmd.AddCommand(armoryInstallCmd)
 
 		armoryUpdateCmd := &cobra.Command{
@@ -150,9 +154,10 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.SearchStr,
 			Short: "Search for aliases and extensions by name (regex)",
 			Long:  help.GetHelpFor([]string{consts.ArmoryStr, consts.SearchStr}),
-			Args:  cobra.ExactArgs(1), // 	a.String("name", "a name regular expression")
+			Args:  cobra.ExactArgs(1),
 			Run:   armory.ArmorySearchCmd,
 		}
+		carapace.Gen(armorySearchCmd).PositionalCompletion(carapace.ActionValues().Usage("a name regular expression"))
 		armoryCmd.AddCommand(armorySearchCmd)
 
 		// [ Update ] --------------------------------------------------------------
@@ -192,7 +197,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Job control",
 			Long:    help.GetHelpFor([]string{consts.JobsStr}),
 			Run:     jobs.JobsCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("jobs", jobsCmd, func(f *pflag.FlagSet) {
 			f.Int32P("kill", "k", -1, "kill a background job")
@@ -209,7 +214,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Start an mTLS listener",
 			Long:    help.GetHelpFor([]string{consts.MtlsStr}),
 			Run:     jobs.MTLSListenerCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("mTLS listener", mtlsCmd, func(f *pflag.FlagSet) {
 			f.StringP("lhost", "L", "", "interface to bind server to")
@@ -224,7 +229,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Start a WireGuard listener",
 			Long:    help.GetHelpFor([]string{consts.WGStr}),
 			Run:     jobs.WGListenerCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("WireGuardlistener", wgCmd, func(f *pflag.FlagSet) {
 			f.StringP("lhost", "L", "", "interface to bind server to")
@@ -241,7 +246,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Start a DNS listener",
 			Long:    help.GetHelpFor([]string{consts.DnsStr}),
 			Run:     jobs.DNSListenerCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("DNS listener", dnsCmd, func(f *pflag.FlagSet) {
 			f.StringP("domains", "d", "", "parent domain(s) to use for DNS c2")
@@ -259,7 +264,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Start an HTTP listener",
 			Long:    help.GetHelpFor([]string{consts.HttpStr}),
 			Run:     jobs.HTTPListenerCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("HTTP listener", httpCmd, func(f *pflag.FlagSet) {
 			f.StringP("domain", "d", "", "limit responses to specific domain")
@@ -279,7 +284,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Start an HTTPS listener",
 			Long:    help.GetHelpFor([]string{consts.HttpsStr}),
 			Run:     jobs.HTTPSListenerCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("HTTPS listener", httpsCmd, func(f *pflag.FlagSet) {
 			f.StringP("domain", "d", "", "limit responses to specific domain")
@@ -305,7 +310,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Start a stager listener",
 			Long:    help.GetHelpFor([]string{consts.StageListenerStr}),
 			Run:     jobs.StageListenerCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("stage listener", stageCmd, func(f *pflag.FlagSet) {
 			f.StringP("profile", "p", "", "implant profile name to link with the listener")
@@ -333,7 +338,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Manage operators",
 			Long:    help.GetHelpFor([]string{consts.OperatorsStr}),
 			Run:     operators.OperatorsCmd,
-			GroupID: consts.MultiplayerHelpGroup,
+			GroupID: consts.GenericHelpGroup,
 		}
 		Flags("operators", operatorsCmd, func(f *pflag.FlagSet) {
 			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
@@ -387,12 +392,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Use ] --------------------------------------------------------------
 
 		useCmd := &cobra.Command{
-			Use:   consts.UseStr,
-			Short: "Switch the active session or beacon",
-			Long:  help.GetHelpFor([]string{consts.UseStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.String("id", "beacon or session ID", grumble.Default(""))
-			// },
+			Use:     consts.UseStr,
+			Short:   "Switch the active session or beacon",
+			Long:    help.GetHelpFor([]string{consts.UseStr}),
 			Run:     use.UseCmd,
 			GroupID: consts.SliverHelpGroup,
 		}
@@ -495,8 +497,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Polymorphic binary shellcode encoder (ノ ゜Д゜)ノ ︵ 仕方がない",
 			Long:    help.GetHelpFor([]string{consts.ShikataGaNai}),
 			Run:     sgn.ShikataGaNaiCmd,
-			Args:    cobra.ExactArgs(1), // 	a.String("shellcode", "binary shellcode file path")
-			GroupID: consts.SliverHelpGroup,
+			Args:    cobra.ExactArgs(1),
+			GroupID: consts.PayloadsHelpGroup,
 		}
 		server.AddCommand(shikataGaNaiCmd)
 		Flags("shikata ga nai", shikataGaNaiCmd, func(f *pflag.FlagSet) {
@@ -520,7 +522,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Generate an implant binary",
 			Long:    help.GetHelpFor([]string{consts.GenerateStr}),
 			Run:     generate.GenerateCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.PayloadsHelpGroup,
 		}
 		Flags("session", generateCmd, func(f *pflag.FlagSet) {
 			f.StringP("os", "o", "windows", "operating system")
@@ -688,9 +690,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:     consts.RegenerateStr,
 			Short:   "Regenerate an implant",
 			Long:    help.GetHelpFor([]string{consts.RegenerateStr}),
-			Args:    cobra.ExactArgs(1), // 	a.String("implant-name", "name of the implant")
+			Args:    cobra.ExactArgs(1),
 			Run:     generate.RegenerateCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.PayloadsHelpGroup,
 		}
 		Flags("regenerate", regenerateCmd, func(f *pflag.FlagSet) {
 			f.StringP("save", "s", "", "directory/file to the binary to")
@@ -699,6 +701,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		FlagComps(regenerateCmd, func(comp *carapace.ActionMap) {
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
 		})
+		carapace.Gen(regenerateCmd).PositionalCompletion(generate.ImplantBuildNameCompleter())
 		server.AddCommand(regenerateCmd)
 
 		profilesCmd := &cobra.Command{
@@ -706,7 +709,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "List existing profiles",
 			Long:    help.GetHelpFor([]string{consts.ProfilesStr}),
 			Run:     generate.ProfilesCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.PayloadsHelpGroup,
 		}
 		Flags("profiles", profilesCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
@@ -717,7 +720,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.GenerateStr,
 			Short: "Generate implant from a profile",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.GenerateStr}),
-			Args:  cobra.ExactArgs(1), // 	a.String("name", "name of the profile", grumble.Default(""))
+			Args:  cobra.ExactArgs(1),
 			Run:   generate.ProfilesGenerateCmd,
 		}
 		Flags("profiles", profilesGenerateCmd, func(f *pflag.FlagSet) {
@@ -795,6 +798,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			(*comp)["format"] = generate.FormatCompleter()
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
 		})
+		carapace.Gen(profilesNewCmd).PositionalCompletion(carapace.ActionValues().Usage("name of the profile (optional)"))
 		profilesCmd.AddCommand(profilesNewCmd)
 
 		// New Beacon Profile Command
@@ -869,13 +873,14 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			(*comp)["format"] = generate.FormatCompleter()
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
 		})
+		carapace.Gen(profilesNewBeaconCmd).PositionalCompletion(carapace.ActionValues().Usage("name of the profile (optional)"))
 		profilesNewCmd.AddCommand(profilesNewBeaconCmd)
 
 		profilesRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
 			Short: "Remove a profile",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.RmStr}),
-			Args:  cobra.ExactArgs(1), // 	a.String("name", "name of the profile", grumble.Default(""))
+			Args:  cobra.ExactArgs(1),
 			Run:   generate.ProfilesRmCmd,
 		}
 		Flags("profiles", profilesRmCmd, func(f *pflag.FlagSet) {
@@ -889,7 +894,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "List implant builds",
 			Long:    help.GetHelpFor([]string{consts.ImplantBuildsStr}),
 			Run:     generate.ImplantsCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.PayloadsHelpGroup,
 		}
 		Flags("implants", implantBuildsCmd, func(f *pflag.FlagSet) {
 			f.StringP("os", "o", "", "filter builds by operating system")
@@ -912,7 +917,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.RmStr,
 			Short: "Remove implant build",
 			Long:  help.GetHelpFor([]string{consts.ImplantBuildsStr, consts.RmStr}),
-			Args:  cobra.ExactArgs(1), // 	a.String("name", "implant name", grumble.Default(""))
+			Args:  cobra.ExactArgs(1),
 			Run:   generate.ImplantsRmCmd,
 		}
 		Flags("implants", implantsRmCmd, func(f *pflag.FlagSet) {
@@ -926,7 +931,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "List previously generated canaries",
 			Long:    help.GetHelpFor([]string{consts.CanariesStr}),
 			Run:     generate.CanariesCmd,
-			GroupID: consts.SliverHelpGroup,
+			GroupID: consts.PayloadsHelpGroup,
 		}
 		Flags("canaries", canariesCmd, func(f *pflag.FlagSet) {
 			f.BoolP("burned", "b", false, "show only triggered/burned canaries")
@@ -943,11 +948,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			// Args: func(a *grumble.Args) {
 			// 	a.String("name", "website name", grumble.Default(""))
 			// },
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("websites", websitesCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		// carapace.Gen(websitesCmd).PositionalCompletion(carapace.ActionMessage("website name"))
 
 		websitesRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
@@ -975,8 +981,6 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.StringP("web-path", "p", "", "http path to host file at")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		// FlagComps(websitesRmWebContentCmd, func(comp *carapace.ActionMap) {
-		// })
 		websitesCmd.AddCommand(websitesRmWebContentCmd)
 
 		websitesContentCmd := &cobra.Command{
@@ -1033,7 +1037,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(beaconsCmd, func(comp *carapace.ActionMap) {
-			(*comp)["kill"] = use.BeaconAndSessionIDCompleter()
+			(*comp)["kill"] = use.BeaconIDCompleter()
 		})
 		beaconsRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
@@ -1092,7 +1096,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Generate a new WireGuard client config",
 			Long:    help.GetHelpFor([]string{consts.WgConfigStr}),
 			Run:     wireguard.WGConfigCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		server.AddCommand(wgConfigCmd)
 
@@ -1109,7 +1113,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "List ports forwarded by the WireGuard tun interface",
 			Long:    help.GetHelpFor([]string{consts.WgPortFwdStr}),
 			Run:     wireguard.WGPortFwdListCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("wg portforward", wgPortFwdCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
@@ -1146,7 +1150,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "List socks servers listening on the WireGuard tun interface",
 			Long:    help.GetHelpFor([]string{consts.WgSocksStr}),
 			Run:     wireguard.WGSocksListCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("wg socks", wgSocksCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
@@ -1182,7 +1186,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		monitorCmd := &cobra.Command{
 			Use:     consts.MonitorStr,
 			Short:   "Monitor threat intel platforms for Sliver implants",
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.SliverHelpGroup,
 		}
 		monitorCmd.AddCommand(&cobra.Command{
 			Use:   "start",
@@ -1203,7 +1207,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Manage the server's loot store",
 			Long:    help.GetHelpFor([]string{consts.LootStr}),
 			Run:     loot.LootCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.SliverHelpGroup,
 		}
 		Flags("loot", lootCmd, func(f *pflag.FlagSet) {
 			f.StringP("filter", "f", "", "filter based on loot type")
@@ -1215,7 +1219,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Add a local file to the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.LootLocalStr}),
 			Run:   loot.LootAddLocalCmd,
-			Args:  cobra.ExactArgs(1), // 	a.String("path", "The local file path to the loot")
+			Args:  cobra.ExactArgs(1),
 		}
 		lootCmd.AddCommand(lootAddCmd)
 		Flags("loot", lootAddCmd, func(f *pflag.FlagSet) {
@@ -1224,6 +1228,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.StringP("file-type", "F", "", "force a specific file type (binary/text)")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(lootAddCmd).PositionalCompletion(
+			carapace.ActionFiles().Tag("local loot file").Usage("The local file path to the loot"))
 
 		lootRemoteCmd := &cobra.Command{
 			Use:   consts.LootRemoteStr,
@@ -1275,7 +1281,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.StringP("filter", "f", "", "filter based on loot type")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		FlagComps(lootCmd, func(comp *carapace.ActionMap) {
+		FlagComps(lootFetchCmd, func(comp *carapace.ActionMap) {
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save loot")
 		})
 
@@ -1299,7 +1305,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Manage the database of hosts",
 			Long:    help.GetHelpFor([]string{consts.HostsStr}),
 			Run:     hosts.HostsCmd,
-			GroupID: consts.GenericHelpGroup,
+			GroupID: consts.SliverHelpGroup,
 		}
 		server.AddCommand(hostsCmd)
 		Flags("hosts", hostsCmd, func(f *pflag.FlagSet) {
@@ -1403,7 +1409,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Connect with Prelude's Operator",
 			Long:  help.GetHelpFor([]string{consts.PreludeOperatorStr, consts.ConnectStr}),
 			Run:   operator.ConnectCmd,
-			Args:  cobra.ExactArgs(1), // 	a.String("connection-string", "connection string to the Operator Host (e.g. 127.0.0.1:1234)")
+			Args:  cobra.ExactArgs(1),
 		}
 		operatorCmd.AddCommand(operatorConnectCmd)
 		Flags("operator", operatorConnectCmd, func(f *pflag.FlagSet) {
@@ -1411,6 +1417,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.StringP("aes-key", "a", "abcdefghijklmnopqrstuvwxyz012345", "AES key for communication encryption")
 			f.StringP("range", "r", "sliver", "Agents range")
 		})
+		carapace.Gen(operatorConnectCmd).PositionalCompletion(
+			carapace.ActionValues().Usage("connection string to the Operator Host (e.g. 127.0.0.1:1234)"))
 
 		// [ Builders ] ---------------------------------------------
 
@@ -1418,8 +1426,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:     consts.BuildersStr,
 			Short:   "List external builders",
 			Long:    help.GetHelpFor([]string{consts.BuildersStr}),
-			GroupID: consts.GenericHelpGroup,
 			Run:     builders.BuildersCmd,
+			GroupID: consts.PayloadsHelpGroup,
 		}
 		server.AddCommand(buildersCmd)
 		Flags("builders", buildersCmd, func(f *pflag.FlagSet) {

@@ -37,7 +37,7 @@ func ProfilesGenerateCmd(cmd *cobra.Command, args []string) {
 	if len(args) > 0 {
 		name = args[0]
 	}
-	// name := ctx.Args.String("name")
+
 	if name == "" {
 		log.Errorf("No profile name specified\n")
 		return

@@ -265,8 +265,14 @@ const (
 
 // Groups
 const (
-	GenericHelpGroup     = "Generic"
-	SliverHelpGroup      = "Sliver"
+	// Server commands =====================
+	GenericHelpGroup  = "Generic"
+	NetworkHelpGroup  = "Network"
+	PayloadsHelpGroup = "Payload"
+	DataHelpGroup     = "Data"
+	SliverHelpGroup   = "Sliver"
+
+	// Sliver commands =====================
 	SliverWinHelpGroup   = "Sliver - Windows"
 	MultiplayerHelpGroup = "Multiplayer"
 	AliasHelpGroup       = "Sliver - 3rd Party macros"
