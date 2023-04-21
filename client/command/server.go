@@ -19,6 +19,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/reaction"
 	"github.com/bishopfox/sliver/client/command/sessions"
 	"github.com/bishopfox/sliver/client/command/settings"
+	sgn "github.com/bishopfox/sliver/client/command/shikata-ga-nai"
 	"github.com/bishopfox/sliver/client/command/update"
 	"github.com/bishopfox/sliver/client/command/use"
 	"github.com/bishopfox/sliver/client/command/websites"
@@ -489,30 +490,28 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 
 		// [ Shellcode Encoders ] --------------------------------------------------------------
 
-		// server.AddCommand(&cobra.Command{
-		// 	Use:     consts.ShikataGaNai,
-		// 	Short:     "Polymorphic binary shellcode encoder (ノ ゜Д゜)ノ ︵ 仕方がない",
-		// 	Long: help.GetHelpFor([]string{consts.ShikataGaNai}),
-		// 	// Args: func(a *grumble.Args) {
-		// 	// 	a.String("shellcode", "binary shellcode file path")
-		// 	// },
-		// 	// Flags: func(f *grumble.Flags) {
-		// 	// 	f.String("s", "save", "", "save output to local file")
-		// 	//
-		// 	// 	f.String("a", "arch", "amd64", "architecture of shellcode")
-		// 	// 	f.Int("i", "iterations", 1, "number of iterations")
-		// 	// 	f.String("b", "bad-chars", "", "hex encoded bad characters to avoid (e.g. 0001)")
-		// 	//
-		// 	// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-		// 	// },
-		// 	// Run: func(ctx *grumble.Context) error {
-		// 	// 	con.Println()
-		// 	// 	sgn.ShikataGaNaiCmd(ctx, con)
-		// 	// 	con.Println()
-		// 	// 	return nil
-		// 	// },
-		// 	GroupID: consts.SliverHelpGroup,
-		// })
+		shikataGaNaiCmd := &cobra.Command{
+			Use:     consts.ShikataGaNai,
+			Short:   "Polymorphic binary shellcode encoder (ノ ゜Д゜)ノ ︵ 仕方がない",
+			Long:    help.GetHelpFor([]string{consts.ShikataGaNai}),
+			Run:     sgn.ShikataGaNaiCmd,
+			Args:    cobra.ExactArgs(1), // 	a.String("shellcode", "binary shellcode file path")
+			GroupID: consts.SliverHelpGroup,
+		}
+		server.AddCommand(shikataGaNaiCmd)
+		Flags("shikata ga nai", shikataGaNaiCmd, func(f *pflag.FlagSet) {
+			f.StringP("save", "s", "", "save output to local file")
+			f.StringP("arch", "a", "amd64", "architecture of shellcode")
+			f.IntP("iterations", "i", 1, "number of iterations")
+			f.StringP("bad-chars", "b", "", "hex encoded bad characters to avoid (e.g. 0001)")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+
+		carapace.Gen(shikataGaNaiCmd).PositionalCompletion(carapace.ActionFiles().Tag("shellcode file"))
+		FlagComps(shikataGaNaiCmd, func(comp *carapace.ActionMap) {
+			(*comp)["arch"] = generate.ArchCompleter() // TODO: only propose shikataGaNaiCmd architectures
+			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save shellcode")
+		})
 
 		// [ Generate ] --------------------------------------------------------------
 
