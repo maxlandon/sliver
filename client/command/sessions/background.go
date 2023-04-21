@@ -2,6 +2,7 @@ package sessions
 
 import (
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/spf13/cobra"
 )
 
@@ -10,5 +11,5 @@ func BackgroundCmd(cmd *cobra.Command, args []string) {
 	con := console.Client
 
 	con.ActiveTarget.Background()
-	con.PrintInfof("Background ...\n")
+	log.Infof("Background ...\n")
 }

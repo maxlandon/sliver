@@ -30,6 +30,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/extensions"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/server/cryptography/minisign"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +45,7 @@ func ArmoryInstallCmd(cmd *cobra.Command, args []string) {
 	name := args[0]
 	// name := ctx.Args.String("name")
 	if name == "" {
-		con.PrintErrorf("A package or bundle name is required")
+		log.Errorf("A package or bundle name is required")
 		return
 	}
 	clientConfig := parseArmoryHTTPConfig(cmd)
@@ -75,14 +76,14 @@ func ArmoryInstallCmd(cmd *cobra.Command, args []string) {
 			}
 		}
 	}
-	con.PrintErrorf("No package or bundle named '%s' was found", name)
+	log.Errorf("No package or bundle named '%s' was found", name)
 }
 
 func installBundle(bundle *ArmoryBundle, clientConfig ArmoryHTTPConfig, con *console.SliverConsole) {
 	for _, pkgName := range bundle.Packages {
 		err := installPackageByName(pkgName, clientConfig, con)
 		if err != nil {
-			con.PrintErrorf("Failed to install '%s': %s", pkgName, err)
+			log.Errorf("Failed to install '%s': %s", pkgName, err)
 		}
 	}
 }
@@ -106,8 +107,8 @@ func installPackageByName(name string, clientConfig ArmoryHTTPConfig, con *conso
 		}
 	}
 	if name == "all" {
-		con.Printf("\n")
-		con.PrintInfof("All packages installed\n")
+		log.Printf("\n")
+		log.Infof("All packages installed\n")
 		return nil
 	}
 	return ErrPackageNotFound
@@ -116,7 +117,7 @@ func installPackageByName(name string, clientConfig ArmoryHTTPConfig, con *conso
 func installAlias(alias *alias.AliasManifest, clientConfig ArmoryHTTPConfig, con *console.SliverConsole) {
 	err := installAliasPackageByName(alias.CommandName, clientConfig, con)
 	if err != nil {
-		con.PrintErrorf("Failed to install alias '%s': %s", alias.CommandName, err)
+		log.Errorf("Failed to install alias '%s': %s", alias.CommandName, err)
 		return
 	}
 }
@@ -139,7 +140,7 @@ func installAliasPackageByName(name string, clientConfig ArmoryHTTPConfig, con *
 		return err
 	}
 
-	con.PrintInfof("Downloading alias ...")
+	log.Infof("Downloading alias ...")
 
 	var sig *minisign.Signature
 	var tarGz []byte
@@ -171,7 +172,7 @@ func installAliasPackageByName(name string, clientConfig ArmoryHTTPConfig, con *
 	}
 	tmpFile.Close()
 
-	con.Printf(console.Clearln + "\r") // Clear the line
+	log.Printf(console.Clearln + "\r") // Clear the line
 
 	installPath := alias.InstallFromFile(tmpFile.Name(), true, con)
 	if installPath == nil {
@@ -197,13 +198,13 @@ func installExtension(ext *extensions.ExtensionManifest, clientConfig ArmoryHTTP
 		}
 		err := installExtensionPackageByName(dep, clientConfig, con)
 		if err != nil {
-			con.PrintErrorf("Failed to install extension dependency '%s': %s", dep, err)
+			log.Errorf("Failed to install extension dependency '%s': %s", dep, err)
 			return
 		}
 	}
 	err := installExtensionPackageByName(ext.CommandName, clientConfig, con)
 	if err != nil {
-		con.PrintErrorf("Failed to install extension '%s': %s", ext.CommandName, err)
+		log.Errorf("Failed to install extension '%s': %s", ext.CommandName, err)
 		return
 	}
 }
@@ -261,7 +262,7 @@ func installExtensionPackageByName(name string, clientConfig ArmoryHTTPConfig, c
 		return err
 	}
 
-	con.PrintInfof("Downloading extension ...")
+	log.Infof("Downloading extension ...")
 
 	var sig *minisign.Signature
 	var tarGz []byte
@@ -296,7 +297,7 @@ func installExtensionPackageByName(name string, clientConfig ArmoryHTTPConfig, c
 		return err
 	}
 
-	con.Printf(console.Clearln + "\r") // Clear download message
+	log.Printf(console.Clearln + "\r") // Clear download message
 
 	installPath := extensions.InstallFromFilePath(tmpFile.Name(), true, con)
 	if installPath == nil {

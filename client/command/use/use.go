@@ -29,6 +29,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/rsteube/carapace"
@@ -57,14 +58,14 @@ func UseCmd(cmd *cobra.Command, args []string) {
 		session, beacon, err = SelectSessionOrBeacon(con)
 	}
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	if session != nil {
-		con.PrintInfof("Active session %s (%s)\n", session.Name, session.ID)
+		log.Infof("Active session %s (%s)\n", session.Name, session.ID)
 		con.ActiveTarget.Set(session, nil)
 	} else if beacon != nil {
-		con.PrintInfof("Active beacon %s (%s)\n", beacon.Name, beacon.ID)
+		log.Infof("Active beacon %s (%s)\n", beacon.Name, beacon.ID)
 		con.ActiveTarget.Set(nil, beacon)
 	}
 }

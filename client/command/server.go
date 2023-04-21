@@ -33,9 +33,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// Load Reactions
 		n, err := reaction.LoadReactions()
 		if err != nil && !os.IsNotExist(err) {
-			log.PrintErrorf("Failed to load reactions: %s\n", err)
+			log.Errorf("Failed to load reactions: %s\n", err)
 		} else if n > 0 {
-			log.PrintInfof("Loaded %d reaction(s) from disk\n", n)
+			log.Infof("Loaded %d reaction(s) from disk\n", n)
 		}
 
 		// [ Groups ] ----------------------------------------------

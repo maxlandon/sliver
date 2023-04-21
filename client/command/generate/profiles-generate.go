@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +39,7 @@ func ProfilesGenerateCmd(cmd *cobra.Command, args []string) {
 	}
 	// name := ctx.Args.String("name")
 	if name == "" {
-		con.PrintErrorf("No profile name specified\n")
+		log.Errorf("No profile name specified\n")
 		return
 	}
 	save, _ := cmd.Flags().GetString("save")
@@ -55,11 +56,11 @@ func ProfilesGenerateCmd(cmd *cobra.Command, args []string) {
 		profile.Config.Name = buildImplantName(implantFile.Name)
 		_, err = con.Rpc.SaveImplantProfile(context.Background(), profile)
 		if err != nil {
-			con.PrintErrorf("could not update implant profile: %v\n", err)
+			log.Errorf("could not update implant profile: %v\n", err)
 			return
 		}
 	} else {
-		con.PrintErrorf("No profile with name '%s'", name)
+		log.Errorf("No profile with name '%s'", name)
 	}
 }
 

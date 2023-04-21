@@ -32,6 +32,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/util"
 )
@@ -49,25 +50,25 @@ func StageListenerCmd(cmd *cobra.Command, args []string) {
 	compress := strings.ToLower(compressF)
 
 	if profileName == "" || listenerURL == "" {
-		con.PrintErrorf("Missing required flags, see `help stage-listener` for more info\n")
+		log.Errorf("Missing required flags, see `help stage-listener` for more info\n")
 		return
 	}
 
 	// parse listener url
 	stagingURL, err := url.Parse(listenerURL)
 	if err != nil {
-		con.PrintErrorf("Listener-url format not supported")
+		log.Errorf("Listener-url format not supported")
 		return
 	}
 	stagingPort, err := strconv.ParseUint(stagingURL.Port(), 10, 32)
 	if err != nil {
-		con.PrintErrorf("error parsing staging port: %v\n", err)
+		log.Errorf("error parsing staging port: %v\n", err)
 		return
 	}
 
 	profile := generate.GetImplantProfileByName(profileName, con)
 	if profile == nil {
-		con.PrintErrorf("Profile not found\n")
+		log.Errorf("Profile not found\n")
 		return
 	}
 
@@ -75,7 +76,7 @@ func StageListenerCmd(cmd *cobra.Command, args []string) {
 	if aesEncryptKey != "" {
 		// check if aes encryption key is correct length
 		if len(aesEncryptKey)%16 != 0 {
-			con.PrintErrorf("Incorrect length of AES Key\n")
+			log.Errorf("Incorrect length of AES Key\n")
 			return
 		}
 
@@ -86,7 +87,7 @@ func StageListenerCmd(cmd *cobra.Command, args []string) {
 
 		// check if aes iv is correct length
 		if len(aesEncryptIv)%16 != 0 {
-			con.PrintErrorf("Incorrect length of AES IV\n")
+			log.Errorf("Incorrect length of AES IV\n")
 			return
 		}
 
@@ -95,7 +96,7 @@ func StageListenerCmd(cmd *cobra.Command, args []string) {
 
 	stage2, err := generate.GetSliverBinary(profile, con)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 
@@ -138,10 +139,10 @@ func StageListenerCmd(cmd *cobra.Command, args []string) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			con.PrintErrorf("Error starting HTTP staging listener: %s\n", err)
+			log.Errorf("Error starting HTTP staging listener: %s\n", err)
 			return
 		}
-		con.PrintInfof("Job %d (http) started\n", stageListener.GetJobID())
+		log.Infof("Job %d (http) started\n", stageListener.GetJobID())
 	case "https":
 		letsEncrypt, _ := cmd.Flags().GetBool("lets-encrypt")
 		if prependSize {
@@ -150,7 +151,7 @@ func StageListenerCmd(cmd *cobra.Command, args []string) {
 		cert, key, err := getLocalCertificatePair(cmd)
 		if err != nil {
 			con.Println()
-			con.PrintErrorf("Failed to load local certificate %s\n", err)
+			log.Errorf("Failed to load local certificate %s\n", err)
 			return
 		}
 		ctrl := make(chan bool)
@@ -167,10 +168,10 @@ func StageListenerCmd(cmd *cobra.Command, args []string) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			con.PrintErrorf("Error starting HTTPS staging listener: %v\n", err)
+			log.Errorf("Error starting HTTPS staging listener: %v\n", err)
 			return
 		}
-		con.PrintInfof("Job %d (https) started\n", stageListener.GetJobID())
+		log.Infof("Job %d (https) started\n", stageListener.GetJobID())
 	case "tcp":
 		// Always prepend payload size for TCP stagers
 		stage2 = prependPayloadSize(stage2)
@@ -185,19 +186,19 @@ func StageListenerCmd(cmd *cobra.Command, args []string) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			con.PrintErrorf("Error starting TCP staging listener: %v\n", err)
+			log.Errorf("Error starting TCP staging listener: %v\n", err)
 			return
 		}
-		con.PrintInfof("Job %d (tcp) started\n", stageListener.GetJobID())
+		log.Infof("Job %d (tcp) started\n", stageListener.GetJobID())
 
 	default:
-		con.PrintErrorf("Unsupported staging protocol: %s\n", stagingURL.Scheme)
+		log.Errorf("Unsupported staging protocol: %s\n", stagingURL.Scheme)
 		return
 	}
 
 	if aesEncrypt {
-		con.PrintInfof("AES KEY: %v\n", aesEncryptKey)
-		con.PrintInfof("AES IV: %v\n", aesEncryptIv)
+		log.Infof("AES KEY: %v\n", aesEncryptKey)
+		log.Infof("AES IV: %v\n", aesEncryptIv)
 	}
 }
 

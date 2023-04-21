@@ -41,7 +41,7 @@ func AliasesCmd(cmd *cobra.Command, args []string) error {
 	if 0 < len(loadedAliases) {
 		PrintAliases()
 	} else {
-		log.PrintInfof("No aliases installed, use the 'armory' command to automatically install some\n")
+		log.Infof("No aliases installed, use the 'armory' command to automatically install some\n")
 	}
 
 	return nil
@@ -135,9 +135,7 @@ func getInstalledManifests() map[string]*AliasManifest {
 func AliasCompleter() carapace.Action {
 	results := []string{}
 	for name := range loadedAliases {
-		// if strings.HasPrefix(name, prefix) {
 		results = append(results, name)
-		// }
 	}
 	return carapace.ActionValues(results...).Tag("aliases")
 }

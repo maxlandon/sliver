@@ -24,6 +24,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/spf13/cobra"
 )
@@ -38,12 +39,12 @@ func ProfilesRmCmd(cmd *cobra.Command, args []string) {
 	}
 	// name := ctx.Args.String("name")
 	if name == "" {
-		con.PrintErrorf("No profile name specified\n")
+		log.Errorf("No profile name specified\n")
 		return
 	}
 	profile := GetImplantProfileByName(name, con)
 	if profile == nil {
-		con.PrintErrorf("No profile found with name '%s'\n", name)
+		log.Errorf("No profile found with name '%s'\n", name)
 		return
 	}
 	confirm := false
@@ -56,7 +57,7 @@ func ProfilesRmCmd(cmd *cobra.Command, args []string) {
 		Name: name,
 	})
 	if err != nil {
-		con.PrintErrorf("Failed to delete profile %s\n", err)
+		log.Errorf("Failed to delete profile %s\n", err)
 		return
 	}
 }

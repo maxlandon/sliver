@@ -22,6 +22,7 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +34,7 @@ func CloseSessionCmd(cmd *cobra.Command, args []string) {
 	// Get the active session
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
-		con.PrintErrorf("No active session\n")
+		log.Errorf("No active session\n")
 		return
 	}
 
@@ -42,7 +43,7 @@ func CloseSessionCmd(cmd *cobra.Command, args []string) {
 		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return
 	}
 

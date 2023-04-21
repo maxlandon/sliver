@@ -23,6 +23,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/kill"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/spf13/cobra"
 )
@@ -33,22 +34,22 @@ func SessionsPruneCmd(cmd *cobra.Command, args []string) {
 
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	if len(sessions.GetSessions()) == 0 {
-		con.PrintInfof("No sessions to prune\n")
+		log.Infof("No sessions to prune\n")
 		return
 	}
 	for _, session := range sessions.GetSessions() {
 		if session.IsDead {
-			con.Printf("Pruning session %s ... ", session.ID)
+			log.Printf("Pruning session %s ... ", session.ID)
 			err = kill.KillSession(session, cmd, con)
 			if err != nil {
-				con.Printf("failed!\n")
-				con.PrintErrorf("%s\n", err)
+				log.Printf("failed!\n")
+				log.Errorf("%s\n", err)
 			} else {
-				con.Printf("done!\n")
+				log.Printf("done!\n")
 			}
 		}
 	}

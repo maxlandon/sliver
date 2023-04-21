@@ -22,6 +22,7 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/spf13/cobra"
 )
@@ -35,7 +36,7 @@ func WGListenerCmd(cmd *cobra.Command, args []string) {
 	keyExchangePort, _ := cmd.Flags().GetUint32("key-port")
 	persistent, _ := cmd.Flags().GetBool("persistent")
 
-	con.PrintInfof("Starting Wireguard listener ...\n")
+	log.Infof("Starting Wireguard listener ...\n")
 	wg, err := con.Rpc.StartWGListener(context.Background(), &clientpb.WGListenerReq{
 		Port:       lport,
 		NPort:      nport,
@@ -43,8 +44,8 @@ func WGListenerCmd(cmd *cobra.Command, args []string) {
 		Persistent: persistent,
 	})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 	} else {
-		con.PrintInfof("Successfully started job #%d\n", wg.JobID)
+		log.Infof("Successfully started job #%d\n", wg.JobID)
 	}
 }

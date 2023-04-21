@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/spf13/cobra"
 )
@@ -44,9 +45,9 @@ func ProfilesNewCmd(cmd *cobra.Command, args []string) {
 	}
 	resp, err := con.Rpc.SaveImplantProfile(context.Background(), profile)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 	} else {
-		con.PrintInfof("Saved new implant profile %s\n", resp.Name)
+		log.Infof("Saved new implant profile %s\n", resp.Name)
 	}
 }
 
@@ -60,7 +61,7 @@ func ProfilesNewBeaconCmd(cmd *cobra.Command, args []string) {
 	}
 	// name := ctx.Args.String("name")
 	if name == "" {
-		con.PrintErrorf("No profile name specified\n")
+		log.Errorf("No profile name specified\n")
 		return
 	}
 	config := parseCompileFlags(cmd, con)
@@ -70,7 +71,7 @@ func ProfilesNewBeaconCmd(cmd *cobra.Command, args []string) {
 	config.IsBeacon = true
 	err := parseBeaconFlags(cmd, con, config)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	profile := &clientpb.ImplantProfile{
@@ -79,8 +80,8 @@ func ProfilesNewBeaconCmd(cmd *cobra.Command, args []string) {
 	}
 	resp, err := con.Rpc.SaveImplantProfile(context.Background(), profile)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 	} else {
-		con.PrintInfof("Saved new implant profile (beacon) %s\n", resp.Name)
+		log.Infof("Saved new implant profile (beacon) %s\n", resp.Name)
 	}
 }

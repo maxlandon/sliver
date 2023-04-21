@@ -25,6 +25,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -48,7 +49,7 @@ func ImplantsCmd(cmd *cobra.Command, args []string) {
 
 	builds, err := con.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	implantBuildFilters := ImplantBuildFilter{}
@@ -56,7 +57,7 @@ func ImplantsCmd(cmd *cobra.Command, args []string) {
 	if 0 < len(builds.Configs) {
 		PrintImplantBuilds(builds.Configs, implantBuildFilters, con)
 	} else {
-		con.PrintInfof("No implant builds\n")
+		log.Infof("No implant builds\n")
 	}
 }
 

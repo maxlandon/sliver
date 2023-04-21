@@ -36,7 +36,7 @@ func AliasesRemoveCmd(cmd *cobra.Command, args []string) {
 	name := args[0]
 	// name := ctx.Args.String("name")
 	if name == "" {
-		log.PrintErrorf("Extension name is required\n")
+		log.Errorf("Extension name is required\n")
 		return
 	}
 	confirm := false
@@ -47,10 +47,10 @@ func AliasesRemoveCmd(cmd *cobra.Command, args []string) {
 	}
 	err := RemoveAliasByCommandName(name, console.Client)
 	if err != nil {
-		log.PrintErrorf("Error removing alias: %s\n", err)
+		log.Errorf("Error removing alias: %s\n", err)
 		return
 	} else {
-		log.PrintInfof("Alias '%s' removed\n", name)
+		log.Infof("Alias '%s' removed\n", name)
 	}
 }
 

@@ -28,6 +28,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/kill"
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -46,7 +47,7 @@ func SessionsCmd(cmd *cobra.Command, args []string) {
 
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 
@@ -55,10 +56,10 @@ func SessionsCmd(cmd *cobra.Command, args []string) {
 		for _, session := range sessions.Sessions {
 			err := kill.KillSession(session, cmd, con)
 			if err != nil {
-				con.PrintErrorf("%s\n", err)
+				log.Errorf("%s\n", err)
 			}
 			con.Println()
-			con.PrintInfof("Killed %s (%s)\n", session.Name, session.ID)
+			log.Infof("Killed %s (%s)\n", session.Name, session.ID)
 		}
 		return
 	}
@@ -69,10 +70,10 @@ func SessionsCmd(cmd *cobra.Command, args []string) {
 			if session.IsDead {
 				err := kill.KillSession(session, cmd, con)
 				if err != nil {
-					con.PrintErrorf("%s\n", err)
+					log.Errorf("%s\n", err)
 				}
 				con.Println()
-				con.PrintInfof("Killed %s (%s)\n", session.Name, session.ID)
+				log.Infof("Killed %s (%s)\n", session.Name, session.ID)
 			}
 		}
 		return
@@ -85,7 +86,7 @@ func SessionsCmd(cmd *cobra.Command, args []string) {
 		}
 		err := kill.KillSession(session, cmd, con)
 		if err != nil {
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 		}
 		return
 	}
@@ -94,9 +95,9 @@ func SessionsCmd(cmd *cobra.Command, args []string) {
 		session := con.GetSession(interact)
 		if session != nil {
 			con.ActiveTarget.Set(session, nil)
-			con.PrintInfof("Active session %s (%s)\n", session.Name, ShortSessionID(session.ID))
+			log.Infof("Active session %s (%s)\n", session.Name, ShortSessionID(session.ID))
 		} else {
-			con.PrintErrorf("Invalid session name or session number: %s\n", interact)
+			log.Errorf("Invalid session name or session number: %s\n", interact)
 		}
 	} else {
 		filter, _ := cmd.Flags().GetString("filter")
@@ -106,7 +107,7 @@ func SessionsCmd(cmd *cobra.Command, args []string) {
 
 			filterRegex, err = regexp.Compile(filter)
 			if err != nil {
-				con.PrintErrorf("%s\n", err)
+				log.Errorf("%s\n", err)
 				return
 			}
 		}
@@ -118,7 +119,7 @@ func SessionsCmd(cmd *cobra.Command, args []string) {
 		if 0 < len(sessionsMap) {
 			PrintSessions(sessionsMap, filter, filterRegex, con)
 		} else {
-			con.PrintInfof("No sessions 🙁\n")
+			log.Infof("No sessions 🙁\n")
 		}
 	}
 }
@@ -231,7 +232,7 @@ func PrintSessions(sessions map[string]*clientpb.Session, filter string, filterR
 		}
 	}
 
-	con.Printf("%s\n", tw.Render())
+	log.Printf("%s\n", tw.Render())
 }
 
 // ShortSessionID - Shorten the session ID

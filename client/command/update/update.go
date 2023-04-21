@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -40,6 +39,7 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/version"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/util"
@@ -80,7 +80,7 @@ func UpdateCmd(cmd *cobra.Command, args []string) {
 	if proxy != "" {
 		proxyURL, err = url.Parse(proxy)
 		if err != nil {
-			con.PrintErrorf("%s", err)
+			log.Errorf("%s", err)
 			return
 		}
 	}
@@ -99,24 +99,24 @@ func UpdateCmd(cmd *cobra.Command, args []string) {
 		},
 	}
 
-	con.Printf("\nChecking for updates ... ")
+	log.Printf("\nChecking for updates ... ")
 	prereleases, _ := cmd.Flags().GetBool("prereleases")
 	release, err := version.CheckForUpdates(client, prereleases)
-	con.Printf("done!\n\n")
+	log.Printf("done!\n\n")
 	if err != nil {
-		con.PrintErrorf("Update check failed %s\n", err)
+		log.Errorf("Update check failed %s\n", err)
 		return
 	}
 
 	if release != nil {
 		saveTo, err := updateSavePath(cmd)
 		if err != nil {
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 			return
 		}
 		updateAvailable(con, client, release, saveTo)
 	} else {
-		con.PrintInfof("No new releases.\n")
+		log.Infof("No new releases.\n")
 	}
 	now := time.Now()
 	lastCheck := []byte(fmt.Sprintf("%d", now.Unix()))
@@ -135,21 +135,21 @@ func VerboseVersionsCmd(cmd *cobra.Command, args []string) {
 	clientVer := version.FullVersion()
 	serverVer, err := con.Rpc.GetVersion(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("Failed to check server version %s\n", err)
+		log.Errorf("Failed to check server version %s\n", err)
 		return
 	}
 
-	con.PrintInfof("Client %s - %s/%s\n", clientVer, runtime.GOOS, runtime.GOARCH)
+	log.Infof("Client %s - %s/%s\n", clientVer, runtime.GOOS, runtime.GOARCH)
 	clientCompiledAt, _ := version.Compiled()
-	con.Printf("    Compiled at %s\n", clientCompiledAt)
-	con.Printf("    Compiled with %s\n\n", version.GoVersion)
+	log.Printf("    Compiled at %s\n", clientCompiledAt)
+	log.Printf("    Compiled with %s\n\n", version.GoVersion)
 
 	con.Println()
-	con.PrintInfof("Server v%d.%d.%d - %s - %s/%s\n",
+	log.Infof("Server v%d.%d.%d - %s - %s/%s\n",
 		serverVer.Major, serverVer.Minor, serverVer.Patch, serverVer.Commit,
 		serverVer.OS, serverVer.Arch)
 	serverCompiledAt := time.Unix(serverVer.CompiledAt, 0)
-	con.Printf("    Compiled at %s\n", serverCompiledAt)
+	log.Printf("    Compiled at %s\n", serverCompiledAt)
 }
 
 func updateSavePath(cmd *cobra.Command) (string, error) {
@@ -227,12 +227,12 @@ func updateAvailable(con *console.SliverConsole, client *http.Client, release *v
 	serverAsset := serverAssetForGOOS(release.Assets)
 	clientAsset := clientAssetForGOOS(release.Assets)
 
-	con.Printf("New version available %s\n", release.TagName)
+	log.Printf("New version available %s\n", release.TagName)
 	if serverAsset != nil {
-		con.Printf(" - Server: %s\n", util.ByteCountBinary(int64(serverAsset.Size)))
+		log.Printf(" - Server: %s\n", util.ByteCountBinary(int64(serverAsset.Size)))
 	}
 	if clientAsset != nil {
-		con.Printf(" - Client: %s\n", util.ByteCountBinary(int64(clientAsset.Size)))
+		log.Printf(" - Client: %s\n", util.ByteCountBinary(int64(clientAsset.Size)))
 	}
 	con.Println()
 
@@ -242,19 +242,19 @@ func updateAvailable(con *console.SliverConsole, client *http.Client, release *v
 	}
 	survey.AskOne(prompt, &confirm)
 	if confirm {
-		con.Printf("Please wait ...")
+		log.Printf("Please wait ...")
 		err := downloadAsset(client, serverAsset, saveTo)
 		if err != nil {
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 			return
 		}
 		err = downloadAsset(client, clientAsset, saveTo)
 		if err != nil {
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 			return
 		}
 		con.Println(console.Clearln)
-		con.PrintInfof("Saved updates to: %s\n", saveTo)
+		log.Infof("Saved updates to: %s\n", saveTo)
 	}
 }
 

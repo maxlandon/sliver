@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/spf13/cobra"
 )
@@ -42,16 +43,16 @@ func HTTPListenerCmd(cmd *cobra.Command, args []string) {
 
 	longPollTimeout, err := time.ParseDuration(pollTimeout)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	longPollJitter, err := time.ParseDuration(pollJitter)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 
-	con.PrintInfof("Starting HTTP %s:%d listener ...\n", domain, lport)
+	log.Infof("Starting HTTP %s:%d listener ...\n", domain, lport)
 	http, err := con.Rpc.StartHTTPListener(context.Background(), &clientpb.HTTPListenerReq{
 		Domain:          domain,
 		Website:         website,
@@ -64,8 +65,8 @@ func HTTPListenerCmd(cmd *cobra.Command, args []string) {
 		LongPollJitter:  int64(longPollJitter),
 	})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 	} else {
-		con.PrintInfof("Successfully started job #%d\n", http.JobID)
+		log.Infof("Successfully started job #%d\n", http.JobID)
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -18,14 +19,14 @@ func CanariesCmd(cmd *cobra.Command, args []string) {
 
 	canaries, err := con.Rpc.Canaries(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("Failed to list canaries %s", err)
+		log.Errorf("Failed to list canaries %s", err)
 		return
 	}
 	if 0 < len(canaries.Canaries) {
 		burnedOnly, _ := cmd.Flags().GetBool("burned")
 		PrintCanaries(con, canaries.Canaries, burnedOnly)
 	} else {
-		con.PrintInfof("No canaries in database\n")
+		log.Infof("No canaries in database\n")
 	}
 }
 
@@ -63,5 +64,5 @@ func PrintCanaries(con *console.SliverConsole, canaries []*clientpb.DNSCanary, b
 		}
 		tw.AppendRow(row)
 	}
-	con.Printf("%s\n", tw.Render())
+	log.Printf("%s\n", tw.Render())
 }

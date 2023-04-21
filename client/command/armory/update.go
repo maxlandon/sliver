@@ -26,6 +26,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/extensions"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/spf13/cobra"
 )
 
@@ -33,37 +34,37 @@ import (
 func ArmoryUpdateCmd(cmd *cobra.Command, args []string) {
 	con := console.Client
 
-	con.PrintInfof("Refreshing package cache ... ")
+	log.Infof("Refreshing package cache ... ")
 	clientConfig := parseArmoryHTTPConfig(cmd)
 	refresh(clientConfig)
-	con.Printf(console.Clearln + "\r")
+	log.Printf(console.Clearln + "\r")
 
 	// Aliases
 	aliasUpdates := checkForAliasUpdates(clientConfig, con)
 	if 0 < len(aliasUpdates) {
-		con.PrintInfof("%d alias(es) out of date: %s\n", len(aliasUpdates), strings.Join(aliasUpdates, ", "))
+		log.Infof("%d alias(es) out of date: %s\n", len(aliasUpdates), strings.Join(aliasUpdates, ", "))
 		for _, aliasName := range aliasUpdates {
 			err := installAliasPackageByName(aliasName, clientConfig, con)
 			if err != nil {
-				con.PrintErrorf("Failed to update %s: %s\n", aliasName, err)
+				log.Errorf("Failed to update %s: %s\n", aliasName, err)
 			}
 		}
 	} else {
-		con.PrintInfof("All aliases up to date!\n")
+		log.Infof("All aliases up to date!\n")
 	}
 
 	// Extensions
 	extUpdates := checkForExtensionUpdates(clientConfig, con)
 	if 0 < len(extUpdates) {
-		con.PrintInfof("%d extension(s) out of date: %s\n", len(extUpdates), strings.Join(extUpdates, ", "))
+		log.Infof("%d extension(s) out of date: %s\n", len(extUpdates), strings.Join(extUpdates, ", "))
 		for _, extName := range extUpdates {
 			err := installExtensionPackageByName(extName, clientConfig, con)
 			if err != nil {
-				con.PrintErrorf("Failed to update %s: %s\n", extName, err)
+				log.Errorf("Failed to update %s: %s\n", extName, err)
 			}
 		}
 	} else {
-		con.PrintInfof("All extensions up to date!\n")
+		log.Infof("All extensions up to date!\n")
 	}
 }
 

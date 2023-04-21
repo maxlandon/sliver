@@ -22,6 +22,7 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +35,7 @@ func MTLSListenerCmd(cmd *cobra.Command, args []string) {
 	lport, _ := cmd.Flags().GetUint32("lport")
 	persistent, _ := cmd.Flags().GetBool("persistent")
 
-	con.PrintInfof("Starting mTLS listener ...\n")
+	log.Infof("Starting mTLS listener ...\n")
 	mtls, err := con.Rpc.StartMTLSListener(context.Background(), &clientpb.MTLSListenerReq{
 		Host:       lhost,
 		Port:       lport,
@@ -42,8 +43,8 @@ func MTLSListenerCmd(cmd *cobra.Command, args []string) {
 	})
 	con.Println()
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 	} else {
-		con.PrintInfof("Successfully started job #%d\n", mtls.JobID)
+		log.Infof("Successfully started job #%d\n", mtls.JobID)
 	}
 }

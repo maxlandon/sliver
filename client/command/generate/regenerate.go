@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/spf13/cobra"
 )
@@ -45,22 +46,22 @@ func RegenerateCmd(cmd *cobra.Command, args []string) {
 		ImplantName: name,
 	})
 	if err != nil {
-		con.PrintErrorf("Failed to regenerate implant %s\n", err)
+		log.Errorf("Failed to regenerate implant %s\n", err)
 		return
 	}
 	if regenerate.File == nil {
-		con.PrintErrorf("Failed to regenerate implant (no data)\n")
+		log.Errorf("Failed to regenerate implant (no data)\n")
 		return
 	}
 	saveTo, err := saveLocation(save, regenerate.File.Name)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	err = os.WriteFile(saveTo, regenerate.File.Data, 0o700)
 	if err != nil {
-		con.PrintErrorf("Failed to write to %s\n", err)
+		log.Errorf("Failed to write to %s\n", err)
 		return
 	}
-	con.PrintInfof("Implant binary saved to: %s\n", saveTo)
+	log.Infof("Implant binary saved to: %s\n", saveTo)
 }

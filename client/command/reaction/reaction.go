@@ -45,7 +45,7 @@ func ReactionCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		totalReactions += len(reactions)
 	}
 	if totalReactions == 0 {
-		log.PrintInfof("No reactions set\n")
+		log.Infof("No reactions set\n")
 	}
 }
 

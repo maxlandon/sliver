@@ -24,6 +24,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/extensions"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/spf13/cobra"
 )
 
@@ -31,20 +32,20 @@ import (
 func ArmorySearchCmd(cmd *cobra.Command, args []string) {
 	con := console.Client
 
-	con.PrintInfof("Refreshing package cache ... ")
+	log.Infof("Refreshing package cache ... ")
 	clientConfig := parseArmoryHTTPConfig(cmd)
 	refresh(clientConfig)
-	con.Printf(console.Clearln + "\r")
+	log.Printf(console.Clearln + "\r")
 
 	rawNameExpr := args[0]
 	// rawNameExpr := ctx.Args.String("name")
 	if rawNameExpr == "" {
-		con.PrintErrorf("Please specify a search term!\n")
+		log.Errorf("Please specify a search term!\n")
 		return
 	}
 	nameExpr, err := regexp.Compile(rawNameExpr)
 	if err != nil {
-		con.PrintErrorf("Invalid regular expression: %s\n", err)
+		log.Errorf("Invalid regular expression: %s\n", err)
 		return
 	}
 
@@ -62,7 +63,7 @@ func ArmorySearchCmd(cmd *cobra.Command, args []string) {
 		}
 	}
 	if len(matchedAliases) == 0 && len(matchedExts) == 0 {
-		con.PrintInfof("No packages found matching '%s'\n", rawNameExpr)
+		log.Infof("No packages found matching '%s'\n", rawNameExpr)
 		return
 	}
 	PrintArmoryPackages(matchedAliases, matchedExts, con)

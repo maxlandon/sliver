@@ -21,6 +21,7 @@ package use
 import (
 	"github.com/bishopfox/sliver/client/command/sessions"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/spf13/cobra"
 )
 
@@ -31,15 +32,15 @@ func UseSessionCmd(cmd *cobra.Command, args []string) {
 	session, err := sessions.SelectSession(false, con)
 	if session != nil {
 		con.ActiveTarget.Set(session, nil)
-		con.PrintInfof("Active session %s (%s)\n", session.Name, session.ID)
+		log.Infof("Active session %s (%s)\n", session.Name, session.ID)
 	} else if err != nil {
 		switch err {
 		case sessions.ErrNoSessions:
-			con.PrintErrorf("No sessions available\n")
+			log.Errorf("No sessions available\n")
 		case sessions.ErrNoSelection:
-			con.PrintErrorf("No session selected\n")
+			log.Errorf("No session selected\n")
 		default:
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 		}
 	}
 }

@@ -28,6 +28,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +40,7 @@ func GenerateStagerCmd(cmd *cobra.Command, args []string) {
 	var stageProto clientpb.StageProtocol
 	lhost, _ := cmd.Flags().GetString("lhost")
 	if lhost == "" {
-		con.PrintErrorf("Please specify a listening host")
+		log.Errorf("Please specify a listening host")
 		return
 	}
 	match, err := regexp.MatchString(`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`, lhost)
@@ -49,7 +50,7 @@ func GenerateStagerCmd(cmd *cobra.Command, args []string) {
 	if !match {
 		addr, err := net.LookupHost(lhost)
 		if err != nil {
-			con.PrintErrorf("Error resolving %s: %v\n", lhost, err)
+			log.Errorf("Error resolving %s: %v\n", lhost, err)
 			return
 		}
 		if len(addr) > 1 {
@@ -59,7 +60,7 @@ func GenerateStagerCmd(cmd *cobra.Command, args []string) {
 			}
 			err := survey.AskOne(prompt, &lhost)
 			if err != nil {
-				con.PrintErrorf("Error: %v\n", err)
+				log.Errorf("Error: %v\n", err)
 				return
 			}
 		} else {
@@ -89,7 +90,7 @@ func GenerateStagerCmd(cmd *cobra.Command, args []string) {
 	case "https":
 		stageProto = clientpb.StageProtocol_HTTPS
 	default:
-		con.PrintErrorf("%s staging protocol not supported\n", proto)
+		log.Errorf("%s staging protocol not supported\n", proto)
 		return
 	}
 
@@ -108,7 +109,7 @@ func GenerateStagerCmd(cmd *cobra.Command, args []string) {
 	<-ctrl
 
 	if err != nil {
-		con.PrintErrorf("Error: %v", err)
+		log.Errorf("Error: %v", err)
 		return
 	}
 
@@ -120,12 +121,12 @@ func GenerateStagerCmd(cmd *cobra.Command, args []string) {
 
 		err = os.WriteFile(saveTo, stageFile.GetFile().GetData(), 0o700)
 		if err != nil {
-			con.PrintErrorf("Failed to write to: %s\n", saveTo)
+			log.Errorf("Failed to write to: %s\n", saveTo)
 			return
 		}
-		con.PrintInfof("Sliver implant stager saved to: %s\n", saveTo)
+		log.Infof("Sliver implant stager saved to: %s\n", saveTo)
 	} else {
-		con.PrintInfof("Here's your stager:")
+		log.Infof("Here's your stager:")
 		con.Println(string(stageFile.GetFile().GetData()))
 	}
 }

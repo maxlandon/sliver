@@ -40,9 +40,9 @@ func SliverCommands() *cobra.Command {
 	}
 	// if 0 < n {
 	// 	if n == 1 {
-	// 		console.Client.PrintInfof("Loaded %d alias from disk\n", n)
+	// 		log.Infof("Loaded %d alias from disk\n", n)
 	// 	} else {
-	// 		console.Client.PrintInfof("Loaded %d aliases from disk\n", n)
+	// 		log.Infof("Loaded %d aliases from disk\n", n)
 	// 	}
 	// }
 
@@ -60,9 +60,9 @@ func SliverCommands() *cobra.Command {
 		n++
 	}
 	// if 0 < n {
-	// 	con.PrintInfof("Loaded %d extension(s) from disk\n", n)
+	// 	log.Infof("Loaded %d extension(s) from disk\n", n)
 	// }
-	// con.App.SetPrintHelp(help.HelpCmd(con)) // Responsible for display long-form help templates, etc.
+	// .App.SetPrintHelp(help.HelpCmd(con)) // Responsible for display long-form help templates, etc.
 
 	// [ Reconfig ] ---------------------------------------------------------------
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +27,7 @@ func GenerateBeaconCmd(cmd *cobra.Command, args []string) {
 	config.IsBeacon = true
 	err := parseBeaconFlags(cmd, con, config)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	save, _ := cmd.Flags().GetString("save")

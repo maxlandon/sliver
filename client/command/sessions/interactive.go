@@ -25,6 +25,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/spf13/cobra"
@@ -40,7 +41,7 @@ func InteractiveCmd(cmd *cobra.Command, con *console.SliverConsole) {
 	delayF, _ := cmd.Flags().GetString("delay")
 	delay, err := time.ParseDuration(delayF)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 
@@ -50,7 +51,7 @@ func InteractiveCmd(cmd *cobra.Command, con *console.SliverConsole) {
 	mtlsC2F, _ := cmd.Flags().GetString("mtls")
 	mtlsC2, err := generate.ParseMTLSc2(mtlsC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return
 	}
 	c2s = append(c2s, mtlsC2...)
@@ -58,7 +59,7 @@ func InteractiveCmd(cmd *cobra.Command, con *console.SliverConsole) {
 	wgC2F, _ := cmd.Flags().GetString("wg")
 	wgC2, err := generate.ParseWGc2(wgC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return
 	}
 	c2s = append(c2s, wgC2...)
@@ -66,7 +67,7 @@ func InteractiveCmd(cmd *cobra.Command, con *console.SliverConsole) {
 	httpC2F, _ := cmd.Flags().GetString("http")
 	httpC2, err := generate.ParseHTTPc2(httpC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return
 	}
 	c2s = append(c2s, httpC2...)
@@ -74,7 +75,7 @@ func InteractiveCmd(cmd *cobra.Command, con *console.SliverConsole) {
 	dnsC2F, _ := cmd.Flags().GetString("dns")
 	dnsC2, err := generate.ParseDNSc2(dnsC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return
 	}
 	c2s = append(c2s, dnsC2...)
@@ -82,7 +83,7 @@ func InteractiveCmd(cmd *cobra.Command, con *console.SliverConsole) {
 	namedPipeC2F, _ := cmd.Flags().GetString("named-pipe")
 	namedPipeC2, err := generate.ParseNamedPipec2(namedPipeC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return
 	}
 	c2s = append(c2s, namedPipeC2...)
@@ -90,31 +91,31 @@ func InteractiveCmd(cmd *cobra.Command, con *console.SliverConsole) {
 	tcpPivotC2F, _ := cmd.Flags().GetString("tcp-pivot")
 	tcpPivotC2, err := generate.ParseTCPPivotc2(tcpPivotC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return
 	}
 	c2s = append(c2s, tcpPivotC2...)
 
 	// No flags, parse the current beacon's ActiveC2 instead
 	if len(c2s) == 0 {
-		con.PrintInfof("Using beacon's active C2 endpoint: %s\n", beacon.ActiveC2)
+		log.Infof("Using beacon's active C2 endpoint: %s\n", beacon.ActiveC2)
 		c2url, err := url.Parse(beacon.ActiveC2)
 		if err != nil {
-			con.PrintErrorf("%s\n", err.Error())
+			log.Errorf("%s\n", err.Error())
 			return
 		}
 		switch c2url.Scheme {
 		case "mtls":
 			mtlsC2, err = generate.ParseMTLSc2(beacon.ActiveC2)
 			if err != nil {
-				con.PrintErrorf("%s\n", err.Error())
+				log.Errorf("%s\n", err.Error())
 				return
 			}
 			c2s = append(c2s, mtlsC2...)
 		case "wg":
 			wgC2, err = generate.ParseWGc2(beacon.ActiveC2)
 			if err != nil {
-				con.PrintErrorf("%s\n", err.Error())
+				log.Errorf("%s\n", err.Error())
 				return
 			}
 			c2s = append(c2s, wgC2...)
@@ -123,33 +124,33 @@ func InteractiveCmd(cmd *cobra.Command, con *console.SliverConsole) {
 		case "http":
 			httpC2, err = generate.ParseHTTPc2(beacon.ActiveC2)
 			if err != nil {
-				con.PrintErrorf("%s\n", err.Error())
+				log.Errorf("%s\n", err.Error())
 				return
 			}
 			c2s = append(c2s, httpC2...)
 		case "dns":
 			dnsC2, err = generate.ParseDNSc2(beacon.ActiveC2)
 			if err != nil {
-				con.PrintErrorf("%s\n", err.Error())
+				log.Errorf("%s\n", err.Error())
 				return
 			}
 			c2s = append(c2s, dnsC2...)
 		case "namedpipe":
 			namedPipeC2, err = generate.ParseNamedPipec2(beacon.ActiveC2)
 			if err != nil {
-				con.PrintErrorf("%s\n", err.Error())
+				log.Errorf("%s\n", err.Error())
 				return
 			}
 			c2s = append(c2s, namedPipeC2...)
 		case "tcppivot":
 			tcpPivotC2, err = generate.ParseTCPPivotc2(beacon.ActiveC2)
 			if err != nil {
-				con.PrintErrorf("%s\n", err.Error())
+				log.Errorf("%s\n", err.Error())
 				return
 			}
 			c2s = append(c2s, tcpPivotC2...)
 		default:
-			con.PrintErrorf("Unsupported C2 scheme: %s\n", c2url.Scheme)
+			log.Errorf("Unsupported C2 scheme: %s\n", c2url.Scheme)
 			return
 		}
 	}
@@ -165,11 +166,11 @@ func InteractiveCmd(cmd *cobra.Command, con *console.SliverConsole) {
 
 	openSession, err = con.Rpc.OpenSession(context.Background(), openSession)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 	}
 	if openSession.Response != nil && openSession.Response.Async {
-		con.PrintAsyncResponse(openSession.Response)
+		log.AsyncResponse(openSession.Response)
 	} else {
-		con.PrintErrorf("rpc response missing!\n")
+		log.Errorf("rpc response missing!\n")
 	}
 }

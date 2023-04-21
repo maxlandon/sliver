@@ -22,7 +22,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/url"
 	"os"
@@ -35,6 +34,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/util"
@@ -105,14 +105,14 @@ func GenerateCmd(cmd *cobra.Command, args []string) {
 		_, err := externalBuild(config, save, con)
 		if err != nil {
 			if err == ErrNoExternalBuilder {
-				con.PrintErrorf("There are no external builders currently connected to the server\n")
-				con.PrintErrorf("See 'builders' command for more information\n")
+				log.Errorf("There are no external builders currently connected to the server\n")
+				log.Errorf("See 'builders' command for more information\n")
 			} else if err == ErrNoValidBuilders {
-				con.PrintErrorf("There are external builders connected to the server, but none can build the target you specified\n")
-				con.PrintErrorf("Invalid target %s\n", fmt.Sprintf("%s:%s/%s", config.Format, config.GOOS, config.GOARCH))
-				con.PrintErrorf("See 'builders' command for more information\n")
+				log.Errorf("There are external builders connected to the server, but none can build the target you specified\n")
+				log.Errorf("Invalid target %s\n", fmt.Sprintf("%s:%s/%s", config.Format, config.GOOS, config.GOARCH))
+				log.Errorf("See 'builders' command for more information\n")
 			} else {
-				con.PrintErrorf("%s\n", err)
+				log.Errorf("%s\n", err)
 			}
 			return
 		}
@@ -191,7 +191,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 		name = strings.ToLower(nameF)
 
 		if err := util.AllowedName(name); err != nil {
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 			return nil
 		}
 	}
@@ -201,7 +201,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 	mtlsC2F, _ := cmd.Flags().GetString("mtls")
 	mtlsC2, err := ParseMTLSc2(mtlsC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return nil
 	}
 	c2s = append(c2s, mtlsC2...)
@@ -209,7 +209,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 	wgC2F, _ := cmd.Flags().GetString("wg")
 	wgC2, err := ParseWGc2(wgC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return nil
 	}
 	wgKeyExchangePort, _ := cmd.Flags().GetUint32("key-exchange")
@@ -220,7 +220,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 	httpC2F, _ := cmd.Flags().GetString("http")
 	httpC2, err := ParseHTTPc2(httpC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return nil
 	}
 	c2s = append(c2s, httpC2...)
@@ -228,7 +228,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 	dnsC2F, _ := cmd.Flags().GetString("dns")
 	dnsC2, err := ParseDNSc2(dnsC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return nil
 	}
 	c2s = append(c2s, dnsC2...)
@@ -236,7 +236,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 	namedPipeC2F, _ := cmd.Flags().GetString("named-pipe")
 	namedPipeC2, err := ParseNamedPipec2(namedPipeC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return nil
 	}
 	c2s = append(c2s, namedPipeC2...)
@@ -244,7 +244,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 	tcpPivotC2F, _ := cmd.Flags().GetString("tcp-pivot")
 	tcpPivotC2, err := ParseTCPPivotc2(tcpPivotC2F)
 	if err != nil {
-		con.PrintErrorf("%s\n", err.Error())
+		log.Errorf("%s\n", err.Error())
 		return nil
 	}
 	c2s = append(c2s, tcpPivotC2...)
@@ -258,7 +258,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 	}
 
 	if len(mtlsC2) == 0 && len(wgC2) == 0 && len(httpC2) == 0 && len(dnsC2) == 0 && len(namedPipeC2) == 0 && len(tcpPivotC2) == 0 {
-		con.PrintErrorf("Must specify at least one of --mtls, --wg, --http, --dns, --named-pipe, or --tcp-pivot\n")
+		log.Errorf("Must specify at least one of --mtls, --wg, --http, --dns, --named-pipe, or --tcp-pivot\n")
 		return nil
 	}
 
@@ -323,11 +323,11 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 		return nil
 	}
 	if configFormat == clientpb.OutputFormat_SHELLCODE && targetOS != "windows" {
-		con.PrintErrorf("Shellcode format is currently only supported on Windows\n")
+		log.Errorf("Shellcode format is currently only supported on Windows\n")
 		return nil
 	}
 	if len(namedPipeC2) > 0 && targetOS != "windows" {
-		con.PrintErrorf("Named pipe pivoting can only be used in Windows.")
+		log.Errorf("Named pipe pivoting can only be used in Windows.")
 		return nil
 	}
 
@@ -341,16 +341,16 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 		uniqueWGIP, err := con.Rpc.GenerateUniqueIP(context.Background(), &commonpb.Empty{})
 		tunIP = net.ParseIP(uniqueWGIP.IP)
 		if err != nil {
-			con.PrintErrorf("Failed to generate unique ip for wg peer tun interface")
+			log.Errorf("Failed to generate unique ip for wg peer tun interface")
 			return nil
 		}
-		con.PrintInfof("Generated unique ip for wg peer tun interface: %s\n", tunIP.String())
+		log.Infof("Generated unique ip for wg peer tun interface: %s\n", tunIP.String())
 	}
 
 	// TODO: Use generics or something to check in a slice
 	connectionStrategy, _ := cmd.Flags().GetString("strategy")
 	if connectionStrategy != "" && connectionStrategy != "s" && connectionStrategy != "r" && connectionStrategy != "rd" {
-		con.PrintErrorf("Invalid connection strategy: %s\n", connectionStrategy)
+		log.Errorf("Invalid connection strategy: %s\n", connectionStrategy)
 		return nil
 	}
 
@@ -415,10 +415,10 @@ func getTargets(targetOS string, targetArch string, con *console.SliverConsole) 
 
 	target := fmt.Sprintf("%s/%s", targetOS, targetArch)
 	if _, ok := SupportedCompilerTargets[target]; !ok {
-		con.Printf("⚠️  Unsupported compiler target %s%s%s, but we can try to compile a generic implant.\n",
+		log.Printf("⚠️  Unsupported compiler target %s%s%s, but we can try to compile a generic implant.\n",
 			console.Bold, target, console.Normal,
 		)
-		con.Printf("⚠️  Generic implants do not support all commands/features.\n")
+		log.Printf("⚠️  Generic implants do not support all commands/features.\n")
 		prompt := &survey.Confirm{Message: "Attempt to build generic implant?"}
 		var confirm bool
 		survey.AskOne(prompt, &confirm)
@@ -658,24 +658,24 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 	if len(potentialBuilders) == 1 {
 		externalBuilder = potentialBuilders[0]
 	} else {
-		con.PrintInfof("Found %d external builders that can compile this configuration", len(potentialBuilders))
+		log.Infof("Found %d external builders that can compile this configuration", len(potentialBuilders))
 		externalBuilder, err = selectExternalBuilder(potentialBuilders, con)
 		if err != nil {
 			return nil, err
 		}
 	}
-	con.PrintInfof("Using external builder: %s\n", externalBuilder.Name)
+	log.Infof("Using external builder: %s\n", externalBuilder.Name)
 
 	if config.IsBeacon {
 		interval := time.Duration(config.BeaconInterval)
-		con.PrintInfof("Externally generating new %s/%s beacon implant binary (%v)\n", config.GOOS, config.GOARCH, interval)
+		log.Infof("Externally generating new %s/%s beacon implant binary (%v)\n", config.GOOS, config.GOARCH, interval)
 	} else {
-		con.PrintInfof("Externally generating new %s/%s implant binary\n", config.GOOS, config.GOARCH)
+		log.Infof("Externally generating new %s/%s implant binary\n", config.GOOS, config.GOARCH)
 	}
 	if config.ObfuscateSymbols {
-		con.PrintInfof("%sSymbol obfuscation is enabled%s\n", console.Bold, console.Normal)
+		log.Infof("%sSymbol obfuscation is enabled%s\n", console.Bold, console.Normal)
 	} else if !config.Debug {
-		con.PrintErrorf("Symbol obfuscation is %sdisabled%s\n", console.Bold, console.Normal)
+		log.Errorf("Symbol obfuscation is %sdisabled%s\n", console.Bold, console.Normal)
 	}
 	start := time.Now()
 
@@ -687,16 +687,16 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 	sigint := make(chan os.Signal, 1) // Catch keyboard interrupts
 	signal.Notify(sigint, os.Interrupt)
 
-	con.PrintInfof("Creating external build ... ")
+	log.Infof("Creating external build ... ")
 	externalImplantConfig, err := con.Rpc.GenerateExternal(context.Background(), &clientpb.ExternalGenerateReq{
 		Config:      config,
 		BuilderName: externalBuilder.Name,
 	})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return nil, err
 	}
-	con.Printf("done\n")
+	log.Printf("done\n")
 
 	var name string
 	// msgF := "Waiting for external builder to acknowledge build (template: %s) ... %s"
@@ -741,13 +741,13 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 
 		case <-sigint:
 			waiting = false
-			con.Printf("\n")
+			log.Printf("\n")
 			return nil, fmt.Errorf("user interrupt")
 		}
 	}
 
 	elapsed := time.Since(start)
-	con.PrintInfof("Build completed in %s\n", elapsed.Round(time.Second))
+	log.Infof("Build completed in %s\n", elapsed.Round(time.Second))
 
 	generated, err := con.Rpc.Regenerate(context.Background(), &clientpb.RegenerateReq{
 		ImplantName: name,
@@ -755,7 +755,7 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 	if err != nil {
 		return nil, err
 	}
-	con.PrintInfof("Build name: %s (%d bytes)\n", name, len(generated.File.Data))
+	log.Infof("Build name: %s (%d bytes)\n", name, len(generated.File.Data))
 
 	saveTo, err := saveLocation(save, filepath.Base(generated.File.Name))
 	if err != nil {
@@ -764,10 +764,10 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 
 	err = os.WriteFile(saveTo, generated.File.Data, 0o700)
 	if err != nil {
-		con.PrintErrorf("Failed to write to: %s\n", saveTo)
+		log.Errorf("Failed to write to: %s\n", saveTo)
 		return nil, err
 	}
-	con.PrintInfof("Implant saved to %s\n", saveTo)
+	log.Infof("Implant saved to %s\n", saveTo)
 
 	return nil, nil
 }
@@ -775,14 +775,14 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 func compile(config *clientpb.ImplantConfig, disableSGN bool, save string, con *console.SliverConsole) (*commonpb.File, error) {
 	if config.IsBeacon {
 		interval := time.Duration(config.BeaconInterval)
-		con.PrintInfof("Generating new %s/%s beacon implant binary (%v)\n", config.GOOS, config.GOARCH, interval)
+		log.Infof("Generating new %s/%s beacon implant binary (%v)\n", config.GOOS, config.GOARCH, interval)
 	} else {
-		con.PrintInfof("Generating new %s/%s implant binary\n", config.GOOS, config.GOARCH)
+		log.Infof("Generating new %s/%s implant binary\n", config.GOOS, config.GOARCH)
 	}
 	if config.ObfuscateSymbols {
-		con.PrintInfof("%sSymbol obfuscation is enabled%s\n", console.Bold, console.Normal)
+		log.Infof("%sSymbol obfuscation is enabled%s\n", console.Bold, console.Normal)
 	} else if !config.Debug {
-		con.PrintErrorf("Symbol obfuscation is %sdisabled%s\n", console.Bold, console.Normal)
+		log.Errorf("Symbol obfuscation is %sdisabled%s\n", console.Bold, console.Normal)
 	}
 
 	start := time.Now()
@@ -795,23 +795,23 @@ func compile(config *clientpb.ImplantConfig, disableSGN bool, save string, con *
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return nil, err
 	}
 
 	elapsed := time.Since(start)
-	con.PrintInfof("Build completed in %s\n", elapsed.Round(time.Second))
+	log.Infof("Build completed in %s\n", elapsed.Round(time.Second))
 	if len(generated.File.Data) == 0 {
-		con.PrintErrorf("Build failed, no file data\n")
+		log.Errorf("Build failed, no file data\n")
 		return nil, errors.New("no file data")
 	}
 
 	fileData := generated.File.Data
 	if config.IsShellcode {
 		if disableSGN {
-			con.PrintErrorf("Shikata ga nai encoder is %sdisabled%s\n", console.Bold, console.Normal)
+			log.Errorf("Shikata ga nai encoder is %sdisabled%s\n", console.Bold, console.Normal)
 		} else {
-			con.PrintInfof("Encoding shellcode with shikata ga nai ... ")
+			log.Infof("Encoding shellcode with shikata ga nai ... ")
 			resp, err := con.Rpc.ShellcodeEncoder(context.Background(), &clientpb.ShellcodeEncodeReq{
 				Encoder:      clientpb.ShellcodeEncoder_SHIKATA_GA_NAI,
 				Architecture: config.GOARCH,
@@ -820,9 +820,9 @@ func compile(config *clientpb.ImplantConfig, disableSGN bool, save string, con *
 				Data:         fileData,
 			})
 			if err != nil {
-				con.PrintErrorf("%s\n", err)
+				log.Errorf("%s\n", err)
 			} else {
-				con.Printf("success!\n")
+				log.Printf("success!\n")
 				fileData = resp.GetData()
 			}
 		}
@@ -835,10 +835,10 @@ func compile(config *clientpb.ImplantConfig, disableSGN bool, save string, con *
 
 	err = os.WriteFile(saveTo, fileData, 0o700)
 	if err != nil {
-		con.PrintErrorf("Failed to write to: %s\n", saveTo)
+		log.Errorf("Failed to write to: %s\n", saveTo)
 		return nil, err
 	}
-	con.PrintInfof("Implant saved to %s\n", saveTo)
+	log.Infof("Implant saved to %s\n", saveTo)
 	return generated.File, err
 }
 
@@ -872,7 +872,7 @@ func checkBuildTargetCompatibility(format clientpb.OutputFormat, targetOS string
 
 	compilers, err := con.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("Failed to check target compatibility: %s\n", err)
+		log.Errorf("Failed to check target compatibility: %s\n", err)
 		return true
 	}
 
@@ -907,16 +907,16 @@ func hasCC(targetOS string, targetArch string, crossCompilers []*clientpb.CrossC
 }
 
 func warnMissingCrossCompiler(format clientpb.OutputFormat, targetOS string, targetArch string, con *console.SliverConsole) bool {
-	con.PrintWarnf("Missing cross-compiler for %s on %s/%s\n", nameOfOutputFormat(format), targetOS, targetArch)
+	log.Warnf("Missing cross-compiler for %s on %s/%s\n", nameOfOutputFormat(format), targetOS, targetArch)
 	switch targetOS {
 	case "windows":
-		con.PrintWarnf("The server cannot find an installation of mingw")
+		log.Warnf("The server cannot find an installation of mingw")
 	case "darwin":
-		con.PrintWarnf("The server cannot find an installation of osxcross")
+		log.Warnf("The server cannot find an installation of osxcross")
 	case "linux":
-		con.PrintWarnf("The server cannot find an installation of musl-cross")
+		log.Warnf("The server cannot find an installation of musl-cross")
 	}
-	con.PrintWarnf("For more information please read %s\n", crossCompilerInfoURL)
+	log.Warnf("For more information please read %s\n", crossCompilerInfoURL)
 
 	confirm := false
 	prompt := &survey.Confirm{Message: "Try to compile anyways (will likely fail)?"}

@@ -23,6 +23,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/spf13/cobra"
@@ -36,11 +37,11 @@ func OperatorsCmd(cmd *cobra.Command, args []string) {
 
 	operators, err := con.Rpc.GetOperators(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 	} else if 0 < len(operators.Operators) {
 		displayOperators(operators.Operators, con)
 	} else {
-		con.PrintInfof("No remote operators connected\n")
+		log.Infof("No remote operators connected\n")
 	}
 }
 
@@ -57,7 +58,7 @@ func displayOperators(operators []*clientpb.Operator, con *console.SliverConsole
 			status(operator.Online),
 		})
 	}
-	con.Printf("%s\n", tw.Render())
+	log.Printf("%s\n", tw.Render())
 }
 
 func status(isOnline bool) string {

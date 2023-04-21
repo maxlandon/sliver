@@ -26,6 +26,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -42,7 +43,7 @@ func ProfilesCmd(cmd *cobra.Command, args []string) {
 		return
 	}
 	if len(profiles) == 0 {
-		con.PrintInfof("No profiles, see `%s %s help`\n", consts.ProfilesStr, consts.NewStr)
+		log.Infof("No profiles, see `%s %s help`\n", consts.ProfilesStr, consts.NewStr)
 		return
 	} else {
 		PrintProfiles(profiles, con)
@@ -94,13 +95,13 @@ func PrintProfiles(profiles []*clientpb.ImplantProfile, con *console.SliverConso
 		})
 	}
 
-	con.Printf("%s\n", tw.Render())
+	log.Printf("%s\n", tw.Render())
 }
 
 func getImplantProfiles(con *console.SliverConsole) []*clientpb.ImplantProfile {
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return nil
 	}
 	return pbProfiles.Profiles
@@ -110,7 +111,7 @@ func getImplantProfiles(con *console.SliverConsole) []*clientpb.ImplantProfile {
 func GetImplantProfileByName(name string, con *console.SliverConsole) *clientpb.ImplantProfile {
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return nil
 	}
 	for _, profile := range pbProfiles.Profiles {

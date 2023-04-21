@@ -22,6 +22,7 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/spf13/cobra"
 )
@@ -39,18 +40,18 @@ func ExtensionsListCmd(cmd *cobra.Command, args []string) {
 		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 
 	if extList.Response != nil && extList.Response.Err != "" {
-		con.PrintErrorf("%s\n", extList.Response.Err)
+		log.Errorf("%s\n", extList.Response.Err)
 		return
 	}
 	if len(extList.Names) > 0 {
-		con.PrintInfof("Loaded extensions:\n")
+		log.Infof("Loaded extensions:\n")
 		for _, ext := range extList.Names {
-			con.Printf("- %s\n", ext)
+			log.Printf("- %s\n", ext)
 		}
 	}
 }

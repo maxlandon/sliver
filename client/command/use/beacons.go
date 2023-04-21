@@ -21,6 +21,7 @@ package use
 import (
 	"github.com/bishopfox/sliver/client/command/beacons"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/spf13/cobra"
 )
 
@@ -31,15 +32,15 @@ func UseBeaconCmd(cmd *cobra.Command, args []string) {
 	beacon, err := beacons.SelectBeacon(con)
 	if beacon != nil {
 		con.ActiveTarget.Set(nil, beacon)
-		con.PrintInfof("Active beacon %s (%s)\n", beacon.Name, beacon.ID)
+		log.Infof("Active beacon %s (%s)\n", beacon.Name, beacon.ID)
 	} else if err != nil {
 		switch err {
 		case beacons.ErrNoBeacons:
-			con.PrintErrorf("No beacon available\n")
+			log.Errorf("No beacon available\n")
 		case beacons.ErrNoSelection:
-			con.PrintErrorf("No beacon selected\n")
+			log.Errorf("No beacon selected\n")
 		default:
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 		}
 	}
 }

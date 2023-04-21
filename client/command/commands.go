@@ -46,9 +46,9 @@ func BindCommands(con *console.SliverConsoleClient) {
 	// // Load Reactions
 	// n, err := reaction.LoadReactions()
 	// if err != nil && !os.IsNotExist(err) {
-	// 	con.PrintErrorf("Failed to load reactions: %s\n", err)
+	// 	log.Errorf("Failed to load reactions: %s\n", err)
 	// } else if n > 0 {
-	// 	con.PrintInfof("Loaded %d reaction(s) from disk\n", n)
+	// 	log.Infof("Loaded %d reaction(s) from disk\n", n)
 	// }
 	//
 	// // Load Aliases
@@ -57,16 +57,16 @@ func BindCommands(con *console.SliverConsoleClient) {
 	// for _, manifest := range aliasManifests {
 	// 	_, err = alias.LoadAlias(manifest, con)
 	// 	if err != nil {
-	// 		con.PrintErrorf("Failed to load alias: %s\n", err)
+	// 		log.Errorf("Failed to load alias: %s\n", err)
 	// 		continue
 	// 	}
 	// 	n++
 	// }
 	// if 0 < n {
 	// 	if n == 1 {
-	// 		con.PrintInfof("Loaded %d alias from disk\n", n)
+	// 		log.Infof("Loaded %d alias from disk\n", n)
 	// 	} else {
-	// 		con.PrintInfof("Loaded %d aliases from disk\n", n)
+	// 		log.Infof("Loaded %d aliases from disk\n", n)
 	// 	}
 	// }
 	//
@@ -77,14 +77,14 @@ func BindCommands(con *console.SliverConsoleClient) {
 	// 	ext, err := extensions.LoadExtensionManifest(manifest)
 	// 	// Absorb error in case there's no extensions manifest
 	// 	if err != nil {
-	// 		con.PrintErrorf("Failed to load extension: %s\n", err)
+	// 		log.Errorf("Failed to load extension: %s\n", err)
 	// 		continue
 	// 	}
 	// 	extensions.ExtensionRegisterCommand(ext, con)
 	// 	n++
 	// }
 	// if 0 < n {
-	// 	con.PrintInfof("Loaded %d extension(s) from disk\n", n)
+	// 	log.Infof("Loaded %d extension(s) from disk\n", n)
 	// }
 	// con.App.SetPrintHelp(help.HelpCmd(con)) // Responsible for display long-form help templates, etc.
 	//

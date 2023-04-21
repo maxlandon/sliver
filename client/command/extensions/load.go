@@ -114,11 +114,11 @@ func ExtensionLoadCmd(cmd *cobra.Command, args []string) {
 	// do not add if the command already exists
 	sliverMenu := console.Client.App.Menu("implant")
 	if CmdExists(extCmd.CommandName, sliverMenu.Command) {
-		log.PrintErrorf("%s command already exists\n", extCmd.CommandName)
+		log.Errorf("%s command already exists\n", extCmd.CommandName)
 		return
 	}
 	ExtensionRegisterCommand(extCmd, cmd.Root())
-	log.PrintInfof("Added %s command: %s\n", extCmd.CommandName, extCmd.Help)
+	log.Infof("Added %s command: %s\n", extCmd.CommandName, extCmd.Help)
 }
 
 // LoadExtensionManifest - Parse extension files
@@ -197,7 +197,7 @@ func ExtensionRegisterCommand(extCmd *ExtensionManifest, cmd *cobra.Command) {
 		// 				argFunc = a.String
 		// 				defaultValue = grumble.Default("")
 		// 			default:
-		// 				con.PrintErrorf("Invalid argument type: %s\n", arg.Type)
+		// 				log.Errorf("Invalid argument type: %s\n", arg.Type)
 		// 				return
 		// 			}
 		// 			if arg.Optional {
@@ -233,7 +233,7 @@ func loadExtension(goos string, goarch string, checkCache bool, ext *ExtensionMa
 			Request: con.ActiveTarget.Request(cmd),
 		})
 		if err != nil {
-			con.PrintErrorf("List extensions error: %s\n", err.Error())
+			log.Errorf("List extensions error: %s\n", err.Error())
 			return err
 		}
 		if extList.Response != nil && extList.Response.Err != "" {
@@ -329,19 +329,19 @@ func runExtensionCmd(cmd *cobra.Command, args []string) {
 
 	ext, ok := loadedExtensions[cmd.Name()]
 	if !ok {
-		con.PrintErrorf("No extension command found for `%s` command\n", cmd.Name())
+		log.Errorf("No extension command found for `%s` command\n", cmd.Name())
 		return
 	}
 
 	checkCache := session != nil
 	if err = loadExtension(goos, goarch, checkCache, ext, cmd, con); err != nil {
-		con.PrintErrorf("Could not load extension: %s\n", err)
+		log.Errorf("Could not load extension: %s\n", err)
 		return
 	}
 
 	binPath, err := ext.getFileForTarget(cmd.Name(), goos, goarch)
 	if err != nil {
-		con.PrintErrorf("Failed to read extension file: %s\n", err)
+		log.Errorf("Failed to read extension file: %s\n", err)
 		return
 	}
 
@@ -356,7 +356,7 @@ func runExtensionCmd(cmd *cobra.Command, args []string) {
 		// Beacon Object File -- requires a COFF loader
 		extensionArgs, err = getBOFArgs(cmd, binPath, ext)
 		if err != nil {
-			con.PrintErrorf("BOF args error: %s\n", err)
+			log.Errorf("BOF args error: %s\n", err)
 			return
 		}
 		extName = ext.DependsOn
@@ -382,7 +382,7 @@ func runExtensionCmd(cmd *cobra.Command, args []string) {
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		con.PrintErrorf("Call extension error: %s\n", err.Error())
+		log.Errorf("Call extension error: %s\n", err.Error())
 		return
 	}
 
@@ -390,12 +390,12 @@ func runExtensionCmd(cmd *cobra.Command, args []string) {
 		con.AddBeaconCallback(callExtResp.Response.TaskID, func(task *clientpb.BeaconTask) {
 			err = proto.Unmarshal(task.Response, callExtResp)
 			if err != nil {
-				con.PrintErrorf("Failed to decode call ext response %s\n", err)
+				log.Errorf("Failed to decode call ext response %s\n", err)
 				return
 			}
 			PrintExtOutput(extName, ext.CommandName, callExtResp, con)
 		})
-		con.PrintAsyncResponse(callExtResp.Response)
+		log.AsyncResponse(callExtResp.Response)
 	} else {
 		PrintExtOutput(extName, ext.CommandName, callExtResp, con)
 	}
@@ -404,15 +404,15 @@ func runExtensionCmd(cmd *cobra.Command, args []string) {
 // PrintExtOutput - Print the ext execution output
 func PrintExtOutput(extName string, commandName string, callExtension *sliverpb.CallExtension, con *console.SliverConsole) {
 	if extName == commandName {
-		con.PrintInfof("Successfully executed %s\n", extName)
+		log.Infof("Successfully executed %s\n", extName)
 	} else {
-		con.PrintInfof("Successfully executed %s (%s)\n", commandName, extName)
+		log.Infof("Successfully executed %s (%s)\n", commandName, extName)
 	}
 	if 0 < len(string(callExtension.Output)) {
-		con.PrintInfof("Got output:\n%s\n", callExtension.Output)
+		log.Infof("Got output:\n%s\n", callExtension.Output)
 	}
 	if callExtension.Response != nil && callExtension.Response.Err != "" {
-		con.PrintErrorf("%s\n", callExtension.Response.Err)
+		log.Errorf("%s\n", callExtension.Response.Err)
 		return
 	}
 }
