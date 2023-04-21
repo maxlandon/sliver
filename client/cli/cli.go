@@ -24,11 +24,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/bishopfox/sliver/client/assets"
-	"github.com/bishopfox/sliver/client/command"
-	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/version"
+	"github.com/rsteube/carapace"
 
 	"github.com/spf13/cobra"
 )
@@ -53,51 +50,26 @@ func initLogging(appDir string) *os.File {
 func init() {
 	// Import
 	rootCmd.AddCommand(cmdImport)
+	rootCmd.TraverseChildren = true
 
 	// Version
 	rootCmd.AddCommand(cmdVersion)
 
 	// Console
 	rootCmd.AddCommand(cmdConsole)
+
+	// Implant
+	rootCmd.AddCommand(implantCmd())
+
+	// Completions
+	carapace.Gen(rootCmd)
 }
 
 var rootCmd = &cobra.Command{
 	Use:   "sliver-client",
 	Short: "",
 	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		appDir := assets.GetRootAppDir()
-		logFile := initLogging(appDir)
-		defer logFile.Close()
-
-		os.Args = os.Args[:1] // Stops grumble from complaining
-		err := StartClientConsole()
-		if err != nil {
-			fmt.Printf("[!] %s\n", err)
-		}
-	},
-}
-
-// StartClientConsole - Start the client console
-func StartClientConsole() error {
-	configs := assets.GetConfigs()
-	if len(configs) == 0 {
-		fmt.Printf("No config files found at %s (see --help)\n", assets.GetConfigDir())
-		return nil
-	}
-	config := selectConfig()
-	if config == nil {
-		return nil
-	}
-
-	fmt.Printf("Connecting to %s:%d ...\n", config.LHost, config.LPort)
-	rpc, ln, err := transport.MTLSConnect(config)
-	if err != nil {
-		fmt.Printf("Connection to server failed %s", err)
-		return nil
-	}
-	defer ln.Close()
-	return console.Start(rpc, command.BindCommands, func(con *console.SliverConsoleClient) {}, false)
+	RunE:  startConsole,
 }
 
 // Execute - Execute root command

@@ -6,6 +6,7 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command"
 	client "github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/spf13/cobra"
 )
@@ -22,10 +23,6 @@ func startConsole(cmd *cobra.Command, args []string) error {
 	logFile := initLogging(appDir)
 	defer logFile.Close()
 
-	return Start()
-}
-
-func Start() error {
 	configs := assets.GetConfigs()
 	if len(configs) == 0 {
 		fmt.Printf("No config files found at %s (see --help)\n", assets.GetConfigDir())
@@ -44,8 +41,9 @@ func Start() error {
 	}
 	defer ln.Close()
 
-	// Initialize the console application and bind commands first.
-	client.Setup(command.ServerCommands(nil), command.SliverCommands)
+	// Initialize the console application and bind commands first, and init log.
+	app := client.NewConsole(command.ServerCommands(nil), command.SliverCommands)
+	log.Init(app.LogTransient)
 
-	return client.StartReadline(rpc, false)
+	return client.StartConsole(app, rpc, false)
 }
