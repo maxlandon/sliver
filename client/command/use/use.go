@@ -206,10 +206,16 @@ func SessionIDCompleter() carapace.Action {
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err == nil {
 		for _, s := range sessions.Sessions {
-			results = append(results, s.ID)
+			link := fmt.Sprintf("[%s <- %s]", s.ActiveC2, s.RemoteAddress)
+			id := fmt.Sprintf("%s (%d)", s.Name, s.PID)
+			userHost := fmt.Sprintf("%s@%s", s.Username, s.Hostname)
+			desc := strings.Join([]string{id, userHost, link}, " ")
+
+			results = append(results, s.ID[:8])
+			results = append(results, desc)
 		}
 	}
-	return carapace.ActionValues(results...).Tag("sessions")
+	return carapace.ActionValuesDescribed(results...).Tag("sessions")
 }
 
 // BeaconIDCompleter completes beacon IDs
@@ -221,8 +227,14 @@ func BeaconIDCompleter() carapace.Action {
 	beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
 	if err == nil {
 		for _, b := range beacons.Beacons {
-			results = append(results, b.ID)
+			link := fmt.Sprintf("[%s <- %s]", b.ActiveC2, b.RemoteAddress)
+			id := fmt.Sprintf("%s (%d)", b.Name, b.PID)
+			userHost := fmt.Sprintf("%s@%s", b.Username, b.Hostname)
+			desc := strings.Join([]string{id, userHost, link}, " ")
+
+			results = append(results, b.ID[:8])
+			results = append(results, desc)
 		}
 	}
-	return carapace.ActionValues(results...).Tag("beacons")
+	return carapace.ActionValuesDescribed(results...).Tag("beacons")
 }

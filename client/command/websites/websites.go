@@ -25,11 +25,11 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/jedib0t/go-pretty/v6/table"
-
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -38,51 +38,55 @@ const (
 )
 
 // WebsitesCmd - Manage websites
-func WebsitesCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	websiteName := ctx.Args.String("name")
-	if websiteName == "" {
-		ListWebsites(ctx, con)
-	} else {
+func WebsitesCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	if len(args) > 0 {
+		websiteName := args[0]
 		ListWebsiteContent(websiteName, con)
+	} else {
+		ListWebsites(cmd, args)
 	}
 }
 
 // ListWebsites - Display a list of websites
-func ListWebsites(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ListWebsites(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	websites, err := con.Rpc.Websites(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("Failed to list websites %s", err)
+		log.Errorf("Failed to list websites %s", err)
 		return
 	}
 	if len(websites.Websites) < 1 {
-		con.PrintInfof("No websites\n")
+		log.Infof("No websites\n")
 		return
 	}
 	con.Println("Websites")
 	con.Println(strings.Repeat("=", len("Websites")))
 	for _, site := range websites.Websites {
-		con.Printf("%s%s%s - %d page(s)\n", console.Bold, site.Name, console.Normal, len(site.Contents))
+		log.Printf("%s%s%s - %d page(s)\n", console.Bold, site.Name, console.Normal, len(site.Contents))
 	}
 }
 
 // ListWebsiteContent - List the static contents of a website
-func ListWebsiteContent(websiteName string, con *console.SliverConsoleClient) {
+func ListWebsiteContent(websiteName string, con *console.SliverConsole) {
 	website, err := con.Rpc.Website(context.Background(), &clientpb.Website{
 		Name: websiteName,
 	})
 	if err != nil {
-		con.PrintErrorf("Failed to list website content %s", err)
+		log.Errorf("Failed to list website content %s", err)
 		return
 	}
 	if 0 < len(website.Contents) {
 		PrintWebsite(website, con)
 	} else {
-		con.PrintInfof("No content for '%s'", websiteName)
+		log.Infof("No content for '%s'", websiteName)
 	}
 }
 
 // PrintWebsite - Print a website and its contents, paths, etc.
-func PrintWebsite(web *clientpb.Website, con *console.SliverConsoleClient) {
+func PrintWebsite(web *clientpb.Website, con *console.SliverConsole) {
 	con.Println(console.Clearln + console.Info + web.Name)
 	con.Println()
 	tw := table.NewWriter()

@@ -25,6 +25,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"golang.org/x/term"
@@ -205,7 +206,7 @@ func PaginateTable(tw table.Writer, skipPages int, overflow bool, interactive bo
 			if len(line) == 0 {
 				continue
 			}
-			con.Printf("%s\n", line)
+			log.Printf("%s\n", line)
 		}
 		con.Println()
 		if interactive {
@@ -221,12 +222,12 @@ func PaginateTable(tw table.Writer, skipPages int, overflow bool, interactive bo
 					}
 					con.Println()
 				} else {
-					con.Printf(console.Bold+"Page [%d/%d]\n", pageNumber+1, len(pages))
+					log.Printf(console.Bold+"Page [%d/%d]\n", pageNumber+1, len(pages))
 				}
 			}
 		} else {
 			if 1 < len(pages) {
-				con.Printf(console.Bold+"Page [%d/%d]\n", pageNumber+1, len(pages))
+				log.Printf(console.Bold+"Page [%d/%d]\n", pageNumber+1, len(pages))
 			}
 			break
 		}

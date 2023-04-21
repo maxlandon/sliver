@@ -29,34 +29,37 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // WebsitesAddContentCmd - Add static content to a website
-func WebsitesAddContentCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	websiteName := ctx.Flags.String("website")
+func WebsitesAddContentCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	websiteName, _ := cmd.Flags().GetString("website")
 	if websiteName == "" {
-		con.PrintErrorf("Must specify a website name via --website, see --help\n")
+		log.Errorf("Must specify a website name via --website, see --help\n")
 		return
 	}
-	webPath := ctx.Flags.String("web-path")
+	webPath, _ := cmd.Flags().GetString("web-path")
 	if webPath == "" {
-		con.PrintErrorf("Must specify a web path via --web-path, see --help\n")
+		log.Errorf("Must specify a web path via --web-path, see --help\n")
 		return
 	}
-	contentPath := ctx.Flags.String("content")
+	contentPath, _ := cmd.Flags().GetString("content")
 	if contentPath == "" {
-		con.PrintErrorf("Must specify some --content\n")
+		log.Errorf("Must specify some --content\n")
 		return
 	}
 	contentPath, _ = filepath.Abs(contentPath)
-	contentType := ctx.Flags.String("content-type")
-	recursive := ctx.Flags.Bool("recursive")
+	contentType, _ := cmd.Flags().GetString("content-type")
+	recursive, _ := cmd.Flags().GetBool("recursive")
 
 	fileInfo, err := os.Stat(contentPath)
 	if err != nil {
-		con.PrintErrorf("Error adding content %s\n", err)
+		log.Errorf("Error adding content %s\n", err)
 		return
 	}
 
@@ -76,7 +79,7 @@ func WebsitesAddContentCmd(ctx *grumble.Context, con *console.SliverConsoleClien
 
 	web, err := con.Rpc.WebsiteAddContent(context.Background(), addWeb)
 	if err != nil {
-		con.PrintErrorf("%s", err)
+		log.Errorf("%s", err)
 		return
 	}
 	PrintWebsite(web, con)

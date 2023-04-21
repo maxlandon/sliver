@@ -21,19 +21,22 @@ package settings
 import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/desertbit/grumble"
+	"github.com/bishopfox/sliver/client/log"
+	"github.com/spf13/cobra"
 )
 
 // SettingsBeaconsAutoResultCmd - The client settings command
-func SettingsBeaconsAutoResultCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SettingsBeaconsAutoResultCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
 		if err != nil {
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 			return
 		}
 	}
 	con.Settings.BeaconAutoResults = !con.Settings.BeaconAutoResults
-	con.PrintInfof("Beacon Auto Result = %v\n", con.Settings.BeaconAutoResults)
+	log.Infof("Beacon Auto Result = %v\n", con.Settings.BeaconAutoResults)
 }

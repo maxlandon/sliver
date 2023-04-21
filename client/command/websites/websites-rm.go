@@ -22,17 +22,25 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // WebsiteRmCmd - Remove a website and all its static content
-func WebsiteRmCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func WebsiteRmCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	var name string
+	if len(args) > 0 {
+		name = args[0]
+	}
+
 	_, err := con.Rpc.WebsiteRemove(context.Background(), &clientpb.Website{
-		Name: ctx.Args.String("name"),
+		Name: name,
 	})
 	if err != nil {
-		con.PrintErrorf("Failed to remove website %s", err)
+		log.Errorf("Failed to remove website %s", err)
 		return
 	}
 }

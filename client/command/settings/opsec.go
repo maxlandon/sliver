@@ -22,21 +22,24 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/desertbit/grumble"
+	"github.com/bishopfox/sliver/client/log"
+	"github.com/spf13/cobra"
 )
 
 // SettingsAutoAdultCmd - The client settings command
-func SettingsAutoAdultCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SettingsAutoAdultCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
 		if err != nil {
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 			return
 		}
 	}
 	con.Settings.AutoAdult = !con.Settings.AutoAdult
-	con.PrintInfof("Auto Adult = %v\n", con.Settings.AutoAdult)
+	log.Infof("Auto Adult = %v\n", con.Settings.AutoAdult)
 }
 
 // IsUserAnAdult - This should be called for any dangerous (OPSEC-wise) functions

@@ -23,22 +23,25 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // WebsitesRmContent - Remove static content from a website
-func WebsitesRmContent(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	name := ctx.Flags.String("website")
-	webPath := ctx.Flags.String("web-path")
-	recursive := ctx.Flags.Bool("recursive")
+func WebsitesRmContent(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	name, _ := cmd.Flags().GetString("website")
+	webPath, _ := cmd.Flags().GetString("web-path")
+	recursive, _ := cmd.Flags().GetBool("recursive")
 
 	if name == "" {
-		con.PrintErrorf("Must specify a website name via --website, see --help\n")
+		log.Errorf("Must specify a website name via --website, see --help\n")
 		return
 	}
 	if webPath == "" {
-		con.PrintErrorf("Must specify a web path via --web-path, see --help\n")
+		log.Errorf("Must specify a web path via --web-path, see --help\n")
 		return
 	}
 
@@ -46,7 +49,7 @@ func WebsitesRmContent(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		Name: name,
 	})
 	if err != nil {
-		con.PrintErrorf("%s", err)
+		log.Errorf("%s", err)
 		return
 	}
 
@@ -65,7 +68,7 @@ func WebsitesRmContent(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	}
 	web, err := con.Rpc.WebsiteRemoveContent(context.Background(), rmWebContent)
 	if err != nil {
-		con.PrintErrorf("Failed to remove content %s", err)
+		log.Errorf("Failed to remove content %s", err)
 		return
 	}
 	PrintWebsite(web, con)

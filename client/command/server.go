@@ -7,12 +7,15 @@ import (
 	"github.com/bishopfox/sliver/client/command/armory"
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/command/help"
+	"github.com/bishopfox/sliver/client/command/info"
 	"github.com/bishopfox/sliver/client/command/jobs"
 	"github.com/bishopfox/sliver/client/command/operators"
 	"github.com/bishopfox/sliver/client/command/reaction"
 	"github.com/bishopfox/sliver/client/command/sessions"
+	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/command/update"
 	"github.com/bishopfox/sliver/client/command/use"
+	"github.com/bishopfox/sliver/client/command/websites"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/rsteube/carapace"
@@ -417,121 +420,64 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Settings ] --------------------------------------------------------------
 
 		settingsCmd := &cobra.Command{
-			Use:   consts.SettingsStr,
-			Short: "Manage client settings",
-			Long:  help.GetHelpFor([]string{consts.SettingsStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	settings.SettingsCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Use:     consts.SettingsStr,
+			Short:   "Manage client settings",
+			Long:    help.GetHelpFor([]string{consts.SettingsStr}),
+			Run:     settings.SettingsCmd,
 			GroupID: consts.GenericHelpGroup,
 		}
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   consts.SaveStr,
 			Short: "Save the current settings to disk",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, consts.SaveStr}),
-			Run:   func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	settings.SettingsSaveCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   settings.SettingsSaveCmd,
 		})
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   consts.TablesStr,
 			Short: "Modify tables setting (style)",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, consts.TablesStr}),
-			Run:   func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	settings.SettingsTablesCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   settings.SettingsTablesCmd,
 		})
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   "beacon-autoresults",
 			Short: "Automatically display beacon task results when completed",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, "beacon-autoresults"}),
-			Run:   func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	settings.SettingsBeaconsAutoResultCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   settings.SettingsBeaconsAutoResultCmd,
 		})
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   "autoadult",
 			Short: "Automatically accept OPSEC warnings",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, "autoadult"}),
-			Run:   func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	settings.SettingsAutoAdultCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   settings.SettingsAutoAdultCmd,
 		})
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   "always-overflow",
 			Short: "Disable table pagination",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, "always-overflow"}),
-			Run:   func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	settings.SettingsAlwaysOverflow(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   settings.SettingsAlwaysOverflow,
 		})
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   "small-terminal",
 			Short: "Set the small terminal width",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, "small-terminal"}),
-			Run:   func(cmd *cobra.Command, args []string) {},
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	settings.SettingsSmallTerm(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   settings.SettingsSmallTerm,
 		})
 		server.AddCommand(settingsCmd)
 
 		// [ Info ] --------------------------------------------------------------
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.InfoStr,
-			Short: "Get info about session",
-			Long:  help.GetHelpFor([]string{consts.InfoStr}),
-			Run:   func(cmd *cobra.Command, args []string) {},
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Args: func(a *grumble.Args) {
-			// 	a.String("session", "session ID", grumble.Default(""))
-			// },
-			// Completer: func(prefix string, args []string) []string {
-			// 	return use.BeaconAndSessionIDCompleter(prefix, args, con)
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	info.InfoCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+		infoCmd := &cobra.Command{
+			Use:     consts.InfoStr,
+			Short:   "Get info about session",
+			Long:    help.GetHelpFor([]string{consts.InfoStr}),
+			Run:     info.InfoCmd,
 			GroupID: consts.SliverHelpGroup,
+		}
+		Flags("use", infoCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(infoCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter())
+		server.AddCommand(infoCmd)
 
 		// [ Shellcode Encoders ] --------------------------------------------------------------
 
@@ -986,97 +932,73 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.WebsitesStr,
 			Short: "Host static content (used with HTTP C2)",
 			Long:  help.GetHelpFor([]string{consts.WebsitesStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	websites.WebsitesCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run:   websites.WebsitesCmd,
 			// Args: func(a *grumble.Args) {
 			// 	a.String("name", "website name", grumble.Default(""))
 			// },
 			GroupID: consts.GenericHelpGroup,
 		}
-		websitesCmd.AddCommand(&cobra.Command{
+		Flags("websites", websitesCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+
+		websitesRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
 			Short: "Remove an entire website and all of its contents",
 			Long:  help.GetHelpFor([]string{consts.WebsitesStr, consts.RmStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	websites.WebsiteRmCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run:   websites.WebsiteRmCmd,
 			// Args: func(a *grumble.Args) {
 			// 	a.String("name", "website name", grumble.Default(""))
 			// },
-			// GroupID: consts.GenericHelpGroup,
+		}
+		Flags("websites", websitesRmCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		websitesCmd.AddCommand(&cobra.Command{
+		websitesCmd.AddCommand(websitesRmCmd)
+
+		websitesRmWebContentCmd := &cobra.Command{
 			Use:   consts.RmWebContentStr,
 			Short: "Remove specific content from a website",
 			Long:  help.GetHelpFor([]string{consts.WebsitesStr, consts.RmWebContentStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Bool("r", "recursive", false, "recursively add/rm content")
-			// 	f.String("w", "website", "", "website name")
-			// 	f.String("p", "web-path", "", "http path to host file at")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	websites.WebsitesRmContent(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   websites.WebsitesRmContent,
+		}
+		Flags("websites", websitesRmWebContentCmd, func(f *pflag.FlagSet) {
+			f.BoolP("recursive", "r", false, "recursively add/rm content")
+			f.StringP("website", "w", "", "website name")
+			f.StringP("web-path", "p", "", "http path to host file at")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		websitesCmd.AddCommand(&cobra.Command{
+		websitesCmd.AddCommand(websitesRmWebContentCmd)
+
+		websitesContentCmd := &cobra.Command{
 			Use:   consts.AddWebContentStr,
 			Short: "Add content to a website",
 			Long:  help.GetHelpFor([]string{consts.WebsitesStr, consts.RmWebContentStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("w", "website", "", "website name")
-			// 	f.String("m", "content-type", "", "mime content-type (if blank use file ext.)")
-			// 	f.String("p", "web-path", "/", "http path to host file at")
-			// 	f.String("c", "content", "", "local file path/dir (must use --recursive for dir)")
-			// 	f.Bool("r", "recursive", false, "recursively add/rm content")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	websites.WebsitesAddContentCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   websites.WebsitesAddContentCmd,
+		}
+		Flags("websites", websitesContentCmd, func(f *pflag.FlagSet) {
+			f.StringP("website", "w", "", "website name")
+			f.StringP("content-type", "m", "", "mime content-type (if blank use file ext.)")
+			f.StringP("web-path", "p", "/", "http path to host file at")
+			f.StringP("content", "c", "", "local file path/dir (must use --recursive for dir)")
+			f.BoolP("recursive", "r", false, "recursively add/rm content")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		websitesCmd.AddCommand(&cobra.Command{
+		websitesCmd.AddCommand(websitesContentCmd)
+
+		websitesContentTypeCmd := &cobra.Command{
 			Use:   consts.WebContentTypeStr,
 			Short: "Update a path's content-type",
 			Long:  help.GetHelpFor([]string{consts.WebsitesStr, consts.WebContentTypeStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("w", "website", "", "website name")
-			// 	f.String("m", "content-type", "", "mime content-type (if blank use file ext.)")
-			// 	f.String("p", "web-path", "/", "http path to host file at")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	websites.WebsitesUpdateContentCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   websites.WebsitesUpdateContentCmd,
+		}
+		Flags("websites", websitesContentTypeCmd, func(f *pflag.FlagSet) {
+			f.StringP("website", "w", "", "website name")
+			f.StringP("content-type", "m", "", "mime content-type (if blank use file ext.)")
+			f.StringP("web-path", "p", "/", "http path to host file at")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		websitesCmd.AddCommand(websitesContentTypeCmd)
 		server.AddCommand(websitesCmd)
 
 		// [ Beacons ] ---------------------------------------------
