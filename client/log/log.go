@@ -55,11 +55,12 @@ func Init(printf func(format string, args ...any) (n int, err error)) {
 }
 
 func Printf(format string, args ...any) (n int, err error) {
-	return print(format, args)
+	return print(format, args...)
 }
 
 func Println(args ...any) (n int, err error) {
-	return print(strings.Repeat("%s", len(args))+"\n", args...)
+	format := strings.Repeat("%s", len(args))
+	return print(format+"\n", args...)
 }
 
 func Infof(format string, args ...any) (n int, err error) {
