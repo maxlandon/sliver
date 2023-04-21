@@ -33,43 +33,46 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // LootCmd - The loot root command
-func LootCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	filter := ctx.Flags.String("filter")
+func LootCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	filter, _ := cmd.Flags().GetString("filter")
 	var allLoot *clientpb.AllLoot
 	var err error
 	if filter == "" {
 		allLoot, err = con.Rpc.LootAll(context.Background(), &commonpb.Empty{})
 		if err != nil {
-			con.PrintErrorf("Failed to fetch loot %s\n", err)
+			log.Errorf("Failed to fetch loot %s\n", err)
 			return
 		}
 	} else {
 		lootType, err := lootTypeFromHumanStr(filter)
 		if err != nil {
-			con.PrintErrorf("Invalid loot type see --help")
+			log.Errorf("Invalid loot type see --help")
 			return
 		}
 		allLoot, err = con.Rpc.LootAllOf(context.Background(), &clientpb.Loot{Type: lootType})
 		if err != nil {
-			con.PrintErrorf("Failed to fetch loot %s\n", err)
+			log.Errorf("Failed to fetch loot %s\n", err)
 			return
 		}
 	}
 	if filter == "" {
-		PrintAllLootTable(con.App.Stdout(), allLoot)
+		PrintAllLootTable(os.Stdout, allLoot)
 	} else {
 		lootType, _ := lootTypeFromHumanStr(filter)
 		switch lootType {
 		case clientpb.LootType_LOOT_FILE:
-			PrintAllFileLootTable(con.App.Stdout(), allLoot)
+			PrintAllFileLootTable(os.Stdout, allLoot)
 		case clientpb.LootType_LOOT_CREDENTIAL:
-			PrintAllCredentialLootTable(con.App.Stdout(), allLoot)
+			PrintAllCredentialLootTable(os.Stdout, allLoot)
 		}
 	}
 }
@@ -123,12 +126,12 @@ func PrintLootCredential(stdout io.Writer, loot *clientpb.Loot) {
 }
 
 // Any loot with a "File" can be saved to disk
-func saveLootToDisk(ctx *grumble.Context, loot *clientpb.Loot) (string, error) {
+func saveLootToDisk(cmd *cobra.Command, loot *clientpb.Loot) (string, error) {
 	if loot.File == nil {
 		return "", errors.New("Loot does not contain a file")
 	}
 
-	saveTo := ctx.Flags.String("save")
+	saveTo, _ := cmd.Flags().GetString("save")
 	fi, err := os.Stat(saveTo)
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
@@ -144,7 +147,7 @@ func saveLootToDisk(ctx *grumble.Context, loot *clientpb.Loot) (string, error) {
 			return "", nil
 		}
 	}
-	err = ioutil.WriteFile(saveTo, loot.File.Data, 0600)
+	err = ioutil.WriteFile(saveTo, loot.File.Data, 0o600)
 	return saveTo, err
 }
 

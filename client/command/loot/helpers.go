@@ -33,10 +33,11 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -111,12 +112,12 @@ func AddLootAPIKey(rpc rpcpb.SliverRPCClient, name string, apiKey string) error 
 }
 
 // SelectCredentials - An interactive menu for the user to select a piece of loot
-func SelectCredentials(con *console.SliverConsoleClient) (*clientpb.Loot, error) {
+func SelectCredentials(con *console.SliverConsole) (*clientpb.Loot, error) {
 	allLoot, err := con.Rpc.LootAllOf(context.Background(), &clientpb.Loot{
 		Type: clientpb.LootType_LOOT_CREDENTIAL,
 	})
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 	}
 
 	// Render selection table
@@ -150,10 +151,9 @@ func SelectCredentials(con *console.SliverConsoleClient) (*clientpb.Loot, error)
 }
 
 // SelectLoot - Interactive menu for the user to select a piece loot (all types)
-func SelectLoot(ctx *grumble.Context, rpc rpcpb.SliverRPCClient) (*clientpb.Loot, error) {
-
+func SelectLoot(cmd *cobra.Command, rpc rpcpb.SliverRPCClient) (*clientpb.Loot, error) {
 	// Fetch data with optional filter
-	filter := ctx.Flags.String("filter")
+	filter, _ := cmd.Flags().GetString("filter")
 	var allLoot *clientpb.AllLoot
 	var err error
 	if filter == "" {

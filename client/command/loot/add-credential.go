@@ -23,12 +23,15 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // LootAddCredentialCmd - Add a credential type loot
-func LootAddCredentialCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func LootAddCredentialCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	prompt := &survey.Select{
 		Message: "Choose a credential type:",
 		Options: []string{
@@ -38,7 +41,7 @@ func LootAddCredentialCmd(ctx *grumble.Context, con *console.SliverConsoleClient
 	}
 	credType := ""
 	survey.AskOne(prompt, &credType, survey.WithValidator(survey.Required))
-	name := ctx.Flags.String("name")
+	name, _ := cmd.Flags().GetString("name")
 	if name == "" {
 		namePrompt := &survey.Input{Message: "Credential Name: "}
 		con.Println()
@@ -77,9 +80,9 @@ func LootAddCredentialCmd(ctx *grumble.Context, con *console.SliverConsoleClient
 
 	loot, err := con.Rpc.LootAdd(context.Background(), loot)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 
-	con.PrintInfof("Successfully added loot to server (%s)\n", loot.LootID)
+	log.Infof("Successfully added loot to server (%s)\n", loot.LootID)
 }

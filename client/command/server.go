@@ -10,6 +10,8 @@ import (
 	"github.com/bishopfox/sliver/client/command/help"
 	"github.com/bishopfox/sliver/client/command/info"
 	"github.com/bishopfox/sliver/client/command/jobs"
+	"github.com/bishopfox/sliver/client/command/loot"
+	"github.com/bishopfox/sliver/client/command/monitor"
 	"github.com/bishopfox/sliver/client/command/operators"
 	"github.com/bishopfox/sliver/client/command/reaction"
 	"github.com/bishopfox/sliver/client/command/sessions"
@@ -1183,155 +1185,107 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		monitorCmd.AddCommand(&cobra.Command{
 			Use:   "start",
 			Short: "Start the monitoring loops",
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	monitor.MonitorStartCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run:   monitor.MonitorStartCmd,
 		})
 		monitorCmd.AddCommand(&cobra.Command{
 			Use:   "stop",
 			Short: "Stop the monitoring loops",
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	monitor.MonitorStopCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run:   monitor.MonitorStopCmd,
 		})
 		server.AddCommand(monitorCmd)
 
 		// [ Loot ] --------------------------------------------------------------
 
 		lootCmd := &cobra.Command{
-			Use:   consts.LootStr,
-			Short: "Manage the server's loot store",
-			Long:  help.GetHelpFor([]string{consts.LootStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("f", "filter", "", "filter based on loot type")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	loot.LootCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Use:     consts.LootStr,
+			Short:   "Manage the server's loot store",
+			Long:    help.GetHelpFor([]string{consts.LootStr}),
+			Run:     loot.LootCmd,
 			GroupID: consts.GenericHelpGroup,
 		}
-		lootCmd.AddCommand(&cobra.Command{
+		Flags("loot", lootCmd, func(f *pflag.FlagSet) {
+			f.StringP("filter", "f", "", "filter based on loot type")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+
+		lootAddCmd := &cobra.Command{
 			Use:   consts.LootLocalStr,
 			Short: "Add a local file to the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.LootLocalStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.String("path", "The local file path to the loot")
-			// },
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("n", "name", "", "name of this piece of loot")
-			// 	f.String("T", "type", "", "force a specific loot type (file/cred)")
-			// 	f.String("F", "file-type", "", "force a specific file type (binary/text)")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	loot.LootAddLocalCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   loot.LootAddLocalCmd,
+			Args:  cobra.ExactArgs(1), // 	a.String("path", "The local file path to the loot")
+		}
+		lootCmd.AddCommand(lootAddCmd)
+		Flags("loot", lootAddCmd, func(f *pflag.FlagSet) {
+			f.StringP("name", "n", "", "name of this piece of loot")
+			f.StringP("type", "T", "", "force a specific loot type (file/cred)")
+			f.StringP("file-type", "F", "", "force a specific file type (binary/text)")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		lootCmd.AddCommand(&cobra.Command{
+
+		lootRemoteCmd := &cobra.Command{
 			Use:   consts.LootRemoteStr,
 			Short: "Add a remote file from the current session to the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.LootRemoteStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.String("path", "The file path on the remote host to the loot")
-			// },
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("n", "name", "", "name of this piece of loot")
-			// 	f.String("T", "type", "", "force a specific loot type (file/cred)")
-			// 	f.String("F", "file-type", "", "force a specific file type (binary/text)")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	loot.LootAddRemoteCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   loot.LootAddRemoteCmd,
+			Args:  cobra.ExactArgs(1), // 	a.String("path", "The file path on the remote host to the loot")
+		}
+		lootCmd.AddCommand(lootRemoteCmd)
+		Flags("loot", lootRemoteCmd, func(f *pflag.FlagSet) {
+			f.StringP("name", "n", "", "name of this piece of loot")
+			f.StringP("type", "T", "", "force a specific loot type (file/cred)")
+			f.StringP("file-type", "F", "", "force a specific file type (binary/text)")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		lootCmd.AddCommand(&cobra.Command{
+
+		lootCredsCmd := &cobra.Command{
 			Use:   consts.LootCredsStr,
 			Short: "Add credentials to the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.LootCredsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("n", "name", "", "name of this piece of loot")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	loot.LootAddCredentialCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   loot.LootAddCredentialCmd,
+		}
+		lootCmd.AddCommand(lootCredsCmd)
+		Flags("loot", lootCredsCmd, func(f *pflag.FlagSet) {
+			f.StringP("name", "n", "", "name of this piece of loot")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		lootCmd.AddCommand(&cobra.Command{
+
+		lootRenameCmd := &cobra.Command{
 			Use:   consts.RenameStr,
 			Short: "Re-name a piece of existing loot",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.RenameStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	loot.LootRenameCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   loot.LootRenameCmd,
+		}
+		lootCmd.AddCommand(lootRenameCmd)
+		Flags("loot", lootRenameCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		lootCmd.AddCommand(&cobra.Command{
+
+		lootFetchCmd := &cobra.Command{
 			Use:   consts.FetchStr,
 			Short: "Fetch a piece of loot from the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.FetchStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("s", "save", "", "save loot to a local file")
-			// 	f.String("f", "filter", "", "filter based on loot type")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	loot.LootFetchCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   loot.LootFetchCmd,
+		}
+		lootCmd.AddCommand(lootFetchCmd)
+		Flags("loot", lootFetchCmd, func(f *pflag.FlagSet) {
+			f.StringP("save", "s", "", "save loot to a local file")
+			f.StringP("filter", "f", "", "filter based on loot type")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		lootCmd.AddCommand(&cobra.Command{
+
+		lootRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
 			Short: "Remove a piece of loot from the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.RmStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("f", "filter", "", "filter based on loot type")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	loot.LootRmCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   loot.LootRmCmd,
+		}
+		lootCmd.AddCommand(lootRmCmd)
+		Flags("loot", lootRmCmd, func(f *pflag.FlagSet) {
+			f.StringP("filter", "f", "", "filter based on loot type")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+
 		server.AddCommand(lootCmd)
 
 		// [ Hosts ] --------------------------------------------------------------

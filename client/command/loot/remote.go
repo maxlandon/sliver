@@ -29,11 +29,12 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/util/encoders"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -72,14 +73,14 @@ func ValidateLootFileType(lootFileTypeInput string, data []byte) clientpb.FileTy
 }
 
 /*
-	Eventually this function needs to be refactored out, but we made the decision to
-	duplicate it for now
+Eventually this function needs to be refactored out, but we made the decision to
+duplicate it for now
 */
-func PerformDownload(remotePath string, fileName string, ctx *grumble.Context, con *console.SliverConsoleClient) (*sliverpb.Download, error) {
+func PerformDownload(remotePath string, fileName string, cmd *cobra.Command, con *console.SliverConsole) (*sliverpb.Download, error) {
 	ctrl := make(chan bool)
 	con.SpinUntil(fmt.Sprintf("%s -> %s", fileName, "loot"), ctrl)
 	download, err := con.Rpc.Download(context.Background(), &sliverpb.DownloadReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 		Path:    remotePath,
 	})
 	ctrl <- true
@@ -91,10 +92,10 @@ func PerformDownload(remotePath string, fileName string, ctx *grumble.Context, c
 		con.AddBeaconCallback(download.Response.TaskID, func(task *clientpb.BeaconTask) {
 			err = proto.Unmarshal(task.Response, download)
 			if err != nil {
-				con.PrintErrorf("Failed to decode response %s\n", err)
+				log.Errorf("Failed to decode response %s\n", err)
 			}
 		})
-		con.PrintAsyncResponse(download.Response)
+		log.AsyncResponse(download.Response)
 	}
 
 	if download.Response != nil && download.Response.Err != "" {
@@ -134,7 +135,7 @@ func CreateLootMessage(fileName string, lootName string, lootType clientpb.LootT
 	return lootMessage
 }
 
-func SendLootMessage(loot *clientpb.Loot, con *console.SliverConsoleClient) {
+func SendLootMessage(loot *clientpb.Loot, con *console.SliverConsole) {
 	control := make(chan bool)
 	con.SpinUntil(fmt.Sprintf("Sending looted file (%s) to the server...", loot.Name), control)
 
@@ -142,22 +143,22 @@ func SendLootMessage(loot *clientpb.Loot, con *console.SliverConsoleClient) {
 	control <- true
 	<-control
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 	}
 
 	if loot.Name != loot.File.Name {
-		con.PrintInfof("Successfully looted %s (%s) (ID: %s)\n", loot.File.Name, loot.Name, loot.LootID)
+		log.Infof("Successfully looted %s (%s) (ID: %s)\n", loot.File.Name, loot.Name, loot.LootID)
 	} else {
-		con.PrintInfof("Successfully looted %s (ID: %s)\n", loot.Name, loot.LootID)
+		log.Infof("Successfully looted %s (ID: %s)\n", loot.Name, loot.LootID)
 	}
 
 	return
 }
 
-func LootDownload(download *sliverpb.Download, lootName string, lootType clientpb.LootType, fileType clientpb.FileType, ctx *grumble.Context, con *console.SliverConsoleClient) {
+func LootDownload(download *sliverpb.Download, lootName string, lootType clientpb.LootType, fileType clientpb.FileType, cmd *cobra.Command, con *console.SliverConsole) {
 	// Was the download successful?
 	if download.Response != nil && download.Response.Err != "" {
-		con.PrintErrorf("%s\n", download.Response.Err)
+		log.Errorf("%s\n", download.Response.Err)
 		return
 	}
 
@@ -174,9 +175,8 @@ func LootDownload(download *sliverpb.Download, lootName string, lootType clientp
 	} else {
 		// We have to decompress the gzip file first
 		decompressedDownload, err := gzip.NewReader(bytes.NewReader(download.Data))
-
 		if err != nil {
-			con.PrintErrorf("Could not decompress downloaded data: %s", err)
+			log.Errorf("Could not decompress downloaded data: %s", err)
 			return
 		}
 
@@ -227,28 +227,32 @@ func LootDownload(download *sliverpb.Download, lootName string, lootType clientp
 }
 
 // LootAddRemoteCmd - Add a file from the remote system to the server as loot
-func LootAddRemoteCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func LootAddRemoteCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
-	remotePath := ctx.Args.String("path")
+	remotePath := args[0]
 	fileName := filepath.Base(remotePath)
-	name := ctx.Flags.String("name")
+	name, _ := cmd.Flags().GetString("name")
 
-	lootType, err := ValidateLootType(ctx.Flags.String("type"))
+	lType, _ := cmd.Flags().GetString("type")
+	lootType, err := ValidateLootType(lType)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 
-	download, err := PerformDownload(remotePath, fileName, ctx, con)
+	download, err := PerformDownload(remotePath, fileName, cmd, con)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 
 	// Determine type based on download buffer
-	lootFileType := ValidateLootFileType(ctx.Flags.String("file-type"), download.Data)
-	LootDownload(download, name, lootType, lootFileType, ctx, con)
+	fileType, _ := cmd.Flags().GetString("file-type")
+	lootFileType := ValidateLootFileType(fileType, download.Data)
+	LootDownload(download, name, lootType, lootFileType, cmd, con)
 }

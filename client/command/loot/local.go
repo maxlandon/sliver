@@ -26,43 +26,46 @@ import (
 	"path"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // LootAddLocalCmd - Add a local file to the server as loot
-func LootAddLocalCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	localPath := ctx.Args.String("path")
+func LootAddLocalCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	localPath := args[0]
 	if _, err := os.Stat(localPath); os.IsNotExist(err) {
-		con.PrintErrorf("Path '%s' not found\n", localPath)
+		log.Errorf("Path '%s' not found\n", localPath)
 		return
 	}
 
-	name := ctx.Flags.String("name")
+	name, _ := cmd.Flags().GetString("name")
 	if name == "" {
 		name = path.Base(localPath)
 	}
 
 	var lootType clientpb.LootType
 	var err error
-	lootTypeStr := ctx.Flags.String("type")
+	lootTypeStr, _ := cmd.Flags().GetString("type")
 	if lootTypeStr != "" {
 		lootType, err = lootTypeFromHumanStr(lootTypeStr)
 		if err == ErrInvalidLootType {
-			con.PrintErrorf("Invalid loot type %s\n", lootTypeStr)
+			log.Errorf("Invalid loot type %s\n", lootTypeStr)
 			return
 		}
 	} else {
 		lootType = clientpb.LootType_LOOT_FILE
 	}
 
-	lootFileTypeStr := ctx.Flags.String("file-type")
+	lootFileTypeStr, _ := cmd.Flags().GetString("file-type")
 	var lootFileType clientpb.FileType
 	if lootFileTypeStr != "" {
 		lootFileType, err = lootFileTypeFromHumanStr(lootFileTypeStr)
 		if err != nil {
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 			return
 		}
 	} else {
@@ -74,7 +77,7 @@ func LootAddLocalCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	}
 	data, err := ioutil.ReadFile(localPath)
 	if err != nil {
-		con.PrintErrorf("Failed to read file %s\n", err)
+		log.Errorf("Failed to read file %s\n", err)
 		return
 	}
 
@@ -97,8 +100,8 @@ func LootAddLocalCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 	}
 
-	con.PrintInfof("Successfully added loot to server (%s)\n", loot.LootID)
+	log.Infof("Successfully added loot to server (%s)\n", loot.LootID)
 }

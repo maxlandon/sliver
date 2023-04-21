@@ -22,21 +22,24 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/desertbit/grumble"
+	"github.com/bishopfox/sliver/client/log"
+	"github.com/spf13/cobra"
 )
 
-func LootRmCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	loot, err := SelectLoot(ctx, con.Rpc)
+func LootRmCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	loot, err := SelectLoot(cmd, con.Rpc)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 
 	_, err = con.Rpc.LootRm(context.Background(), loot)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	con.Println()
-	con.PrintInfof("Removed loot from server\n")
+	log.Infof("Removed loot from server\n")
 }
