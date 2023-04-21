@@ -9,9 +9,9 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 )
 
-// SetupPrompt creates different types responsible for rendering the various
+// setupPrompts creates different types responsible for rendering the various
 // prompts (server and sliver menu) and loads the prompt configurations per menu.
-func SetupPrompt(con *SliverConsole) {
+func setupPrompts(con *SliverConsole) {
 	// Create the types and register them to the engine.
 	server := &serverPrompt{con: con}
 	implant := &sliverPrompt{con: con}

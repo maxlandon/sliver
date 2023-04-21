@@ -1,10 +1,16 @@
 package log
 
 import (
+	"context"
+	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/spin"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
 const (
@@ -36,51 +42,66 @@ const (
 	Success = Bold + Green + "[+] " + Normal
 )
 
-func Printf(format string, args ...interface{}) {
-	// return fmt.Fprintf(console.Console.Stdout(), format, args...)
-	console.Console.LogTransient(format, args)
+var print func(format string, args ...any) (n int, err error)
+
+// Init is used to pass the console specialized print function,
+// It's generally a transient logging utility, but can be fmt.Print.
+func Init(printf func(format string, args ...any) (n int, err error)) {
+	if printf != nil {
+		print = printf
+	} else {
+		print = fmt.Printf
+	}
 }
 
-func Println(args ...interface{}) {
-	// return fmt.Fprintln(console.Console.Stdout(), args...)
-	// console.Console.LogTransient(args...)
+func Printf(format string, args ...any) (n int, err error) {
+	return print(format, args)
 }
 
-func PrintInfof(format string, args ...interface{}) {
-	// return fmt.Fprintf(console.Console.Stdout(), Clearln+Info+format, args...)
-	console.Console.LogTransient(Clearln+Info+format, args...)
+func Println(args ...any) (n int, err error) {
+	return print(strings.Repeat("%s", len(args))+"\n", args...)
 }
 
-func PrintSuccessf(format string, args ...interface{}) {
-	// return fmt.Fprintf(console.Console.Stdout(), Clearln+Success+format, args...)
-	console.Console.LogTransient(Clearln+Success+format, args...)
+func Infof(format string, args ...any) (n int, err error) {
+	return print(Clearln+Info+format, args...)
 }
 
-func PrintWarnf(format string, args ...interface{}) {
-	// return fmt.Fprintf(console.Console.Stdout(), Clearln+"⚠️  "+Normal+format, args...)
-	console.Console.LogTransient(Clearln+"⚠️  "+Normal+format, args...)
+func Successf(format string, args ...any) (n int, err error) {
+	return print(Clearln+Success+format, args...)
 }
 
-func PrintErrorf(format string, args ...interface{}) {
-	// return fmt.Fprintf(console.Console.Stderr(), Clearln+Warn+format, args...)
-	console.Console.LogTransient(Clearln+Warn+format, args...)
+func Warnf(format string, args ...any) (n int, err error) {
+	return print(Clearln+"⚠️  "+Normal+format, args...)
 }
 
-func PrintEventInfof(format string, args ...interface{}) {
-	// return fmt.Fprintf(console.Console.Stdout(), Clearln+Info+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
-	console.Console.LogTransient(Clearln+Info+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
+func Errorf(format string, args ...any) (n int, err error) {
+	return print(Clearln+Warn+format, args...)
 }
 
-func PrintEventErrorf(format string, args ...interface{}) {
-	// return fmt.Fprintf(console.Console.Stderr(), Clearln+Warn+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
-	console.Console.LogTransient(Clearln+Warn+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
+func EventInfof(format string, args ...any) (n int, err error) {
+	return print(Clearln+Info+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 }
 
-func PrintEventSuccessf(format string, args ...interface{}) {
-	// return fmt.Fprintf(console.Console.Stdout(), Clearln+Success+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
-	console.Console.LogTransient(Clearln+Success+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
+func EventErrorf(format string, args ...any) (n int, err error) {
+	return print(Clearln+Warn+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
+}
+
+func EventSuccessf(format string, args ...any) (n int, err error) {
+	return print(Clearln+Success+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 }
 
 func SpinUntil(message string, ctrl chan bool) {
 	go spin.Until(os.Stdout, message, ctrl)
+}
+
+// AsyncResponse - Print the generic async response information
+func AsyncResponse(resp *commonpb.Response) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	beacon, err := console.Client.Rpc.GetBeacon(ctx, &clientpb.Beacon{ID: resp.BeaconID})
+	if err != nil {
+		fmt.Printf(Warn+"%s\n", err)
+		return
+	}
+	Infof("Tasked beacon %s (%s)\n", beacon.Name, strings.Split(resp.TaskID, "-")[0])
 }

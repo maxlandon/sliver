@@ -30,37 +30,51 @@ import (
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 )
 
-// Console is the client console
-var Console *console.Console
+const (
+	defaultTimeout = 60
+)
 
+// Client is the singleton wrapper for the RPC server connection,
+// the active session/beacon target and the console application.
 var Client *SliverConsole
 
-// Setup creates the console application, its menus and related settings
-// (prompts, interrupt handlers, etc), and binds all required commands to each.
-func Setup(serverCmds, sliverCmds console.Commands) {
-	Console = console.New()
+type SliverConsole struct {
+	App                      *console.Console
+	Rpc                      rpcpb.SliverRPCClient
+	ActiveTarget             *ActiveTarget
+	EventListeners           *sync.Map
+	BeaconTaskCallbacks      map[string]BeaconTaskCallback
+	BeaconTaskCallbacksMutex *sync.Mutex
+	IsServer                 bool
+	IsCLI                    bool
+	Settings                 *assets.ClientSettings
+}
+
+// NewConsole creates the console and its menus, and binds commands to them.
+func NewConsole(serverCmds, sliverCmds console.Commands) *console.Console {
+	con := console.New()
 
 	// Server menu.
-	server := Console.CurrentMenu()
+	server := con.CurrentMenu()
 	server.AddHistorySourceFile("server history", filepath.Join(assets.GetRootAppDir(), "history"))
-
 	server.Short = "Server commands"
 	server.SetCommands(serverCmds)
 
 	// Implant menu.
-	sliver := Console.NewMenu("implant")
-
+	sliver := con.NewMenu("implant")
 	sliver.Short = "Implant commands"
 	sliver.SetCommands(sliverCmds)
+
+	return con
 }
 
-// StartReadline wraps the last client settings and starts the console.
-func StartReadline(rpc rpcpb.SliverRPCClient, isServer bool) error {
+// StartConsole creates and sets up the console, prepares the client wrapper, binds commands and starts.
+func StartConsole(app *console.Console, rpc rpcpb.SliverRPCClient, isServer bool) error {
 	assets.Setup(false, false)
 	settings, _ := assets.LoadSettings()
 
 	con := &SliverConsole{
-		App: Console,
+		App: app,
 		Rpc: rpc,
 		ActiveTarget: &ActiveTarget{
 			observers:  map[int]Observer{},
@@ -72,14 +86,12 @@ func StartReadline(rpc rpcpb.SliverRPCClient, isServer bool) error {
 		IsServer:                 isServer,
 		Settings:                 settings,
 	}
-
 	Client = con
 
-	SetupPrompt(con)
+	// Register prompt segments and configurations.
+	setupPrompts(con)
 
-	// con.App.SetPrintASCIILogo(func(_ *grumble.App) {
 	con.PrintLogo()
-	// })
 
 	go con.startEventLoop()
 	go core.TunnelLoop(rpc)
@@ -88,18 +100,33 @@ func StartReadline(rpc rpcpb.SliverRPCClient, isServer bool) error {
 	if err != nil {
 		log.Printf("Run loop returned error: %v", err)
 	}
+
 	return err
 }
 
-type SliverConsole struct {
-	App                      *console.Console
-	Rpc                      rpcpb.SliverRPCClient
-	ActiveTarget             *ActiveTarget
-	EventListeners           *sync.Map
-	BeaconTaskCallbacks      map[string]BeaconTaskCallback
-	BeaconTaskCallbacksMutex *sync.Mutex
-	IsServer                 bool
-	Settings                 *assets.ClientSettings
+// StartCLI creates a wrapper client with a console that won't be ran.
+// This should only be used by the CLI command to interact with implants.
+func StartCLI(app *console.Console, rpc rpcpb.SliverRPCClient, isServer bool) {
+	assets.Setup(false, false)
+	settings, _ := assets.LoadSettings()
+
+	con := &SliverConsole{
+		App: app,
+		Rpc: rpc,
+		ActiveTarget: &ActiveTarget{
+			observers:  map[int]Observer{},
+			observerID: 0,
+		},
+		EventListeners:           &sync.Map{},
+		BeaconTaskCallbacks:      map[string]BeaconTaskCallback{},
+		BeaconTaskCallbacksMutex: &sync.Mutex{},
+		IsServer:                 isServer,
+		IsCLI:                    true,
+		Settings:                 settings,
+	}
+	Client = con
+
+	setupPrompts(con)
 }
 
 func (con *SliverConsole) startEventLoop() {
@@ -361,15 +388,15 @@ func (con *SliverConsole) PrintLogo() {
 	serverSemVer := fmt.Sprintf("%d.%d.%d", serverVer.Major, serverVer.Minor, serverVer.Patch)
 
 	logo := asciiLogos[insecureRand.Intn(len(asciiLogos))]
-	con.Println(logo)
-	con.Println("All hackers gain " + abilities[insecureRand.Intn(len(abilities))])
-	con.Printf(Info+"Server v%s - %s%s\n", serverSemVer, serverVer.Commit, dirty)
+	fmt.Println(logo)
+	fmt.Println("All hackers gain " + abilities[insecureRand.Intn(len(abilities))])
+	fmt.Printf(Info+"Server v%s - %s%s\n", serverSemVer, serverVer.Commit, dirty)
 	if version.GitCommit != serverVer.Commit {
-		con.Printf(Info+"Client %s\n", version.FullVersion())
+		fmt.Printf(Info+"Client %s\n", version.FullVersion())
 	}
-	con.Println(Info + "Welcome to the sliver shell, please type 'help' for options")
+	fmt.Println(Info + "Welcome to the sliver shell, please type 'help' for options")
 	if serverVer.Major != int32(version.SemanticVersion()[0]) {
-		con.Printf(Warn + "Warning: Client and server may be running incompatible versions.\n")
+		fmt.Printf(Warn + "Warning: Client and server may be running incompatible versions.\n")
 	}
 	con.CheckLastUpdate()
 }
@@ -563,10 +590,9 @@ func (con *SliverConsole) FormatDateDelta(t time.Time, includeDate bool, color b
 type ActiveTarget struct {
 	session    *clientpb.Session
 	beacon     *clientpb.Beacon
+	prompt     *sliverPrompt
 	observers  map[int]Observer
 	observerID int
-
-	prompt *sliverPrompt
 }
 
 // GetSessionInteractive - Get the active target(s)
@@ -621,14 +647,15 @@ func (s *ActiveTarget) Request(cmd *cobra.Command) *commonpb.Request {
 		return nil
 	}
 
-	timeOutF := 120
+	timeOutF := int64(defaultTimeout)
 	if cmd != nil {
-		timeOutF, _ = cmd.Flags().GetInt("timeout")
+		timeOutF, _ = cmd.Flags().GetInt64("timeout")
 	}
+	timeout := int64(time.Second) * timeOutF
 
-	timeout := int(time.Second) * timeOutF
 	req := &commonpb.Request{}
-	req.Timeout = int64(timeout)
+	req.Timeout = timeout
+
 	if s.session != nil {
 		req.Async = false
 		req.SessionID = s.session.ID
@@ -643,7 +670,6 @@ func (s *ActiveTarget) Request(cmd *cobra.Command) *commonpb.Request {
 // Set - Change the active session
 func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 	if session != nil && beacon != nil {
-		// panic("cannot set both an active beacon and an active session")
 		Client.PrintErrorf("cannot set both an active beacon and an active session")
 		return
 	}
@@ -656,12 +682,17 @@ func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 			observer(s.session, s.beacon)
 		}
 
-		s.prompt.loadProperties(nil, nil)
+		if Client.IsCLI {
+			return
+		}
 
 		// Switch back to server menu.
 		if Client.App.CurrentMenu().Name() == "implant" {
 			Client.App.SwitchMenu("")
 		}
+
+		s.prompt.loadProperties(nil, nil)
+
 		return
 	}
 
@@ -672,22 +703,24 @@ func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 		for _, observer := range s.observers {
 			observer(s.session, s.beacon)
 		}
-
-		s.prompt.loadProperties(session, nil)
 	} else if beacon != nil {
 		s.beacon = beacon
 		s.session = nil
 		for _, observer := range s.observers {
 			observer(s.session, s.beacon)
 		}
-
-		s.prompt.loadProperties(nil, beacon)
 	}
 
-	// Switch to implant menu.
+	if Client.IsCLI {
+		return
+	}
+
+	// Update menus, prompts and commands
 	if Client.App.CurrentMenu().Name() != "implant" {
 		Client.App.SwitchMenu("implant")
 	}
+
+	s.prompt.loadProperties(session, beacon)
 }
 
 // Background - Background the active session
@@ -699,7 +732,7 @@ func (s *ActiveTarget) Background() {
 	}
 
 	// Switch back to server menu.
-	if Client.App.CurrentMenu().Name() == "implant" {
+	if !Client.IsCLI && Client.App.CurrentMenu().Name() == "implant" {
 		Client.App.SwitchMenu("")
 	}
 }
