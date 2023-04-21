@@ -25,27 +25,30 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 )
 
 // BuildersCmd - List external builders
-func BuildersCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func BuildersCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	builders, err := con.Rpc.Builders(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("%s", err)
+		log.Errorf("%s", err)
 		return
 	}
 	if len(builders.Builders) == 0 {
-		con.PrintInfof("No external builders connected to server\n")
+		log.Infof("No external builders connected to server\n")
 	} else {
 		PrintBuilders(builders.Builders, con)
 	}
 }
 
-func PrintBuilders(externalBuilders []*clientpb.Builder, con *console.SliverConsoleClient) {
+func PrintBuilders(externalBuilders []*clientpb.Builder, con *console.SliverConsole) {
 	tw := table.NewWriter()
 	tw.SetStyle(settings.GetTableStyle(con))
 	tw.AppendHeader(table.Row{
@@ -67,5 +70,5 @@ func PrintBuilders(externalBuilders []*clientpb.Builder, con *console.SliverCons
 		}
 		tw.AppendRow(table.Row(row))
 	}
-	con.Printf("%s\n", tw.Render())
+	log.Printf("%s\n", tw.Render())
 }

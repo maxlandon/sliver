@@ -28,16 +28,19 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/desertbit/grumble"
+	"github.com/bishopfox/sliver/client/log"
+	"github.com/spf13/cobra"
 )
 
 // ReactionUnsetCmd - Unset a reaction upon an event
-func ReactionUnsetCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
-	reactionID := ctx.Flags.Int("id")
+func ReactionUnsetCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
+	reactionID, _ := cmd.Flags().GetInt("id")
 	if reactionID == 0 {
 		reaction, err := selectReaction(con)
 		if err != nil {
-			con.PrintErrorf("%s\n", err)
+			log.Errorf("%s\n", err)
 			return
 		}
 		reactionID = reaction.ID
@@ -45,14 +48,14 @@ func ReactionUnsetCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	success := core.Reactions.Remove(reactionID)
 	if success {
 		con.Println()
-		con.PrintInfof("Successfully removed reaction with id %d", reactionID)
+		log.Infof("Successfully removed reaction with id %d", reactionID)
 	} else {
-		con.PrintErrorf("No reaction found with id %d", reactionID)
+		log.Errorf("No reaction found with id %d", reactionID)
 	}
 	con.Println()
 }
 
-func selectReaction(con *console.SliverConsoleClient) (*core.Reaction, error) {
+func selectReaction(con *console.SliverConsole) (*core.Reaction, error) {
 	outputBuf := bytes.NewBufferString("")
 	table := tabwriter.NewWriter(outputBuf, 0, 2, 2, ' ', 0)
 	allReactions := core.Reactions.All()

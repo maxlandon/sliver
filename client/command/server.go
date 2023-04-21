@@ -6,13 +6,16 @@ import (
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/armory"
 	"github.com/bishopfox/sliver/client/command/beacons"
+	"github.com/bishopfox/sliver/client/command/builders"
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/command/help"
+	"github.com/bishopfox/sliver/client/command/hosts"
 	"github.com/bishopfox/sliver/client/command/info"
 	"github.com/bishopfox/sliver/client/command/jobs"
 	"github.com/bishopfox/sliver/client/command/loot"
 	"github.com/bishopfox/sliver/client/command/monitor"
 	"github.com/bishopfox/sliver/client/command/operators"
+	operator "github.com/bishopfox/sliver/client/command/prelude-operator"
 	"github.com/bishopfox/sliver/client/command/reaction"
 	"github.com/bishopfox/sliver/client/command/sessions"
 	"github.com/bishopfox/sliver/client/command/settings"
@@ -1273,6 +1276,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.StringP("filter", "f", "", "filter based on loot type")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(lootCmd, func(comp *carapace.ActionMap) {
+			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save loot")
+		})
 
 		lootRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
@@ -1290,137 +1296,98 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 
 		// [ Hosts ] --------------------------------------------------------------
 		hostsCmd := &cobra.Command{
-			Use:   consts.HostsStr,
-			Short: "Manage the database of hosts",
-			Long:  help.GetHelpFor([]string{consts.HostsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	hosts.HostsCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Use:     consts.HostsStr,
+			Short:   "Manage the database of hosts",
+			Long:    help.GetHelpFor([]string{consts.HostsStr}),
+			Run:     hosts.HostsCmd,
 			GroupID: consts.GenericHelpGroup,
 		}
-		hostsCmd.AddCommand(&cobra.Command{
+		server.AddCommand(hostsCmd)
+		Flags("hosts", hostsCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+
+		hostsRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
 			Short: "Remove a host from the database",
 			Long:  help.GetHelpFor([]string{consts.HostsStr, consts.RmStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	hosts.HostsRmCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   hosts.HostsRmCmd,
+		}
+		hostsCmd.AddCommand(hostsRmCmd)
+		Flags("hosts", hostsRmCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		iocCmd := &cobra.Command{
+
+		hostsIOCCmd := &cobra.Command{
 			Use:   consts.IOCStr,
 			Short: "Manage tracked IOCs on a given host",
 			Long:  help.GetHelpFor([]string{consts.HostsStr, consts.IOCStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	hosts.HostsIOCCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   hosts.HostsIOCCmd,
 		}
-		iocCmd.AddCommand(&cobra.Command{
+		hostsCmd.AddCommand(hostsIOCCmd)
+		Flags("iocs", hostsIOCCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+
+		hostsIOCRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
 			Short: "Delete IOCs from the database",
 			Long:  help.GetHelpFor([]string{consts.HostsStr, consts.IOCStr, consts.RmStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	hosts.HostsIOCRmCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   hosts.HostsIOCRmCmd,
+		}
+		hostsIOCCmd.AddCommand(hostsIOCRmCmd)
+		Flags("iocs", hostsIOCRmCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		hostsCmd.AddCommand(iocCmd)
-		server.AddCommand(hostsCmd)
 
 		// [ Reactions ] -----------------------------------------------------------------
 
 		reactionCmd := &cobra.Command{
-			Use:   consts.ReactionStr,
-			Short: "Manage automatic reactions to events",
-			Long:  help.GetHelpFor([]string{consts.ReactionStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	reaction.ReactionCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Use:     consts.ReactionStr,
+			Short:   "Manage automatic reactions to events",
+			Long:    help.GetHelpFor([]string{consts.ReactionStr}),
+			Run:     reaction.ReactionCmd,
 			GroupID: consts.SliverHelpGroup,
 		}
-		reactionCmd.AddCommand(&cobra.Command{
+		server.AddCommand(reactionCmd)
+
+		reactionSetCmd := &cobra.Command{
 			Use:   consts.SetStr,
 			Short: "Set a reaction to an event",
 			Long:  help.GetHelpFor([]string{consts.ReactionStr, consts.SetStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("e", "event", "", "specify the event type to react to")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	reaction.ReactionSetCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   reaction.ReactionSetCmd,
+		}
+		reactionCmd.AddCommand(reactionSetCmd)
+		Flags("reactions", reactionSetCmd, func(f *pflag.FlagSet) {
+			f.StringP("event", "e", "", "specify the event type to react to")
 		})
-		reactionCmd.AddCommand(&cobra.Command{
+
+		reactionUnsetCmd := &cobra.Command{
 			Use:   consts.UnsetStr,
 			Short: "Unset an existing reaction",
 			Long:  help.GetHelpFor([]string{consts.ReactionStr, consts.UnsetStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("i", "id", 0, "the id of the reaction to remove")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	reaction.ReactionUnsetCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Run:   reaction.ReactionUnsetCmd,
+		}
+		reactionCmd.AddCommand(reactionUnsetCmd)
+		Flags("reactions", reactionUnsetCmd, func(f *pflag.FlagSet) {
+			f.IntP("id", "i", 0, "the id of the reaction to remove")
 		})
-		reactionCmd.AddCommand(&cobra.Command{
+
+		reactionSaveCmd := &cobra.Command{
 			Use:   consts.SaveStr,
 			Short: "Save current reactions to disk",
 			Long:  help.GetHelpFor([]string{consts.ReactionStr, consts.SaveStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	reaction.ReactionSaveCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
-		})
-		reactionCmd.AddCommand(&cobra.Command{
+			Run:   reaction.ReactionSaveCmd,
+		}
+		reactionCmd.AddCommand(reactionSaveCmd)
+
+		reactionReloadCmd := &cobra.Command{
 			Use:   consts.ReloadStr,
 			Short: "Reload reactions from disk, replaces the running configuration",
 			Long:  help.GetHelpFor([]string{consts.ReactionStr, consts.ReloadStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	reaction.ReactionReloadCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
-		})
-		server.AddCommand(reactionCmd)
+			Run:   reaction.ReactionReloadCmd,
+		}
+		reactionCmd.AddCommand(reactionReloadCmd)
 
 		// [ Prelude's Operator ] ------------------------------------------------------------
 		operatorCmd := &cobra.Command{
@@ -1428,34 +1395,23 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Manage connection to Prelude's Operator",
 			Long:    help.GetHelpFor([]string{consts.PreludeOperatorStr}),
 			GroupID: consts.GenericHelpGroup,
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	operator.OperatorCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run:     operator.OperatorCmd,
 		}
-		operatorCmd.AddCommand(&cobra.Command{
+		server.AddCommand(operatorCmd)
+
+		operatorConnectCmd := &cobra.Command{
 			Use:   consts.ConnectStr,
 			Short: "Connect with Prelude's Operator",
 			Long:  help.GetHelpFor([]string{consts.PreludeOperatorStr, consts.ConnectStr}),
-			// GroupID: consts.GenericHelpGroup,
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	operator.ConnectCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// Args: func(a *grumble.Args) {
-			// 	a.String("connection-string", "connection string to the Operator Host (e.g. 127.0.0.1:1234)")
-			// },
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Bool("s", "skip-existing", false, "Do not add existing sessions as Operator Agents")
-			// 	f.String("a", "aes-key", "abcdefghijklmnopqrstuvwxyz012345", "AES key for communication encryption")
-			// 	f.String("r", "range", "sliver", "Agents range")
-			// },
+			Run:   operator.ConnectCmd,
+			Args:  cobra.ExactArgs(1), // 	a.String("connection-string", "connection string to the Operator Host (e.g. 127.0.0.1:1234)")
+		}
+		operatorCmd.AddCommand(operatorConnectCmd)
+		Flags("operator", operatorConnectCmd, func(f *pflag.FlagSet) {
+			f.BoolP("skip-existing", "s", false, "Do not add existing sessions as Operator Agents")
+			f.StringP("aes-key", "a", "abcdefghijklmnopqrstuvwxyz012345", "AES key for communication encryption")
+			f.StringP("range", "r", "sliver", "Agents range")
 		})
-		server.AddCommand(operatorCmd)
 
 		// [ Builders ] ---------------------------------------------
 
@@ -1464,17 +1420,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "List external builders",
 			Long:    help.GetHelpFor([]string{consts.BuildersStr}),
 			GroupID: consts.GenericHelpGroup,
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	builders.BuildersCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run:     builders.BuildersCmd,
 		}
 		server.AddCommand(buildersCmd)
+		Flags("builders", buildersCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
 
 		return server
 	}

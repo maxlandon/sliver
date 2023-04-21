@@ -23,13 +23,16 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/desertbit/grumble"
+	"github.com/bishopfox/sliver/client/log"
+	"github.com/spf13/cobra"
 )
 
 // ReactionSaveCmd - Manage reactions to events
-func ReactionReloadCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ReactionReloadCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	if _, err := os.Stat(GetReactionFilePath()); os.IsNotExist(err) {
-		con.PrintErrorf("Missing reaction file %s\n", GetReactionFilePath())
+		log.Errorf("Missing reaction file %s\n", GetReactionFilePath())
 		return
 	}
 	confirm := false
@@ -41,8 +44,8 @@ func ReactionReloadCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 
 	n, err := LoadReactions()
 	if err != nil {
-		con.PrintErrorf("Failed to load reactions: %s\n", err)
+		log.Errorf("Failed to load reactions: %s\n", err)
 	}
 	con.Println()
-	con.PrintInfof("Reloaded %d reactions from disk\n", n)
+	log.Infof("Reloaded %d reactions from disk\n", n)
 }

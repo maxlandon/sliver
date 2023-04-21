@@ -27,27 +27,30 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 )
 
 // HostsIOCCmd - Remove a host from the database
-func HostsIOCCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func HostsIOCCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	host, err := SelectHost(con)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	if 0 < len(host.IOCs) {
-		con.Printf("%s\n", hostIOCsTable(host, con))
+		log.Printf("%s\n", hostIOCsTable(host, con))
 	} else {
 		con.Println()
-		con.PrintInfof("No IOCs tracked on host\n")
+		log.Infof("No IOCs tracked on host\n")
 	}
 }
 
-func hostIOCsTable(host *clientpb.Host, con *console.SliverConsoleClient) string {
+func hostIOCsTable(host *clientpb.Host, con *console.SliverConsole) string {
 	tw := table.NewWriter()
 	tw.SetStyle(table.StyleBold)
 	tw.AppendHeader(table.Row{"File Path", "SHA-256"})
@@ -60,12 +63,11 @@ func hostIOCsTable(host *clientpb.Host, con *console.SliverConsoleClient) string
 	return tw.Render()
 }
 
-func SelectHostIOC(host *clientpb.Host, con *console.SliverConsoleClient) (*clientpb.IOC, error) {
-
+func SelectHostIOC(host *clientpb.Host, con *console.SliverConsole) (*clientpb.IOC, error) {
 	// Sort the keys because maps have a randomized order, these keys must be ordered for the selection
 	// to work properly since we rely on the index of the user's selection to find the session in the map
 	var keys []string
-	var iocMap = make(map[string]*clientpb.IOC)
+	iocMap := make(map[string]*clientpb.IOC)
 	for _, ioc := range host.IOCs {
 		keys = append(keys, ioc.ID)
 		iocMap[ioc.ID] = ioc
