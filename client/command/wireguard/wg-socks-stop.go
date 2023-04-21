@@ -20,41 +20,48 @@ package wireguard
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // WGSocksStopCmd - Stop a WireGuard SOCKS proxy
-func WGSocksStopCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func WGSocksStopCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	session := con.ActiveTarget.GetSession()
 	if session == nil {
 		return
 	}
 	if session.Transport != "wg" {
-		con.PrintErrorf("This command is only supported for WireGuard implants")
+		log.Errorf("This command is only supported for WireGuard implants")
 		return
 	}
 
-	socksID := ctx.Args.Int("id")
+	socksID, err := strconv.Atoi(args[0])
+	if err != nil {
+		log.Errorf("Error converting Socks ID (%s) to int: %s", args[0], err.Error())
+		return
+	}
 
 	stopReq, err := con.Rpc.WGStopSocks(context.Background(), &sliverpb.WGSocksStopReq{
 		ID:      int32(socksID),
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
-
 	if err != nil {
-		con.PrintErrorf("Error: %v", err)
+		log.Errorf("Error: %v", err)
 		return
 	}
 
 	if stopReq.Response != nil && stopReq.Response.Err != "" {
-		con.PrintErrorf("Error: %v\n", stopReq.Response.Err)
+		log.Errorf("Error: %v\n", stopReq.Response.Err)
 		return
 	}
 
 	if stopReq.Server != nil {
-		con.PrintInfof("Removed socks listener rule %s \n", stopReq.Server.LocalAddr)
+		log.Infof("Removed socks listener rule %s \n", stopReq.Server.LocalAddr)
 	}
 }

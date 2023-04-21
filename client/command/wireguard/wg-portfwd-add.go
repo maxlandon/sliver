@@ -23,47 +23,49 @@ import (
 	"net"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // WGPortFwdAddCmd - Add a new WireGuard port forward
-func WGPortFwdAddCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func WGPortFwdAddCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
 	if session.Transport != "wg" {
-		con.PrintErrorf("This command is only supported for WireGuard implants")
+		log.Errorf("This command is only supported for WireGuard implants")
 		return
 	}
 
-	localPort := ctx.Flags.Int("bind")
-	remoteAddr := ctx.Flags.String("remote")
+	localPort, _ := cmd.Flags().GetInt32("bind")
+	remoteAddr, _ := cmd.Flags().GetString("remote")
 	if remoteAddr == "" {
-		con.PrintErrorf("Must specify a remote target host:port")
+		log.Errorf("Must specify a remote target host:port")
 		return
 	}
 	remoteHost, remotePort, err := net.SplitHostPort(remoteAddr)
 	if err != nil {
-		con.PrintErrorf("Failed to parse remote target %s\n", err)
+		log.Errorf("Failed to parse remote target %s\n", err)
 		return
 	}
 
 	portfwdAdd, err := con.Rpc.WGStartPortForward(context.Background(), &sliverpb.WGPortForwardStartReq{
-		LocalPort:     int32(localPort),
+		LocalPort:     localPort,
 		RemoteAddress: remoteAddr,
-		Request:       con.ActiveTarget.Request(ctx),
+		Request:       con.ActiveTarget.Request(cmd),
 	})
-
 	if err != nil {
-		con.PrintErrorf("Error: %v", err)
+		log.Errorf("Error: %v", err)
 		return
 	}
 
 	if portfwdAdd.Response != nil && portfwdAdd.Response.Err != "" {
-		con.PrintErrorf("Error: %s\n", portfwdAdd.Response.Err)
+		log.Errorf("Error: %s\n", portfwdAdd.Response.Err)
 		return
 	}
-	con.PrintInfof("Port forwarding %s -> %s:%s\n", portfwdAdd.Forwarder.LocalAddr, remoteHost, remotePort)
+	log.Infof("Port forwarding %s -> %s:%s\n", portfwdAdd.Forwarder.LocalAddr, remoteHost, remotePort)
 }

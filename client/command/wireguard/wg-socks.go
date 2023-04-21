@@ -23,31 +23,34 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 )
 
 // WGSocksListCmd - List WireGuard SOCKS proxies
-func WGSocksListCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func WGSocksListCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
 	if session.Transport != "wg" {
-		con.PrintErrorf("This command is only supported for WireGuard implants")
+		log.Errorf("This command is only supported for WireGuard implants")
 		return
 	}
 
 	socksList, err := con.Rpc.WGListSocksServers(context.Background(), &sliverpb.WGSocksServersReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
-		con.PrintErrorf("Error: %v", err)
+		log.Errorf("Error: %v", err)
 		return
 	}
 	if socksList.Response != nil && socksList.Response.Err != "" {
-		con.PrintErrorf("Error: %s\n", socksList.Response.Err)
+		log.Errorf("Error: %s\n", socksList.Response.Err)
 		return
 	}
 
@@ -68,5 +71,4 @@ func WGSocksListCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 			con.Println(tw.Render())
 		}
 	}
-
 }

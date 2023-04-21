@@ -22,39 +22,41 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // WGSocksStartCmd - Start a WireGuard reverse SOCKS proxy
-func WGSocksStartCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func WGSocksStartCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
 	if session.Transport != "wg" {
-		con.PrintErrorf("This command is only supported for Wireguard implants")
+		log.Errorf("This command is only supported for Wireguard implants")
 		return
 	}
 
-	bindPort := ctx.Flags.Int("bind")
+	bindPort, _ := cmd.Flags().GetInt32("bind")
 
 	socks, err := con.Rpc.WGStartSocks(context.Background(), &sliverpb.WGSocksStartReq{
 		Port:    int32(bindPort),
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
-
 	if err != nil {
-		con.PrintErrorf("Error: %v", err)
+		log.Errorf("Error: %v", err)
 		return
 	}
 
 	if socks.Response != nil && socks.Response.Err != "" {
-		con.PrintErrorf("Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 
 	if socks.Server != nil {
-		con.PrintInfof("Started SOCKS server on %s\n", socks.Server.LocalAddr)
+		log.Infof("Started SOCKS server on %s\n", socks.Server.LocalAddr)
 	}
 }

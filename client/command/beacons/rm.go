@@ -22,6 +22,7 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/spf13/cobra"
 )
 
@@ -31,13 +32,13 @@ func BeaconsRmCmd(cmd *cobra.Command, args []string) {
 
 	beacon, err := SelectBeacon(con)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
 	_, err = con.Rpc.RmBeacon(context.Background(), beacon)
 	if err != nil {
-		con.PrintErrorf("%s\n", err)
+		log.Errorf("%s\n", err)
 		return
 	}
-	con.PrintInfof("Beacon removed (%s)\n", beacon.ID)
+	log.Infof("Beacon removed (%s)\n", beacon.ID)
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/armory"
+	"github.com/bishopfox/sliver/client/command/beacons"
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/command/help"
 	"github.com/bishopfox/sliver/client/command/info"
@@ -16,7 +17,9 @@ import (
 	"github.com/bishopfox/sliver/client/command/update"
 	"github.com/bishopfox/sliver/client/command/use"
 	"github.com/bishopfox/sliver/client/command/websites"
+	"github.com/bishopfox/sliver/client/command/wireguard"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/licenses"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
@@ -968,6 +971,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.StringP("web-path", "p", "", "http path to host file at")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		// FlagComps(websitesRmWebContentCmd, func(comp *carapace.ActionMap) {
+		// })
 		websitesCmd.AddCommand(websitesRmWebContentCmd)
 
 		websitesContentCmd := &cobra.Command{
@@ -983,6 +988,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.StringP("content", "c", "", "local file path/dir (must use --recursive for dir)")
 			f.BoolP("recursive", "r", false, "recursively add/rm content")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(websitesContentCmd, func(comp *carapace.ActionMap) {
+			(*comp)["content"] = carapace.ActionFiles().Tag("content directory/files")
 		})
 		websitesCmd.AddCommand(websitesContentCmd)
 
@@ -1004,73 +1012,59 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Beacons ] ---------------------------------------------
 
 		beaconsCmd := &cobra.Command{
-			Use:   consts.BeaconsStr,
-			Short: "Manage beacons",
-			Long:  help.GetHelpFor([]string{consts.BeaconsStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("k", "kill", "", "kill a beacon")
-			// 	f.Bool("K", "kill-all", false, "kill all beacons")
-			// 	f.Bool("F", "force", false, "force killing of the beacon")
-			// 	f.String("f", "filter", "", "filter beacons by substring")
-			// 	f.String("e", "filter-re", "", "filter beacons by regular expression")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
+			Use:     consts.BeaconsStr,
+			Short:   "Manage beacons",
+			Long:    help.GetHelpFor([]string{consts.BeaconsStr}),
 			GroupID: consts.SliverHelpGroup,
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	beacons.BeaconsCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run:     beacons.BeaconsCmd,
 		}
-		beaconsCmd.AddCommand(&cobra.Command{
+		Flags("beacons", beaconsCmd, func(f *pflag.FlagSet) {
+			f.StringP("kill", "k", "", "kill the designated beacon")
+			f.BoolP("kill-all", "K", false, "kill all beacons")
+			f.BoolP("force", "F", false, "force killing the beacon")
+
+			f.StringP("filter", "f", "", "filter beacons by substring")
+			f.StringP("filter-re", "e", "", "filter beacons by regular expression")
+
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(beaconsCmd, func(comp *carapace.ActionMap) {
+			(*comp)["kill"] = use.BeaconAndSessionIDCompleter()
+		})
+		beaconsRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
 			Short: "Remove a beacon",
 			Long:  help.GetHelpFor([]string{consts.BeaconsStr, consts.RmStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// GroupID: consts.SliverWinHelpGroup,
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	beacons.BeaconsRmCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run:   beacons.BeaconsRmCmd,
+		}
+		Flags("beacons", beaconsRmCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		beaconsCmd.AddCommand(&cobra.Command{
+		carapace.Gen(beaconsRmCmd).PositionalCompletion(use.BeaconIDCompleter())
+		beaconsCmd.AddCommand(beaconsRmCmd)
+
+		beaconsWatchCmd := &cobra.Command{
 			Use:   consts.WatchStr,
 			Short: "Watch your beacons",
 			Long:  help.GetHelpFor([]string{consts.BeaconsStr, consts.WatchStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// GroupID: consts.SliverWinHelpGroup,
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	beacons.BeaconsWatchCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run:   beacons.BeaconsWatchCmd,
+		}
+		Flags("beacons", beaconsWatchCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		beaconsCmd.AddCommand(&cobra.Command{
+		beaconsCmd.AddCommand(beaconsWatchCmd)
+
+		beaconsPruneCmd := &cobra.Command{
 			Use:   consts.PruneStr,
 			Short: "Prune stale beacons automatically",
 			Long:  help.GetHelpFor([]string{consts.BeaconsStr, consts.PruneStr}),
-			// Flags: func(f *grumble.Flags) {
-			// 	f.String("d", "duration", "1h", "duration to prune beacons that have missed their last checkin")
-			//
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
-			// GroupID: consts.SliverWinHelpGroup,
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	beacons.BeaconsPruneCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run:   beacons.BeaconsPruneCmd,
+		}
+		Flags("beacons", beaconsPruneCmd, func(f *pflag.FlagSet) {
+			f.StringP("duration", "d", "1h", "duration to prune beacons that have missed their last checkin")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		beaconsCmd.AddCommand(beaconsPruneCmd)
 		server.AddCommand(beaconsCmd)
 
 		// [ Licenses ] ---------------------------------------------
@@ -1079,130 +1073,103 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.LicensesStr,
 			Short: "Open source licenses",
 			Long:  help.GetHelpFor([]string{consts.LicensesStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	con.Println(licenses.All)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Run: func(cmd *cobra.Command, args []string) {
+				log.Println()
+				log.Println(licenses.All)
+				log.Println()
+			},
 			GroupID: consts.GenericHelpGroup,
 		})
 
 		// [ WireGuard ] --------------------------------------------------------------
 
-		server.AddCommand(&cobra.Command{
-			Use:   consts.WgConfigStr,
-			Short: "Generate a new WireGuard client config",
-			Long:  help.GetHelpFor([]string{consts.WgConfigStr}),
-			// 	Flags: func(f *grumble.Flags) {
-			// 		f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// 		f.String("s", "save", "", "save configuration to file (.conf)")
-			// 	},
-			// 	Run: func(ctx *grumble.Context) error {
-			// 		con.Println()
-			// 		wireguard.WGConfigCmd(ctx, con)
-			// 		con.Println()
-			// 		return nil
-			// 	},
+		wgConfigCmd := &cobra.Command{
+			Use:     consts.WgConfigStr,
+			Short:   "Generate a new WireGuard client config",
+			Long:    help.GetHelpFor([]string{consts.WgConfigStr}),
+			Run:     wireguard.WGConfigCmd,
 			GroupID: consts.GenericHelpGroup,
+		}
+		server.AddCommand(wgConfigCmd)
+
+		Flags("beacons", wgConfigCmd, func(f *pflag.FlagSet) {
+			f.StringP("save", "s", "", "save configuration to file (.conf)")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(wgConfigCmd, func(comp *carapace.ActionMap) {
+			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save config")
 		})
 
 		wgPortFwdCmd := &cobra.Command{
-			Use:   consts.WgPortFwdStr,
-			Short: "List ports forwarded by the WireGuard tun interface",
-			Long:  help.GetHelpFor([]string{consts.WgPortFwdStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	wireguard.WGPortFwdListCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
+			Use:     consts.WgPortFwdStr,
+			Short:   "List ports forwarded by the WireGuard tun interface",
+			Long:    help.GetHelpFor([]string{consts.WgPortFwdStr}),
+			Run:     wireguard.WGPortFwdListCmd,
 			GroupID: consts.GenericHelpGroup,
 		}
-		wgPortFwdCmd.AddCommand(&cobra.Command{
+		Flags("wg portforward", wgPortFwdCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+
+		wgPortFwdAddCmd := &cobra.Command{
 			Use:   consts.AddStr,
 			Short: "Add a port forward from the WireGuard tun interface to a host on the target network",
 			Long:  help.GetHelpFor([]string{consts.WgPortFwdStr, consts.AddStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	wireguard.WGPortFwdAddCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// 	f.Int("b", "bind", 1080, "port to listen on the WireGuard tun interface")
-			// 	f.String("r", "remote", "", "remote target host:port (e.g., 10.0.0.1:445)")
-			// },
+			Run:   wireguard.WGPortFwdAddCmd,
+		}
+		Flags("wg portforward", wgPortFwdAddCmd, func(f *pflag.FlagSet) {
+			f.Int32P("bind", "b", 1080, "port to listen on the WireGuard tun interface")
+			f.StringP("remote", "r", "", "remote target host:port (e.g., 10.0.0.1:445)")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		wgPortFwdCmd.AddCommand(&cobra.Command{
+		wgPortFwdCmd.AddCommand(wgPortFwdAddCmd)
+
+		wgPortFwdRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
 			Short: "Remove a port forward from the WireGuard tun interface",
 			Long:  help.GetHelpFor([]string{consts.WgPortFwdStr, consts.RmStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.Int("id", "forwarder id")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	wireguard.WGPortFwdRmCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
+			Args:  cobra.ExactArgs(1), // 	a.Int("id", "forwarder id")
+			Run:   wireguard.WGPortFwdRmCmd,
+		}
+		Flags("wg portforward", wgPortFwdRmCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		wgPortFwdCmd.AddCommand(wgPortFwdRmCmd)
 		server.AddCommand(wgPortFwdCmd)
 
 		wgSocksCmd := &cobra.Command{
-			Use:   consts.WgSocksStr,
-			Short: "List socks servers listening on the WireGuard tun interface",
-			Long:  help.GetHelpFor([]string{consts.WgSocksStr}),
-			// 	Run: func(ctx *grumble.Context) error {
-			// 		con.Println()
-			// 		wireguard.WGSocksListCmd(ctx, con)
-			// 		con.Println()
-			// 		return nil
-			// 	},
-			// 	Flags: func(f *grumble.Flags) {
-			// 		f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// 	},
+			Use:     consts.WgSocksStr,
+			Short:   "List socks servers listening on the WireGuard tun interface",
+			Long:    help.GetHelpFor([]string{consts.WgSocksStr}),
+			Run:     wireguard.WGSocksListCmd,
 			GroupID: consts.GenericHelpGroup,
 		}
-		wgSocksCmd.AddCommand(&cobra.Command{
+		Flags("wg socks", wgSocksCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+
+		wgSocksStartCmd := &cobra.Command{
 			Use:   consts.StartStr,
 			Short: "Start a socks5 listener on the WireGuard tun interface",
 			Long:  help.GetHelpFor([]string{consts.WgSocksStr, consts.StartStr}),
-			// 	Run: func(ctx *grumble.Context) error {
-			// 		con.Println()
-			// 		wireguard.WGSocksStartCmd(ctx, con)
-			// 		con.Println()
-			// 		return nil
-			// 	},
-			// 	Flags: func(f *grumble.Flags) {
-			// 		f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// 		f.Int("b", "bind", 3090, "port to listen on the WireGuard tun interface")
-			// 	},
+			Run:   wireguard.WGSocksStartCmd,
+		}
+		wgSocksCmd.AddCommand(wgSocksStartCmd)
+		Flags("wg socks", wgSocksStartCmd, func(f *pflag.FlagSet) {
+			f.Int32P("bind", "b", 3090, "port to listen on the WireGuard tun interface")
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		wgSocksCmd.AddCommand(&cobra.Command{
+
+		wgSocksStopCmd := &cobra.Command{
 			Use:   consts.StopStr,
 			Short: "Stop a socks5 listener on the WireGuard tun interface",
 			Long:  help.GetHelpFor([]string{consts.WgSocksStr, consts.StopStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.Int("id", "forwarder id")
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	wireguard.WGSocksStopCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// Flags: func(f *grumble.Flags) {
-			// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-			// },
+			Run:   wireguard.WGSocksStopCmd,
+			Args:  cobra.ExactArgs(1), // 	a.Int("id", "forwarder id")
+		}
+		wgSocksCmd.AddCommand(wgSocksStopCmd)
+		Flags("wg socks", wgSocksStopCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		server.AddCommand(wgSocksCmd)
 

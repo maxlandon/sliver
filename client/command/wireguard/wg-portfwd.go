@@ -23,37 +23,40 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 )
 
 // WGPortFwdListCmd - List WireGuard port forwards
-func WGPortFwdListCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func WGPortFwdListCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
 	if session.Transport != "wg" {
-		con.PrintErrorf("This command is only supported for WireGuard implants")
+		log.Errorf("This command is only supported for WireGuard implants")
 		return
 	}
 
 	fwdList, err := con.Rpc.WGListForwarders(context.Background(), &sliverpb.WGTCPForwardersReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
-		con.PrintErrorf("Error: %v", err)
+		log.Errorf("Error: %v", err)
 		return
 	}
 	if fwdList.Response != nil && fwdList.Response.Err != "" {
-		con.PrintErrorf("Error: %s\n", fwdList.Response.Err)
+		log.Errorf("Error: %s\n", fwdList.Response.Err)
 		return
 	}
 
 	if fwdList.Forwarders != nil {
 		if len(fwdList.Forwarders) == 0 {
-			con.PrintInfof("No port forwards\n")
+			log.Infof("No port forwards\n")
 		} else {
 			tw := table.NewWriter()
 			tw.SetStyle(settings.GetTableStyle(con))

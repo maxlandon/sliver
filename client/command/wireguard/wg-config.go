@@ -29,8 +29,9 @@ import (
 	"text/template"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 var wgQuickTemplate = `[Interface]
@@ -52,30 +53,32 @@ type wgQuickConfig struct {
 }
 
 // WGConfigCmd - Generate a WireGuard client configuration
-func WGConfigCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func WGConfigCmd(cmd *cobra.Command, args []string) {
+	con := console.Client
+
 	wgConfig, err := con.Rpc.GenerateWGClientConfig(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		con.PrintErrorf("Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 	clientPrivKeyBytes, err := hex.DecodeString(wgConfig.ClientPrivateKey)
 	if err != nil {
-		con.PrintErrorf("Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 	serverPubKeyBytes, err := hex.DecodeString(wgConfig.ServerPubKey)
 	if err != nil {
-		con.PrintErrorf("Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 	tmpl, err := template.New("wgQuick").Parse(wgQuickTemplate)
 	if err != nil {
-		con.PrintErrorf("Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 	clientIP, network, err := net.ParseCIDR(wgConfig.ClientIP + "/16")
 	if err != nil {
-		con.PrintErrorf("Error: %s\n", err)
+		log.Errorf("Error: %s\n", err)
 		return
 	}
 	output := bytes.Buffer{}
@@ -86,19 +89,19 @@ func WGConfigCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		AllowedSubnet:   network.String(),
 	})
 
-	save := ctx.Flags.String("save")
+	save, _ := cmd.Flags().GetString("save")
 	if save == "" {
-		con.PrintInfof("New client config:")
+		log.Infof("New client config:")
 		con.Println(output.String())
 	} else {
 		if !strings.HasSuffix(save, ".conf") {
 			save += ".conf"
 		}
-		err = ioutil.WriteFile(save, output.Bytes(), 0600)
+		err = ioutil.WriteFile(save, output.Bytes(), 0o600)
 		if err != nil {
-			con.PrintErrorf("Error: %s\n", err)
+			log.Errorf("Error: %s\n", err)
 			return
 		}
-		con.PrintInfof("Wrote conf: %s\n", save)
+		log.Infof("Wrote conf: %s\n", save)
 	}
 }
