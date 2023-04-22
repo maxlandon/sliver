@@ -23,12 +23,13 @@ import (
 	"errors"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/spf13/cobra"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
-	"github.com/spf13/cobra"
 )
 
 // KillCmd - Kill the active session (not to be confused with TerminateCmd)
@@ -51,6 +52,7 @@ func KillCmd(cmd *cobra.Command, args []string) {
 		}
 		con.PrintInfof("Killed %s (%s)\n", session.Name, session.ID)
 		con.ActiveTarget.Background()
+		con.ExposeCommands()
 		return
 	} else if beacon != nil {
 		survey.AskOne(&survey.Confirm{Message: "Kill the active beacon?"}, &confirm, nil)
@@ -64,6 +66,7 @@ func KillCmd(cmd *cobra.Command, args []string) {
 		}
 		con.PrintInfof("Killed %s (%s)\n", beacon.Name, beacon.ID)
 		con.ActiveTarget.Background()
+		con.ExposeCommands()
 		return
 	}
 	con.PrintErrorf("No active session or beacon\n")

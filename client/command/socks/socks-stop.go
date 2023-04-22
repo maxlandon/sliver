@@ -21,10 +21,11 @@ package socks
 import (
 	"context"
 
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
 )
 
 // SocksStopCmd - Remove an existing tunneled port forward

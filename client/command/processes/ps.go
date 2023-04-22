@@ -24,14 +24,15 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/desertbit/grumble"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
-	"github.com/jedib0t/go-pretty/v6/table"
-	"google.golang.org/protobuf/proto"
 )
 
 var (

@@ -25,10 +25,11 @@ import (
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/spf13/cobra"
+
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/log"
-	"github.com/spf13/cobra"
 )
 
 // AliasesRemoveCmd - Locally load a alias into the Sliver shell.

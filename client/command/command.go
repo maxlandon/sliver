@@ -1,6 +1,9 @@
 package command
 
 import (
+	"strings"
+
+	"github.com/reeflective/console"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -24,4 +27,27 @@ func FlagComps(cmd *cobra.Command, bind func(comp *carapace.ActionMap)) {
 	bind(&comps)
 
 	carapace.Gen(cmd).FlagCompletion(comps)
+}
+
+// HideCommand generates a cobra annotation map with a single
+// console.CommandHiddenFilter key, which value is a comma-separated list
+// of filters to use in order to expose/hide commands based on requirements.
+// Ex: cmd.Annotations = HideCommand("windows") will hide the cmd
+// if the target session/beacon is not a Windows host.
+func HideCommand(filters ...string) map[string]string {
+	if len(filters) == 0 {
+		return nil
+	}
+
+	if len(filters) == 1 {
+		return map[string]string{
+			console.CommandFilterKey: filters[0],
+		}
+	}
+
+	filts := strings.Join(filters, ",")
+
+	return map[string]string{
+		console.CommandFilterKey: filts,
+	}
 }

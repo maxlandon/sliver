@@ -21,11 +21,12 @@ package portfwd
 import (
 	"sort"
 
+	"github.com/desertbit/grumble"
+	"github.com/jedib0t/go-pretty/v6/table"
+
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/desertbit/grumble"
-	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 // PortfwdCmd - Display information about tunneled port forward(s)

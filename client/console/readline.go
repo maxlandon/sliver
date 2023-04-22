@@ -212,6 +212,7 @@ func (con *SliverConsole) startEventLoop() {
 			core.CloseCursedProcesses(session.ID)
 			if activeSession != nil && activeSession.ID == session.ID {
 				con.ActiveTarget.Set(nil, nil)
+				con.ExposeCommands()
 				con.PrintEventErrorf("Active session disconnected")
 				// con.App.SetPrompt(con.GetPrompt())
 			}
@@ -292,6 +293,7 @@ func (con *SliverConsole) triggerReactions(event *clientpb.Event) {
 	currentActiveSession, currentActiveBeacon := con.ActiveTarget.Get()
 	defer func() {
 		con.ActiveTarget.Set(currentActiveSession, currentActiveBeacon)
+		con.ExposeCommands()
 	}()
 
 	con.ActiveTarget.Set(nil, nil)
@@ -302,6 +304,8 @@ func (con *SliverConsole) triggerReactions(event *clientpb.Event) {
 		proto.Unmarshal(event.Data, beacon)
 		con.ActiveTarget.Set(nil, beacon)
 	}
+
+	con.ExposeCommands()
 
 	for _, reaction := range reactions {
 		for _, line := range reaction.Commands {
@@ -735,4 +739,49 @@ func (s *ActiveTarget) Background() {
 	if !Client.IsCLI && Client.App.CurrentMenu().Name() == "implant" {
 		Client.App.SwitchMenu("")
 	}
+}
+
+// Expose or hide commands if the active target does support them (or not).
+// Ex; hide Windows commands on Linux implants, Wireguard tools on HTTP C2, etc.
+func (con *SliverConsole) ExposeCommands() {
+	if con.ActiveTarget.session == nil && con.ActiveTarget.beacon == nil {
+		con.App.ShowCommands()
+		return
+	}
+
+	filters := make([]string, 0)
+
+	// Target type.
+	switch {
+	case con.ActiveTarget.session != nil:
+		session := con.ActiveTarget.session
+		filters = append(filters, consts.BeaconCmdsFilter)
+
+		// Operating system
+		if session.OS != "windows" {
+			filters = append(filters, consts.WindowsCmdsFilter)
+		}
+
+		// C2 stack
+		if session.Transport != "wg" {
+			filters = append(filters, consts.WireguardCmdsFilter)
+		}
+
+	case con.ActiveTarget.beacon != nil:
+		beacon := con.ActiveTarget.beacon
+		filters = append(filters, consts.SessionCmdsFilter)
+
+		// Operating system
+		if beacon.OS != "windows" {
+			filters = append(filters, consts.WindowsCmdsFilter)
+		}
+
+		// C2 stack
+		if beacon.Transport != "wg" {
+			filters = append(filters, consts.WireguardCmdsFilter)
+		}
+	}
+
+	// Use all defined filters.
+	con.App.HideCommands(filters...)
 }

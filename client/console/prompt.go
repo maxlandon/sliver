@@ -3,10 +3,11 @@ package console
 import (
 	"strings"
 
-	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/jandedobbeleer/oh-my-posh/src/engine"
 	"github.com/jandedobbeleer/oh-my-posh/src/platform"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
+
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // setupPrompts creates different types responsible for rendering the various

@@ -27,11 +27,12 @@ import (
 	"text/tabwriter"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/desertbit/grumble"
+	"github.com/desertbit/readline"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/overlord"
-	"github.com/desertbit/grumble"
-	"github.com/desertbit/readline"
 )
 
 func CursedConsoleCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {

@@ -22,9 +22,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
 )
 
 // MigrateCmd - Windows only, inject an implant into another process

@@ -21,11 +21,12 @@ package privilege
 import (
 	"context"
 
+	"github.com/desertbit/grumble"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
-	"google.golang.org/protobuf/proto"
 )
 
 // RunAsCmd - Run a command as another user on the remote system

@@ -21,9 +21,10 @@ package loot
 import (
 	"context"
 
+	"github.com/spf13/cobra"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/log"
-	"github.com/spf13/cobra"
 )
 
 func LootRmCmd(cmd *cobra.Command, args []string) {

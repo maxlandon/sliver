@@ -27,8 +27,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bishopfox/sliver/util/encoders"
 	"github.com/spf13/cobra"
+
+	"github.com/bishopfox/sliver/util/encoders"
 
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/console"

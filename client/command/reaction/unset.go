@@ -26,10 +26,11 @@ import (
 	"text/tabwriter"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/spf13/cobra"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/log"
-	"github.com/spf13/cobra"
 )
 
 // ReactionUnsetCmd - Unset a reaction upon an event

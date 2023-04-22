@@ -24,6 +24,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rsteube/carapace"
+
 	"github.com/bishopfox/sliver/client/console"
 )
 
@@ -60,4 +62,48 @@ func LocalPathCompleter(prefix string, args []string, con *console.SliverConsole
 		}
 	}
 	return results
+}
+
+func WebsiteNameCompleter() carapace.Action {
+	return carapace.ActionMessage("unimplemented completer")
+}
+
+func C2URLCompleter() carapace.Action {
+	return carapace.ActionMessage("unimplemented completer")
+}
+
+func WgPortforwardIDCompleter() carapace.Action {
+	return carapace.ActionMessage("unimplemented completer")
+}
+
+func PortforwardIDCompleter() carapace.Action {
+	return carapace.ActionMessage("unimplemented completer")
+}
+
+func SocksIDCompleter() carapace.Action {
+	return carapace.ActionMessage("unimplemented completer")
+}
+
+func ReactionIDCompleter() carapace.Action {
+	return carapace.ActionMessage("unimplemented completer")
+}
+
+func EventTypeCompleter() carapace.Action {
+	return carapace.ActionMessage("unimplemented completer")
+}
+
+func ServerInterfacesCompleter() carapace.Action {
+	return carapace.ActionMessage("unimplemented completer")
+}
+
+func ImplantInterfacesCompleter() carapace.Action {
+	return carapace.ActionMessage("unimplemented completer")
+}
+
+func RemotePathCompleter() carapace.Action {
+	return carapace.ActionMessage("unimplemented completer")
+}
+
+func MakeExtensionArgumentsCompleter() carapace.CompletionCallback {
+	return nil
 }

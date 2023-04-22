@@ -21,9 +21,10 @@ package beacons
 import (
 	"context"
 
+	"github.com/spf13/cobra"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/log"
-	"github.com/spf13/cobra"
 )
 
 // BeaconsRmCmd - Display/interact with beacons

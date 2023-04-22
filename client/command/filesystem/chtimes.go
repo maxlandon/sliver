@@ -21,10 +21,11 @@ import (
 	"context"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/desertbit/grumble"
 )
@@ -71,12 +72,12 @@ func ChtimesCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		return
 	}
 	unixMtime := t_b.Unix()
-	
+
 	chtimes, err := con.Rpc.Chtimes(context.Background(), &sliverpb.ChtimesReq{
-		Request:   con.ActiveTarget.Request(ctx),
-		Path:      filePath,
-		ATime:  unixAtime,
-		MTime:  unixMtime,
+		Request: con.ActiveTarget.Request(ctx),
+		Path:    filePath,
+		ATime:   unixAtime,
+		MTime:   unixMtime,
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

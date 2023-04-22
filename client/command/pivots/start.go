@@ -22,9 +22,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
 )
 
 // StartTCPListenerCmd - Start a TCP pivot listener on the remote system

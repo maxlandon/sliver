@@ -20,10 +20,11 @@ package filesystem
 import (
 	"context"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/desertbit/grumble"
 )
@@ -55,12 +56,12 @@ func ChownCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		con.PrintErrorf("Missing parameter: group id\n")
 		return
 	}
-	
+
 	chown, err := con.Rpc.Chown(context.Background(), &sliverpb.ChownReq{
 		Request:   con.ActiveTarget.Request(ctx),
 		Path:      filePath,
-		Uid:  uid,
-		Gid:  gid,
+		Uid:       uid,
+		Gid:       gid,
 		Recursive: ctx.Flags.Bool("recursive"),
 	})
 	if err != nil {

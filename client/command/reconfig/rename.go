@@ -20,10 +20,12 @@ package reconfig
 
 import (
 	"context"
+
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/util"
-	"github.com/desertbit/grumble"
 )
 
 // RecnameCmd - Reconfigure metadata about a sessions

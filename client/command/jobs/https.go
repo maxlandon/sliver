@@ -23,10 +23,11 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/spf13/cobra"
 )
 
 // HTTPSListenerCmd - Start an HTTPS listener

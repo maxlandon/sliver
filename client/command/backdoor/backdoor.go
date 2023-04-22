@@ -22,9 +22,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
 )
 
 // BackdoorCmd - Command to inject implant code into an existing binary

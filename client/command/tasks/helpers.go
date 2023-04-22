@@ -8,6 +8,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/AlecAivazis/survey/v2"
+
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 

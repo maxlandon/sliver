@@ -23,9 +23,10 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/overlord"
-	"github.com/desertbit/grumble"
 )
 
 func CursedScreenshotCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {

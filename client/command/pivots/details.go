@@ -22,11 +22,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/desertbit/grumble"
+	"github.com/jedib0t/go-pretty/v6/table"
+
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
-	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 // PivotDetailsCmd - Display pivots for all sessions

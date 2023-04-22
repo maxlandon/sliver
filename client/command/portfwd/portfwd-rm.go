@@ -19,9 +19,10 @@ package portfwd
 */
 
 import (
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/desertbit/grumble"
 )
 
 // PortfwdRmCmd - Remove an existing tunneled port forward

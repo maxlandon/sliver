@@ -25,10 +25,11 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/tcpproxy"
-	"github.com/desertbit/grumble"
 )
 
 var (

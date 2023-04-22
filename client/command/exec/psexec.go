@@ -27,6 +27,8 @@ import (
 
 	insecureRand "math/rand"
 
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
@@ -35,7 +37,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/codenames"
 	"github.com/bishopfox/sliver/util/encoders"
-	"github.com/desertbit/grumble"
 )
 
 // PsExecCmd - psexec command implementation.

@@ -3,9 +3,10 @@ package tasks
 import (
 	"context"
 
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/desertbit/grumble"
 )
 
 // TasksCancelCmd - Cancel a beacon task before it's sent to the implant

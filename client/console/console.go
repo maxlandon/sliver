@@ -30,6 +30,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/desertbit/go-shlex"
+	"github.com/desertbit/grumble"
+	"github.com/fatih/color"
+	"github.com/gofrs/uuid"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/client/assets"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
@@ -39,11 +45,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
-	"github.com/desertbit/go-shlex"
-	"github.com/desertbit/grumble"
-	"github.com/fatih/color"
-	"github.com/gofrs/uuid"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -232,6 +233,7 @@ func (con *SliverConsoleClient) startEventLoop() {
 			core.CloseCursedProcesses(session.ID)
 			if activeSession != nil && activeSession.ID == session.ID {
 				con.ActiveTarget.Set(nil, nil)
+				// con.ExposeCommands()
 				con.PrintEventErrorf("Active session disconnected")
 				con.App.SetPrompt(con.GetPrompt())
 			}

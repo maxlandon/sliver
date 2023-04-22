@@ -19,10 +19,11 @@ package use
 */
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/bishopfox/sliver/client/command/sessions"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/log"
-	"github.com/spf13/cobra"
 )
 
 // UseSessionCmd - Change the active session
@@ -32,6 +33,7 @@ func UseSessionCmd(cmd *cobra.Command, args []string) {
 	session, err := sessions.SelectSession(false, con)
 	if session != nil {
 		con.ActiveTarget.Set(session, nil)
+		con.ExposeCommands()
 		log.Infof("Active session %s (%s)\n", session.Name, session.ID)
 	} else if err != nil {
 		switch err {

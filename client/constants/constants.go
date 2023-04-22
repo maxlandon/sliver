@@ -290,3 +290,11 @@ const (
 	SliverWinHelpGroup   = "Sliver - Windows"
 	MultiplayerHelpGroup = "Multiplayer"
 )
+
+// Command types / filters (per OS/type/C2/etc)
+const (
+	SessionCmdsFilter   = "session-commands"
+	BeaconCmdsFilter    = "beacon-commands"
+	WindowsCmdsFilter   = "windows-commands"
+	WireguardCmdsFilter = "wireguard-commands"
+)

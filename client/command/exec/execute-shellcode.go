@@ -26,12 +26,13 @@ import (
 	"log"
 	"os"
 
+	"golang.org/x/term"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"golang.org/x/term"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/desertbit/grumble"
 )

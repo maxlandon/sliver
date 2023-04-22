@@ -22,10 +22,11 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/spf13/cobra"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/spf13/cobra"
 )
 
 // WGPortFwdRmCmd - Remove a WireGuard port forward

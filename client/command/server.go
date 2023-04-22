@@ -3,6 +3,11 @@ package command
 import (
 	"os"
 
+	"github.com/reeflective/console"
+	"github.com/rsteube/carapace"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/armory"
 	"github.com/bishopfox/sliver/client/command/beacons"
@@ -27,11 +32,6 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/licenses"
 	"github.com/bishopfox/sliver/client/log"
-	"github.com/rsteube/carapace"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-
-	"github.com/reeflective/console"
 )
 
 // ServerCommands returns all commands bound to the server menu, optionally
@@ -1107,79 +1107,6 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		FlagComps(wgConfigCmd, func(comp *carapace.ActionMap) {
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save config")
 		})
-
-		wgPortFwdCmd := &cobra.Command{
-			Use:     consts.WgPortFwdStr,
-			Short:   "List ports forwarded by the WireGuard tun interface",
-			Long:    help.GetHelpFor([]string{consts.WgPortFwdStr}),
-			Run:     wireguard.WGPortFwdListCmd,
-			GroupID: consts.NetworkHelpGroup,
-		}
-		Flags("wg portforward", wgPortFwdCmd, func(f *pflag.FlagSet) {
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
-
-		wgPortFwdAddCmd := &cobra.Command{
-			Use:   consts.AddStr,
-			Short: "Add a port forward from the WireGuard tun interface to a host on the target network",
-			Long:  help.GetHelpFor([]string{consts.WgPortFwdStr, consts.AddStr}),
-			Run:   wireguard.WGPortFwdAddCmd,
-		}
-		Flags("wg portforward", wgPortFwdAddCmd, func(f *pflag.FlagSet) {
-			f.Int32P("bind", "b", 1080, "port to listen on the WireGuard tun interface")
-			f.StringP("remote", "r", "", "remote target host:port (e.g., 10.0.0.1:445)")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
-		wgPortFwdCmd.AddCommand(wgPortFwdAddCmd)
-
-		wgPortFwdRmCmd := &cobra.Command{
-			Use:   consts.RmStr,
-			Short: "Remove a port forward from the WireGuard tun interface",
-			Long:  help.GetHelpFor([]string{consts.WgPortFwdStr, consts.RmStr}),
-			Args:  cobra.ExactArgs(1), // 	a.Int("id", "forwarder id")
-			Run:   wireguard.WGPortFwdRmCmd,
-		}
-		Flags("wg portforward", wgPortFwdRmCmd, func(f *pflag.FlagSet) {
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
-		wgPortFwdCmd.AddCommand(wgPortFwdRmCmd)
-		server.AddCommand(wgPortFwdCmd)
-
-		wgSocksCmd := &cobra.Command{
-			Use:     consts.WgSocksStr,
-			Short:   "List socks servers listening on the WireGuard tun interface",
-			Long:    help.GetHelpFor([]string{consts.WgSocksStr}),
-			Run:     wireguard.WGSocksListCmd,
-			GroupID: consts.NetworkHelpGroup,
-		}
-		Flags("wg socks", wgSocksCmd, func(f *pflag.FlagSet) {
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
-
-		wgSocksStartCmd := &cobra.Command{
-			Use:   consts.StartStr,
-			Short: "Start a socks5 listener on the WireGuard tun interface",
-			Long:  help.GetHelpFor([]string{consts.WgSocksStr, consts.StartStr}),
-			Run:   wireguard.WGSocksStartCmd,
-		}
-		wgSocksCmd.AddCommand(wgSocksStartCmd)
-		Flags("wg socks", wgSocksStartCmd, func(f *pflag.FlagSet) {
-			f.Int32P("bind", "b", 3090, "port to listen on the WireGuard tun interface")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
-
-		wgSocksStopCmd := &cobra.Command{
-			Use:   consts.StopStr,
-			Short: "Stop a socks5 listener on the WireGuard tun interface",
-			Long:  help.GetHelpFor([]string{consts.WgSocksStr, consts.StopStr}),
-			Run:   wireguard.WGSocksStopCmd,
-			Args:  cobra.ExactArgs(1), // 	a.Int("id", "forwarder id")
-		}
-		wgSocksCmd.AddCommand(wgSocksStopCmd)
-		Flags("wg socks", wgSocksStopCmd, func(f *pflag.FlagSet) {
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
-		server.AddCommand(wgSocksCmd)
 
 		// [ Monitor ] --------------------------------------------------------------
 

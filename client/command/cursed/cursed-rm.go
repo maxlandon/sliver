@@ -22,10 +22,11 @@ import (
 	"context"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/desertbit/grumble"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/desertbit/grumble"
 )
 
 func CursedRmCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {

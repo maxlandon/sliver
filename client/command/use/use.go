@@ -28,12 +28,13 @@ import (
 	"text/tabwriter"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/rsteube/carapace"
+	"github.com/spf13/cobra"
+
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/rsteube/carapace"
-	"github.com/spf13/cobra"
 )
 
 var ErrNoSelection = errors.New("no selection")
@@ -64,9 +65,11 @@ func UseCmd(cmd *cobra.Command, args []string) {
 	if session != nil {
 		log.Infof("Active session %s (%s)\n", session.Name, session.ID)
 		con.ActiveTarget.Set(session, nil)
+		con.ExposeCommands()
 	} else if beacon != nil {
 		log.Infof("Active beacon %s (%s)\n", beacon.Name, beacon.ID)
 		con.ActiveTarget.Set(nil, beacon)
+		con.ExposeCommands()
 	}
 }
 
