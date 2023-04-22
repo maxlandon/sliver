@@ -226,15 +226,18 @@ const (
 	RegistryListValuesStr = "list-values"
 	RegistryCreateKeyStr  = "create"
 	RegistryDeleteKeyStr  = "delete"
-	PivotsStr             = "pivots"
-	WgConfigStr           = "wg-config"
-	WgSocksStr            = "wg-socks"
-	WgPortFwdStr          = "wg-portfwd"
-	MonitorStr            = "monitor"
-	SSHStr                = "ssh"
-	DLLHijackStr          = "dllhijack"
-	InteractiveStr        = "interactive"
-	CloseStr              = "close"
+
+	PivotsStr = "pivots"
+	GraphStr  = "graph"
+
+	WgConfigStr    = "wg-config"
+	WgSocksStr     = "wg-socks"
+	WgPortFwdStr   = "wg-portfwd"
+	MonitorStr     = "monitor"
+	SSHStr         = "ssh"
+	DLLHijackStr   = "dllhijack"
+	InteractiveStr = "interactive"
+	CloseStr       = "close"
 
 	PortfwdStr  = "portfwd"
 	Socks5Str   = "socks5"
@@ -273,8 +276,17 @@ const (
 	SliverHelpGroup   = "Sliver"
 
 	// Sliver commands =====================
+	SliverCoreHelpGroup    = "Core"
+	InfoHelpGroup          = "Info"
+	FilesystemHelpGroup    = "Filesystem"
+	SliverNetworkHelpGroup = "Network tools"
+	ExecutionHelpGroup     = "Execution"
+	PrivilegesHelpGroups   = "Privileges"
+
+	AliasHelpGroup     = "Sliver - 3rd Party macros"
+	ExtensionHelpGroup = "Sliver - 3rd Party extensions"
+
+	// Useless
 	SliverWinHelpGroup   = "Sliver - Windows"
 	MultiplayerHelpGroup = "Multiplayer"
-	AliasHelpGroup       = "Sliver - 3rd Party macros"
-	ExtensionHelpGroup   = "Sliver - 3rd Party extensions"
 )
