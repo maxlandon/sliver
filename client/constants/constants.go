@@ -276,12 +276,12 @@ const (
 	SliverHelpGroup   = "Sliver"
 
 	// Sliver commands =====================
-	SliverCoreHelpGroup    = "Core"
-	InfoHelpGroup          = "Info"
-	FilesystemHelpGroup    = "Filesystem"
-	SliverNetworkHelpGroup = "Network tools"
-	ExecutionHelpGroup     = "Execution"
-	PrivilegesHelpGroups   = "Privileges"
+	SliverCoreHelpGroup = "Core"
+	InfoHelpGroup       = "Info"
+	FilesystemHelpGroup = "Filesystem"
+	ExecutionHelpGroup  = "Execution"
+	PrivilegesHelpGroup = "Privileges"
+	ProcessHelpGroup    = "Process"
 
 	AliasHelpGroup     = "Sliver - 3rd Party macros"
 	ExtensionHelpGroup = "Sliver - 3rd Party extensions"

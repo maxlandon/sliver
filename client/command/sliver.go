@@ -6,9 +6,12 @@ import (
 	"github.com/bishopfox/sliver/client/command/extensions"
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/command/help"
+	"github.com/bishopfox/sliver/client/command/info"
 	"github.com/bishopfox/sliver/client/command/sessions"
+	"github.com/bishopfox/sliver/client/command/use"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -20,11 +23,15 @@ func SliverCommands() *cobra.Command {
 	}
 
 	groups := []*cobra.Group{
-		{ID: consts.GenericHelpGroup, Title: consts.GenericHelpGroup},
-		{ID: consts.SliverHelpGroup, Title: consts.SliverHelpGroup},
+		{ID: consts.SliverCoreHelpGroup, Title: consts.SliverCoreHelpGroup},
+		{ID: consts.InfoHelpGroup, Title: consts.InfoHelpGroup},
+		{ID: consts.FilesystemHelpGroup, Title: consts.FilesystemHelpGroup},
+		{ID: consts.NetworkHelpGroup, Title: consts.NetworkHelpGroup},
+		{ID: consts.ExecutionHelpGroup, Title: consts.ExecutionHelpGroup},
+		{ID: consts.PrivilegesHelpGroup, Title: consts.PrivilegesHelpGroup},
+		{ID: consts.ProcessHelpGroup, Title: consts.ProcessHelpGroup},
 		{ID: consts.AliasHelpGroup, Title: consts.AliasHelpGroup},
 		{ID: consts.ExtensionHelpGroup, Title: consts.ExtensionHelpGroup},
-		{ID: consts.SliverWinHelpGroup, Title: consts.SliverWinHelpGroup},
 	}
 	sliver.AddGroup(groups...)
 
@@ -77,7 +84,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.SliverCoreHelpGroup,
 	}
 	sliver.AddCommand(reconfigCmd)
 	Flags("reconfig", reconfigCmd, func(f *pflag.FlagSet) {
@@ -97,7 +104,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.SliverCoreHelpGroup,
 	}
 	sliver.AddCommand(renameCmd)
 
@@ -108,55 +115,49 @@ func SliverCommands() *cobra.Command {
 
 	// [ Sessions ] --------------------------------------------------------------
 
-	// sessionsCmd := &cobra.Command{
-	// 	Use:     consts.SessionsStr,
-	// 	Short:     "Session management",
-	// 	Long: help.GetHelpFor([]string{consts.SessionsStr}),
-	// 	Flags: func(f *grumble.Flags) {
-	// 		f.String("i", "interact", "", "interact with a session")
-	// 		f.String("k", "kill", "", "kill the designated session")
-	// 		f.Bool("K", "kill-all", false, "kill all the sessions")
-	// 		f.Bool("C", "clean", false, "clean out any sessions marked as [DEAD]")
-	// 		f.Bool("F", "force", false, "force session action without waiting for results")
-	//
-	// 		f.String("f", "filter", "", "filter sessions by substring")
-	// 		f.String("e", "filter-re", "", "filter sessions by regular expression")
-	//
-	// 		f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-	// 	},
-	// 	Run: func(ctx *grumble.Context) error {
-	// 		con.Println()
-	// 		sessions.SessionsCmd(ctx, con)
-	// 		con.Println()
-	// 		return nil
-	// 	},
-	// 	GroupID: consts.GenericHelpGroup,
-	// }
-	// sessionsCmd.AddCommand(&cobra.Command{
-	// 	Use:     consts.PruneStr,
-	// 	Short:     "Kill all stale/dead sessions",
-	// 	Long: help.GetHelpFor([]string{consts.SessionsStr, consts.PruneStr}),
-	// 	Flags: func(f *grumble.Flags) {
-	// 		f.Bool("F", "force", false, "Force the killing of stale/dead sessions")
-	//
-	// 		f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-	// 	},
-	// 	Run: func(ctx *grumble.Context) error {
-	// 		con.Println()
-	// 		sessions.SessionsPruneCmd(ctx, con)
-	// 		con.Println()
-	// 		return nil
-	// 	},
-	// 	GroupID: consts.SliverHelpGroup,
-	// })
-	// sliver.AddCommand(sessionsCmd)
+	sessionsCmd := &cobra.Command{
+		Use:     consts.SessionsStr,
+		Short:   "Session management",
+		Long:    help.GetHelpFor([]string{consts.SessionsStr}),
+		Run:     sessions.SessionsCmd,
+		GroupID: consts.SliverCoreHelpGroup,
+	}
+	Flags("sessions", sessionsCmd, func(f *pflag.FlagSet) {
+		f.StringP("interact", "i", "", "interact with a session")
+		f.StringP("kill", "k", "", "kill the designated session")
+		f.BoolP("kill-all", "K", false, "kill all the sessions")
+		f.BoolP("clean", "C", false, "clean out any sessions marked as [DEAD]")
+		f.BoolP("force", "F", false, "force session action without waiting for results")
+
+		f.StringP("filter", "f", "", "filter sessions by substring")
+		f.StringP("filter-re", "e", "", "filter sessions by regular expression")
+
+		f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+	})
+	FlagComps(sessionsCmd, func(comp *carapace.ActionMap) {
+		(*comp)["interact"] = use.BeaconAndSessionIDCompleter()
+		(*comp)["kill"] = use.BeaconAndSessionIDCompleter()
+	})
+	sliver.AddCommand(sessionsCmd)
+
+	sessionsPruneCmd := &cobra.Command{
+		Use:   consts.PruneStr,
+		Short: "Kill all stale/dead sessions",
+		Long:  help.GetHelpFor([]string{consts.SessionsStr, consts.PruneStr}),
+		Run:   sessions.SessionsPruneCmd,
+	}
+	Flags("prune", sessionsCmd, func(f *pflag.FlagSet) {
+		f.BoolP("force", "F", false, "Force the killing of stale/dead sessions")
+		f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+	})
+	sessionsCmd.AddCommand(sessionsPruneCmd)
 
 	backgroundCmd := &cobra.Command{
 		Use:     consts.BackgroundStr,
 		Short:   "Background an active session",
 		Long:    help.GetHelpFor([]string{consts.BackgroundStr}),
 		Run:     sessions.BackgroundCmd,
-		GroupID: consts.GenericHelpGroup,
+		GroupID: consts.SliverCoreHelpGroup,
 	}
 	Flags("use", backgroundCmd, func(f *pflag.FlagSet) {
 		f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
@@ -173,11 +174,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		// Flags: func(f *grumble.Flags) {
-		//
-		// 	f.Int("t", "timeout", defaultTimeout, "command timeout in seconds")
-		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.SliverCoreHelpGroup,
 	}
 	sliver.AddCommand(killCmd)
 	Flags("use", backgroundCmd, func(f *pflag.FlagSet) {
@@ -195,7 +192,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.SliverCoreHelpGroup,
 	}
 	sliver.AddCommand(openSessionCmd)
 	Flags("", openSessionCmd, func(f *pflag.FlagSet) {
@@ -222,7 +219,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.GenericHelpGroup,
+		GroupID: consts.SliverCoreHelpGroup,
 	}
 	sliver.AddCommand(closeSessionCmd)
 	Flags("", closeSessionCmd, func(f *pflag.FlagSet) {
@@ -241,7 +238,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.GenericHelpGroup,
+		GroupID: consts.SliverCoreHelpGroup,
 	}
 	Flags("", tasksCmd, func(f *pflag.FlagSet) {
 		f.BoolP("overflow", "O", false, "overflow terminal width (display truncated rows)")
@@ -289,7 +286,6 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		// GroupID: consts.GenericHelpGroup,
 	}
 	tasksCmd.AddCommand(cancelCmd)
 	Flags("", cancelCmd, func(f *pflag.FlagSet) {
@@ -303,27 +299,17 @@ func SliverCommands() *cobra.Command {
 	// [ Info ] --------------------------------------------------------------
 
 	infoCmd := &cobra.Command{
-		Use:   consts.InfoStr,
-		Short: "Get info about session",
-		Long:  help.GetHelpFor([]string{consts.InfoStr}),
-		// Args: func(a *grumble.Args) {
-		// 	a.String("session", "session ID", grumble.Default(""))
-		// },
-		// Completer: func(prefix string, args []string) []string {
-		// 	return use.BeaconAndSessionIDCompleter(prefix, args, con)
-		// },
-		// Run: func(ctx *grumble.Context) error {
-		// 	con.Println()
-		// 	info.InfoCmd(ctx, con)
-		// 	con.Println()
-		// 	return nil
-		// },
-		GroupID: consts.SliverHelpGroup,
+		Use:     consts.InfoStr,
+		Short:   "Get info about session",
+		Long:    help.GetHelpFor([]string{consts.InfoStr}),
+		Run:     info.InfoCmd,
+		GroupID: consts.InfoHelpGroup,
 	}
-	sliver.AddCommand(infoCmd)
-	Flags("", infoCmd, func(f *pflag.FlagSet) {
+	Flags("use", infoCmd, func(f *pflag.FlagSet) {
 		f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 	})
+	carapace.Gen(infoCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter())
+	sliver.AddCommand(infoCmd)
 
 	pingCmd := &cobra.Command{
 		Use:   consts.PingStr,
@@ -335,7 +321,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.InfoHelpGroup,
 	}
 	sliver.AddCommand(pingCmd)
 	Flags("", pingCmd, func(f *pflag.FlagSet) {
@@ -352,7 +338,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.InfoHelpGroup,
 	}
 	sliver.AddCommand(getPIDCmd)
 	Flags("", getPIDCmd, func(f *pflag.FlagSet) {
@@ -369,7 +355,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.InfoHelpGroup,
 	}
 	sliver.AddCommand(getUIDCmd)
 	Flags("", getUIDCmd, func(f *pflag.FlagSet) {
@@ -386,7 +372,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.InfoHelpGroup,
 	}
 	sliver.AddCommand(getGIDCmd)
 	Flags("", getGIDCmd, func(f *pflag.FlagSet) {
@@ -403,7 +389,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.InfoHelpGroup,
 	}
 	sliver.AddCommand(whoamiCmd)
 	Flags("", whoamiCmd, func(f *pflag.FlagSet) {
@@ -422,7 +408,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 	}
 	sliver.AddCommand(shellCmd)
 	Flags("", shellCmd, func(f *pflag.FlagSet) {
@@ -448,7 +434,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 	}
 	sliver.AddCommand(executeCmd)
 	Flags("", executeCmd, func(f *pflag.FlagSet) {
@@ -479,7 +465,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 	}
 	sliver.AddCommand(executeAssemblyCmd)
 	Flags("", executeAssemblyCmd, func(f *pflag.FlagSet) {
@@ -514,7 +500,7 @@ func SliverCommands() *cobra.Command {
 		// Args: func(a *grumble.Args) {
 		// 	a.String("filepath", "path the shellcode file")
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 	}
 	sliver.AddCommand(executeShellcodeCmd)
 	Flags("", executeShellcodeCmd, func(f *pflag.FlagSet) {
@@ -537,7 +523,7 @@ func SliverCommands() *cobra.Command {
 		// 	a.String("filepath", "path the shared library file")
 		// 	a.StringList("args", "arguments for the binary", grumble.Default([]string{}))
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 		// Run: func(ctx *grumble.Context) error {
 		// 	con.Println()
 		// 	exec.SideloadCmd(ctx, con)
@@ -568,7 +554,7 @@ func SliverCommands() *cobra.Command {
 		// 	a.String("filepath", "path the DLL file")
 		// 	a.StringList("arguments", "arguments to pass to the DLL entrypoint", grumble.Default([]string{}))
 		// },
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 		// Run: func(ctx *grumble.Context) error {
 		// 	con.Println()
 		// 	exec.SpawnDllCmd(ctx, con)
@@ -603,7 +589,7 @@ func SliverCommands() *cobra.Command {
 		// Args: func(a *grumble.Args) {
 		// 	a.Uint("pid", "pid")
 		// },
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 	}
 	sliver.AddCommand(migrateCmd)
 	Flags("", migrateCmd, func(f *pflag.FlagSet) {
@@ -621,7 +607,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 	}
 	sliver.AddCommand(msfCmd)
 	Flags("", msfCmd, func(f *pflag.FlagSet) {
@@ -644,7 +630,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 	}
 	sliver.AddCommand(msfInjectCmd)
 	Flags("", msfInjectCmd, func(f *pflag.FlagSet) {
@@ -671,7 +657,7 @@ func SliverCommands() *cobra.Command {
 		// Args: func(a *grumble.Args) {
 		// 	a.String("hostname", "hostname")
 		// },
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 	}
 	sliver.AddCommand(psExecCmd)
 	Flags("", psExecCmd, func(f *pflag.FlagSet) {
@@ -698,7 +684,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 	}
 	sliver.AddCommand(sshCmd)
 	Flags("", sshCmd, func(f *pflag.FlagSet) {
@@ -728,7 +714,7 @@ func SliverCommands() *cobra.Command {
 		// 	err := filesystem.MvCmd(ctx, con)
 		// 	return err
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.FilesystemHelpGroup,
 	}
 	sliver.AddCommand(mvCmd)
 	Flags("", mvCmd, func(f *pflag.FlagSet) {
@@ -737,7 +723,7 @@ func SliverCommands() *cobra.Command {
 
 	lsCmd := &cobra.Command{
 		Use:   consts.LsStr,
-		Short: "List current directory",
+		Short: "List current directory tttttttttttttttttttttttttttttttttttttttttttt",
 		Long:  help.GetHelpFor([]string{consts.LsStr}),
 		// Args: func(a *grumble.Args) {
 		// 	a.String("path", "path to enumerate", grumble.Default("."))
@@ -748,7 +734,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.FilesystemHelpGroup,
 	}
 	sliver.AddCommand(lsCmd)
 	Flags("", lsCmd, func(f *pflag.FlagSet) {
@@ -771,7 +757,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.FilesystemHelpGroup,
 	}
 	sliver.AddCommand(rmCmd)
 	Flags("", rmCmd, func(f *pflag.FlagSet) {
@@ -793,7 +779,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.FilesystemHelpGroup,
 	}
 	sliver.AddCommand(mkdirCmd)
 	Flags("", mkdirCmd, func(f *pflag.FlagSet) {
@@ -813,7 +799,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.FilesystemHelpGroup,
 	}
 	sliver.AddCommand(cdCmd)
 	Flags("", cdCmd, func(f *pflag.FlagSet) {
@@ -830,7 +816,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.FilesystemHelpGroup,
 	}
 	sliver.AddCommand(pwdCmd)
 	Flags("", pwdCmd, func(f *pflag.FlagSet) {
@@ -850,7 +836,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.FilesystemHelpGroup,
 	}
 	sliver.AddCommand(catCmd)
 	Flags("", catCmd, func(f *pflag.FlagSet) {
@@ -877,7 +863,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.FilesystemHelpGroup,
 	}
 	sliver.AddCommand(downloadCmd)
 	Flags("", downloadCmd, func(f *pflag.FlagSet) {
@@ -903,7 +889,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.FilesystemHelpGroup,
 	}
 	sliver.AddCommand(uploadCmd)
 	Flags("", uploadCmd, func(f *pflag.FlagSet) {
@@ -923,7 +909,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.NetworkHelpGroup,
 	}
 	sliver.AddCommand(ifconfigCmd)
 	Flags("", ifconfigCmd, func(f *pflag.FlagSet) {
@@ -943,7 +929,7 @@ func SliverCommands() *cobra.Command {
 		// },
 		// Flags: func(f *grumble.Flags) {
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.NetworkHelpGroup,
 	}
 	sliver.AddCommand(netstatCmd)
 	Flags("", netstatCmd, func(f *pflag.FlagSet) {
@@ -968,7 +954,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.ProcessHelpGroup,
 	}
 	sliver.AddCommand(psCmd)
 	Flags("", psCmd, func(f *pflag.FlagSet) {
@@ -993,7 +979,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.ProcessHelpGroup,
 	}
 	sliver.AddCommand(procdumpCmd)
 	Flags("", procdumpCmd, func(f *pflag.FlagSet) {
@@ -1019,7 +1005,7 @@ func SliverCommands() *cobra.Command {
 		// Args: func(a *grumble.Args) {
 		// 	a.Uint("pid", "pid")
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.ProcessHelpGroup,
 	}
 	sliver.AddCommand(terminateCmd)
 	Flags("", terminateCmd, func(f *pflag.FlagSet) {
@@ -1041,7 +1027,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.PrivilegesHelpGroup,
 	}
 	sliver.AddCommand(runAsCmd)
 	Flags("", runAsCmd, func(f *pflag.FlagSet) {
@@ -1069,7 +1055,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.PrivilegesHelpGroup,
 	}
 	sliver.AddCommand(impersonateCmd)
 	Flags("", impersonateCmd, func(f *pflag.FlagSet) {
@@ -1086,7 +1072,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.PrivilegesHelpGroup,
 	}
 	sliver.AddCommand(revToSelfCmd)
 	Flags("", revToSelfCmd, func(f *pflag.FlagSet) {
@@ -1103,7 +1089,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.PrivilegesHelpGroup,
 	}
 	sliver.AddCommand(getSystemCmd)
 	Flags("", getSystemCmd, func(f *pflag.FlagSet) {
@@ -1115,7 +1101,7 @@ func SliverCommands() *cobra.Command {
 		Use:     consts.MakeTokenStr,
 		Short:   "Create a new Logon Session with the specified credentials",
 		Long:    help.GetHelpFor([]string{consts.MakeTokenStr}),
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.PrivilegesHelpGroup,
 		// Run: func(ctx *grumble.Context) error {
 		// 	con.Println()
 		// 	privilege.MakeTokenCmd(ctx, con)
@@ -1146,7 +1132,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.PrivilegesHelpGroup,
 	}
 	sliver.AddCommand(chmodCmd)
 	Flags("", chmodCmd, func(f *pflag.FlagSet) {
@@ -1169,7 +1155,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.PrivilegesHelpGroup,
 	}
 	sliver.AddCommand(chownCmd)
 	Flags("", chownCmd, func(f *pflag.FlagSet) {
@@ -1192,7 +1178,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.PrivilegesHelpGroup,
 	}
 	sliver.AddCommand(chtimesCmd)
 	Flags("", chtimesCmd, func(f *pflag.FlagSet) {
@@ -1211,7 +1197,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.InfoHelpGroup,
 	}
 	sliver.AddCommand(screenshotCmd)
 	Flags("", screenshotCmd, func(f *pflag.FlagSet) {
@@ -1231,7 +1217,7 @@ func SliverCommands() *cobra.Command {
 		// Args: func(a *grumble.Args) {
 		// 	a.String("remote-file", "path to the file to backdoor")
 		// },
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 		// Run: func(ctx *grumble.Context) error {
 		// 	con.Println()
 		// 	backdoor.BackdoorCmd(ctx, con)
@@ -1260,7 +1246,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.GenericHelpGroup,
+		GroupID: consts.InfoHelpGroup,
 	}
 	sliver.AddCommand(envCmd)
 	Flags("", envCmd, func(f *pflag.FlagSet) {
@@ -1317,7 +1303,7 @@ func SliverCommands() *cobra.Command {
 		// Run: func(ctx *grumble.Context) error {
 		// 	return nil
 		// },
-		GroupID: consts.SliverWinHelpGroup,
+		GroupID: consts.InfoHelpGroup,
 	}
 	sliver.AddCommand(registryCmd)
 
@@ -1464,7 +1450,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.NetworkHelpGroup,
 	}
 	sliver.AddCommand(rportfwdCmd)
 	Flags("", rportfwdCmd, func(f *pflag.FlagSet) {
@@ -1520,7 +1506,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		// GroupID: consts.SliverHelpGroup,
+		GroupID: consts.SliverCoreHelpGroup,
 	}
 	sliver.AddCommand(pivotsCmd)
 	Flags("", pivotsCmd, func(f *pflag.FlagSet) {
@@ -1632,7 +1618,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.NetworkHelpGroup,
 	}
 	sliver.AddCommand(portfwdCmd)
 	Flags("", portfwdCmd, func(f *pflag.FlagSet) {
@@ -1688,7 +1674,7 @@ func SliverCommands() *cobra.Command {
 		// 	con.Println()
 		// 	return nil
 		// },
-		GroupID: consts.SliverHelpGroup,
+		GroupID: consts.NetworkHelpGroup,
 	}
 	sliver.AddCommand(socksCmd)
 	Flags("", socksCmd, func(f *pflag.FlagSet) {
@@ -1738,7 +1724,7 @@ func SliverCommands() *cobra.Command {
 		Use:     consts.Cursed,
 		Short:   "Chrome/electron post-exploitation tool kit (∩｀-´)⊃━☆ﾟ.*･｡ﾟ",
 		Long:    help.GetHelpFor([]string{consts.Cursed}),
-		GroupID: consts.GenericHelpGroup,
+		GroupID: consts.ExecutionHelpGroup,
 		// Run: func(ctx *grumble.Context) error {
 		// 	con.Println()
 		// 	cursed.CursedCmd(ctx, con)
