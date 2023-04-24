@@ -474,10 +474,10 @@ github.com/pquerna/otp
 github.com/pquerna/otp/hotp
 github.com/pquerna/otp/internal
 github.com/pquerna/otp/totp
-# github.com/reeflective/console v0.0.0-20230419191006-6accbaa81476
+# github.com/reeflective/console v0.0.0-20230424020400-73da0b1f4797
 ## explicit; go 1.19
 github.com/reeflective/console
-# github.com/reeflective/readline v0.1.0-beta.0.20230419174847-16f4f8a74f0e
+# github.com/reeflective/readline v0.1.0-beta.0.20230424001558-5e424c760214
 ## explicit; go 1.19
 github.com/reeflective/readline
 github.com/reeflective/readline/inputrc

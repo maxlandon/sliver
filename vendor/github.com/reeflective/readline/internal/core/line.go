@@ -618,7 +618,9 @@ func (l *Line) Display(indent int) {
 			line += "\n"
 		}
 
-		fmt.Print(line + term.ClearLineAfter)
+		line += term.ClearLineAfter
+
+		fmt.Print(line)
 	}
 }
 

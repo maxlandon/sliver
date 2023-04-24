@@ -308,10 +308,10 @@ github.com/pquerna/otp v1.4.0/go.mod h1:dkJfzwRKNiegxyNb54X/3fLwhCynbMspSyWKnvi1
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6 h1:3HHTRiXvaEz8iACxwlOBc9jHDYxYNvW60U63Q97/31w=
 github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6/go.mod h1:jkLt41Ne2TD2xPuMdX/2O05Smhy8vMgG7O2TYvC0yOc=
-github.com/reeflective/console v0.0.0-20230419191006-6accbaa81476 h1:Xvfo1BhQj62pYDxv1p1t8PABrQvAjDIkuu87X3qy+Bo=
-github.com/reeflective/console v0.0.0-20230419191006-6accbaa81476/go.mod h1:Ve8l4bbkA/5ZPrBoOMsGzdoWU40OeSBdwQFXZRO6cdw=
-github.com/reeflective/readline v0.1.0-beta.0.20230419174847-16f4f8a74f0e h1:K3Bwp8raFPRqyeZF+VeptgvEmlpTa6DH+AVtiKQXa4M=
-github.com/reeflective/readline v0.1.0-beta.0.20230419174847-16f4f8a74f0e/go.mod h1:1kS/+b3JDh8qYlo4ld9iuFVnl12Ju5wV7BsYbZ0C7vg=
+github.com/reeflective/console v0.0.0-20230424020400-73da0b1f4797 h1:FEs5QCPW7qJCI9uFfI929fpQcSPw6PHU/33Le4VLnVk=
+github.com/reeflective/console v0.0.0-20230424020400-73da0b1f4797/go.mod h1:UWUrnhu+UaXVMS5v5/RiqqhUk4CVIYxi26cerhkjL1k=
+github.com/reeflective/readline v0.1.0-beta.0.20230424001558-5e424c760214 h1:cMkKbDfAhRT+MkDZOWxw8zNmqf49uIO+YL0FkoAbDr8=
+github.com/reeflective/readline v0.1.0-beta.0.20230424001558-5e424c760214/go.mod h1:8HAqpVpqNCgdnOMmFQwWX9dH9QQBrJias1oPzpmD+SQ=
 github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94icq4NjY3clb7Lk8O1qJ8BdBEF8z0ibU0rE=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
