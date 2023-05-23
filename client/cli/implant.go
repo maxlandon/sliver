@@ -4,33 +4,34 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/bishopfox/sliver/client/assets"
-	"github.com/bishopfox/sliver/client/command"
-	"github.com/bishopfox/sliver/client/command/use"
-	client "github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
-	"github.com/bishopfox/sliver/client/transport"
-	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
+
+	"github.com/bishopfox/sliver/client/assets"
+	"github.com/bishopfox/sliver/client/command"
+	"github.com/bishopfox/sliver/client/command/use"
+	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/transport"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 )
 
 func implantCmd() *cobra.Command {
-	// Generate the implant command tree
-	cmd := command.SliverCommands()
+	// Implant command tree
+	makeCommands := command.SliverCommands()
+	cmd := makeCommands()
 	cmd.Use = "implant"
 
-	// Make flags
+	// Flags
 	command.Flags("sessions", cmd, func(f *pflag.FlagSet) {
 		f.StringP("use", "s", "", "interact with a session")
 	})
 
-	// Make the various runners (console setup, connection, etc)
+	// Prerunners (console setup, connection, etc)
 	cmd.PersistentPreRunE, cmd.PersistentPostRunE = makeRunners(cmd)
 
-	// Generate command and flags' argument completions
+	// Completions
 	makeCompleters(cmd)
 
 	return cmd
@@ -41,7 +42,8 @@ func makeRunners(implantCmd *cobra.Command) (pre, post func(cmd *cobra.Command, 
 	var ln *grpc.ClientConn
 	var err error
 
-	// The pre-run function connects to the server and sets up a "fake" console.
+	// The pre-run function connects to the server and sets up a "fake" console,
+	// so we can have access to active sessions/beacons, and other stuff needed.
 	pre = func(cmd *cobra.Command, args []string) error {
 		configs := assets.GetConfigs()
 		if len(configs) == 0 {
@@ -59,12 +61,8 @@ func makeRunners(implantCmd *cobra.Command) (pre, post func(cmd *cobra.Command, 
 			return nil
 		}
 
-		// Initialize the console application and bind commands first, and init log.
-		app := client.NewConsole(nil, command.SliverCommands)
-		log.Init(nil)
-
-		// Finish setup, and fake the console start.
-		client.StartCLI(app, rpc, false)
+		// Create and setup the console application, without starting it.
+		console.NewClient(rpc, nil, command.SliverCommands(), false)
 
 		// Set the active target.
 		target, _ := implantCmd.Flags().GetString("use")
@@ -72,9 +70,10 @@ func makeRunners(implantCmd *cobra.Command) (pre, post func(cmd *cobra.Command, 
 			return errors.New("no target implant to run command on")
 		}
 
-		session := client.Client.GetSession(target)
+		session := console.Client.GetSession(target)
 		if session != nil {
-			client.Client.ActiveTarget.Set(session, nil)
+			console.Client.ActiveTarget.Set(session, nil)
+			console.Client.ExposeCommands()
 		}
 
 		return nil

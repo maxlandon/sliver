@@ -55,7 +55,6 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			{ID: consts.GenericHelpGroup, Title: consts.GenericHelpGroup},
 			{ID: consts.NetworkHelpGroup, Title: consts.NetworkHelpGroup},
 			{ID: consts.PayloadsHelpGroup, Title: consts.PayloadsHelpGroup},
-			{ID: consts.DataHelpGroup, Title: consts.DataHelpGroup},
 			{ID: consts.SliverHelpGroup, Title: consts.SliverHelpGroup},
 		}
 		server.AddGroup(groups...)
@@ -231,7 +230,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Run:     jobs.WGListenerCmd,
 			GroupID: consts.NetworkHelpGroup,
 		}
-		Flags("WireGuardlistener", wgCmd, func(f *pflag.FlagSet) {
+		Flags("WireGuard listener", wgCmd, func(f *pflag.FlagSet) {
 			f.StringP("lhost", "L", "", "interface to bind server to")
 			f.Uint32P("lport", "l", generate.DefaultWGLPort, "udp listen port")
 			f.Uint32P("nport", "n", generate.DefaultWGNPort, "virtual tun interface listen port")
@@ -347,6 +346,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 
 		// Server-only commands.
 		if serverCmds != nil {
+			server.AddGroup(&cobra.Group{ID: consts.MultiplayerHelpGroup, Title: consts.MultiplayerHelpGroup})
 			server.AddCommand(serverCmds()...)
 		}
 
