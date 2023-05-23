@@ -2,13 +2,14 @@ package cli
 
 import (
 	"fmt"
+	"log"
+
+	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command"
-	client "github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
+	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/transport"
-	"github.com/spf13/cobra"
 )
 
 var cmdConsole = &cobra.Command{
@@ -18,7 +19,7 @@ var cmdConsole = &cobra.Command{
 	RunE:  startConsole,
 }
 
-func startConsole(cmd *cobra.Command, args []string) error {
+func startConsole(_ *cobra.Command, _ []string) error {
 	appDir := assets.GetRootAppDir()
 	logFile := initLogging(appDir)
 	defer logFile.Close()
@@ -41,9 +42,12 @@ func startConsole(cmd *cobra.Command, args []string) error {
 	}
 	defer ln.Close()
 
-	// Initialize the console application and bind commands first, and init log.
-	app := client.NewConsole(command.ServerCommands(nil), command.SliverCommands)
-	log.Init(app.LogTransient)
+	// Create and setup the console application, without starting it.
+	console.NewClient(rpc, command.ServerCommands(nil), command.SliverCommands(), false)
 
-	return client.StartConsole(app, rpc, false)
+	err = console.Client.App.Run()
+	if err != nil {
+		log.Printf("Run loop returned error: %v", err)
+	}
+	return err
 }

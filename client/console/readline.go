@@ -50,9 +50,47 @@ type SliverConsole struct {
 	Settings                 *assets.ClientSettings
 }
 
+// NewClient creates and sets up the sliver console client, binding commands and RPC connections.
+// It does not start the console application, so that this function can be reused for console & CLI runs.
+func NewClient(rpc rpcpb.SliverRPCClient, serverCmds, sliverCmds console.Commands, isServer bool) {
+	assets.Setup(false, false)
+	settings, _ := assets.LoadSettings()
+
+	con := &SliverConsole{
+		App: NewConsole(serverCmds, sliverCmds),
+		Rpc: rpc,
+		ActiveTarget: &ActiveTarget{
+			observers:  map[int]Observer{},
+			observerID: 0,
+		},
+		EventListeners:           &sync.Map{},
+		BeaconTaskCallbacks:      map[string]BeaconTaskCallback{},
+		BeaconTaskCallbacksMutex: &sync.Mutex{},
+		IsServer:                 isServer,
+		Settings:                 settings,
+	}
+	Client = con
+
+	// Register prompts and configurations.
+	con.App.Menu("").Prompt().Primary = con.GetPrompt
+	con.App.Menu("implant").Prompt().Primary = con.GetPrompt
+
+	con.App.SetPrintLogo(func(_ *console.Console) {
+		con.PrintLogo()
+	})
+
+	// Start monitoring events anyway: both CLI and console need them.
+	go Client.startEventLoop()
+	go core.TunnelLoop(Client.Rpc)
+}
+
 // NewConsole creates the console and its menus, and binds commands to them.
 func NewConsole(serverCmds, sliverCmds console.Commands) *console.Console {
-	con := console.New()
+	con := console.New("sliver")
+
+	// Global settings
+	con.NewlineBefore = true
+	con.NewlineAfter = true
 
 	// Server menu.
 	server := con.CurrentMenu()
@@ -66,67 +104,6 @@ func NewConsole(serverCmds, sliverCmds console.Commands) *console.Console {
 	sliver.SetCommands(sliverCmds)
 
 	return con
-}
-
-// StartConsole creates and sets up the console, prepares the client wrapper, binds commands and starts.
-func StartConsole(app *console.Console, rpc rpcpb.SliverRPCClient, isServer bool) error {
-	assets.Setup(false, false)
-	settings, _ := assets.LoadSettings()
-
-	con := &SliverConsole{
-		App: app,
-		Rpc: rpc,
-		ActiveTarget: &ActiveTarget{
-			observers:  map[int]Observer{},
-			observerID: 0,
-		},
-		EventListeners:           &sync.Map{},
-		BeaconTaskCallbacks:      map[string]BeaconTaskCallback{},
-		BeaconTaskCallbacksMutex: &sync.Mutex{},
-		IsServer:                 isServer,
-		Settings:                 settings,
-	}
-	Client = con
-
-	// Register prompt segments and configurations.
-	setupPrompts(con)
-
-	con.PrintLogo()
-
-	go con.startEventLoop()
-	go core.TunnelLoop(rpc)
-
-	err := con.App.Run()
-	if err != nil {
-		log.Printf("Run loop returned error: %v", err)
-	}
-
-	return err
-}
-
-// StartCLI creates a wrapper client with a console that won't be ran.
-// This should only be used by the CLI command to interact with implants.
-func StartCLI(app *console.Console, rpc rpcpb.SliverRPCClient, isServer bool) {
-	assets.Setup(false, false)
-	settings, _ := assets.LoadSettings()
-
-	con := &SliverConsole{
-		App: app,
-		Rpc: rpc,
-		ActiveTarget: &ActiveTarget{
-			observers:  map[int]Observer{},
-			observerID: 0,
-		},
-		EventListeners:           &sync.Map{},
-		BeaconTaskCallbacks:      map[string]BeaconTaskCallback{},
-		BeaconTaskCallbacksMutex: &sync.Mutex{},
-		IsServer:                 isServer,
-		IsCLI:                    true,
-		Settings:                 settings,
-	}
-	Client = con
-
-	setupPrompts(con)
 }
 
 func (con *SliverConsole) startEventLoop() {
@@ -511,48 +488,48 @@ func (con *SliverConsole) PrintAsyncResponse(resp *commonpb.Response) {
 
 func (con *SliverConsole) Printf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), format, args...)
-	con.App.LogTransient(format, args...)
+	con.App.CurrentMenu().TransientPrintf(format, args...)
 }
 
 func (con *SliverConsole) Println(args ...any) {
 	// return fmt.Fprintln(con.App.Stdout(), args...)
 	format := strings.Repeat("%s", len(args))
-	con.App.LogTransient(format+"\n", args...)
+	con.App.CurrentMenu().TransientPrintf(format+"\n", args...)
 }
 
 func (con *SliverConsole) PrintInfof(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), Clearln+Info+format, args...)
-	con.App.LogTransient(Clearln+Info+format, args...)
+	con.App.CurrentMenu().TransientPrintf(Clearln+Info+format, args...)
 }
 
 func (con *SliverConsole) PrintSuccessf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), Clearln+Success+format, args...)
-	con.App.LogTransient(Clearln+Success+format, args...)
+	con.App.CurrentMenu().TransientPrintf(Clearln+Success+format, args...)
 }
 
 func (con *SliverConsole) PrintWarnf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), Clearln+"⚠️  "+Normal+format, args...)
-	con.App.LogTransient(Clearln+"⚠️  "+Normal+format, args...)
+	con.App.CurrentMenu().TransientPrintf(Clearln+"⚠️  "+Normal+format, args...)
 }
 
 func (con *SliverConsole) PrintErrorf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stderr(), Clearln+Warn+format, args...)
-	con.App.LogTransient(Clearln+Warn+format, args...)
+	con.App.CurrentMenu().TransientPrintf(Clearln+Warn+format, args...)
 }
 
 func (con *SliverConsole) PrintEventInfof(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), Clearln+Info+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
-	con.App.LogTransient(Clearln+Info+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
+	con.App.CurrentMenu().TransientPrintf(Clearln+Info+format+"\n"+Clearln, args...)
 }
 
 func (con *SliverConsole) PrintEventErrorf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stderr(), Clearln+Warn+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
-	con.App.LogTransient(Clearln+Warn+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
+	con.App.CurrentMenu().TransientPrintf(Clearln+Warn+format+"\n"+Clearln+"\r", args...)
 }
 
 func (con *SliverConsole) PrintEventSuccessf(format string, args ...any) {
 	// return fmt.Fprintf(con.App.Stdout(), Clearln+Success+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
-	con.App.LogTransient(Clearln+Success+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
+	con.App.CurrentMenu().TransientPrintf(Clearln+Success+format+"\n"+Clearln+"\r", args...)
 }
 
 func (con *SliverConsole) SpinUntil(message string, ctrl chan bool) {
@@ -594,7 +571,6 @@ func (con *SliverConsole) FormatDateDelta(t time.Time, includeDate bool, color b
 type ActiveTarget struct {
 	session    *clientpb.Session
 	beacon     *clientpb.Beacon
-	prompt     *sliverPrompt
 	observers  map[int]Observer
 	observerID int
 }
@@ -646,6 +622,17 @@ func (s *ActiveTarget) IsSession() bool {
 	return s.session != nil
 }
 
+// AddObserver - Observers to notify when the active session changes
+func (s *ActiveTarget) AddObserver(observer Observer) int {
+	s.observerID++
+	s.observers[s.observerID] = observer
+	return s.observerID
+}
+
+func (s *ActiveTarget) RemoveObserver(observerID int) {
+	delete(s.observers, observerID)
+}
+
 func (s *ActiveTarget) Request(cmd *cobra.Command) *commonpb.Request {
 	if s.session == nil && s.beacon == nil {
 		return nil
@@ -695,8 +682,6 @@ func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 			Client.App.SwitchMenu("")
 		}
 
-		s.prompt.loadProperties(nil, nil)
-
 		return
 	}
 
@@ -715,6 +700,9 @@ func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 		}
 	}
 
+	// Filter commands per OS/arch/functions
+	Client.ExposeCommands()
+
 	if Client.IsCLI {
 		return
 	}
@@ -723,8 +711,6 @@ func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 	if Client.App.CurrentMenu().Name() != "implant" {
 		Client.App.SwitchMenu("implant")
 	}
-
-	s.prompt.loadProperties(session, beacon)
 }
 
 // Background - Background the active session
@@ -784,4 +770,71 @@ func (con *SliverConsole) ExposeCommands() {
 
 	// Use all defined filters.
 	con.App.HideCommands(filters...)
+}
+
+var abilities = []string{
+	"first strike",
+	"vigilance",
+	"haste",
+	"indestructible",
+	"hexproof",
+	"deathtouch",
+	"fear",
+	"epic",
+	"ninjitsu",
+	"recover",
+	"persist",
+	"conspire",
+	"reinforce",
+	"exalted",
+	"annihilator",
+	"infect",
+	"undying",
+	"living weapon",
+	"miracle",
+	"scavenge",
+	"cipher",
+	"evolve",
+	"dethrone",
+	"hidden agenda",
+	"prowess",
+	"dash",
+	"exploit",
+	"renown",
+	"skulk",
+	"improvise",
+	"assist",
+	"jump-start",
+}
+
+var asciiLogos = []string{
+	Red + `
+ 	  ██████  ██▓     ██▓ ██▒   █▓▓█████  ██▀███
+	▒██    ▒ ▓██▒    ▓██▒▓██░   █▒▓█   ▀ ▓██ ▒ ██▒
+	░ ▓██▄   ▒██░    ▒██▒ ▓██  █▒░▒███   ▓██ ░▄█ ▒
+	  ▒   ██▒▒██░    ░██░  ▒██ █░░▒▓█  ▄ ▒██▀▀█▄
+	▒██████▒▒░██████▒░██░   ▒▀█░  ░▒████▒░██▓ ▒██▒
+	▒ ▒▓▒ ▒ ░░ ▒░▓  ░░▓     ░ ▐░  ░░ ▒░ ░░ ▒▓ ░▒▓░
+	░ ░▒  ░ ░░ ░ ▒  ░ ▒ ░   ░ ░░   ░ ░  ░  ░▒ ░ ▒░
+	░  ░  ░    ░ ░    ▒ ░     ░░     ░     ░░   ░
+		  ░      ░  ░ ░        ░     ░  ░   ░
+` + Normal,
+
+	Green + `
+    ███████╗██╗     ██╗██╗   ██╗███████╗██████╗
+    ██╔════╝██║     ██║██║   ██║██╔════╝██╔══██╗
+    ███████╗██║     ██║██║   ██║█████╗  ██████╔╝
+    ╚════██║██║     ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗
+    ███████║███████╗██║ ╚████╔╝ ███████╗██║  ██║
+    ╚══════╝╚══════╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
+` + Normal,
+
+	Bold + Gray + `
+.------..------..------..------..------..------.
+|S.--. ||L.--. ||I.--. ||V.--. ||E.--. ||R.--. |
+| :/\: || :/\: || (\/) || :(): || (\/) || :(): |
+| :\/: || (__) || :\/: || ()() || :\/: || ()() |
+| '--'S|| '--'L|| '--'I|| '--'V|| '--'E|| '--'R|
+` + "`------'`------'`------'`------'`------'`------'" + `
+` + Normal,
 }

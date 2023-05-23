@@ -22,8 +22,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bishopfox/sliver/client/assets"
 	"github.com/spf13/cobra"
+
+	"github.com/bishopfox/sliver/client/assets"
 )
 
 var cmdImport = &cobra.Command{

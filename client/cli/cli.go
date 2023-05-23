@@ -24,8 +24,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/bishopfox/sliver/client/version"
 	"github.com/rsteube/carapace"
+
+	"github.com/bishopfox/sliver/client/version"
 
 	"github.com/spf13/cobra"
 )

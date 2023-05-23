@@ -42,53 +42,41 @@ const (
 	Success = Bold + Green + "[+] " + Normal
 )
 
-var print func(format string, args ...any) (n int, err error)
-
-// Init is used to pass the console specialized print function,
-// It's generally a transient logging utility, but can be fmt.Print.
-func Init(printf func(format string, args ...any) (n int, err error)) {
-	if printf != nil {
-		print = printf
-	} else {
-		print = fmt.Printf
-	}
-}
-
 func Printf(format string, args ...any) (n int, err error) {
-	return print(format, args...)
+	return console.Client.App.CurrentMenu().TransientPrintf(format, args...)
 }
 
 func Println(args ...any) (n int, err error) {
 	format := strings.Repeat("%s", len(args))
-	return print(format+"\n", args...)
+	return console.Client.App.CurrentMenu().TransientPrintf(format+"\n", args...)
 }
 
 func Infof(format string, args ...any) (n int, err error) {
-	return print(Clearln+Info+format, args...)
+	return console.Client.App.CurrentMenu().TransientPrintf(Clearln+Info+format, args...)
 }
 
 func Successf(format string, args ...any) (n int, err error) {
-	return print(Clearln+Success+format, args...)
+	return console.Client.App.CurrentMenu().TransientPrintf(Clearln+Success+format, args...)
 }
 
 func Warnf(format string, args ...any) (n int, err error) {
-	return print(Clearln+"⚠️  "+Normal+format, args...)
+	return console.Client.App.CurrentMenu().TransientPrintf(Clearln+"⚠️  "+Normal+format, args...)
 }
 
 func Errorf(format string, args ...any) (n int, err error) {
-	return print(Clearln+Warn+format, args...)
+	return console.Client.App.CurrentMenu().TransientPrintf(Clearln+Warn+format, args...)
 }
 
 func EventInfof(format string, args ...any) (n int, err error) {
-	return print(Clearln+Info+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
+	return console.Client.App.CurrentMenu().TransientPrintf(Clearln+Info+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 }
 
 func EventErrorf(format string, args ...any) (n int, err error) {
-	return print(Clearln+Warn+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
+	return console.Client.App.CurrentMenu().TransientPrintf(Clearln+Warn+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 }
 
 func EventSuccessf(format string, args ...any) (n int, err error) {
-	return print(Clearln+Success+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
+	return console.Client.App.CurrentMenu().TransientPrintf(Clearln+Success+format+"\n"+Clearln+"\r\n"+Clearln+"\r", args...)
 }
 
 func SpinUntil(message string, ctrl chan bool) {
@@ -104,5 +92,6 @@ func AsyncResponse(resp *commonpb.Response) {
 		fmt.Printf(Warn+"%s\n", err)
 		return
 	}
+
 	Infof("Tasked beacon %s (%s)\n", beacon.Name, strings.Split(resp.TaskID, "-")[0])
 }

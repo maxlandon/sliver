@@ -29,7 +29,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/command"
 	"github.com/bishopfox/sliver/client/command/help"
-	clientconsole "github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
 	clienttransport "github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
@@ -61,10 +61,10 @@ func Start() {
 		fmt.Printf(Warn+"Error in HTTP C2 config: %s\n", err)
 	}
 
-	// Create the console, set it up and bind all commands.
-	clientconsole.Setup(command.ServerCommands(serverOnlyCmds), command.SliverCommands)
+	// Initialize the console application and bind commands first, and init log.
+	console.NewClient(localRPC, command.ServerCommands(serverOnlyCmds), command.SliverCommands(), true)
 
-	clientconsole.StartReadline(localRPC, true)
+	console.Client.App.Run()
 }
 
 // serverOnlyCmds - Server only commands
