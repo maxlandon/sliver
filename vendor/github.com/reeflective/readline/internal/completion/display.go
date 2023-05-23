@@ -11,8 +11,8 @@ import (
 
 // Display prints the current completion list to the screen,
 // respecting the current display and completion settings.
-func (e *Engine) Display(lines int) {
-	e.usedY = 0
+func Display(eng *Engine, maxRows int) {
+	eng.usedY = 0
 
 	defer fmt.Print(term.ClearScreenBelow)
 
@@ -21,7 +21,7 @@ func (e *Engine) Display(lines int) {
 	// sometimes it's better to keep completions printed for a
 	// little more time. The engine itself is responsible for
 	// deleting those lists when it deems them useless.
-	if e.Matches() == 0 {
+	if eng.Matches() == 0 || eng.skipDisplay {
 		fmt.Print(term.ClearLineAfter)
 		return
 	}
@@ -29,12 +29,12 @@ func (e *Engine) Display(lines int) {
 	// The final completions string to print.
 	completions := term.ClearLineAfter
 
-	for _, group := range e.groups {
-		completions += group.writeComps(e)
+	for _, group := range eng.groups {
+		completions += group.writeComps(eng)
 	}
 
 	// Crop the completions so that it fits within our terminal
-	completions, e.usedY = e.cropCompletions(completions, lines)
+	completions, eng.usedY = eng.cropCompletions(completions, maxRows)
 
 	if completions != "" {
 		fmt.Print(completions)
@@ -43,7 +43,7 @@ func (e *Engine) Display(lines int) {
 
 // Coordinates returns the number of terminal rows used
 // when displaying the completions with Display().
-func (e *Engine) Coordinates() int {
+func Coordinates(e *Engine) int {
 	return e.usedY
 }
 
@@ -58,13 +58,13 @@ func (e *Engine) cropCompletions(comps string, maxRows int) (cropped string, use
 	scanner := bufio.NewScanner(strings.NewReader(comps))
 
 	// If absPos < MaxTabCompleterRows, cut below MaxTabCompleterRows and return
-	if absPos < maxRows {
+	if absPos < maxRows-1 {
 		return e.cutCompletionsBelow(scanner, maxRows)
 	}
 
 	// If absolute > MaxTabCompleterRows, cut above and below and return
 	//      -> This includes de facto when we tabCompletionReverse
-	if absPos >= maxRows {
+	if absPos >= maxRows-1 {
 		return e.cutCompletionsAboveBelow(scanner, maxRows, absPos)
 	}
 
@@ -77,7 +77,7 @@ func (e *Engine) cutCompletionsBelow(scanner *bufio.Scanner, maxRows int) (strin
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		if count < maxRows {
+		if count < maxRows-1 {
 			cropped += line + "\n"
 			count++
 		} else {
@@ -85,7 +85,17 @@ func (e *Engine) cutCompletionsBelow(scanner *bufio.Scanner, maxRows int) (strin
 		}
 	}
 
-	cropped = e.excessCompletionsHint(cropped, maxRows, count)
+	cropped = strings.TrimSuffix(cropped, "\n")
+
+	// Add hint for remaining completions, if any.
+	_, used := e.completionCount()
+	remain := used - count
+
+	if remain <= 0 {
+		return cropped, count - 1
+	}
+
+	cropped += fmt.Sprintf("\n"+color.Dim+color.FgYellow+" %d more completion rows... (scroll down to show)"+color.Reset, remain)
 
 	return cropped, count
 }
@@ -113,23 +123,18 @@ func (e *Engine) cutCompletionsAboveBelow(scanner *bufio.Scanner, maxRows, absPo
 		}
 	}
 
-	cropped = e.excessCompletionsHint(cropped, maxRows, maxRows+cutAbove)
-	count--
+	cropped = strings.TrimSuffix(cropped, "\n")
+	count -= cutAbove + 1
 
-	return cropped, count - cutAbove
-}
-
-func (e *Engine) excessCompletionsHint(cropped string, maxRows, offset int) string {
+	// Add hint for remaining completions, if any.
 	_, used := e.completionCount()
-	remain := used - offset
+	remain := used - (maxRows + cutAbove)
 
-	if remain <= 0 || offset < maxRows {
-		return cropped
+	if remain <= 0 {
+		return cropped, count - 1
 	}
 
-	hint := fmt.Sprintf(color.Dim+color.FgYellow+" %d more completion rows... (scroll down to show)"+color.Reset, remain)
+	cropped += fmt.Sprintf("\n"+color.Dim+color.FgYellow+" %d more completion rows... (scroll down to show)"+color.Reset, remain)
 
-	hinted := cropped + hint
-
-	return hinted
+	return cropped, count
 }

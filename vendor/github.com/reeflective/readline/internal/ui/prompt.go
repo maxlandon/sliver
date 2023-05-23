@@ -12,8 +12,6 @@ import (
 	"github.com/reeflective/readline/internal/term"
 )
 
-const transientEnableOption = "prompt-transient"
-
 // Prompt stores all prompt rendering/generation functions and is
 // in charge of displaying them, as well as computing their offsets.
 type Prompt struct {
@@ -21,31 +19,25 @@ type Prompt struct {
 	primaryRows int
 	primaryCols int
 
-	secondaryF    func() string
-	secondaryCols int
-
+	secondaryF func() string
 	transientF func() string
-
-	rightF func() string
-
-	tooltipF func() string
+	rightF     func() string
+	tooltipF   func() string
 
 	// True if some logs have printed asynchronously
 	// since last loop. Check refresh prompt funcs.
 	refreshing bool
 
 	// Shell parameters
-	keys    *core.Keys
 	line    *core.Line
 	cursor  *core.Cursor
-	keymaps *keymap.Modes
+	keymaps *keymap.Engine
 	opts    *inputrc.Config
 }
 
 // NewPrompt is a required constructor to initialize the prompt system.
-func NewPrompt(keys *core.Keys, line *core.Line, cursor *core.Cursor, keymaps *keymap.Modes, opts *inputrc.Config) *Prompt {
+func NewPrompt(line *core.Line, cursor *core.Cursor, keymaps *keymap.Engine, opts *inputrc.Config) *Prompt {
 	return &Prompt{
-		keys:    keys,
 		line:    line,
 		cursor:  cursor,
 		keymaps: keymaps,
@@ -94,7 +86,7 @@ func (p *Prompt) Tooltip(prompt func(word string) string) {
 }
 
 // PrimaryPrint prints the primary prompt string, excluding
-// the last line if the primary spans on several lines.
+// the last line if the primary prompt spans on several lines.
 func (p *Prompt) PrimaryPrint() {
 	p.refreshing = false
 
@@ -102,33 +94,27 @@ func (p *Prompt) PrimaryPrint() {
 		return
 	}
 
-	var prompt, lastPrompt string
+	prompt := p.primaryF()
 
-	prompt = p.primaryF()
-
-	// Get all the lines but the last.
-	lines := strings.Split(prompt, "\n")
-
-	if len(lines) > 1 {
-		prompt = strings.Join(lines[:len(lines)-1], "\n")
-		lastPrompt = lines[len(lines)-1]
-	} else {
-		lastPrompt, prompt = prompt, ""
-	}
+	prompt, lastPrompt := p.formatPrimaryLines(prompt)
 
 	// Format the last line with the editing status.
 	lastPrompt = p.formatLastPrompt(lastPrompt)
 
 	// Print the various lines.
 	if prompt != "" {
-		fmt.Println(prompt)
+		fmt.Print(prompt)
 	}
 
 	fmt.Print(lastPrompt)
 
 	// And compute coordinates
-	p.primaryRows = len(strings.Split(prompt, "\n"))
+	p.primaryRows = strings.Count(prompt, "\n")
 	p.primaryCols = strutil.RealLength(lastPrompt)
+
+	if p.primaryCols > 0 {
+		p.primaryCols--
+	}
 }
 
 // PrimaryUsed returns the number of terminal rows on which
@@ -150,7 +136,6 @@ func (p *Prompt) LastPrint() {
 	// rows used since any redisplay of all lines but the last
 	// will trigger their  own recomputation.
 	lines := strings.Split(p.primaryF(), "\n")
-	p.primaryRows = 0
 
 	// Print the prompt and compute columns.
 	if len(lines) == 0 {
@@ -162,6 +147,9 @@ func (p *Prompt) LastPrint() {
 	fmt.Print(prompt)
 
 	p.primaryCols = strutil.RealLength(prompt)
+	if p.primaryCols > 0 {
+		p.primaryCols--
+	}
 }
 
 // LastUsed returns the number of terminal columns used by the last
@@ -169,7 +157,26 @@ func (p *Prompt) LastPrint() {
 // This, in effect, returns the X coordinate at which the input line
 // should be printed, and indentation for subsequent lines if several.
 func (p *Prompt) LastUsed() int {
-	return p.primaryCols - 1
+	if p.primaryF == nil {
+		return 0
+	}
+
+	// Only display the last line, but overwrite the number of
+	// rows used since any redisplay of all lines but the last
+	// will trigger their  own recomputation.
+	lines := strings.Split(p.primaryF(), "\n")
+	if len(lines) == 0 {
+		return 0
+	}
+
+	prompt := p.formatLastPrompt(lines[len(lines)-1])
+	p.primaryCols = strutil.RealLength(prompt)
+
+	if p.primaryCols > 0 {
+		p.primaryCols--
+	}
+
+	return p.primaryCols
 }
 
 // RightPrint prints the right-sided prompt strings, which might be either
@@ -198,23 +205,19 @@ func (p *Prompt) RightPrint(startColumn int, force bool) {
 	}
 }
 
-// TransientPrint prints the transient prompt if it is enabled.
+// TransientPrint prints the transient prompt.
 func (p *Prompt) TransientPrint() {
-	if p.transientF == nil || !p.opts.GetBool(transientEnableOption) {
+	if p.transientF == nil {
 		return
 	}
 
-	// _, lines := p.line.Coordinates()
-
 	// Clean everything below where the prompt will be printed.
 	term.MoveCursorBackwards(term.GetWidth())
-	promptLines := strings.Count(p.primaryF(), "\n")
-	term.MoveCursorUp(promptLines)
+	term.MoveCursorUp(p.primaryRows)
 	fmt.Print(term.ClearScreenBelow)
 
-	// And print the prompt and the accepted input line.
+	// And print the prompt
 	fmt.Print(p.transientF())
-	fmt.Println(string(*p.line))
 }
 
 // Refreshing returns true if the prompt is currently redisplaying
@@ -233,28 +236,21 @@ func (p *Prompt) formatLastPrompt(prompt string) string {
 	switch {
 	case p.keymaps.IsEmacs():
 		status = p.opts.GetString("emacs-mode-string")
-	case p.keymaps.Main() == keymap.ViCmd:
+	case p.keymaps.Main() == keymap.ViCommand:
 		status = p.opts.GetString("vi-cmd-mode-string")
-	case p.keymaps.Main() == keymap.ViIns:
+	case p.keymaps.Main() == keymap.ViInsert:
 		status = p.opts.GetString("vi-ins-mode-string")
 	}
 
-	// Fix parsing of inputrc which sometimes preserves quotes on some values.
-	if strings.HasPrefix(status, "\"") && strings.HasSuffix(status, "\"") {
-		status = strings.Trim(status, "\"")
-	}
+	// Fix parsing of inputrc which sometimes preserves quotes on some
+	// values, and remove bash readline begin/end non-printable delimiters.
+	status = strings.Trim(status, "\"")
 
-	// Remove bash readline begin/end non-printable delimiters.
 	begin := regexp.MustCompile(`\\1`)
 	end := regexp.MustCompile(`\\2`)
 
 	status = begin.ReplaceAllString(status, "")
 	status = end.ReplaceAllString(status, "")
-
-	// Remove ClearScreenBelow sequence to avoid flickering
-	prompt = strings.ReplaceAll(prompt, term.ClearScreenBelow, "")
-	prompt = strings.ReplaceAll(prompt, term.ClearLineAfter, "")
-	prompt = strings.ReplaceAll(prompt, term.ClearLine, "")
 
 	return status + prompt
 }
@@ -273,8 +269,22 @@ func (p *Prompt) formatRightPrompt(rprompt string, startColumn int) (prompt stri
 	// Check that we have room for a right/tooltip prompt.
 	canPrint = (startColumn+promptLen < termWidth) || startColumn == termWidth
 	if canPrint {
-		prompt = fmt.Sprintf("%s%s", strings.Repeat(" ", padLen), rprompt) // + term.ClearLineAfter
+		prompt = fmt.Sprintf("%s%s", strings.Repeat(" ", padLen), rprompt)
 	}
 
 	return
+}
+
+func (p *Prompt) formatPrimaryLines(prompt string) (multi, lastPrompt string) {
+	// Get all the lines but the last.
+	lines := strings.Split(prompt, "\n")
+
+	if len(lines) > 1 {
+		multi = strings.Join(lines[:len(lines)-1], "\n") + "\n"
+		lastPrompt = lines[len(lines)-1]
+	} else {
+		lastPrompt, multi = prompt, ""
+	}
+
+	return multi, lastPrompt
 }

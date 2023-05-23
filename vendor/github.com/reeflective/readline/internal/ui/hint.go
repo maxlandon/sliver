@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/reeflective/readline/inputrc"
@@ -17,11 +16,25 @@ import (
 type Hint struct {
 	text       []rune
 	persistent []rune
+	cleanup    bool
+	temp       bool
+	set        bool
 }
 
 // Set sets the hint message to the given text.
+// Generally, this hint message will persist until either a command
+// or the completion system overwrites it, or if hint.Reset() is called.
 func (h *Hint) Set(hint string) {
 	h.text = []rune(hint)
+	h.set = true
+}
+
+// SetTemporary sets a hint message that will be cleared at the next keypress
+// or command being run, which generally coincides with the next redisplay.
+func (h *Hint) SetTemporary(hint string) {
+	h.text = []rune(hint)
+	h.set = true
+	h.temp = true
 }
 
 // Persist adds a hint message to be persistently
@@ -46,28 +59,47 @@ func (h *Hint) Len() int {
 // Reset removes the hint message.
 func (h *Hint) Reset() {
 	h.text = make([]rune, 0)
+	h.temp = false
+	h.set = false
 }
 
-// ResetPersist drops the persistent hint.
+// ResetPersist drops the persistent hint section.
 func (h *Hint) ResetPersist() {
+	h.cleanup = len(h.persistent) > 0
 	h.persistent = make([]rune, 0)
 }
 
-// Display prints the hint section.
-func (h *Hint) Display() {
-	if len(h.text) == 0 && len(h.persistent) == 0 {
+// DisplayHint prints the hint (persistent and/or temporary) sections.
+func DisplayHint(hint *Hint) {
+	if hint.temp && hint.set {
+		hint.set = false
+	} else if hint.temp {
+		hint.Reset()
+	}
+
+	if len(hint.text) == 0 && len(hint.persistent) == 0 {
+		if hint.cleanup {
+			fmt.Print(term.ClearLineAfter)
+		}
+
+		hint.cleanup = false
+
 		return
 	}
 
 	var text string
 
 	// Add the various hints.
-	if len(h.persistent) > 0 {
-		text += string(h.persistent) + "\n"
+	if len(hint.persistent) > 0 {
+		text += string(hint.persistent) + "\n"
 	}
 
-	if len(h.text) > 0 {
-		text += string(h.text)
+	if len(hint.text) > 0 {
+		text += string(hint.text)
+	}
+
+	if strutil.RealLength(text) == 0 {
+		return
 	}
 
 	text = "\r" + strings.TrimSuffix(text, "\n") + term.ClearLineAfter + string(inputrc.Newline) + color.Reset
@@ -77,41 +109,34 @@ func (h *Hint) Display() {
 	}
 }
 
-// Coordinates returns the number of terminal rows used by the hint.
-func (h *Hint) Coordinates() int {
+// CoordinatesHint returns the number of terminal rows used by the hint.
+func CoordinatesHint(hint *Hint) int {
 	var text string
 
 	// Add the various hints.
-	if len(h.persistent) > 0 {
-		text += string(h.persistent) + "\n"
+	if len(hint.persistent) > 0 {
+		text += string(hint.persistent) + "\n"
 	}
 
-	if len(h.text) > 0 {
-		text += string(h.text)
+	if len(hint.text) > 0 {
+		text += string(hint.text)
 	}
 
+	// Nothing to do if no real text
 	text = strings.TrimSuffix(text, "\n")
 
-	if text == "" {
+	if strutil.RealLength(text) == 0 {
 		return 0
 	}
 
-	line := color.Strip(text)
-	line += string(inputrc.Newline)
-	nl := regexp.MustCompile(string(inputrc.Newline))
-
-	newlines := nl.FindAllStringIndex(line, -1)
-
-	bpos := 0
+	// Otherwise compute the real length/span.
 	usedY := 0
+	line := color.Strip(text)
+	lines := strings.Split(line, "\n")
 
-	for i, newline := range newlines {
-		bline := line[bpos:newline[0]]
-		bpos = newline[0]
-
-		x, y := strutil.LineSpan([]rune(bline), i, 0)
-
-		if x != 0 || y == 0 {
+	for i, line := range lines {
+		x, y := strutil.LineSpan([]rune(line), i, 0)
+		if x != 0 {
 			y++
 		}
 

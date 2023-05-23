@@ -1,7 +1,6 @@
 package completion
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/reeflective/readline/internal/color"
@@ -12,26 +11,29 @@ func (e *Engine) hintCompletions(comps Values) {
 
 	// First add the command/flag usage string if any,
 	// and only if we don't have completions.
-	if len(comps.values) == 0 {
-		hint += color.Dim + comps.Usage + "\n"
+	if len(comps.values) == 0 || e.config.GetBool("usage-hint-always") {
+		if comps.Usage != "" {
+			hint += color.Dim + comps.Usage + color.Reset + "\n"
+		}
 	}
 
 	// And all further messages
-	for _, message := range comps.Messages.Get() {
-		if message == "" {
-			continue
-		}
+	hint += strings.Join(comps.Messages.Get(), "\n")
 
-		hint += fmt.Sprintf("%s\n", message)
+	if e.Matches() == 0 && hint == "" && !e.auto {
+		hint = e.hintNoMatches()
 	}
 
 	hint = strings.TrimSuffix(hint, "\n")
+	if hint == "" {
+		return
+	}
 
 	// Add the hint to the shell.
-	e.hint.Set(hint)
+	e.hint.Set(hint + color.Reset)
 }
 
-func (e *Engine) hintNoMatches() {
+func (e *Engine) hintNoMatches() string {
 	noMatches := color.Dim + "no matching"
 
 	var groups []string
@@ -44,40 +46,10 @@ func (e *Engine) hintNoMatches() {
 		groups = append(groups, group.tag)
 	}
 
-	// History has no named group, so add it
-	// if len(groups) == 0 && len(rl.histHint) > 0 {
-	// 	groups = append(groups, rl.historyNames[rl.historySourcePos])
-	// }
-
 	if len(groups) > 0 {
 		groupsStr := strings.Join(groups, ", ")
 		noMatches += "'" + groupsStr + "'"
 	}
 
-	noMatches += " completions"
-
-	e.hint.Set(noMatches)
-}
-
-func (e *Engine) hintIsearch() {
-	var currentMode string
-
-	if e.hint.Len() > 0 {
-		currentMode = e.hint.Text() + color.FgCyan + " (isearch): "
-	} else {
-		currentMode = "isearch: "
-	}
-
-	hint := color.Bold + color.FgCyan + currentMode + color.Reset + color.BgDarkGray
-	hint += string(*e.isearchBuf)
-
-	if e.isearch == nil && e.isearchBuf.Len() > 0 {
-		hint += color.FgRed + " ! failed to compile search regexp"
-	} else if e.noCompletions() && e.isearchBuf.Len() > 0 {
-		hint += color.FgRed + " ! no matches"
-	}
-
-	// hint += color.Reset
-
-	e.hint.Set(hint)
+	return noMatches + " completions"
 }

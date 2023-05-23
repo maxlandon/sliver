@@ -12,12 +12,14 @@ var (
 	Dim        = "\x1b[2m"
 	Underscore = "\x1b[4m"
 	Blink      = "\x1b[5m"
+	Reverse    = "\x1b[7m"
 
 	// Effects reset.
-	BoldReset       = "\x1b[21m"
+	BoldReset       = "\x1b[22m" // 21 actually causes underline instead
 	DimReset        = "\x1b[22m"
 	UnderscoreReset = "\x1b[24m"
 	BlinkReset      = "\x1b[25m"
+	ReverseReset    = "\x1b[27m"
 )
 
 // Text colours.
@@ -69,19 +71,15 @@ var (
 
 // Text effects.
 const (
-	sgrStart     = "\x1b["
-	fgColorStart = "38;05;"
-	bgColorStart = "48;05;"
-	sgrEnd       = "m"
+	SGRStart = "\x1b["
+	Fg       = "38;05;"
+	Bg       = "48;05;"
+	SGREnd   = "m"
 )
 
-// SGR formats a color code as an ANSI escaped color sequence.
-func SGR(color string, fg bool) string {
-	if fg {
-		return sgrStart + color + sgrEnd
-	}
-
-	return sgrStart + bgColorStart + color + sgrEnd
+// Fmt formats a color code as an ANSI escaped color sequence.
+func Fmt(color string) string {
+	return SGRStart + color + SGREnd
 }
 
 // HasEffects returns true if colors and effects are supported
@@ -96,7 +94,7 @@ func HasEffects() bool {
 	return true
 }
 
-// Disable will disable all colors and effects.
+// DisableEffects will disable all colors and effects.
 func DisableEffects() {
 	// Effects
 	Reset = ""
@@ -157,6 +155,18 @@ const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)
 
 var re = regexp.MustCompile(ansi)
 
+// Strip removes all ANSI escaped color sequences in a string.
 func Strip(str string) string {
 	return re.ReplaceAllString(str, "")
 }
+
+// wrong: reapplies fg/bg escapes regardless of the string passed.
+// Users should be in charge of applying any effect as they wish.
+// func SGR(color string, fg bool) string {
+// 	if fg {
+// 		return SGRStart + FgColorStart + color + SGREnd
+// 		// return SGRStart + color + SGREnd
+// 	}
+//
+// 	return SGRStart + BgColorStart + color + SGREnd
+// }

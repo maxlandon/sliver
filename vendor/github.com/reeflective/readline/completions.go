@@ -21,6 +21,7 @@ type Completions struct {
 	listLong map[string]bool
 	noSort   map[string]bool
 	listSep  map[string]string
+	pad      map[string]bool
 
 	// Initially this will be set to the part of the current word
 	// from the beginning of the word up to the position of the cursor.
@@ -158,7 +159,7 @@ func (c Completions) Usage(usage string, args ...interface{}) Completions {
 	})
 }
 
-// Usage sets the usage using a function.
+// UsageF sets the usage using a function.
 func (c Completions) UsageF(f func() string) Completions {
 	if usage := f(); usage != "" {
 		c.usage = usage
@@ -177,7 +178,7 @@ func (c Completions) Style(style string) Completions {
 	})
 }
 
-// Style sets the style using a reference
+// StyleR sets the style using a reference
 //
 //	CompleteValues("value").StyleR(&style.Value)
 //	CompleteValues("description").StyleR(&style.Value)
@@ -189,7 +190,7 @@ func (c Completions) StyleR(style *string) Completions {
 	return c
 }
 
-// Style sets the style using a function
+// StyleF sets the style using a function
 //
 //	CompleteValues("dir/", "test.txt").StyleF(myStyleFunc)
 //	CompleteValues("true", "false").StyleF(styleForKeyword)
@@ -210,7 +211,7 @@ func (c Completions) Tag(tag string) Completions {
 	})
 }
 
-// Tag sets the tag using a function.
+// TagF sets the tag using a function.
 //
 //	CompleteValues("192.168.1.1", "127.0.0.1").TagF(func(value string) string {
 //		return "interfaces"
@@ -303,6 +304,24 @@ func (c Completions) Filter(values []string) Completions {
 	return c
 }
 
+// JustifyDescriptions accepts a list of tags for which descriptions (if any), will be left justified.
+// If no arguments are given, description justification (padding) will apply to all tags.
+func (c Completions) JustifyDescriptions(tags ...string) Completions {
+	if c.pad == nil {
+		c.pad = make(map[string]bool)
+	}
+
+	if len(tags) == 0 {
+		c.pad["*"] = true
+	}
+
+	for _, tag := range tags {
+		c.pad[tag] = true
+	}
+
+	return c
+}
+
 // Merge merges Completions (existing values are overwritten)
 //
 //	a := CompleteValues("A", "B").Invoke(c)
@@ -331,6 +350,13 @@ func (c Completions) Merge(others ...Completions) Completions {
 	return c
 }
 
+// EachValue runs a function on each value, overwriting with the returned one.
+func (c *Completions) EachValue(tagF func(comp Completion) Completion) {
+	for index, v := range c.values {
+		c.values[index] = tagF(v)
+	}
+}
+
 func (c *Completions) merge(other Completions) {
 	if other.usage != "" {
 		c.usage = other.usage
@@ -350,6 +376,18 @@ func (c *Completions) merge(other Completions) {
 			c.noSort[tag] = true
 		}
 	}
+
+	for tag := range other.listSep {
+		if _, found := c.listSep[tag]; !found {
+			c.listSep[tag] = other.listSep[tag]
+		}
+	}
+
+	for tag := range other.pad {
+		if _, found := c.pad[tag]; !found {
+			c.pad[tag] = other.pad[tag]
+		}
+	}
 }
 
 func (c *Completions) convert() completion.Values {
@@ -361,6 +399,7 @@ func (c *Completions) convert() completion.Values {
 	comps.ListLong = c.listLong
 	comps.NoSort = c.noSort
 	comps.ListSep = c.listSep
+	comps.Pad = c.pad
 
 	return comps
 }

@@ -2,8 +2,8 @@ package completion
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -27,10 +27,12 @@ type group struct {
 	tcMaxLength   int           // Used when display is map/list, for determining message width
 	maxDescWidth  int
 	maxCellLength int
-	posX          int
-	posY          int
-	maxX          int
-	maxY          int
+
+	// Selectors (position/bounds) management
+	posX int
+	posY int
+	maxX int
+	maxY int
 }
 
 func (e *Engine) group(comps Values) {
@@ -45,7 +47,7 @@ func (e *Engine) group(comps Values) {
 		return
 	}
 
-	comps.values.eachTag(func(tag string, values RawValues) {
+	comps.values.EachTag(func(tag string, values RawValues) {
 		// Separate the completions that have a description and
 		// those which don't, and devise if there are aliases.
 		vals, noDescVals, aliased := e.groupValues(&comps, values)
@@ -60,12 +62,17 @@ func (e *Engine) group(comps Values) {
 		}
 	})
 
-	e.justifyCommandComps()
+	e.justifyGroups(comps)
 }
 
 // groupValues separates values based on whether they have descriptions, or are aliases of each other.
 func (e *Engine) groupValues(comps *Values, values RawValues) (vals, noDescVals RawValues, aliased bool) {
 	var descriptions []string
+
+	prefix := ""
+	if e.prefix != "\"\"" && e.prefix != "''" {
+		prefix = e.prefix
+	}
 
 	for _, val := range values {
 		// Ensure all values have a display string.
@@ -73,9 +80,8 @@ func (e *Engine) groupValues(comps *Values, values RawValues) (vals, noDescVals 
 			val.Display = val.Value
 		}
 
-		// NOTE: Currently this is because errors are passed as completions.
-		// Filter out error messages
-		if val.Value == e.prefix+"ERR" || val.Value == e.prefix+"_" {
+		// Currently this is because errors are passed as completions.
+		if strings.HasPrefix(val.Value, prefix+"ERR") || strings.HasPrefix(val.Value, prefix+"_") {
 			if val.Description != "" && comps != nil {
 				comps.Messages.Add(color.FgRed + val.Description)
 			}
@@ -108,15 +114,19 @@ func (e *Engine) groupValues(comps *Values, values RawValues) (vals, noDescVals 
 	return vals, noDescVals, aliased
 }
 
-func (e *Engine) justifyCommandComps() {
+func (e *Engine) justifyGroups(values Values) {
 	commandGroups := make([]*group, 0)
 	maxCellLength := 0
 
 	for _, group := range e.groups {
-		if !strings.HasSuffix(group.tag, "commands") {
-			continue
+		// Skip groups that are not to be justified
+		if _, justify := values.Pad[group.tag]; !justify {
+			if _, all := values.Pad["*"]; !all {
+				continue
+			}
 		}
 
+		// Skip groups that are aliased or have more than one column
 		if group.aliased || len(group.columnsWidth) > 1 {
 			continue
 		}
@@ -133,10 +143,10 @@ func (e *Engine) justifyCommandComps() {
 	}
 }
 
-func (e *Engine) newGroup(c Values, tag string, vals RawValues, aliased bool) {
+func (e *Engine) newGroup(comps Values, tag string, vals RawValues, aliased bool) {
 	grp := &group{
 		tag:           tag,
-		noSpace:       c.NoSpace,
+		noSpace:       comps.NoSpace,
 		listSeparator: "--",
 		posX:          -1,
 		posY:          -1,
@@ -149,11 +159,11 @@ func (e *Engine) newGroup(c Values, tag string, vals RawValues, aliased bool) {
 	vals = grp.checkDisplays(vals)
 
 	// Set sorting options, various display styles, etc.
-	grp.setOptions(c, tag, vals)
+	grp.setOptions(comps, tag, vals)
 
 	// Keep computing/devising some parameters and constraints.
 	// This does not do much when we have aliased completions.
-	grp.computeCells(vals)
+	grp.computeCells(e, vals)
 
 	// Rearrange all candidates into a matrix of completions,
 	// based on most parameters computed above.
@@ -217,7 +227,7 @@ func (g *group) setOptions(comps Values, tag string, vals RawValues) {
 	}
 }
 
-func (g *group) computeCells(vals RawValues) {
+func (g *group) computeCells(eng *Engine, vals RawValues) {
 	// Aliases will compute themselves individually, later.
 	if g.aliased {
 		return
@@ -227,7 +237,6 @@ func (g *group) computeCells(vals RawValues) {
 		return
 	}
 
-	termWidth := term.GetWidth()
 	g.tcMaxLength = g.columnsWidth[0]
 
 	// Each value first computes the total amount of space
@@ -244,31 +253,53 @@ func (g *group) computeCells(vals RawValues) {
 		}
 	}
 
-	g.maxX = termWidth / (g.maxCellLength)
+	// Adapt the maximum cell size based on inputrc settings.
+	compDisplayWidth := g.setMaxCellLength(eng)
+
+	// We now have the length of the longest completion for this group,
+	// so we devise how many columns we can use to display completions.
+	g.setColumnsWidth(&vals, compDisplayWidth)
+}
+
+func (g *group) setMaxCellLength(eng *Engine) int {
+	termWidth := term.GetWidth()
+
+	compDisplayWidth := eng.config.GetInt("completion-display-width")
+	if compDisplayWidth > termWidth {
+		compDisplayWidth = -1
+	}
+
+	if compDisplayWidth > 0 && compDisplayWidth < termWidth {
+		if g.maxCellLength < compDisplayWidth {
+			g.maxCellLength = compDisplayWidth
+		} else {
+			g.maxCellLength = termWidth
+		}
+	}
+
+	return compDisplayWidth
+}
+
+func (g *group) setColumnsWidth(vals *RawValues, compDisplayWidth int) {
+	g.maxX = term.GetWidth() / (g.maxCellLength)
 	if g.maxX < 1 {
 		g.maxX = 1 // avoid a divide by zero error
 	}
 
-	if g.maxX > len(vals) {
-		g.maxX = len(vals)
+	if g.maxX > len(*vals) {
+		g.maxX = len(*vals)
 	}
 
-	numColumns := termWidth / (g.maxCellLength)
-	if numColumns == 0 {
-		numColumns = 1
-	}
-
-	if numColumns > len(vals) {
-		numColumns = len(vals)
-	}
-
-	if g.list {
+	if g.list || compDisplayWidth == 0 {
 		g.maxX = 1
-		numColumns = 1
+	}
+
+	if g.maxX > compDisplayWidth && compDisplayWidth > 0 {
+		g.maxX = compDisplayWidth
 	}
 
 	// We also have the width for each column
-	g.columnsWidth = make([]int, numColumns)
+	g.columnsWidth = make([]int, g.maxX)
 	for i := 0; i < g.maxX; i++ {
 		g.columnsWidth[i] = g.maxCellLength
 	}
@@ -330,14 +361,14 @@ func (g *group) canFitInRow(termWidth int) bool {
 }
 
 //
-// Usage-time functions (selecting/writing) 9----------------------------------------------------------------
+// Usage-time functions (selecting/writing) -----------------------------------------------------------------
 //
 
 // updateIsearch - When searching through all completion groups (whether it be command history or not),
 // we ask each of them to filter its own items and return the results to the shell for aggregating them.
 // The rx parameter is passed, as the shell already checked that the search pattern is valid.
 func (g *group) updateIsearch(eng *Engine) {
-	if eng.isearch == nil {
+	if eng.IsearchRegex == nil {
 		return
 	}
 
@@ -347,9 +378,9 @@ func (g *group) updateIsearch(eng *Engine) {
 		row := g.values[i]
 
 		for _, val := range row {
-			if eng.isearch.MatchString(val.Value) {
+			if eng.IsearchRegex.MatchString(val.Value) {
 				suggs = append(suggs, val)
-			} else if val.Description != "" && eng.isearch.MatchString(val.Description) {
+			} else if val.Description != "" && eng.IsearchRegex.MatchString(val.Description) {
 				suggs = append(suggs, val)
 			}
 		}
@@ -373,7 +404,7 @@ func (g *group) updateIsearch(eng *Engine) {
 
 	// And perform the usual initialization routines.
 	vals = g.checkDisplays(vals)
-	g.computeCells(vals)
+	g.computeCells(eng, vals)
 	g.makeMatrix(vals)
 }
 
@@ -447,7 +478,7 @@ func (g *group) moveSelector(x, y int) (done, next bool) {
 	// the next column, if there is another one.
 	if g.posY > g.maxY-1 {
 		g.posY = 0
-		if g.posX < g.maxX {
+		if g.posX < g.maxX-1 {
 			g.posX++
 		} else {
 			return true, true
@@ -552,6 +583,7 @@ func (g *group) writeRow(eng *Engine, row int) (comp string) {
 	writeDesc := func(val Candidate, x, y, pad int) string {
 		desc := g.highlightDescription(eng, val, y, x)
 		descPad := g.padDescription(current, val, pad)
+
 		if descPad > 0 {
 			desc += strings.Repeat(" ", descPad)
 		}
@@ -577,34 +609,36 @@ func (g *group) writeRow(eng *Engine, row int) (comp string) {
 	return
 }
 
-// TODO: After checking works, remove commented lines.
 func (g *group) highlightCandidate(eng *Engine, val Candidate, cell, pad string, selected bool) (candidate string) {
-	reset := color.SGR(val.Style, true)
+	reset := color.Fmt(val.Style)
 	candidate = g.displayTrimmed(val.Display)
-	// candidate = g.displayTrimmed(val.Display) + cell
 
-	if eng.isearch != nil && eng.isearchBuf.Len() > 0 {
-		match := eng.isearch.FindString(candidate)
-		match = color.BgBlackBright + match + color.Reset + cell + reset
-		// match = color.BgBlackBright + match + color.Reset + reset
-		candidate = eng.isearch.ReplaceAllLiteralString(candidate, match)
+	if eng.IsearchRegex != nil && eng.isearchBuf.Len() > 0 {
+		match := eng.IsearchRegex.FindString(candidate)
+		match = color.Fmt(color.Bg+"244") + match + color.Reset + reset
+		candidate = eng.IsearchRegex.ReplaceAllLiteralString(candidate, match)
 	}
 
 	switch {
 	// If the comp is currently selected, overwrite any highlighting already applied.
 	case selected:
-		candidate = color.SGR(strconv.Itoa(255), false) + color.FgBlackBright + g.displayTrimmed(color.Strip(val.Display))
+		candidate = color.Fmt(color.Bg+"255") + color.FgBlackBright + g.displayTrimmed(color.Strip(val.Display))
 		if g.aliased {
 			candidate += cell + color.Reset
 		}
 
 	default:
+		// Highlight the prefix if any and configured for it.
+		if eng.config.GetBool("colored-completion-prefix") && eng.prefix != "" {
+			if prefixMatch, err := regexp.Compile(fmt.Sprintf("^%s", eng.prefix)); err == nil {
+				candidate = prefixMatch.ReplaceAllString(candidate, color.Bold+color.FgBlue+eng.prefix+color.BoldReset+color.FgDefault+reset)
+			}
+		}
+
 		candidate = reset + candidate + color.Reset + cell
 	}
 
-	candidate += pad
-
-	return
+	return candidate + pad
 }
 
 func (g *group) highlightDescription(eng *Engine, val Candidate, row, col int) (desc string) {
@@ -614,15 +648,15 @@ func (g *group) highlightDescription(eng *Engine, val Candidate, row, col int) (
 
 	desc = g.descriptionTrimmed(val.Description)
 
-	if eng.isearch != nil && eng.isearchBuf.Len() > 0 {
-		match := eng.isearch.FindString(desc)
-		match = color.BgBlackBright + match + color.Reset + color.Dim
-		desc = eng.isearch.ReplaceAllLiteralString(desc, match)
+	if eng.IsearchRegex != nil && eng.isearchBuf.Len() > 0 {
+		match := eng.IsearchRegex.FindString(desc)
+		match = color.Fmt("244") + match + color.Reset + color.Dim
+		desc = eng.IsearchRegex.ReplaceAllLiteralString(desc, match)
 	}
 
 	// If the comp is currently selected, overwrite any highlighting already applied.
 	if row == g.posY && col == g.posX && g.isCurrent && !g.aliased {
-		desc = color.SGR(strconv.Itoa(255), false) + color.FgBlackBright + g.descriptionTrimmed(val.Description)
+		desc = color.Fmt(color.Bg+"255") + color.FgBlackBright + g.descriptionTrimmed(val.Description)
 	}
 
 	return color.Dim + desc + color.Reset
@@ -698,6 +732,7 @@ func (g *group) descriptionTrimmed(desc string) string {
 		if !g.aliased {
 			offset++
 		}
+
 		desc = desc[:g.maxDescWidth-offset] + "..."
 	}
 

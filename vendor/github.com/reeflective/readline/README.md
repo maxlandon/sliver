@@ -1,9 +1,5 @@
 
 <div align="center">
-  <a href="https://github.com/reeflective/readline">
-    <img alt="" src="" width="600">
-  </a>
-
   <br> <h1> Readline </h1>
   <p>  Shell library with modern and simple UI features </p>
 </div>
@@ -32,7 +28,7 @@
   </a>
 
   <a href="https://codecov.io/gh/reeflective/readline">
-    <img src="https://codecov.io/gh/reeflective/readline/branch/main/graph/badge.svg"
+    <img src="https://codecov.io/gh/reeflective/readline/branch/master/graph/badge.svg"
       alt="codecov" />
   </a>
 
@@ -42,37 +38,49 @@
   </a>
 </p>
 
-This library is a modern, pure Go readline implementation, enhanced with editing and user 
-interface features commonly found in modern shells, all in little more than 10K lines of code.
-Its kemap-based model and completion engine is heavily inspired from the Z-Shell architecture.
+This library is a modern, pure Go `readline` shell implementation, with full `.inputrc` and legacy
+readline command/option support, and extended with various commands,options and tools commonly
+found in more modern shells. Its architecture and completion system is heavily inspired from Z-Shell.
 It is used, between others, to power the [console](https://github.com/reeflective/console) library.
 
 
 ## Features
 
-### Editing
-- Near-native Emacs and Vim modes.
-- Configurable bind keymaps, with live reload and sane defaults.
-- [Extended list](https://github.com/reeflective/readline/wiki/Keymaps-&-Widgets) of edition/movement/control widgets (Emacs and Vim).
-- Extended surround select/change/add fonctionality, with highlighting.
-- Keywords switching (operators, booleans, hex/binary/digit) with iterations.
-- Support for Vim Visual/Operator pending mode & cursor styles indications.
-- Vim Insert and Replace (once/many).
-- Many Vim text objects.
-- All Vim registers, with completion support.
-- Undo/redo history.
-- Command-line edition in `$EDITOR`.
-- Support for an arbitrary number of history sources.
+### Core 
+- Pure Go, almost-only standard library
+- Full `.inputrc` support (all commands/options)
+- Extensive test suite and full coverage of core code
+- [Extended list](https://github.com/reeflective/readline/wiki/Keymaps-&-Commands) of additional commands/options (edition/completion/history)
+- Complete [multiline edition/movement support](https://github.com/reeflective/readline/wiki/Multiline)
+- Command-line edition in `$EDITOR`/`$VISUAL` support
+- Programmable API, with failure-safe access to core components
+- Support for an [arbitrary number of history sources](https://github.com/reeflective/readline/wiki/History-Sources)
+
+### Emacs / Standard
+- Native Emacs commands
+- Emacs-style [macro engine](https://github.com/reeflective/readline/wiki/Macros#emacs) (not working accross multiple calls)
+- Keywords switching (operators, booleans, hex/binary/digit) with iterations
+- Command/mode cursor status indicator
+- Complete undo/redo history
+- Command status/arg/iterations hint display
+
+### Vim
+- Near-native Vim mode
+- Vim text objects (code blocks/words/blank/shellwords)
+- Extended surround select/change/add fonctionality, with highlighting
+- Vim Visual/Operator pending mode & cursor styles indications
+- Vim Insert and Replace (once/many)
+- All Vim registers, with completion support
+- [Vim-style](https://github.com/reeflective/readline/wiki/Macros#vim) macro recording (`q<a>`) and invocation (`@<a>`)
 
 ### Interface
-- Support for most of [oh-my-posh](https://github.com/JanDeDobbeleer/oh-my-posh) prompts (PS1/PS2/RPROMPT/transient/tooltip).
-- Extended completion system, keymap-based and configurable, easy to populate & use.
+- Support for PS1/PS2/RPROMPT/transient/tooltip [prompts](https://github.com/reeflective/readline/wiki/Prompts) (compatible with [oh-my-posh](https://github.com/JanDeDobbeleer/oh-my-posh))
+- Extended completion system, [keymap-based and configurable](https://github.com/reeflective/readline/wiki/Keymaps-&-Commands#completion), easy to populate & use
 - Multiple completion display styles, with color support.
 - Completion & History incremental search system & highlighting (fuzzy-search).
 - Automatic & context-aware suffix removal for efficient flags/path/list completion.
-- Optional asynchronous autocomplete.
-- Usage/hint message display.
-- Support for syntax highlighting
+- Optional asynchronous autocomplete
+- Builtin & programmable [syntax highlighting](https://github.com/reeflective/readline/wiki/Syntax-Highlighting)
 
 
 ## Documentation
@@ -80,15 +88,7 @@ It is used, between others, to power the [console](https://github.com/reeflectiv
 Readline is used by the [console library](https://github.com/reeflective/console) and its [example binary](https://github.com/reeflective/console/tree/main/example). To get a grasp of the 
 functionality provided by readline and its default configuration, install and start the binary.
 
-* [Introduction](https://github.com/reeflective/readline/wiki/Introduction-&-Features)
-* [Configuration file](https://github.com/reeflective/readline/wiki/Configuration-File)
-* [Keymaps & Widgets](https://github.com/reeflective/readline/wiki/Keymaps-&-Widgets)
-* [Prompts](https://github.com/reeflective/readline/wiki/Prompts)
-* [History Sources](https://github.com/reeflective/readline/wiki/History-Sources)
-* [Vim mode](https://github.com/reeflective/readline/wiki/Vim-Mode)
-* [Custom callbacks](https://github.com/reeflective/readline/wiki/Custom-Callbacks)
-* [Completions & Hints](https://github.com/reeflective/readline/wiki/Completions-&-Hints)
-* [Other features](https://github.com/reeflective/readline/wiki/Other-Features)
+The documentation is available on the [repository wiki](https://github.com/reeflective/readline/wiki), for both users and developers.
 
 
 ## Showcases
@@ -160,13 +160,20 @@ History movement, completion and some other other widgets
 
 ## Status
 
-This library is in a pre-release status, although pretending to be quite bug-free as compared to its feature set.
-Please open a PR or an issue if you wish to bring enhancements to it. 
-Other contributions, as well as bug fixes and reviews are also welcome.
+This library is now in a release status, as it has underwent several major rewrites and is now considered mostly
+feature-complete, with a solid testing suite to ensure safe and smooth operation to the best extent possible.
+New releases will be regularly pushed when bugs are found and corrected.
+
+Additionally:
+- Key dispatch/flushing, meta-key enable, etc might still contain some bugs/wrong behavior: 
+  30 years of legacy support for 3000 different terminal emulators cannot be done right by me alone.
+- Please open a PR or an issue if you face any bug, and it will be promptly resolved.
+- Don't hesitate proposing a new feature or a PR if you deem it to be useful to most users.
+
 
 ## Credits
 
-- While most of the code has been rewritten from scratch, the original library used 
-  is [lmorg/readline](https://github.com/lmorg/readline). I would have never ventured myself doing this if he had not 
-  ventured writing a Vim mode core in the first place. 
+- Big thanks to @kenshaw for his `.inputrc` parsing package, which brings much wider compatiblity to this library.
+- The famous `chzyer/readline` for the Windows I/O code and everything related.
 - Some of the Vim code is inspired or translated from [zsh-vi-mode](https://github.com/jeffreytse/zsh-vi-mode).
+- Thanks to [lmorg/readline](https://github.com/lmorg/readline), for the line tokenizers.
