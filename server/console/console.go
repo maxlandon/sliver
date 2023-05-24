@@ -61,10 +61,10 @@ func Start() {
 		fmt.Printf(Warn+"Error in HTTP C2 config: %s\n", err)
 	}
 
-	// Initialize the console application and bind commands first, and init log.
-	console.NewClient(localRPC, command.ServerCommands(serverOnlyCmds), command.SliverCommands(), true)
+	con := console.NewConsole(false)
+	console.Init(con, localRPC, command.ServerCommands(con, nil), command.SliverCommands(con))
 
-	console.Client.App.Run()
+	con.App.Run()
 }
 
 // serverOnlyCmds - Server only commands

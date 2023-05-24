@@ -26,6 +26,7 @@ import (
 
 	"github.com/rsteube/carapace"
 
+	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/version"
 
 	"github.com/spf13/cobra"
@@ -49,18 +50,31 @@ func initLogging(appDir string) *os.File {
 }
 
 func init() {
-	// Import
-	rootCmd.AddCommand(cmdImport)
 	rootCmd.TraverseChildren = true
+
+	// Create the console client, without any RPC or commands bound to it yet.
+	// This created before anything so that multiple commands can make use of
+	// the same underlying command/run infrastructure.
+	con := console.NewConsole(false)
+
+	// Import
+	rootCmd.AddCommand(importCmd())
 
 	// Version
 	rootCmd.AddCommand(cmdVersion)
 
-	// Console
-	rootCmd.AddCommand(cmdConsole)
+	// Client console.
+	// All commands and RPC connection are generated WITHIN the command RunE():
+	// that means there should be no redundant command tree/RPC connections with
+	// other commands below, such as the implant one.
+	rootCmd.AddCommand(consoleCmd(con))
 
-	// Implant
-	rootCmd.AddCommand(implantCmd())
+	// Implant.
+	// The implant command allows users to run commands on slivers from their
+	// system shell. It makes use of pre-runners for connecting to the server
+	// and binding sliver commands. These same pre-runners are also used for
+	// command completion/filtering purposes.
+	rootCmd.AddCommand(implantCmd(con))
 
 	// Completions
 	carapace.Gen(rootCmd)
@@ -70,7 +84,6 @@ var rootCmd = &cobra.Command{
 	Use:   "sliver-client",
 	Short: "",
 	Long:  ``,
-	RunE:  startConsole,
 }
 
 // Execute - Execute root command
