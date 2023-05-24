@@ -29,7 +29,6 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
@@ -45,12 +44,10 @@ type ImplantBuildFilter struct {
 }
 
 // ImplantsCmd - Displays archived implant builds
-func ImplantsCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func ImplantsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	builds, err := con.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	implantBuildFilters := ImplantBuildFilter{}
@@ -58,7 +55,7 @@ func ImplantsCmd(cmd *cobra.Command, args []string) {
 	if 0 < len(builds.Configs) {
 		PrintImplantBuilds(builds.Configs, implantBuildFilters, con)
 	} else {
-		log.Infof("No implant builds\n")
+		con.PrintInfof("No implant builds\n")
 	}
 }
 
@@ -126,8 +123,8 @@ func PrintImplantBuilds(configs map[string]*clientpb.ImplantConfig, filters Impl
 }
 
 // ImplantBuildNameCompleter - Completer for implant build names
-func ImplantBuildNameCompleter() carapace.Action {
-	builds, err := console.Client.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
+func ImplantBuildNameCompleter(con *console.SliverConsole) carapace.Action {
+	builds, err := con.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return carapace.ActionMessage("No implant builds: %s", err.Error())
 	}

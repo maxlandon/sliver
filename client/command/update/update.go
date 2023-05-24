@@ -42,17 +42,14 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/version"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/util"
 )
 
 // UpdateCmd - Check for updates
-func UpdateCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
-	VerboseVersionsCmd(cmd, args)
+func UpdateCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+	VerboseVersionsCmd(cmd, con, args)
 
 	timeoutF, _ := cmd.Flags().GetInt("timeout")
 	timeout := time.Duration(timeoutF) * time.Second
@@ -81,7 +78,7 @@ func UpdateCmd(cmd *cobra.Command, args []string) {
 	if proxy != "" {
 		proxyURL, err = url.Parse(proxy)
 		if err != nil {
-			log.Errorf("%s", err)
+			con.PrintErrorf("%s", err)
 			return
 		}
 	}
@@ -100,24 +97,24 @@ func UpdateCmd(cmd *cobra.Command, args []string) {
 		},
 	}
 
-	log.Printf("\nChecking for updates ... ")
+	con.Printf("\nChecking for updates ... ")
 	prereleases, _ := cmd.Flags().GetBool("prereleases")
 	release, err := version.CheckForUpdates(client, prereleases)
-	log.Printf("done!\n\n")
+	con.Printf("done!\n\n")
 	if err != nil {
-		log.Errorf("Update check failed %s\n", err)
+		con.PrintErrorf("Update check failed %s\n", err)
 		return
 	}
 
 	if release != nil {
 		saveTo, err := updateSavePath(cmd)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 		updateAvailable(con, client, release, saveTo)
 	} else {
-		log.Infof("No new releases.\n")
+		con.PrintInfof("No new releases.\n")
 	}
 	now := time.Now()
 	lastCheck := []byte(fmt.Sprintf("%d", now.Unix()))
@@ -125,32 +122,30 @@ func UpdateCmd(cmd *cobra.Command, args []string) {
 	lastUpdateCheckPath := path.Join(appDir, consts.LastUpdateCheckFileName)
 	err = ioutil.WriteFile(lastUpdateCheckPath, lastCheck, 0o600)
 	if err != nil {
-		log.Printf("Failed to save update check time %s", err)
+		con.Printf("Failed to save update check time %s", err)
 	}
 }
 
 // VerboseVersionsCmd - Get verbose version information about the client and server
-func VerboseVersionsCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func VerboseVersionsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	clientVer := version.FullVersion()
 	serverVer, err := con.Rpc.GetVersion(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("Failed to check server version %s\n", err)
+		con.PrintErrorf("Failed to check server version %s\n", err)
 		return
 	}
 
-	log.Infof("Client %s - %s/%s\n", clientVer, runtime.GOOS, runtime.GOARCH)
+	con.PrintInfof("Client %s - %s/%s\n", clientVer, runtime.GOOS, runtime.GOARCH)
 	clientCompiledAt, _ := version.Compiled()
-	log.Printf("    Compiled at %s\n", clientCompiledAt)
-	log.Printf("    Compiled with %s\n\n", version.GoVersion)
+	con.Printf("    Compiled at %s\n", clientCompiledAt)
+	con.Printf("    Compiled with %s\n\n", version.GoVersion)
 
 	con.Println()
-	log.Infof("Server v%d.%d.%d - %s - %s/%s\n",
+	con.PrintInfof("Server v%d.%d.%d - %s - %s/%s\n",
 		serverVer.Major, serverVer.Minor, serverVer.Patch, serverVer.Commit,
 		serverVer.OS, serverVer.Arch)
 	serverCompiledAt := time.Unix(serverVer.CompiledAt, 0)
-	log.Printf("    Compiled at %s\n", serverCompiledAt)
+	con.Printf("    Compiled at %s\n", serverCompiledAt)
 }
 
 func updateSavePath(cmd *cobra.Command) (string, error) {
@@ -228,12 +223,12 @@ func updateAvailable(con *console.SliverConsole, client *http.Client, release *v
 	serverAsset := serverAssetForGOOS(release.Assets)
 	clientAsset := clientAssetForGOOS(release.Assets)
 
-	log.Printf("New version available %s\n", release.TagName)
+	con.Printf("New version available %s\n", release.TagName)
 	if serverAsset != nil {
-		log.Printf(" - Server: %s\n", util.ByteCountBinary(int64(serverAsset.Size)))
+		con.Printf(" - Server: %s\n", util.ByteCountBinary(int64(serverAsset.Size)))
 	}
 	if clientAsset != nil {
-		log.Printf(" - Client: %s\n", util.ByteCountBinary(int64(clientAsset.Size)))
+		con.Printf(" - Client: %s\n", util.ByteCountBinary(int64(clientAsset.Size)))
 	}
 	con.Println()
 
@@ -243,19 +238,19 @@ func updateAvailable(con *console.SliverConsole, client *http.Client, release *v
 	}
 	survey.AskOne(prompt, &confirm)
 	if confirm {
-		log.Printf("Please wait ...")
+		con.Printf("Please wait ...")
 		err := downloadAsset(client, serverAsset, saveTo)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 		err = downloadAsset(client, clientAsset, saveTo)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 		con.Println(console.Clearln)
-		log.Infof("Saved updates to: %s\n", saveTo)
+		con.PrintInfof("Saved updates to: %s\n", saveTo)
 	}
 }
 

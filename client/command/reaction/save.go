@@ -25,12 +25,12 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
+	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // ReactionSaveCmd - Manage reactions to events
-func ReactionSaveCmd(cmd *cobra.Command, args []string) {
+func ReactionSaveCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	reactionPath := GetReactionFilePath()
 	if _, err := os.Stat(reactionPath); !os.IsNotExist(err) {
 		confirm := false
@@ -42,8 +42,8 @@ func ReactionSaveCmd(cmd *cobra.Command, args []string) {
 	}
 	err := SaveReactions(core.Reactions.All())
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	} else {
-		log.Infof("Saved reactions to disk (%s)\n", reactionPath)
+		con.PrintInfof("Saved reactions to disk (%s)\n", reactionPath)
 	}
 }

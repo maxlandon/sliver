@@ -31,7 +31,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
@@ -54,32 +53,31 @@ type wgQuickConfig struct {
 }
 
 // WGConfigCmd - Generate a WireGuard client configuration
-func WGConfigCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func WGConfigCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	wgConfig, err := con.Rpc.GenerateWGClientConfig(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
+		con.PrintErrorf("Error: %s\n", err)
 		return
 	}
 	clientPrivKeyBytes, err := hex.DecodeString(wgConfig.ClientPrivateKey)
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
+		con.PrintErrorf("Error: %s\n", err)
 		return
 	}
 	serverPubKeyBytes, err := hex.DecodeString(wgConfig.ServerPubKey)
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
+		con.PrintErrorf("Error: %s\n", err)
 		return
 	}
 	tmpl, err := template.New("wgQuick").Parse(wgQuickTemplate)
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
+		con.PrintErrorf("Error: %s\n", err)
 		return
 	}
 	clientIP, network, err := net.ParseCIDR(wgConfig.ClientIP + "/16")
 	if err != nil {
-		log.Errorf("Error: %s\n", err)
+		con.PrintErrorf("Error: %s\n", err)
 		return
 	}
 	output := bytes.Buffer{}
@@ -92,7 +90,7 @@ func WGConfigCmd(cmd *cobra.Command, args []string) {
 
 	save, _ := cmd.Flags().GetString("save")
 	if save == "" {
-		log.Infof("New client config:")
+		con.PrintInfof("New client config:")
 		con.Println(output.String())
 	} else {
 		if !strings.HasSuffix(save, ".conf") {
@@ -100,9 +98,9 @@ func WGConfigCmd(cmd *cobra.Command, args []string) {
 		}
 		err = ioutil.WriteFile(save, output.Bytes(), 0o600)
 		if err != nil {
-			log.Errorf("Error: %s\n", err)
+			con.PrintErrorf("Error: %s\n", err)
 			return
 		}
-		log.Infof("Wrote conf: %s\n", save)
+		con.PrintInfof("Wrote conf: %s\n", save)
 	}
 }

@@ -33,7 +33,6 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
@@ -48,18 +47,17 @@ var (
 )
 
 // HostsCmd - Main hosts command
-func HostsCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func HostsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	allHosts, err := con.Rpc.Hosts(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s", err)
+		con.PrintErrorf("%s", err)
 		return
 	}
 	if 0 < len(allHosts.Hosts) {
-		log.Printf("%s\n", hostsTable(allHosts.Hosts, con))
+		con.Printf("%s\n", hostsTable(allHosts.Hosts, con))
 	} else {
-		log.Infof("No hosts\n")
+		con.PrintInfof("No hosts\n")
 	}
 }
 

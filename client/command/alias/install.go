@@ -30,22 +30,21 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/util"
 )
 
 // AliasesInstallCmd - Install an alias
-func AliasesInstallCmd(cmd *cobra.Command, args []string) {
+func AliasesInstallCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	aliasLocalPath := args[0]
 	fi, err := os.Stat(aliasLocalPath)
 	if os.IsNotExist(err) {
-		log.Errorf("Extension path '%s' does not exist", aliasLocalPath)
+		con.PrintErrorf("Extension path '%s' does not exist", aliasLocalPath)
 		return
 	}
 	if !fi.IsDir() {
-		InstallFromFile(aliasLocalPath, false, console.Client)
+		InstallFromFile(aliasLocalPath, false, con)
 	} else {
-		installFromDir(aliasLocalPath, console.Client)
+		installFromDir(aliasLocalPath, con)
 	}
 }
 
@@ -53,17 +52,17 @@ func AliasesInstallCmd(cmd *cobra.Command, args []string) {
 func installFromDir(aliasLocalPath string, con *console.SliverConsole) {
 	manifestData, err := ioutil.ReadFile(filepath.Join(aliasLocalPath, ManifestFileName))
 	if err != nil {
-		log.Errorf("Error reading %s: %s", ManifestFileName, err)
+		con.PrintErrorf("Error reading %s: %s", ManifestFileName, err)
 		return
 	}
 	manifest, err := ParseAliasManifest(manifestData)
 	if err != nil {
-		log.Errorf("Error parsing %s: %s", ManifestFileName, err)
+		con.PrintErrorf("Error parsing %s: %s", ManifestFileName, err)
 		return
 	}
 	installPath := filepath.Join(assets.GetAliasesDir(), filepath.Base(manifest.CommandName))
 	if _, err := os.Stat(installPath); !os.IsNotExist(err) {
-		log.Infof("Alias '%s' already exists", manifest.CommandName)
+		con.PrintInfof("Alias '%s' already exists", manifest.CommandName)
 		confirm := false
 		prompt := &survey.Confirm{Message: "Overwrite current install?"}
 		survey.AskOne(prompt, &confirm)
@@ -73,15 +72,15 @@ func installFromDir(aliasLocalPath string, con *console.SliverConsole) {
 		forceRemoveAll(installPath)
 	}
 
-	log.Infof("Installing alias '%s' (%s) ... ", manifest.Name, manifest.Version)
+	con.PrintInfof("Installing alias '%s' (%s) ... ", manifest.Name, manifest.Version)
 	err = os.MkdirAll(installPath, 0o700)
 	if err != nil {
-		log.Errorf("\nError creating alias directory: %s\n", err)
+		con.PrintErrorf("\nError creating alias directory: %s\n", err)
 		return
 	}
 	err = ioutil.WriteFile(filepath.Join(installPath, ManifestFileName), manifestData, 0o600)
 	if err != nil {
-		log.Errorf("\nFailed to write %s: %s\n", ManifestFileName, err)
+		con.PrintErrorf("\nFailed to write %s: %s\n", ManifestFileName, err)
 		forceRemoveAll(installPath)
 		return
 	}
@@ -92,32 +91,32 @@ func installFromDir(aliasLocalPath string, con *console.SliverConsole) {
 			dst := filepath.Join(installPath, util.ResolvePath(cmdFile.Path))
 			err := util.CopyFile(src, dst)
 			if err != nil {
-				log.Errorf("\nError copying file '%s' -> '%s': %s\n", src, dst, err)
+				con.PrintErrorf("\nError copying file '%s' -> '%s': %s\n", src, dst, err)
 				forceRemoveAll(installPath)
 				return
 			}
 		}
 	}
 
-	log.Printf("done!\n")
+	con.Printf("done!\n")
 }
 
 // Install an extension from a .tar.gz file
 func InstallFromFile(aliasGzFilePath string, autoOverwrite bool, con *console.SliverConsole) *string {
 	manifestData, err := util.ReadFileFromTarGz(aliasGzFilePath, fmt.Sprintf("./%s", ManifestFileName))
 	if err != nil {
-		log.Errorf("Failed to read %s from '%s': %s\n", ManifestFileName, aliasGzFilePath, err)
+		con.PrintErrorf("Failed to read %s from '%s': %s\n", ManifestFileName, aliasGzFilePath, err)
 		return nil
 	}
 	manifest, err := ParseAliasManifest(manifestData)
 	if err != nil {
-		log.Errorf("Failed to parse %s: %s\n", ManifestFileName, err)
+		con.PrintErrorf("Failed to parse %s: %s\n", ManifestFileName, err)
 		return nil
 	}
 	installPath := filepath.Join(assets.GetAliasesDir(), filepath.Base(manifest.CommandName))
 	if _, err := os.Stat(installPath); !os.IsNotExist(err) {
 		if !autoOverwrite {
-			log.Infof("Alias '%s' already exists\n", manifest.CommandName)
+			con.PrintInfof("Alias '%s' already exists\n", manifest.CommandName)
 			confirm := false
 			prompt := &survey.Confirm{Message: "Overwrite current install?"}
 			survey.AskOne(prompt, &confirm)
@@ -128,15 +127,15 @@ func InstallFromFile(aliasGzFilePath string, autoOverwrite bool, con *console.Sl
 		forceRemoveAll(installPath)
 	}
 
-	log.Infof("Installing alias '%s' (%s) ... ", manifest.Name, manifest.Version)
+	con.PrintInfof("Installing alias '%s' (%s) ... ", manifest.Name, manifest.Version)
 	err = os.MkdirAll(installPath, 0o700)
 	if err != nil {
-		log.Errorf("\nFailed to create alias directory: %s\n", err)
+		con.PrintErrorf("\nFailed to create alias directory: %s\n", err)
 		return nil
 	}
 	err = ioutil.WriteFile(filepath.Join(installPath, ManifestFileName), manifestData, 0o600)
 	if err != nil {
-		log.Errorf("\nFailed to write %s: %s\n", ManifestFileName, err)
+		con.PrintErrorf("\nFailed to write %s: %s\n", ManifestFileName, err)
 		forceRemoveAll(installPath)
 		return nil
 	}
@@ -144,13 +143,13 @@ func InstallFromFile(aliasGzFilePath string, autoOverwrite bool, con *console.Sl
 		if aliasFile.Path != "" {
 			err := installArtifact(aliasGzFilePath, installPath, aliasFile.Path, con)
 			if err != nil {
-				log.Errorf("\nFailed to install file: %s\n", err)
+				con.PrintErrorf("\nFailed to install file: %s\n", err)
 				forceRemoveAll(installPath)
 				return nil
 			}
 		}
 	}
-	log.Printf("done!\n")
+	con.Printf("done!\n")
 	return &installPath
 }
 

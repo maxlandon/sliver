@@ -9,25 +9,23 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
 // CanariesCmd - Display canaries from the database and their status
-func CanariesCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func CanariesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	canaries, err := con.Rpc.Canaries(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("Failed to list canaries %s", err)
+		con.PrintErrorf("Failed to list canaries %s", err)
 		return
 	}
 	if 0 < len(canaries.Canaries) {
 		burnedOnly, _ := cmd.Flags().GetBool("burned")
 		PrintCanaries(con, canaries.Canaries, burnedOnly)
 	} else {
-		log.Infof("No canaries in database\n")
+		con.PrintInfof("No canaries in database\n")
 	}
 }
 
@@ -65,5 +63,5 @@ func PrintCanaries(con *console.SliverConsole, canaries []*clientpb.DNSCanary, b
 		}
 		tw.AppendRow(row)
 	}
-	log.Printf("%s\n", tw.Render())
+	con.Printf("%s\n", tw.Render())
 }

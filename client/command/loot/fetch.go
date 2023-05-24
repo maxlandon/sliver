@@ -25,23 +25,21 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // LootFetchCmd - Display the contents of or download a piece of loot
-func LootFetchCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func LootFetchCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	loot, err := SelectLoot(cmd, con.Rpc)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 
 	loot, err = con.Rpc.LootContent(context.Background(), loot)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 
@@ -56,10 +54,10 @@ func LootFetchCmd(cmd *cobra.Command, args []string) {
 	if save, _ := cmd.Flags().GetString("save"); save != "" {
 		savedTo, err := saveLootToDisk(cmd, loot)
 		if err != nil {
-			log.Errorf("Failed to save loot %s\n", err)
+			con.PrintErrorf("Failed to save loot %s\n", err)
 		}
 		if savedTo != "" {
-			log.Infof("Saved loot to %s\n", savedTo)
+			con.PrintInfof("Saved loot to %s\n", savedTo)
 		}
 	}
 }

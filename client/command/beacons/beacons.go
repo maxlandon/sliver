@@ -32,15 +32,12 @@ import (
 	"github.com/bishopfox/sliver/client/command/kill"
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
 // BeaconsCmd - Display/interact with beacons
-func BeaconsCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func BeaconsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	killFlag, _ := cmd.Flags().GetString("kill")
 	killAll, _ := cmd.Flags().GetBool("kill-all")
 
@@ -48,32 +45,32 @@ func BeaconsCmd(cmd *cobra.Command, args []string) {
 	if killFlag != "" {
 		beacon, err := GetBeacon(con, killFlag)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 		err = kill.KillBeacon(beacon, cmd, con)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 		con.Println()
-		log.Infof("Killed %s (%s)\n", beacon.Name, beacon.ID)
+		con.PrintInfof("Killed %s (%s)\n", beacon.Name, beacon.ID)
 	}
 
 	if killAll {
 		beacons, err := GetBeacons(con)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 		for _, beacon := range beacons.Beacons {
 			err = kill.KillBeacon(beacon, cmd, con)
 			if err != nil {
-				log.Errorf("%s\n", err)
+				con.PrintErrorf("%s\n", err)
 				return
 			}
 			con.Println()
-			log.Infof("Killed %s (%s)\n", beacon.Name, beacon.ID)
+			con.PrintInfof("Killed %s (%s)\n", beacon.Name, beacon.ID)
 		}
 	}
 	filter, _ := cmd.Flags().GetString("filter")
@@ -82,14 +79,14 @@ func BeaconsCmd(cmd *cobra.Command, args []string) {
 		var err error
 		filterRegex, err = regexp.Compile(filterRe)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	}
 
 	beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	PrintBeacons(beacons.Beacons, filter, filterRegex, con)
@@ -98,11 +95,11 @@ func BeaconsCmd(cmd *cobra.Command, args []string) {
 // PrintBeacons - Display a list of beacons
 func PrintBeacons(beacons []*clientpb.Beacon, filter string, filterRegex *regexp.Regexp, con *console.SliverConsole) {
 	if len(beacons) == 0 {
-		log.Infof("No beacons 🙁\n")
+		con.PrintInfof("No beacons 🙁\n")
 		return
 	}
 	tw := renderBeacons(beacons, filter, filterRegex, con)
-	log.Printf("%s\n", tw.Render())
+	con.Printf("%s\n", tw.Render())
 }
 
 func renderBeacons(beacons []*clientpb.Beacon, filter string, filterRegex *regexp.Regexp, con *console.SliverConsole) table.Writer {

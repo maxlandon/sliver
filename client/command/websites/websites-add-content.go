@@ -31,27 +31,25 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // WebsitesAddContentCmd - Add static content to a website
-func WebsitesAddContentCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func WebsitesAddContentCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	websiteName, _ := cmd.Flags().GetString("website")
 	if websiteName == "" {
-		log.Errorf("Must specify a website name via --website, see --help\n")
+		con.PrintErrorf("Must specify a website name via --website, see --help\n")
 		return
 	}
 	webPath, _ := cmd.Flags().GetString("web-path")
 	if webPath == "" {
-		log.Errorf("Must specify a web path via --web-path, see --help\n")
+		con.PrintErrorf("Must specify a web path via --web-path, see --help\n")
 		return
 	}
 	contentPath, _ := cmd.Flags().GetString("content")
 	if contentPath == "" {
-		log.Errorf("Must specify some --content\n")
+		con.PrintErrorf("Must specify some --content\n")
 		return
 	}
 	contentPath, _ = filepath.Abs(contentPath)
@@ -60,7 +58,7 @@ func WebsitesAddContentCmd(cmd *cobra.Command, args []string) {
 
 	fileInfo, err := os.Stat(contentPath)
 	if err != nil {
-		log.Errorf("Error adding content %s\n", err)
+		con.PrintErrorf("Error adding content %s\n", err)
 		return
 	}
 
@@ -80,7 +78,7 @@ func WebsitesAddContentCmd(cmd *cobra.Command, args []string) {
 
 	web, err := con.Rpc.WebsiteAddContent(context.Background(), addWeb)
 	if err != nil {
-		log.Errorf("%s", err)
+		con.PrintErrorf("%s", err)
 		return
 	}
 	PrintWebsite(web, con)

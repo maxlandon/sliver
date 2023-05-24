@@ -24,20 +24,18 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // WGSocksStartCmd - Start a WireGuard reverse SOCKS proxy
-func WGSocksStartCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func WGSocksStartCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
 	if session.Transport != "wg" {
-		log.Errorf("This command is only supported for Wireguard implants")
+		con.PrintErrorf("This command is only supported for Wireguard implants")
 		return
 	}
 
@@ -48,16 +46,16 @@ func WGSocksStartCmd(cmd *cobra.Command, args []string) {
 		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
-		log.Errorf("Error: %v", err)
+		con.PrintErrorf("Error: %v", err)
 		return
 	}
 
 	if socks.Response != nil && socks.Response.Err != "" {
-		log.Errorf("Error: %s\n", err)
+		con.PrintErrorf("Error: %s\n", err)
 		return
 	}
 
 	if socks.Server != nil {
-		log.Infof("Started SOCKS server on %s\n", socks.Server.LocalAddr)
+		con.PrintInfof("Started SOCKS server on %s\n", socks.Server.LocalAddr)
 	}
 }

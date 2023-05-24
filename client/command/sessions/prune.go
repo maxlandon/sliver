@@ -21,35 +21,34 @@ package sessions
 import (
 	"context"
 
+	"github.com/spf13/cobra"
+
 	"github.com/bishopfox/sliver/client/command/kill"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/spf13/cobra"
 )
 
 // SessionsPruneCmd - Forcefully kill stale sessions
-func SessionsPruneCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func SessionsPruneCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	if len(sessions.GetSessions()) == 0 {
-		log.Infof("No sessions to prune\n")
+		con.PrintInfof("No sessions to prune\n")
 		return
 	}
 	for _, session := range sessions.GetSessions() {
 		if session.IsDead {
-			log.Printf("Pruning session %s ... ", session.ID)
+			con.Printf("Pruning session %s ... ", session.ID)
 			err = kill.KillSession(session, cmd, con)
 			if err != nil {
-				log.Printf("failed!\n")
-				log.Errorf("%s\n", err)
+				con.Printf("failed!\n")
+				con.PrintErrorf("%s\n", err)
 			} else {
-				log.Printf("done!\n")
+				con.Printf("done!\n")
 			}
 		}
 	}

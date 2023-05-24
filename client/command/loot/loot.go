@@ -35,14 +35,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
 // LootCmd - The loot root command
-func LootCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func LootCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	filter, _ := cmd.Flags().GetString("filter")
 	var allLoot *clientpb.AllLoot
@@ -50,18 +48,18 @@ func LootCmd(cmd *cobra.Command, args []string) {
 	if filter == "" {
 		allLoot, err = con.Rpc.LootAll(context.Background(), &commonpb.Empty{})
 		if err != nil {
-			log.Errorf("Failed to fetch loot %s\n", err)
+			con.PrintErrorf("Failed to fetch loot %s\n", err)
 			return
 		}
 	} else {
 		lootType, err := lootTypeFromHumanStr(filter)
 		if err != nil {
-			log.Errorf("Invalid loot type see --help")
+			con.PrintErrorf("Invalid loot type see --help")
 			return
 		}
 		allLoot, err = con.Rpc.LootAllOf(context.Background(), &clientpb.Loot{Type: lootType})
 		if err != nil {
-			log.Errorf("Failed to fetch loot %s\n", err)
+			con.PrintErrorf("Failed to fetch loot %s\n", err)
 			return
 		}
 	}

@@ -24,13 +24,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // ExtensionsListCmd - List all extension loaded on the active session/beacon
-func ExtensionsListCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ExtensionsListCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
@@ -41,18 +39,18 @@ func ExtensionsListCmd(cmd *cobra.Command, args []string) {
 		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 
 	if extList.Response != nil && extList.Response.Err != "" {
-		log.Errorf("%s\n", extList.Response.Err)
+		con.PrintErrorf("%s\n", extList.Response.Err)
 		return
 	}
 	if len(extList.Names) > 0 {
-		log.Infof("Loaded extensions:\n")
+		con.PrintInfof("Loaded extensions:\n")
 		for _, ext := range extList.Names {
-			log.Printf("- %s\n", ext)
+			con.Printf("- %s\n", ext)
 		}
 	}
 }

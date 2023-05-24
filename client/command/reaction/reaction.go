@@ -29,32 +29,30 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // ReactionCmd - Manage reactions to events
-func ReactionCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ReactionCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	totalReactions := 0
 	for _, eventType := range core.ReactableEvents {
 		reactions := core.Reactions.On(eventType)
 		if 0 < len(reactions) {
 			if totalReactions != 0 {
-				log.Printf("\n") // Add newline between each table after the first
+				con.Printf("\n") // Add newline between each table after the first
 			}
 			displayReactionsTable(eventType, reactions, con)
 		}
 		totalReactions += len(reactions)
 	}
 	if totalReactions == 0 {
-		log.Infof("No reactions set\n")
+		con.PrintInfof("No reactions set\n")
 	}
 }
 
 func displayReactionsTable(eventType string, reactions []core.Reaction, con *console.SliverConsole) {
 	tw := table.NewWriter()
-	tw.SetStyle(settings.GetTableStyle(console.Client))
+	tw.SetStyle(settings.GetTableStyle(con))
 	tw.SetTitle(fmt.Sprintf(console.Bold+"%s"+console.Normal, EventTypeToTitle(eventType)))
 	tw.AppendSeparator()
 	slackSpace := len(EventTypeToTitle(eventType)) - len("Commands") - len("ID") - 3
@@ -71,7 +69,7 @@ func displayReactionsTable(eventType string, reactions []core.Reaction, con *con
 			strings.Join(react.Commands, ","),
 		})
 	}
-	log.Printf("%s\n", tw.Render())
+	con.Printf("%s\n", tw.Render())
 }
 
 // EventTypeToTitle - Convert an eventType to a more human friendly string

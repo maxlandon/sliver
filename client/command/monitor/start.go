@@ -24,22 +24,20 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
 // MonitorStartCmd - Start monitoring threat intel for implants
-func MonitorStartCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func MonitorStartCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	resp, err := con.Rpc.MonitorStart(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	if resp != nil && resp.Err != "" {
-		log.Errorf("%s\n", resp.Err)
+		con.PrintErrorf("%s\n", resp.Err)
 		return
 	}
-	log.Infof("Started monitoring threat intel platforms for implants hashes\n")
+	con.PrintInfof("Started monitoring threat intel platforms for implants hashes\n")
 }

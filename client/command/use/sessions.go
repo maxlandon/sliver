@@ -23,26 +23,23 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/sessions"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // UseSessionCmd - Change the active session
-func UseSessionCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func UseSessionCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	session, err := sessions.SelectSession(false, con)
 	if session != nil {
 		con.ActiveTarget.Set(session, nil)
-		con.ExposeCommands()
-		log.Infof("Active session %s (%s)\n", session.Name, session.ID)
+		con.PrintInfof("Active session %s (%s)\n", session.Name, session.ID)
 	} else if err != nil {
 		switch err {
 		case sessions.ErrNoSessions:
-			log.Errorf("No sessions available\n")
+			con.PrintErrorf("No sessions available\n")
 		case sessions.ErrNoSelection:
-			log.Errorf("No session selected\n")
+			con.PrintErrorf("No session selected\n")
 		default:
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 		}
 	}
 }

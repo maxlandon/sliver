@@ -7,13 +7,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // PingCmd - Send a round trip C2 message to an implant (does not use ICMP)
-func PingCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func PingCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
@@ -21,14 +19,14 @@ func PingCmd(cmd *cobra.Command, args []string) {
 	}
 
 	nonce := insecureRand.Intn(999999)
-	log.Infof("Ping %d\n", nonce)
+	con.PrintInfof("Ping %d\n", nonce)
 	pong, err := con.Rpc.Ping(context.Background(), &sliverpb.Ping{
 		Nonce:   int32(nonce),
 		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	} else {
-		log.Infof("Pong %d\n", pong.Nonce)
+		con.PrintInfof("Pong %d\n", pong.Nonce)
 	}
 }

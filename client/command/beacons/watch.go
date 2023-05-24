@@ -27,18 +27,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
 // BeaconsWatchCmd - Watch your beacons in real-ish time
-func BeaconsWatchCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func BeaconsWatchCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	done := waitForInput()
 	defer func() {
-		log.Printf(console.UpN+console.Clearln+"\r", 1)
-		log.Printf(console.UpN+console.Clearln+"\r", 1)
+		con.Printf(console.UpN+console.Clearln+"\r", 1)
+		con.Printf(console.UpN+console.Clearln+"\r", 1)
 	}()
 	for {
 		select {
@@ -52,10 +49,10 @@ func BeaconsWatchCmd(cmd *cobra.Command, args []string) {
 			tw := renderBeacons(beacons.Beacons, "", nil, con)
 			lines := strings.Split(tw.Render(), "\n")
 			for _, line := range lines {
-				log.Printf(console.Clearln+"\r%s\n", line)
+				con.Printf(console.Clearln+"\r%s\n", line)
 			}
-			log.Printf("\nPress enter to stop.\n")
-			log.Printf(console.UpN+"\r", len(lines)+2)
+			con.Printf("\nPress enter to stop.\n")
+			con.Printf(console.UpN+"\r", len(lines)+2)
 		}
 	}
 }

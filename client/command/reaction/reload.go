@@ -25,15 +25,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // ReactionSaveCmd - Manage reactions to events
-func ReactionReloadCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ReactionReloadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	if _, err := os.Stat(GetReactionFilePath()); os.IsNotExist(err) {
-		log.Errorf("Missing reaction file %s\n", GetReactionFilePath())
+		con.PrintErrorf("Missing reaction file %s\n", GetReactionFilePath())
 		return
 	}
 	confirm := false
@@ -45,8 +43,8 @@ func ReactionReloadCmd(cmd *cobra.Command, args []string) {
 
 	n, err := LoadReactions()
 	if err != nil {
-		log.Errorf("Failed to load reactions: %s\n", err)
+		con.PrintErrorf("Failed to load reactions: %s\n", err)
 	}
 	con.Println()
-	log.Infof("Reloaded %d reactions from disk\n", n)
+	con.PrintInfof("Reloaded %d reactions from disk\n", n)
 }

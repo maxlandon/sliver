@@ -28,7 +28,6 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
@@ -39,34 +38,30 @@ const (
 )
 
 // WebsitesCmd - Manage websites
-func WebsitesCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func WebsitesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	if len(args) > 0 {
 		websiteName := args[0]
 		ListWebsiteContent(websiteName, con)
 	} else {
-		ListWebsites(cmd, args)
+		ListWebsites(cmd, con, args)
 	}
 }
 
 // ListWebsites - Display a list of websites
-func ListWebsites(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func ListWebsites(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	websites, err := con.Rpc.Websites(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("Failed to list websites %s", err)
+		con.PrintErrorf("Failed to list websites %s", err)
 		return
 	}
 	if len(websites.Websites) < 1 {
-		log.Infof("No websites\n")
+		con.PrintInfof("No websites\n")
 		return
 	}
 	con.Println("Websites")
 	con.Println(strings.Repeat("=", len("Websites")))
 	for _, site := range websites.Websites {
-		log.Printf("%s%s%s - %d page(s)\n", console.Bold, site.Name, console.Normal, len(site.Contents))
+		con.Printf("%s%s%s - %d page(s)\n", console.Bold, site.Name, console.Normal, len(site.Contents))
 	}
 }
 
@@ -76,13 +71,13 @@ func ListWebsiteContent(websiteName string, con *console.SliverConsole) {
 		Name: websiteName,
 	})
 	if err != nil {
-		log.Errorf("Failed to list website content %s", err)
+		con.PrintErrorf("Failed to list website content %s", err)
 		return
 	}
 	if 0 < len(website.Contents) {
 		PrintWebsite(website, con)
 	} else {
-		log.Infof("No content for '%s'", websiteName)
+		con.PrintInfof("No content for '%s'", websiteName)
 	}
 }
 

@@ -29,7 +29,6 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/util"
 )
 
@@ -37,7 +36,7 @@ import (
 func ExtensionsRemoveCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	name := ctx.Args.String("name")
 	if name == "" {
-		log.Errorf("Extension name is required\n")
+		con.PrintErrorf("Extension name is required\n")
 		return
 	}
 	confirm := false
@@ -48,10 +47,10 @@ func ExtensionsRemoveCmd(ctx *grumble.Context, con *console.SliverConsoleClient)
 	}
 	err := RemoveExtensionByCommandName(name, con)
 	if err != nil {
-		log.Errorf("Error removing extension: %s\n", err)
+		con.PrintErrorf("Error removing extension: %s\n", err)
 		return
 	} else {
-		log.Infof("Extension '%s' removed\n", name)
+		con.PrintInfof("Extension '%s' removed\n", name)
 	}
 }
 

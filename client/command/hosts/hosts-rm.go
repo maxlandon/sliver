@@ -24,22 +24,20 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // HostsRmCmd - Remove a host from the database
-func HostsRmCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func HostsRmCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	host, err := SelectHost(con)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	_, err = con.Rpc.HostRm(context.Background(), host)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
-	log.Infof("Removed host from database\n")
+	con.PrintInfof("Removed host from database\n")
 }

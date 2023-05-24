@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	app "github.com/reeflective/console"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"google.golang.org/protobuf/proto"
@@ -36,7 +37,6 @@ import (
 	"github.com/bishopfox/sliver/client/command/help"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/util"
@@ -124,19 +124,19 @@ func (a *AliasManifest) getFileForTarget(cmdName string, targetOS string, target
 }
 
 // AliasesLoadCmd - Locally load a alias into the Sliver shell.
-func AliasesLoadCmd(cmd *cobra.Command, args []string) {
+func AliasesLoadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	dirPath := args[0]
 	// dirPath := ctx.Args.String("dir-path")
-	alias, err := LoadAlias(dirPath, cmd.Root())
+	alias, err := LoadAlias(dirPath, cmd.Root(), con)
 	if err != nil {
-		log.Errorf("Failed to load alias: %s\n", err)
+		con.PrintErrorf("Failed to load alias: %s\n", err)
 	} else {
-		log.Infof("%s alias has been loaded\n", alias.Name)
+		con.PrintInfof("%s alias has been loaded\n", alias.Name)
 	}
 }
 
 // LoadAlias - Load an alias into the Sliver shell from a given directory
-func LoadAlias(manifestPath string, cmd *cobra.Command) (*AliasManifest, error) {
+func LoadAlias(manifestPath string, cmd *cobra.Command, con *console.SliverConsole) (*AliasManifest, error) {
 	// retrieve alias manifest
 	var err error
 	manifestPath, err = filepath.Abs(manifestPath)
@@ -154,24 +154,22 @@ func LoadAlias(manifestPath string, cmd *cobra.Command) (*AliasManifest, error) 
 		return nil, err
 	}
 	aliasManifest.RootPath = filepath.Dir(manifestPath)
+
 	// for each alias command, add a new app command
-
-	// do not add if the command already exists
-	// if cmdExists(aliasManifest.CommandName, sliverMenu.Command) {
-	// 	return nil, fmt.Errorf("'%s' command already exists", aliasManifest.CommandName)
-	// }
-
 	helpMsg := fmt.Sprintf("[%s] %s", aliasManifest.Name, aliasManifest.Help)
 	longHelpMsg := help.FormatHelpTmpl(aliasManifest.LongHelp)
 	longHelpMsg += "\n\n⚠️  If you're having issues passing arguments to the alias please read:\n"
 	longHelpMsg += "https://github.com/BishopFox/sliver/wiki/Aliases-&-Extensions#aliases-command-parsing"
 	addAliasCmd := &cobra.Command{
-		Use:     aliasManifest.CommandName,
-		Short:   helpMsg,
-		Long:    longHelpMsg,
-		Run:     runAliasCommand,
-		Args:    cobra.ArbitraryArgs, // 	a.StringList("arguments", "arguments", grumble.Default([]string{}))
-		GroupID: consts.AliasHelpGroup,
+		Use:   aliasManifest.CommandName,
+		Short: helpMsg,
+		Long:  longHelpMsg,
+		Run: func(cmd *cobra.Command, args []string) {
+			runAliasCommand(cmd, con, args)
+		},
+		Args:        cobra.ArbitraryArgs, // 	a.StringList("arguments", "arguments", grumble.Default([]string{}))
+		GroupID:     consts.AliasHelpGroup,
+		Annotations: makeAliasPlatformFilters(aliasManifest),
 	}
 
 	if aliasManifest.IsAssembly {
@@ -243,9 +241,7 @@ func ParseAliasManifest(data []byte) (*AliasManifest, error) {
 	return alias, nil
 }
 
-func runAliasCommand(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func runAliasCommand(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -262,13 +258,13 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 
 	loadedAlias, ok := loadedAliases[cmd.Name()]
 	if !ok {
-		log.Errorf("No alias found for `%s` command\n", cmd.Name())
+		con.PrintErrorf("No alias found for `%s` command\n", cmd.Name())
 		return
 	}
 	aliasManifest := loadedAlias.Manifest
 	binPath, err := aliasManifest.getFileForTarget(cmd.Name(), goos, goarch)
 	if err != nil {
-		log.Errorf("Fail to find alias file: %s\n", err)
+		con.PrintErrorf("Fail to find alias file: %s\n", err)
 		return
 	}
 	// args := ctx.Args.StringList("arguments")
@@ -299,13 +295,13 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 				msgStr = " Arguments are limited to 256 characters when using the default fork/exec model for .NET assemblies.\nConsider using the --in-process flag to execute .NET assemblies in-process and work around this limitation.\n"
 			}
 			if !inProcess && (runtime != "" || etwBypass || amsiBypass) {
-				log.Errorf("The --runtime, --etw-bypass, and --amsi-bypass flags can only be used with the --in-process flag\n")
+				con.PrintErrorf("The --runtime, --etw-bypass, and --amsi-bypass flags can only be used with the --in-process flag\n")
 				return
 			}
 		} else if !aliasManifest.IsReflective {
 			msgStr = " Arguments are limited to 256 characters when using the default fork/exec model for non-reflective PE payloads.\n"
 		}
-		log.Warnf(msgStr)
+		con.PrintWarnf(msgStr)
 		confirm := false
 		prompt := &survey.Confirm{Message: "Do you want to continue?"}
 		survey.AskOne(prompt, &confirm, nil)
@@ -318,7 +314,7 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 	if processName == "" {
 		processName, err = aliasManifest.getDefaultProcess(goos)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	}
@@ -328,7 +324,7 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 	}
 	binData, err := os.ReadFile(binPath)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 
@@ -337,7 +333,7 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 		outFile := filepath.Base(fmt.Sprintf("%s_%s*.log", filepath.Base(cmd.Name()), filepath.Base(session.GetHostname())))
 		outFilePath, err = os.CreateTemp("", outFile)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	}
@@ -358,7 +354,7 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 		// Execute Assembly
 		ctrl := make(chan bool)
 		msg := fmt.Sprintf("Executing %s %s ...", cmd.Name(), extArgs)
-		log.SpinUntil(msg, ctrl)
+		con.SpinUntil(msg, ctrl)
 		executeAssemblyResp, err := con.Rpc.ExecuteAssembly(context.Background(), &sliverpb.ExecuteAssemblyReq{
 			Request:     con.ActiveTarget.Request(cmd),
 			IsDLL:       isDLL,
@@ -379,7 +375,7 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 
@@ -387,12 +383,12 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 			con.AddBeaconCallback(executeAssemblyResp.Response.TaskID, func(task *clientpb.BeaconTask) {
 				err = proto.Unmarshal(task.Response, executeAssemblyResp)
 				if err != nil {
-					log.Errorf("Failed to decode call ext response %s\n", err)
+					con.PrintErrorf("Failed to decode call ext response %s\n", err)
 					return
 				}
 				PrintAssemblyOutput(cmd.Name(), executeAssemblyResp, outFilePath, con)
 			})
-			log.AsyncResponse(executeAssemblyResp.Response)
+			con.PrintAsyncResponse(executeAssemblyResp.Response)
 		} else {
 			PrintAssemblyOutput(cmd.Name(), executeAssemblyResp, outFilePath, con)
 		}
@@ -418,7 +414,7 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 
@@ -426,12 +422,12 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 			con.AddBeaconCallback(spawnDllResp.Response.TaskID, func(task *clientpb.BeaconTask) {
 				err = proto.Unmarshal(task.Response, spawnDllResp)
 				if err != nil {
-					log.Errorf("Failed to decode call ext response %s\n", err)
+					con.PrintErrorf("Failed to decode call ext response %s\n", err)
 					return
 				}
 				PrintSpawnDLLOutput(cmd.Name(), spawnDllResp, outFilePath, con)
 			})
-			log.AsyncResponse(spawnDllResp.Response)
+			con.PrintAsyncResponse(spawnDllResp.Response)
 		} else {
 			PrintSpawnDLLOutput(cmd.Name(), spawnDllResp, outFilePath, con)
 		}
@@ -458,7 +454,7 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 
@@ -466,12 +462,12 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 			con.AddBeaconCallback(sideloadResp.Response.TaskID, func(task *clientpb.BeaconTask) {
 				err = proto.Unmarshal(task.Response, sideloadResp)
 				if err != nil {
-					log.Errorf("Failed to decode call ext response %s\n", err)
+					con.PrintErrorf("Failed to decode call ext response %s\n", err)
 					return
 				}
 				PrintSideloadOutput(cmd.Name(), sideloadResp, outFilePath, con)
 			})
-			log.AsyncResponse(sideloadResp.Response)
+			con.PrintAsyncResponse(sideloadResp.Response)
 		} else {
 			PrintSideloadOutput(cmd.Name(), sideloadResp, outFilePath, con)
 		}
@@ -480,36 +476,63 @@ func runAliasCommand(cmd *cobra.Command, args []string) {
 
 // PrintSpawnDLLOutput - Prints the output of a spawn dll command
 func PrintSpawnDLLOutput(cmdName string, spawnDllResp *sliverpb.SpawnDll, outFilePath *os.File, con *console.SliverConsole) {
-	log.Infof("%s output:\n%s", cmdName, spawnDllResp.GetResult())
+	con.PrintInfof("%s output:\n%s", cmdName, spawnDllResp.GetResult())
 	if outFilePath != nil {
 		outFilePath.Write([]byte(spawnDllResp.GetResult()))
-		log.Infof("Output saved to %s\n", outFilePath.Name())
+		con.PrintInfof("Output saved to %s\n", outFilePath.Name())
 	}
 }
 
 // PrintSideloadOutput - Prints the output of a sideload command
 func PrintSideloadOutput(cmdName string, sideloadResp *sliverpb.Sideload, outFilePath *os.File, con *console.SliverConsole) {
-	log.Infof("%s output:\n%s", cmdName, sideloadResp.GetResult())
+	con.PrintInfof("%s output:\n%s", cmdName, sideloadResp.GetResult())
 	if outFilePath != nil {
 		outFilePath.Write([]byte(sideloadResp.GetResult()))
-		log.Infof("Output saved to %s\n", outFilePath.Name())
+		con.PrintInfof("Output saved to %s\n", outFilePath.Name())
 	}
 }
 
 // PrintAssemblyOutput - Prints the output of an execute-assembly command
 func PrintAssemblyOutput(cmdName string, execAsmResp *sliverpb.ExecuteAssembly, outFilePath *os.File, con *console.SliverConsole) {
-	log.Infof("%s output:\n%s", cmdName, string(execAsmResp.GetOutput()))
+	con.PrintInfof("%s output:\n%s", cmdName, string(execAsmResp.GetOutput()))
 	if outFilePath != nil {
 		outFilePath.Write(execAsmResp.GetOutput())
-		log.Infof("Output saved to %s\n", outFilePath.Name())
+		con.PrintInfof("Output saved to %s\n", outFilePath.Name())
 	}
 }
 
-func cmdExists(name string, cmd *cobra.Command) bool {
-	for _, c := range cmd.Commands() {
-		if name == c.Name() {
-			return true
+func makeAliasPlatformFilters(alias *AliasManifest) map[string]string {
+	filtersOS := make(map[string]bool)
+	filtersArch := make(map[string]bool)
+
+	var all []string
+
+	// Only add filters for architectures when there OS matters.
+	for _, file := range alias.Files {
+		filtersOS[file.OS] = true
+
+		if filtersOS[file.OS] {
+			filtersArch[file.Arch] = true
 		}
 	}
-	return false
+
+	for os, enabled := range filtersOS {
+		if enabled {
+			all = append(all, os)
+		}
+	}
+
+	for arch, enabled := range filtersArch {
+		if enabled {
+			all = append(all, arch)
+		}
+	}
+
+	if len(all) == 0 {
+		return map[string]string{}
+	}
+
+	return map[string]string{
+		app.CommandFilterKey: strings.Join(all, ","),
+	}
 }

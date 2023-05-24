@@ -31,7 +31,6 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // ExtensionsCmd - List information about installed extensions
@@ -39,7 +38,7 @@ func ExtensionsCmd(ctx *grumble.Context, con *console.SliverConsole) {
 	if 0 < len(getInstalledManifests()) {
 		PrintExtensions(con)
 	} else {
-		log.Infof("No extensions installed, use the 'armory' command to automatically install some\n")
+		con.PrintInfof("No extensions installed, use the 'armory' command to automatically install some\n")
 	}
 }
 

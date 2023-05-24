@@ -25,24 +25,22 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // WebsitesRmContent - Remove static content from a website
-func WebsitesRmContent(cmd *cobra.Command, args []string) {
-	con := console.Client
+func WebsitesRmContent(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	name, _ := cmd.Flags().GetString("website")
 	webPath, _ := cmd.Flags().GetString("web-path")
 	recursive, _ := cmd.Flags().GetBool("recursive")
 
 	if name == "" {
-		log.Errorf("Must specify a website name via --website, see --help\n")
+		con.PrintErrorf("Must specify a website name via --website, see --help\n")
 		return
 	}
 	if webPath == "" {
-		log.Errorf("Must specify a web path via --web-path, see --help\n")
+		con.PrintErrorf("Must specify a web path via --web-path, see --help\n")
 		return
 	}
 
@@ -50,7 +48,7 @@ func WebsitesRmContent(cmd *cobra.Command, args []string) {
 		Name: name,
 	})
 	if err != nil {
-		log.Errorf("%s", err)
+		con.PrintErrorf("%s", err)
 		return
 	}
 
@@ -69,7 +67,7 @@ func WebsitesRmContent(cmd *cobra.Command, args []string) {
 	}
 	web, err := con.Rpc.WebsiteRemoveContent(context.Background(), rmWebContent)
 	if err != nil {
-		log.Errorf("Failed to remove content %s", err)
+		con.PrintErrorf("Failed to remove content %s", err)
 		return
 	}
 	PrintWebsite(web, con)

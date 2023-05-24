@@ -25,7 +25,6 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
@@ -33,16 +32,15 @@ import (
 )
 
 // OperatorsCmd - Display operators and current online status
-func OperatorsCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func OperatorsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	operators, err := con.Rpc.GetOperators(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	} else if 0 < len(operators.Operators) {
 		displayOperators(operators.Operators, con)
 	} else {
-		log.Infof("No remote operators connected\n")
+		con.PrintInfof("No remote operators connected\n")
 	}
 }
 
@@ -59,7 +57,7 @@ func displayOperators(operators []*clientpb.Operator, con *console.SliverConsole
 			status(operator.Online),
 		})
 	}
-	log.Printf("%s\n", tw.Render())
+	con.Printf("%s\n", tw.Render())
 }
 
 func status(isOnline bool) string {

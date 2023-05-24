@@ -30,7 +30,6 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
@@ -38,9 +37,7 @@ import (
 )
 
 // JobsCmd - Manage server jobs (listeners, etc)
-func JobsCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func JobsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	if pid, _ := cmd.Flags().GetInt32("kill"); pid != -1 {
 		jobKill(uint32(pid), con)
 	} else if all, _ := cmd.Flags().GetBool("kill-all"); all {
@@ -48,7 +45,7 @@ func JobsCmd(cmd *cobra.Command, args []string) {
 	} else {
 		jobs, err := con.Rpc.GetJobs(context.Background(), &commonpb.Empty{})
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 		// Convert to a map
@@ -59,7 +56,7 @@ func JobsCmd(cmd *cobra.Command, args []string) {
 		if 0 < len(activeJobs) {
 			PrintJobs(activeJobs, con)
 		} else {
-			log.Infof("No active jobs\n")
+			con.PrintInfof("No active jobs\n")
 		}
 	}
 }
@@ -90,12 +87,12 @@ func PrintJobs(jobs map[uint32]*clientpb.Job, con *console.SliverConsole) {
 			fmt.Sprintf("%d", job.Port),
 		})
 	}
-	log.Printf("%s\n", tw.Render())
+	con.Printf("%s\n", tw.Render())
 }
 
 // JobsIDCompleter completes jobs IDs with descriptions.
-func JobsIDCompleter() carapace.Action {
-	jobs, err := console.Client.Rpc.GetJobs(context.Background(), &commonpb.Empty{})
+func JobsIDCompleter(con *console.SliverConsole) carapace.Action {
+	jobs, err := con.Rpc.GetJobs(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return carapace.ActionMessage("No active jobs")
 	}
@@ -112,21 +109,21 @@ func JobsIDCompleter() carapace.Action {
 }
 
 func jobKill(jobID uint32, con *console.SliverConsole) {
-	log.Infof("Killing job #%d ...\n", jobID)
+	con.PrintInfof("Killing job #%d ...\n", jobID)
 	jobKill, err := con.Rpc.KillJob(context.Background(), &clientpb.KillJobReq{
 		ID: jobID,
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	} else {
-		log.Infof("Successfully killed job #%d\n", jobKill.ID)
+		con.PrintInfof("Successfully killed job #%d\n", jobKill.ID)
 	}
 }
 
 func killAllJobs(con *console.SliverConsole) {
 	jobs, err := con.Rpc.GetJobs(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	for _, job := range jobs.Active {

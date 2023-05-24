@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
@@ -18,8 +17,7 @@ var (
 )
 
 // GenerateBeaconCmd - The main command used to generate implant binaries
-func GenerateBeaconCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func GenerateBeaconCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	config := parseCompileFlags(cmd, con)
 	if config == nil {
@@ -28,7 +26,7 @@ func GenerateBeaconCmd(cmd *cobra.Command, args []string) {
 	config.IsBeacon = true
 	err := parseBeaconFlags(cmd, con, config)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	save, _ := cmd.Flags().GetString("save")

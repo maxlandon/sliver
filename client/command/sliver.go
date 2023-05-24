@@ -20,7 +20,7 @@ import (
 )
 
 // SliverCommands returns all commands bound to the implant menu.
-func SliverCommands() console.Commands {
+func SliverCommands(con *client.SliverConsole) console.Commands {
 	sliverCommands := func() *cobra.Command {
 		sliver := &cobra.Command{
 			Short: "Implant commands",
@@ -43,18 +43,19 @@ func SliverCommands() console.Commands {
 		aliasManifests := assets.GetInstalledAliasManifests()
 		n := 0
 		for _, manifest := range aliasManifests {
-			_, err := alias.LoadAlias(manifest, sliver)
+			_, err := alias.LoadAlias(manifest, sliver, con)
 			if err != nil {
-				client.Client.PrintErrorf("Failed to load alias: %s\n", err)
+				con.PrintErrorf("Failed to load alias: %s", err)
+				// client.Client.PrintErrorf("Failed to load alias: %s\n", err)
 				continue
 			}
 			n++
 		}
 		// if 0 < n {
 		// 	if n == 1 {
-		// 		log.Infof("Loaded %d alias from disk\n", n)
+		// 		con.PrintInfof("Loaded %d alias from disk\n", n)
 		// 	} else {
-		// 		log.Infof("Loaded %d aliases from disk\n", n)
+		// 		con.PrintInfof("Loaded %d aliases from disk\n", n)
 		// 	}
 		// }
 
@@ -65,14 +66,15 @@ func SliverCommands() console.Commands {
 			ext, err := extensions.LoadExtensionManifest(manifest)
 			// Absorb error in case there's no extensions manifest
 			if err != nil {
-				client.Client.PrintErrorf("Failed to load extension: %s\n", err)
+				con.PrintErrorf("Failed to load extension: %s", err)
+				// client.Client.PrintErrorf("Failed to load extension: %s", err)
 				continue
 			}
-			extensions.ExtensionRegisterCommand(ext, sliver)
+			extensions.ExtensionRegisterCommand(ext, sliver, con)
 			n++
 		}
 		// if 0 < n {
-		// 	log.Infof("Loaded %d extension(s) from disk\n", n)
+		// 	con.PrintInfof("Loaded %d extension(s) from disk\n", n)
 		// }
 		// .App.SetPrintHelp(help.HelpCmd(con)) // Responsible for display long-form help templates, etc.
 
@@ -121,10 +123,12 @@ func SliverCommands() console.Commands {
 		// [ Sessions ] --------------------------------------------------------------
 
 		sessionsCmd := &cobra.Command{
-			Use:     consts.SessionsStr,
-			Short:   "Session management",
-			Long:    help.GetHelpFor([]string{consts.SessionsStr}),
-			Run:     sessions.SessionsCmd,
+			Use:   consts.SessionsStr,
+			Short: "Session management",
+			Long:  help.GetHelpFor([]string{consts.SessionsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				sessions.SessionsCmd(cmd, con, args)
+			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
 		Flags("sessions", sessionsCmd, func(f *pflag.FlagSet) {
@@ -140,8 +144,8 @@ func SliverCommands() console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(sessionsCmd, func(comp *carapace.ActionMap) {
-			(*comp)["interact"] = use.BeaconAndSessionIDCompleter()
-			(*comp)["kill"] = use.BeaconAndSessionIDCompleter()
+			(*comp)["interact"] = use.BeaconAndSessionIDCompleter(con)
+			(*comp)["kill"] = use.BeaconAndSessionIDCompleter(con)
 		})
 		sliver.AddCommand(sessionsCmd)
 
@@ -149,7 +153,9 @@ func SliverCommands() console.Commands {
 			Use:   consts.PruneStr,
 			Short: "Kill all stale/dead sessions",
 			Long:  help.GetHelpFor([]string{consts.SessionsStr, consts.PruneStr}),
-			Run:   sessions.SessionsPruneCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				sessions.SessionsPruneCmd(cmd, con, args)
+			},
 		}
 		Flags("prune", sessionsCmd, func(f *pflag.FlagSet) {
 			f.BoolP("force", "F", false, "Force the killing of stale/dead sessions")
@@ -158,10 +164,12 @@ func SliverCommands() console.Commands {
 		sessionsCmd.AddCommand(sessionsPruneCmd)
 
 		backgroundCmd := &cobra.Command{
-			Use:     consts.BackgroundStr,
-			Short:   "Background an active session",
-			Long:    help.GetHelpFor([]string{consts.BackgroundStr}),
-			Run:     sessions.BackgroundCmd,
+			Use:   consts.BackgroundStr,
+			Short: "Background an active session",
+			Long:  help.GetHelpFor([]string{consts.BackgroundStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				sessions.BackgroundCmd(cmd, con, args)
+			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
 		Flags("use", backgroundCmd, func(f *pflag.FlagSet) {
@@ -173,7 +181,7 @@ func SliverCommands() console.Commands {
 			Use:   consts.KillStr,
 			Short: "Kill a session",
 			Long:  help.GetHelpFor([]string{consts.KillStr}),
-			// Run: func(ctx *grumble.Context) error {
+			// Run: func(cmd *cobra.Command, args []) *grumble.Context) error {
 			// 	con.Println()
 			// 	kill.KillCmd(ctx, con)
 			// 	con.Println()
@@ -305,16 +313,18 @@ func SliverCommands() console.Commands {
 		// [ Info ] --------------------------------------------------------------
 
 		infoCmd := &cobra.Command{
-			Use:     consts.InfoStr,
-			Short:   "Get info about session",
-			Long:    help.GetHelpFor([]string{consts.InfoStr}),
-			Run:     info.InfoCmd,
+			Use:   consts.InfoStr,
+			Short: "Get info about session",
+			Long:  help.GetHelpFor([]string{consts.InfoStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				info.InfoCmd(cmd, con, args)
+			},
 			GroupID: consts.InfoHelpGroup,
 		}
 		Flags("use", infoCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		carapace.Gen(infoCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter())
+		carapace.Gen(infoCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter(con))
 		sliver.AddCommand(infoCmd)
 
 		pingCmd := &cobra.Command{
@@ -734,7 +744,7 @@ func SliverCommands() console.Commands {
 
 		lsCmd := &cobra.Command{
 			Use:   consts.LsStr,
-			Short: "List current directory tttttttttttttttttttttttttttttttttttttttttttt",
+			Short: "List current directory",
 			Long:  help.GetHelpFor([]string{consts.LsStr}),
 			// Args: func(a *grumble.Args) {
 			// 	a.String("path", "path to enumerate", grumble.Default("."))
@@ -1786,10 +1796,12 @@ func SliverCommands() console.Commands {
 		// [ WireGuard ] --------------------------------------------------------------
 
 		wgPortFwdCmd := &cobra.Command{
-			Use:         consts.WgPortFwdStr,
-			Short:       "List ports forwarded by the WireGuard tun interface",
-			Long:        help.GetHelpFor([]string{consts.WgPortFwdStr}),
-			Run:         wireguard.WGPortFwdListCmd,
+			Use:   consts.WgPortFwdStr,
+			Short: "List ports forwarded by the WireGuard tun interface",
+			Long:  help.GetHelpFor([]string{consts.WgPortFwdStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				wireguard.WGPortFwdListCmd(cmd, con, args)
+			},
 			GroupID:     consts.NetworkHelpGroup,
 			Annotations: HideCommand(consts.WireguardCmdsFilter),
 		}
@@ -1801,7 +1813,9 @@ func SliverCommands() console.Commands {
 			Use:   consts.AddStr,
 			Short: "Add a port forward from the WireGuard tun interface to a host on the target network",
 			Long:  help.GetHelpFor([]string{consts.WgPortFwdStr, consts.AddStr}),
-			Run:   wireguard.WGPortFwdAddCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				wireguard.WGPortFwdAddCmd(cmd, con, args)
+			},
 		}
 		Flags("wg portforward", wgPortFwdAddCmd, func(f *pflag.FlagSet) {
 			f.Int32P("bind", "b", 1080, "port to listen on the WireGuard tun interface")
@@ -1815,7 +1829,9 @@ func SliverCommands() console.Commands {
 			Short: "Remove a port forward from the WireGuard tun interface",
 			Long:  help.GetHelpFor([]string{consts.WgPortFwdStr, consts.RmStr}),
 			Args:  cobra.ExactArgs(1), // 	a.Int("id", "forwarder id")
-			Run:   wireguard.WGPortFwdRmCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				wireguard.WGPortFwdRmCmd(cmd, con, args)
+			},
 		}
 		Flags("wg portforward", wgPortFwdRmCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
@@ -1824,10 +1840,12 @@ func SliverCommands() console.Commands {
 		sliver.AddCommand(wgPortFwdCmd)
 
 		wgSocksCmd := &cobra.Command{
-			Use:         consts.WgSocksStr,
-			Short:       "List socks servers listening on the WireGuard tun interface",
-			Long:        help.GetHelpFor([]string{consts.WgSocksStr}),
-			Run:         wireguard.WGSocksListCmd,
+			Use:   consts.WgSocksStr,
+			Short: "List socks servers listening on the WireGuard tun interface",
+			Long:  help.GetHelpFor([]string{consts.WgSocksStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				wireguard.WGSocksListCmd(cmd, con, args)
+			},
 			GroupID:     consts.NetworkHelpGroup,
 			Annotations: HideCommand(consts.WireguardCmdsFilter),
 		}
@@ -1839,7 +1857,9 @@ func SliverCommands() console.Commands {
 			Use:   consts.StartStr,
 			Short: "Start a socks5 listener on the WireGuard tun interface",
 			Long:  help.GetHelpFor([]string{consts.WgSocksStr, consts.StartStr}),
-			Run:   wireguard.WGSocksStartCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				wireguard.WGSocksStartCmd(cmd, con, args)
+			},
 		}
 		wgSocksCmd.AddCommand(wgSocksStartCmd)
 		Flags("wg socks", wgSocksStartCmd, func(f *pflag.FlagSet) {
@@ -1851,8 +1871,10 @@ func SliverCommands() console.Commands {
 			Use:   consts.StopStr,
 			Short: "Stop a socks5 listener on the WireGuard tun interface",
 			Long:  help.GetHelpFor([]string{consts.WgSocksStr, consts.StopStr}),
-			Run:   wireguard.WGSocksStopCmd,
-			Args:  cobra.ExactArgs(1), // 	a.Int("id", "forwarder id")
+			Run: func(cmd *cobra.Command, args []string) {
+				wireguard.WGSocksStopCmd(cmd, con, args)
+			},
+			Args: cobra.ExactArgs(1), // 	a.Int("id", "forwarder id")
 		}
 		wgSocksCmd.AddCommand(wgSocksStopCmd)
 		Flags("wg socks", wgSocksStopCmd, func(f *pflag.FlagSet) {
@@ -2034,7 +2056,10 @@ func SliverCommands() console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
-		client.Client.ExposeCommands()
+		con.ExposeCommands()
+		// if client.Client != nil {
+		// 	client.Client.ExposeCommands()
+		// }
 
 		return sliver
 	}

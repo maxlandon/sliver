@@ -32,7 +32,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -93,10 +92,10 @@ func PerformDownload(remotePath string, fileName string, cmd *cobra.Command, con
 		con.AddBeaconCallback(download.Response.TaskID, func(task *clientpb.BeaconTask) {
 			err = proto.Unmarshal(task.Response, download)
 			if err != nil {
-				log.Errorf("Failed to decode response %s\n", err)
+				con.PrintErrorf("Failed to decode response %s\n", err)
 			}
 		})
-		log.AsyncResponse(download.Response)
+		con.PrintAsyncResponse(download.Response)
 	}
 
 	if download.Response != nil && download.Response.Err != "" {
@@ -144,13 +143,13 @@ func SendLootMessage(loot *clientpb.Loot, con *console.SliverConsole) {
 	control <- true
 	<-control
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	}
 
 	if loot.Name != loot.File.Name {
-		log.Infof("Successfully looted %s (%s) (ID: %s)\n", loot.File.Name, loot.Name, loot.LootID)
+		con.PrintInfof("Successfully looted %s (%s) (ID: %s)\n", loot.File.Name, loot.Name, loot.LootID)
 	} else {
-		log.Infof("Successfully looted %s (ID: %s)\n", loot.Name, loot.LootID)
+		con.PrintInfof("Successfully looted %s (ID: %s)\n", loot.Name, loot.LootID)
 	}
 
 	return
@@ -159,7 +158,7 @@ func SendLootMessage(loot *clientpb.Loot, con *console.SliverConsole) {
 func LootDownload(download *sliverpb.Download, lootName string, lootType clientpb.LootType, fileType clientpb.FileType, cmd *cobra.Command, con *console.SliverConsole) {
 	// Was the download successful?
 	if download.Response != nil && download.Response.Err != "" {
-		log.Errorf("%s\n", download.Response.Err)
+		con.PrintErrorf("%s\n", download.Response.Err)
 		return
 	}
 
@@ -177,7 +176,7 @@ func LootDownload(download *sliverpb.Download, lootName string, lootType clientp
 		// We have to decompress the gzip file first
 		decompressedDownload, err := gzip.NewReader(bytes.NewReader(download.Data))
 		if err != nil {
-			log.Errorf("Could not decompress downloaded data: %s", err)
+			con.PrintErrorf("Could not decompress downloaded data: %s", err)
 			return
 		}
 
@@ -228,8 +227,7 @@ func LootDownload(download *sliverpb.Download, lootName string, lootType clientp
 }
 
 // LootAddRemoteCmd - Add a file from the remote system to the server as loot
-func LootAddRemoteCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func LootAddRemoteCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
@@ -242,13 +240,13 @@ func LootAddRemoteCmd(cmd *cobra.Command, args []string) {
 	lType, _ := cmd.Flags().GetString("type")
 	lootType, err := ValidateLootType(lType)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 
 	download, err := PerformDownload(remotePath, fileName, cmd, con)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 

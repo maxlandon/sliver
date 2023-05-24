@@ -24,27 +24,25 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // WebsitesUpdateContentCmd - Update metadata about static website content
-func WebsitesUpdateContentCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func WebsitesUpdateContentCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	websiteName, _ := cmd.Flags().GetString("website")
 	if websiteName == "" {
-		log.Errorf("Must specify a website name via --website, see --help\n")
+		con.PrintErrorf("Must specify a website name via --website, see --help\n")
 		return
 	}
 	webPath, _ := cmd.Flags().GetString("web-path")
 	if webPath == "" {
-		log.Errorf("Must specify a web path via --web-path, see --help\n")
+		con.PrintErrorf("Must specify a web path via --web-path, see --help\n")
 		return
 	}
 	contentType, _ := cmd.Flags().GetString("content-type")
 	if contentType == "" {
-		log.Errorf("Must specify a new --content-type, see --help\n")
+		con.PrintErrorf("Must specify a new --content-type, see --help\n")
 		return
 	}
 
@@ -58,7 +56,7 @@ func WebsitesUpdateContentCmd(cmd *cobra.Command, args []string) {
 
 	web, err := con.Rpc.WebsiteUpdateContent(context.Background(), updateWeb)
 	if err != nil {
-		log.Errorf("%s", err)
+		con.PrintErrorf("%s", err)
 		return
 	}
 	PrintWebsite(web, con)

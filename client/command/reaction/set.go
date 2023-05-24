@@ -27,27 +27,25 @@ import (
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // ErrNonReactableEvent - Event does not exist or is not supported by reactions
 var ErrNonReactableEvent = errors.New("non-reactable event type")
 
 // ReactionSetCmd - Set a reaction upon an event
-func ReactionSetCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ReactionSetCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	eventType, err := getEventType(cmd, con)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	con.Println()
-	log.Infof("Setting reaction to: %s\n", EventTypeToTitle(eventType))
+	con.PrintInfof("Setting reaction to: %s\n", EventTypeToTitle(eventType))
 	con.Println()
 	rawCommands, err := userCommands()
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	commands := []string{}
@@ -63,7 +61,7 @@ func ReactionSetCmd(cmd *cobra.Command, args []string) {
 	})
 
 	con.Println()
-	log.Infof("Set reaction to %s (id: %d)\n", eventType, reaction.ID)
+	con.PrintInfof("Set reaction to %s (id: %d)\n", eventType, reaction.ID)
 }
 
 func getEventType(cmd *cobra.Command, con *console.SliverConsole) (string, error) {

@@ -30,18 +30,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // GenerateStagerCmd - Generate a stager using Metasploit
-func GenerateStagerCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func GenerateStagerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	var stageProto clientpb.StageProtocol
 	lhost, _ := cmd.Flags().GetString("lhost")
 	if lhost == "" {
-		log.Errorf("Please specify a listening host")
+		con.PrintErrorf("Please specify a listening host")
 		return
 	}
 	match, err := regexp.MatchString(`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`, lhost)
@@ -51,7 +48,7 @@ func GenerateStagerCmd(cmd *cobra.Command, args []string) {
 	if !match {
 		addr, err := net.LookupHost(lhost)
 		if err != nil {
-			log.Errorf("Error resolving %s: %v\n", lhost, err)
+			con.PrintErrorf("Error resolving %s: %v\n", lhost, err)
 			return
 		}
 		if len(addr) > 1 {
@@ -61,7 +58,7 @@ func GenerateStagerCmd(cmd *cobra.Command, args []string) {
 			}
 			err := survey.AskOne(prompt, &lhost)
 			if err != nil {
-				log.Errorf("Error: %v\n", err)
+				con.PrintErrorf("Error: %v\n", err)
 				return
 			}
 		} else {
@@ -91,7 +88,7 @@ func GenerateStagerCmd(cmd *cobra.Command, args []string) {
 	case "https":
 		stageProto = clientpb.StageProtocol_HTTPS
 	default:
-		log.Errorf("%s staging protocol not supported\n", proto)
+		con.PrintErrorf("%s staging protocol not supported\n", proto)
 		return
 	}
 
@@ -110,24 +107,24 @@ func GenerateStagerCmd(cmd *cobra.Command, args []string) {
 	<-ctrl
 
 	if err != nil {
-		log.Errorf("Error: %v", err)
+		con.PrintErrorf("Error: %v", err)
 		return
 	}
 
 	if save != "" || format == "raw" {
-		saveTo, err := saveLocation(save, stageFile.GetFile().GetName())
+		saveTo, err := saveLocation(save, stageFile.GetFile().GetName(), con)
 		if err != nil {
 			return
 		}
 
 		err = os.WriteFile(saveTo, stageFile.GetFile().GetData(), 0o700)
 		if err != nil {
-			log.Errorf("Failed to write to: %s\n", saveTo)
+			con.PrintErrorf("Failed to write to: %s\n", saveTo)
 			return
 		}
-		log.Infof("Sliver implant stager saved to: %s\n", saveTo)
+		con.PrintInfof("Sliver implant stager saved to: %s\n", saveTo)
 	} else {
-		log.Infof("Here's your stager:")
+		con.PrintInfof("Here's your stager:")
 		con.Println(string(stageFile.GetFile().GetData()))
 	}
 }

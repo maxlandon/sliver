@@ -30,24 +30,22 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // HostsIOCCmd - Remove a host from the database
-func HostsIOCCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func HostsIOCCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	host, err := SelectHost(con)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	if 0 < len(host.IOCs) {
-		log.Printf("%s\n", hostIOCsTable(host, con))
+		con.Printf("%s\n", hostIOCsTable(host, con))
 	} else {
 		con.Println()
-		log.Infof("No IOCs tracked on host\n")
+		con.PrintInfof("No IOCs tracked on host\n")
 	}
 }
 

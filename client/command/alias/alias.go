@@ -27,7 +27,6 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 
 	// "github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -37,20 +36,20 @@ import (
 )
 
 // AliasesCmd - The alias command
-func AliasesCmd(cmd *cobra.Command, args []string) error {
+func AliasesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) error {
 	if 0 < len(loadedAliases) {
-		PrintAliases()
+		PrintAliases(con)
 	} else {
-		log.Infof("No aliases installed, use the 'armory' command to automatically install some\n")
+		con.PrintInfof("No aliases installed, use the 'armory' command to automatically install some\n")
 	}
 
 	return nil
 }
 
 // PrintAliases - Print a list of loaded aliases
-func PrintAliases() {
+func PrintAliases(con *console.SliverConsole) {
 	tw := table.NewWriter()
-	tw.SetStyle(settings.GetTableStyle(console.Client))
+	tw.SetStyle(settings.GetTableStyle(con))
 	tw.AppendHeader(table.Row{
 		"Name",
 		"Command Name",
@@ -87,7 +86,7 @@ func PrintAliases() {
 			aliasPkg.Manifest.RepoURL,
 		})
 	}
-	log.Println(tw.Render())
+	con.Println(tw.Render())
 }
 
 // AliasCommandNameCompleter - Completer for installed extensions command names

@@ -29,15 +29,14 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // AliasesRemoveCmd - Locally load a alias into the Sliver shell.
-func AliasesRemoveCmd(cmd *cobra.Command, args []string) {
+func AliasesRemoveCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	name := args[0]
 	// name := ctx.Args.String("name")
 	if name == "" {
-		log.Errorf("Extension name is required\n")
+		con.PrintErrorf("Extension name is required\n")
 		return
 	}
 	confirm := false
@@ -46,12 +45,12 @@ func AliasesRemoveCmd(cmd *cobra.Command, args []string) {
 	if !confirm {
 		return
 	}
-	err := RemoveAliasByCommandName(name, console.Client)
+	err := RemoveAliasByCommandName(name, con)
 	if err != nil {
-		log.Errorf("Error removing alias: %s\n", err)
+		con.PrintErrorf("Error removing alias: %s\n", err)
 		return
 	} else {
-		log.Infof("Alias '%s' removed\n", name)
+		con.PrintInfof("Alias '%s' removed\n", name)
 	}
 }
 

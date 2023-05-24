@@ -25,32 +25,30 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // WGPortFwdAddCmd - Add a new WireGuard port forward
-func WGPortFwdAddCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func WGPortFwdAddCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
 	if session.Transport != "wg" {
-		log.Errorf("This command is only supported for WireGuard implants")
+		con.PrintErrorf("This command is only supported for WireGuard implants")
 		return
 	}
 
 	localPort, _ := cmd.Flags().GetInt32("bind")
 	remoteAddr, _ := cmd.Flags().GetString("remote")
 	if remoteAddr == "" {
-		log.Errorf("Must specify a remote target host:port")
+		con.PrintErrorf("Must specify a remote target host:port")
 		return
 	}
 	remoteHost, remotePort, err := net.SplitHostPort(remoteAddr)
 	if err != nil {
-		log.Errorf("Failed to parse remote target %s\n", err)
+		con.PrintErrorf("Failed to parse remote target %s\n", err)
 		return
 	}
 
@@ -60,13 +58,13 @@ func WGPortFwdAddCmd(cmd *cobra.Command, args []string) {
 		Request:       con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
-		log.Errorf("Error: %v", err)
+		con.PrintErrorf("Error: %v", err)
 		return
 	}
 
 	if portfwdAdd.Response != nil && portfwdAdd.Response.Err != "" {
-		log.Errorf("Error: %s\n", portfwdAdd.Response.Err)
+		con.PrintErrorf("Error: %s\n", portfwdAdd.Response.Err)
 		return
 	}
-	log.Infof("Port forwarding %s -> %s:%s\n", portfwdAdd.Forwarder.LocalAddr, remoteHost, remotePort)
+	con.PrintInfof("Port forwarding %s -> %s:%s\n", portfwdAdd.Forwarder.LocalAddr, remoteHost, remotePort)
 }

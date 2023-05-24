@@ -1,15 +1,14 @@
 package sessions
 
 import (
-	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/spf13/cobra"
+
+	"github.com/bishopfox/sliver/client/console"
 )
 
 // BackgroundCmd - Background the active session
-func BackgroundCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func BackgroundCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	con.ActiveTarget.Background()
-	log.Infof("Background ...\n")
+	con.PrintInfof("Background ...")
 }

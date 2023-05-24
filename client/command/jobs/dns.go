@@ -25,13 +25,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // DNSListenerCmd - Start a DNS lisenter
-func DNSListenerCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func DNSListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	domainsF, _ := cmd.Flags().GetString("domains")
 	domains := strings.Split(domainsF, ",")
@@ -47,7 +45,7 @@ func DNSListenerCmd(cmd *cobra.Command, args []string) {
 	persistent, _ := cmd.Flags().GetBool("persistent")
 	enforceOTP, _ := cmd.Flags().GetBool("disable-otp")
 
-	log.Infof("Starting DNS listener with parent domain(s) %v ...\n", domains)
+	con.PrintInfof("Starting DNS listener with parent domain(s) %v ...\n", domains)
 	dns, err := con.Rpc.StartDNSListener(context.Background(), &clientpb.DNSListenerReq{
 		Domains:    domains,
 		Host:       lhost,
@@ -58,8 +56,8 @@ func DNSListenerCmd(cmd *cobra.Command, args []string) {
 	})
 	con.Println()
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	} else {
-		log.Infof("Successfully started job #%d\n", dns.JobID)
+		con.PrintInfof("Successfully started job #%d\n", dns.JobID)
 	}
 }

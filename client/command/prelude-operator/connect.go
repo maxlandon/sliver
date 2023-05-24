@@ -24,14 +24,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/client/prelude"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
-func ConnectCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ConnectCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	url := args[0]
 	aesKey, _ := cmd.Flags().GetString("aes-key")
@@ -47,41 +45,41 @@ func ConnectCmd(cmd *cobra.Command, args []string) {
 
 	implantMapper := prelude.InitImplantMapper(config)
 
-	log.Infof("Connected to Operator at %s\n", url)
+	con.PrintInfof("Connected to Operator at %s\n", url)
 	if !skipExisting {
 		sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 		if err != nil {
-			log.Errorf("Could not get session list: %s", err)
+			con.PrintErrorf("Could not get session list: %s", err)
 			return
 		}
 		if len(sessions.Sessions) > 0 {
-			log.Infof("Adding existing sessions ...\n")
+			con.PrintInfof("Adding existing sessions ...\n")
 			for _, session := range sessions.Sessions {
 				if !session.IsDead {
 					err = implantMapper.AddImplant(session, nil)
 					if err != nil {
-						log.Errorf("Could not add session %s to implant mapper: %s", session.Name, err)
+						con.PrintErrorf("Could not add session %s to implant mapper: %s", session.Name, err)
 					}
 				}
 			}
-			log.Infof("Done !\n")
+			con.PrintInfof("Done !\n")
 		}
 		beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
 		if err != nil {
-			log.Errorf("Could not get beacon list: %s", err)
+			con.PrintErrorf("Could not get beacon list: %s", err)
 			return
 		}
 		if len(beacons.Beacons) > 0 {
-			log.Infof("Adding existing beacons ...\n")
+			con.PrintInfof("Adding existing beacons ...\n")
 			for _, beacon := range beacons.Beacons {
 				err = implantMapper.AddImplant(beacon, func(taskID string, cb func(task *clientpb.BeaconTask)) {
 					con.AddBeaconCallback(taskID, cb)
 				})
 				if err != nil {
-					log.Errorf("Could not add beacon %s to implant mapper: %s", beacon.Name, err)
+					con.PrintErrorf("Could not add beacon %s to implant mapper: %s", beacon.Name, err)
 				}
 			}
-			log.Infof("Done !\n")
+			con.PrintInfof("Done !\n")
 		}
 	}
 }

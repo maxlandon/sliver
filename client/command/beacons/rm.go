@@ -24,22 +24,19 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // BeaconsRmCmd - Display/interact with beacons
-func BeaconsRmCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func BeaconsRmCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	beacon, err := SelectBeacon(con)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	_, err = con.Rpc.RmBeacon(context.Background(), beacon)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
-	log.Infof("Beacon removed (%s)\n", beacon.ID)
+	con.PrintInfof("Beacon removed (%s)\n", beacon.ID)
 }

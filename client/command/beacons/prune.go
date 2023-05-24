@@ -26,25 +26,22 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
 // BeaconsPruneCmd - Prune stale beacons automatically
-func BeaconsPruneCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func BeaconsPruneCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	duration, _ := cmd.Flags().GetString("duration")
 	pruneDuration, err := time.ParseDuration(duration)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
-	log.Infof("Pruning beacons that missed their last checking by %s or more...\n\n", pruneDuration)
+	con.PrintInfof("Pruning beacons that missed their last checking by %s or more...\n\n", pruneDuration)
 	beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	pruneBeacons := []*clientpb.Beacon{}
@@ -59,17 +56,17 @@ func BeaconsPruneCmd(cmd *cobra.Command, args []string) {
 		}
 	}
 	if len(pruneBeacons) == 0 {
-		log.Infof("No beacons to prune.\n")
+		con.PrintInfof("No beacons to prune.\n")
 		return
 	}
-	log.Warnf("The following beacons and their tasks will be removed:\n")
+	con.PrintWarnf("The following beacons and their tasks will be removed:\n")
 	for index, beacon := range pruneBeacons {
 		beacon, err := con.Rpc.GetBeacon(context.Background(), &clientpb.Beacon{ID: beacon.ID})
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			continue
 		}
-		log.Printf("\t%d. %s (%s)\n", (index + 1), beacon.Name, beacon.ID)
+		con.Printf("\t%d. %s (%s)\n", (index + 1), beacon.Name, beacon.ID)
 	}
 	con.Println()
 	confirm := false
@@ -82,9 +79,9 @@ func BeaconsPruneCmd(cmd *cobra.Command, args []string) {
 	for _, beacon := range pruneBeacons {
 		_, err := con.Rpc.RmBeacon(context.Background(), &clientpb.Beacon{ID: beacon.ID})
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			errCount++
 		}
 	}
-	log.Infof("Pruned %d beacon(s)\n", len(pruneBeacons)-errCount)
+	con.PrintInfof("Pruned %d beacon(s)\n", len(pruneBeacons)-errCount)
 }

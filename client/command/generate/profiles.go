@@ -30,21 +30,18 @@ import (
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
 // ProfilesCmd - Display implant profiles
-func ProfilesCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func ProfilesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	profiles := getImplantProfiles(con)
 	if profiles == nil {
 		return
 	}
 	if len(profiles) == 0 {
-		log.Infof("No profiles, see `%s %s help`\n", consts.ProfilesStr, consts.NewStr)
+		con.PrintInfof("No profiles, see `%s %s help`\n", consts.ProfilesStr, consts.NewStr)
 		return
 	} else {
 		PrintProfiles(profiles, con)
@@ -96,13 +93,13 @@ func PrintProfiles(profiles []*clientpb.ImplantProfile, con *console.SliverConso
 		})
 	}
 
-	log.Printf("%s\n", tw.Render())
+	con.Printf("%s\n", tw.Render())
 }
 
 func getImplantProfiles(con *console.SliverConsole) []*clientpb.ImplantProfile {
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return nil
 	}
 	return pbProfiles.Profiles
@@ -112,7 +109,7 @@ func getImplantProfiles(con *console.SliverConsole) []*clientpb.ImplantProfile {
 func GetImplantProfileByName(name string, con *console.SliverConsole) *clientpb.ImplantProfile {
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return nil
 	}
 	for _, profile := range pbProfiles.Profiles {
@@ -124,9 +121,7 @@ func GetImplantProfileByName(name string, con *console.SliverConsole) *clientpb.
 }
 
 // ProfileNameCompleter - Completer for implant build names
-func ProfileNameCompleter() carapace.Action {
-	con := console.Client
-
+func ProfileNameCompleter(con *console.SliverConsole) carapace.Action {
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return carapace.ActionMessage(fmt.Sprintf("No profiles, err: %s", err.Error()))

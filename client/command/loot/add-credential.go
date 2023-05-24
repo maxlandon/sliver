@@ -25,13 +25,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // LootAddCredentialCmd - Add a credential type loot
-func LootAddCredentialCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func LootAddCredentialCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	prompt := &survey.Select{
 		Message: "Choose a credential type:",
@@ -81,9 +79,9 @@ func LootAddCredentialCmd(cmd *cobra.Command, args []string) {
 
 	loot, err := con.Rpc.LootAdd(context.Background(), loot)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 
-	log.Infof("Successfully added loot to server (%s)\n", loot.LootID)
+	con.PrintInfof("Successfully added loot to server (%s)\n", loot.LootID)
 }

@@ -23,13 +23,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // ProfilesNewCmd - Create a new implant profile
-func ProfilesNewCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ProfilesNewCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var name string
 	if len(args) > 0 {
@@ -46,15 +44,14 @@ func ProfilesNewCmd(cmd *cobra.Command, args []string) {
 	}
 	resp, err := con.Rpc.SaveImplantProfile(context.Background(), profile)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	} else {
-		log.Infof("Saved new implant profile %s\n", resp.Name)
+		con.PrintInfof("Saved new implant profile %s\n", resp.Name)
 	}
 }
 
 // ProfilesNewBeaconCmd - Create a new beacon profile
-func ProfilesNewBeaconCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ProfilesNewBeaconCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var name string
 	if len(args) > 0 {
@@ -62,7 +59,7 @@ func ProfilesNewBeaconCmd(cmd *cobra.Command, args []string) {
 	}
 	// name := ctx.Args.String("name")
 	if name == "" {
-		log.Errorf("No profile name specified\n")
+		con.PrintErrorf("No profile name specified\n")
 		return
 	}
 	config := parseCompileFlags(cmd, con)
@@ -72,7 +69,7 @@ func ProfilesNewBeaconCmd(cmd *cobra.Command, args []string) {
 	config.IsBeacon = true
 	err := parseBeaconFlags(cmd, con, config)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	profile := &clientpb.ImplantProfile{
@@ -81,8 +78,8 @@ func ProfilesNewBeaconCmd(cmd *cobra.Command, args []string) {
 	}
 	resp, err := con.Rpc.SaveImplantProfile(context.Background(), profile)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	} else {
-		log.Infof("Saved new implant profile (beacon) %s\n", resp.Name)
+		con.PrintInfof("Saved new implant profile (beacon) %s\n", resp.Name)
 	}
 }

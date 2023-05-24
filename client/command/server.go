@@ -29,14 +29,14 @@ import (
 	"github.com/bishopfox/sliver/client/command/use"
 	"github.com/bishopfox/sliver/client/command/websites"
 	"github.com/bishopfox/sliver/client/command/wireguard"
+	client "github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/licenses"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // ServerCommands returns all commands bound to the server menu, optionally
 // accepting a function returning a list of additional (admin) commands.
-func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
+func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Command) console.Commands {
 	serverCommands := func() *cobra.Command {
 		server := &cobra.Command{
 			Short: "Server commands",
@@ -45,9 +45,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// Load Reactions
 		n, err := reaction.LoadReactions()
 		if err != nil && !os.IsNotExist(err) {
-			log.Errorf("Failed to load reactions: %s\n", err)
+			con.PrintErrorf("Failed to load reactions: %s\n", err)
 		} else if n > 0 {
-			log.Infof("Loaded %d reaction(s) from disk\n", n)
+			con.PrintInfof("Loaded %d reaction(s) from disk\n", n)
 		}
 
 		// [ Groups ] ----------------------------------------------
@@ -62,10 +62,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Aliases ] ---------------------------------------------
 
 		aliasCmd := &cobra.Command{
-			Use:     consts.AliasesStr,
-			Short:   "List current aliases",
-			Long:    help.GetHelpFor([]string{consts.AliasesStr}),
-			RunE:    alias.AliasesCmd,
+			Use:   consts.AliasesStr,
+			Short: "List current aliases",
+			Long:  help.GetHelpFor([]string{consts.AliasesStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				alias.AliasesCmd(cmd, con, args)
+			},
 			GroupID: consts.GenericHelpGroup,
 		}
 		server.AddCommand(aliasCmd)
@@ -75,7 +77,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Load a command alias",
 			Long:  help.GetHelpFor([]string{consts.AliasesStr, consts.LoadStr}),
 			Args:  cobra.ExactArgs(1),
-			Run:   alias.AliasesLoadCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				alias.AliasesLoadCmd(cmd, con, args)
+			},
 		}
 		carapace.Gen(aliasLoadCmd).PositionalCompletion(
 			carapace.ActionDirectories().Tag("alias directory").Usage("path to the alias directory"))
@@ -86,7 +90,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Install a command alias",
 			Long:  help.GetHelpFor([]string{consts.AliasesStr, consts.InstallStr}),
 			Args:  cobra.ExactArgs(1),
-			Run:   alias.AliasesInstallCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				alias.AliasesInstallCmd(cmd, con, args)
+			},
 		}
 		carapace.Gen(aliasInstallCmd).PositionalCompletion(carapace.ActionFiles().Tag("alias file"))
 		aliasCmd.AddCommand(aliasInstallCmd)
@@ -96,7 +102,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Remove an alias",
 			Long:  help.GetHelpFor([]string{consts.RmStr}),
 			Args:  cobra.ExactArgs(1),
-			Run:   alias.AliasesRemoveCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				alias.AliasesRemoveCmd(cmd, con, args)
+			},
 		}
 		carapace.Gen(aliasRemove).PositionalCompletion(alias.AliasCompleter())
 		aliasCmd.AddCommand(aliasRemove)
@@ -104,10 +112,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Armory ] ---------------------------------------------
 
 		armoryCmd := &cobra.Command{
-			Use:     consts.ArmoryStr,
-			Short:   "Automatically download and install extensions/aliases",
-			Long:    help.GetHelpFor([]string{consts.ArmoryStr}),
-			Run:     armory.ArmoryCmd,
+			Use:   consts.ArmoryStr,
+			Short: "Automatically download and install extensions/aliases",
+			Long:  help.GetHelpFor([]string{consts.ArmoryStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				armory.ArmoryCmd(cmd, con, args)
+			},
 			GroupID: consts.GenericHelpGroup,
 		}
 		Flags("armory", armoryCmd, func(f *pflag.FlagSet) {
@@ -123,7 +133,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Install an alias or extension",
 			Long:  help.GetHelpFor([]string{consts.ArmoryStr, consts.InstallStr}),
 			Args:  cobra.ExactArgs(1),
-			Run:   armory.ArmoryInstallCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				armory.ArmoryInstallCmd(cmd, con, args)
+			},
 		}
 		Flags("armory", armoryInstallCmd, func(f *pflag.FlagSet) {
 			f.BoolP("insecure", "I", false, "skip tls certificate validation")
@@ -139,7 +151,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.UpdateStr,
 			Short: "Update installed an aliases and extensions",
 			Long:  help.GetHelpFor([]string{consts.ArmoryStr, consts.UpdateStr}),
-			Run:   armory.ArmoryUpdateCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				armory.ArmoryUpdateCmd(cmd, con, args)
+			},
 		}
 		Flags("armory", armoryInstallCmd, func(f *pflag.FlagSet) {
 			f.BoolP("insecure", "I", false, "skip tls certificate validation")
@@ -154,7 +168,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Search for aliases and extensions by name (regex)",
 			Long:  help.GetHelpFor([]string{consts.ArmoryStr, consts.SearchStr}),
 			Args:  cobra.ExactArgs(1),
-			Run:   armory.ArmorySearchCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				armory.ArmorySearchCmd(cmd, con, args)
+			},
 		}
 		carapace.Gen(armorySearchCmd).PositionalCompletion(carapace.ActionValues().Usage("a name regular expression"))
 		armoryCmd.AddCommand(armorySearchCmd)
@@ -162,10 +178,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Update ] --------------------------------------------------------------
 
 		updateCmd := &cobra.Command{
-			Use:     consts.UpdateStr,
-			Short:   "Check for updates",
-			Long:    help.GetHelpFor([]string{consts.UpdateStr}),
-			Run:     update.UpdateCmd,
+			Use:   consts.UpdateStr,
+			Short: "Check for updates",
+			Long:  help.GetHelpFor([]string{consts.UpdateStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				update.UpdateCmd(cmd, con, args)
+			},
 			GroupID: consts.GenericHelpGroup,
 		}
 		Flags("update", updateCmd, func(f *pflag.FlagSet) {
@@ -178,10 +196,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		server.AddCommand(updateCmd)
 
 		versionCmd := &cobra.Command{
-			Use:     consts.VersionStr,
-			Short:   "Display version information",
-			Long:    help.GetHelpFor([]string{consts.VersionStr}),
-			Run:     update.VerboseVersionsCmd,
+			Use:   consts.VersionStr,
+			Short: "Display version information",
+			Long:  help.GetHelpFor([]string{consts.VersionStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				update.VerboseVersionsCmd(cmd, con, args)
+			},
 			GroupID: consts.GenericHelpGroup,
 		}
 		Flags("update", versionCmd, func(f *pflag.FlagSet) {
@@ -192,10 +212,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Jobs ] -----------------------------------------------------------------
 
 		jobsCmd := &cobra.Command{
-			Use:     consts.JobsStr,
-			Short:   "Job control",
-			Long:    help.GetHelpFor([]string{consts.JobsStr}),
-			Run:     jobs.JobsCmd,
+			Use:   consts.JobsStr,
+			Short: "Job control",
+			Long:  help.GetHelpFor([]string{consts.JobsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				jobs.JobsCmd(cmd, con, args)
+			},
 			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("jobs", jobsCmd, func(f *pflag.FlagSet) {
@@ -204,15 +226,17 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(jobsCmd, func(comp *carapace.ActionMap) {
-			(*comp)["kill"] = jobs.JobsIDCompleter()
+			(*comp)["kill"] = jobs.JobsIDCompleter(con)
 		})
 		server.AddCommand(jobsCmd)
 
 		mtlsCmd := &cobra.Command{
-			Use:     consts.MtlsStr,
-			Short:   "Start an mTLS listener",
-			Long:    help.GetHelpFor([]string{consts.MtlsStr}),
-			Run:     jobs.MTLSListenerCmd,
+			Use:   consts.MtlsStr,
+			Short: "Start an mTLS listener",
+			Long:  help.GetHelpFor([]string{consts.MtlsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				jobs.MTLSListenerCmd(cmd, con, args)
+			},
 			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("mTLS listener", mtlsCmd, func(f *pflag.FlagSet) {
@@ -224,10 +248,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		server.AddCommand(mtlsCmd)
 
 		wgCmd := &cobra.Command{
-			Use:     consts.WGStr,
-			Short:   "Start a WireGuard listener",
-			Long:    help.GetHelpFor([]string{consts.WGStr}),
-			Run:     jobs.WGListenerCmd,
+			Use:   consts.WGStr,
+			Short: "Start a WireGuard listener",
+			Long:  help.GetHelpFor([]string{consts.WGStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				jobs.WGListenerCmd(cmd, con, args)
+			},
 			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("WireGuard listener", wgCmd, func(f *pflag.FlagSet) {
@@ -241,10 +267,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		server.AddCommand(wgCmd)
 
 		dnsCmd := &cobra.Command{
-			Use:     consts.DnsStr,
-			Short:   "Start a DNS listener",
-			Long:    help.GetHelpFor([]string{consts.DnsStr}),
-			Run:     jobs.DNSListenerCmd,
+			Use:   consts.DnsStr,
+			Short: "Start a DNS listener",
+			Long:  help.GetHelpFor([]string{consts.DnsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				jobs.DNSListenerCmd(cmd, con, args)
+			},
 			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("DNS listener", dnsCmd, func(f *pflag.FlagSet) {
@@ -259,10 +287,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		server.AddCommand(dnsCmd)
 
 		httpCmd := &cobra.Command{
-			Use:     consts.HttpStr,
-			Short:   "Start an HTTP listener",
-			Long:    help.GetHelpFor([]string{consts.HttpStr}),
-			Run:     jobs.HTTPListenerCmd,
+			Use:   consts.HttpStr,
+			Short: "Start an HTTP listener",
+			Long:  help.GetHelpFor([]string{consts.HttpStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				jobs.HTTPListenerCmd(cmd, con, args)
+			},
 			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("HTTP listener", httpCmd, func(f *pflag.FlagSet) {
@@ -279,10 +309,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		server.AddCommand(httpCmd)
 
 		httpsCmd := &cobra.Command{
-			Use:     consts.HttpsStr,
-			Short:   "Start an HTTPS listener",
-			Long:    help.GetHelpFor([]string{consts.HttpsStr}),
-			Run:     jobs.HTTPSListenerCmd,
+			Use:   consts.HttpsStr,
+			Short: "Start an HTTPS listener",
+			Long:  help.GetHelpFor([]string{consts.HttpsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				jobs.HTTPSListenerCmd(cmd, con, args)
+			},
 			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("HTTPS listener", httpsCmd, func(f *pflag.FlagSet) {
@@ -305,10 +337,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		server.AddCommand(httpsCmd)
 
 		stageCmd := &cobra.Command{
-			Use:     consts.StageListenerStr,
-			Short:   "Start a stager listener",
-			Long:    help.GetHelpFor([]string{consts.StageListenerStr}),
-			Run:     jobs.StageListenerCmd,
+			Use:   consts.StageListenerStr,
+			Short: "Start a stager listener",
+			Long:  help.GetHelpFor([]string{consts.StageListenerStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				jobs.StageListenerCmd(cmd, con, args)
+			},
 			GroupID: consts.NetworkHelpGroup,
 		}
 		Flags("stage listener", stageCmd, func(f *pflag.FlagSet) {
@@ -323,7 +357,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.BoolP("prepend-size", "P", false, "prepend the size of the stage to the payload (to use with MSF stagers)")
 		})
 		FlagComps(stageCmd, func(comp *carapace.ActionMap) {
-			(*comp)["profile"] = generate.ProfileNameCompleter()
+			(*comp)["profile"] = generate.ProfileNameCompleter(con)
 			(*comp)["cert"] = carapace.ActionFiles().Tag("certificate file")
 			(*comp)["key"] = carapace.ActionFiles().Tag("key file")
 			(*comp)["compress"] = carapace.ActionValues([]string{"zlib", "gzip", "deflate9", "none"}...).Tag("compression formats")
@@ -333,10 +367,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Operators ] --------------------------------------------------------------
 
 		operatorsCmd := &cobra.Command{
-			Use:     consts.OperatorsStr,
-			Short:   "Manage operators",
-			Long:    help.GetHelpFor([]string{consts.OperatorsStr}),
-			Run:     operators.OperatorsCmd,
+			Use:   consts.OperatorsStr,
+			Short: "Manage operators",
+			Long:  help.GetHelpFor([]string{consts.OperatorsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				operators.OperatorsCmd(cmd, con, args)
+			},
 			GroupID: consts.GenericHelpGroup,
 		}
 		Flags("operators", operatorsCmd, func(f *pflag.FlagSet) {
@@ -353,10 +389,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Sessions ] --------------------------------------------------------------
 
 		sessionsCmd := &cobra.Command{
-			Use:     consts.SessionsStr,
-			Short:   "Session management",
-			Long:    help.GetHelpFor([]string{consts.SessionsStr}),
-			Run:     sessions.SessionsCmd,
+			Use:   consts.SessionsStr,
+			Short: "Session management",
+			Long:  help.GetHelpFor([]string{consts.SessionsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				sessions.SessionsCmd(cmd, con, args)
+			},
 			GroupID: consts.SliverHelpGroup,
 		}
 		Flags("sessions", sessionsCmd, func(f *pflag.FlagSet) {
@@ -372,8 +410,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(sessionsCmd, func(comp *carapace.ActionMap) {
-			(*comp)["interact"] = use.BeaconAndSessionIDCompleter()
-			(*comp)["kill"] = use.BeaconAndSessionIDCompleter()
+			(*comp)["interact"] = use.BeaconAndSessionIDCompleter(con)
+			(*comp)["kill"] = use.BeaconAndSessionIDCompleter(con)
 		})
 		server.AddCommand(sessionsCmd)
 
@@ -381,7 +419,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.PruneStr,
 			Short: "Kill all stale/dead sessions",
 			Long:  help.GetHelpFor([]string{consts.SessionsStr, consts.PruneStr}),
-			Run:   sessions.SessionsPruneCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				sessions.SessionsPruneCmd(cmd, con, args)
+			},
 		}
 		Flags("prune", sessionsCmd, func(f *pflag.FlagSet) {
 			f.BoolP("force", "F", false, "Force the killing of stale/dead sessions")
@@ -392,111 +432,135 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Use ] --------------------------------------------------------------
 
 		useCmd := &cobra.Command{
-			Use:     consts.UseStr,
-			Short:   "Switch the active session or beacon",
-			Long:    help.GetHelpFor([]string{consts.UseStr}),
-			Run:     use.UseCmd,
+			Use:   consts.UseStr,
+			Short: "Switch the active session or beacon",
+			Long:  help.GetHelpFor([]string{consts.UseStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				use.UseCmd(cmd, con, args)
+			},
 			GroupID: consts.SliverHelpGroup,
 		}
 		Flags("use", sessionsCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		carapace.Gen(useCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter())
+		carapace.Gen(useCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter(con))
 		server.AddCommand(useCmd)
 
 		useSessionCmd := &cobra.Command{
 			Use:   consts.SessionsStr,
 			Short: "Switch the active session",
 			Long:  help.GetHelpFor([]string{consts.UseStr, consts.SessionsStr}),
-			Run:   use.UseSessionCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				use.UseSessionCmd(cmd, con, args)
+			},
 		}
 		Flags("use", useSessionCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		carapace.Gen(useSessionCmd).PositionalCompletion(use.SessionIDCompleter())
+		carapace.Gen(useSessionCmd).PositionalCompletion(use.SessionIDCompleter(con))
 		useCmd.AddCommand(useSessionCmd)
 
 		useBeaconCmd := &cobra.Command{
 			Use:   consts.BeaconsStr,
 			Short: "Switch the active beacon",
 			Long:  help.GetHelpFor([]string{consts.UseStr, consts.BeaconsStr}),
-			Run:   use.UseBeaconCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				use.UseBeaconCmd(cmd, con, args)
+			},
 		}
 		Flags("use", useBeaconCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		carapace.Gen(useBeaconCmd).PositionalCompletion(use.BeaconIDCompleter())
+		carapace.Gen(useBeaconCmd).PositionalCompletion(use.BeaconIDCompleter(con))
 		useCmd.AddCommand(useBeaconCmd)
 
 		// [ Settings ] --------------------------------------------------------------
 
 		settingsCmd := &cobra.Command{
-			Use:     consts.SettingsStr,
-			Short:   "Manage client settings",
-			Long:    help.GetHelpFor([]string{consts.SettingsStr}),
-			Run:     settings.SettingsCmd,
+			Use:   consts.SettingsStr,
+			Short: "Manage client settings",
+			Long:  help.GetHelpFor([]string{consts.SettingsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				settings.SettingsCmd(cmd, con, args)
+			},
 			GroupID: consts.GenericHelpGroup,
 		}
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   consts.SaveStr,
 			Short: "Save the current settings to disk",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, consts.SaveStr}),
-			Run:   settings.SettingsSaveCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				settings.SettingsSaveCmd(cmd, con, args)
+			},
 		})
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   consts.TablesStr,
 			Short: "Modify tables setting (style)",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, consts.TablesStr}),
-			Run:   settings.SettingsTablesCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				settings.SettingsTablesCmd(cmd, con, args)
+			},
 		})
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   "beacon-autoresults",
 			Short: "Automatically display beacon task results when completed",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, "beacon-autoresults"}),
-			Run:   settings.SettingsBeaconsAutoResultCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				settings.SettingsBeaconsAutoResultCmd(cmd, con, args)
+			},
 		})
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   "autoadult",
 			Short: "Automatically accept OPSEC warnings",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, "autoadult"}),
-			Run:   settings.SettingsAutoAdultCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				settings.SettingsAutoAdultCmd(cmd, con, args)
+			},
 		})
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   "always-overflow",
 			Short: "Disable table pagination",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, "always-overflow"}),
-			Run:   settings.SettingsAlwaysOverflow,
+			Run: func(cmd *cobra.Command, args []string) {
+				settings.SettingsAlwaysOverflow(cmd, con, args)
+			},
 		})
 		settingsCmd.AddCommand(&cobra.Command{
 			Use:   "small-terminal",
 			Short: "Set the small terminal width",
 			Long:  help.GetHelpFor([]string{consts.SettingsStr, "small-terminal"}),
-			Run:   settings.SettingsSmallTerm,
+			Run: func(cmd *cobra.Command, args []string) {
+				settings.SettingsSmallTerm(cmd, con, args)
+			},
 		})
 		server.AddCommand(settingsCmd)
 
 		// [ Info ] --------------------------------------------------------------
 
 		infoCmd := &cobra.Command{
-			Use:     consts.InfoStr,
-			Short:   "Get info about session",
-			Long:    help.GetHelpFor([]string{consts.InfoStr}),
-			Run:     info.InfoCmd,
+			Use:   consts.InfoStr,
+			Short: "Get info about session",
+			Long:  help.GetHelpFor([]string{consts.InfoStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				info.InfoCmd(cmd, con, args)
+			},
 			GroupID: consts.SliverHelpGroup,
 		}
 		Flags("use", infoCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		carapace.Gen(infoCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter())
+		carapace.Gen(infoCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter(con))
 		server.AddCommand(infoCmd)
 
 		// [ Shellcode Encoders ] --------------------------------------------------------------
 
 		shikataGaNaiCmd := &cobra.Command{
-			Use:     consts.ShikataGaNai,
-			Short:   "Polymorphic binary shellcode encoder (ノ ゜Д゜)ノ ︵ 仕方がない",
-			Long:    help.GetHelpFor([]string{consts.ShikataGaNai}),
-			Run:     sgn.ShikataGaNaiCmd,
+			Use:   consts.ShikataGaNai,
+			Short: "Polymorphic binary shellcode encoder (ノ ゜Д゜)ノ ︵ 仕方がない",
+			Long:  help.GetHelpFor([]string{consts.ShikataGaNai}),
+			Run: func(cmd *cobra.Command, args []string) {
+				sgn.ShikataGaNaiCmd(cmd, con, args)
+			},
 			Args:    cobra.ExactArgs(1),
 			GroupID: consts.PayloadsHelpGroup,
 		}
@@ -511,17 +575,19 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 
 		carapace.Gen(shikataGaNaiCmd).PositionalCompletion(carapace.ActionFiles().Tag("shellcode file"))
 		FlagComps(shikataGaNaiCmd, func(comp *carapace.ActionMap) {
-			(*comp)["arch"] = generate.ArchCompleter() // TODO: only propose shikataGaNaiCmd architectures
+			(*comp)["arch"] = generate.ArchCompleter(con) // TODO: only propose shikataGaNaiCmd architectures
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save shellcode")
 		})
 
 		// [ Generate ] --------------------------------------------------------------
 
 		generateCmd := &cobra.Command{
-			Use:     consts.GenerateStr,
-			Short:   "Generate an implant binary",
-			Long:    help.GetHelpFor([]string{consts.GenerateStr}),
-			Run:     generate.GenerateCmd,
+			Use:   consts.GenerateStr,
+			Short: "Generate an implant binary",
+			Long:  help.GetHelpFor([]string{consts.GenerateStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.GenerateCmd(cmd, con, args)
+			},
 			GroupID: consts.PayloadsHelpGroup,
 		}
 		Flags("session", generateCmd, func(f *pflag.FlagSet) {
@@ -568,8 +634,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(generateCmd, func(comp *carapace.ActionMap) {
-			(*comp)["os"] = generate.OSCompleter()
-			(*comp)["arch"] = generate.ArchCompleter()
+			(*comp)["os"] = generate.OSCompleter(con)
+			(*comp)["arch"] = generate.ArchCompleter(con)
 
 			// Todo: URL completer for C2s.
 			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
@@ -587,7 +653,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.BeaconStr,
 			Short: "Generate a beacon binary",
 			Long:  help.GetHelpFor([]string{consts.GenerateStr, consts.BeaconStr}),
-			Run:   generate.GenerateBeaconCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.GenerateBeaconCmd(cmd, con, args)
+			},
 		}
 		Flags("beacon", generateBeaconCmd, func(f *pflag.FlagSet) {
 			f.Int64P("days", "D", 0, "beacon interval days")
@@ -640,8 +708,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(generateBeaconCmd, func(comp *carapace.ActionMap) {
-			(*comp)["os"] = generate.OSCompleter()
-			(*comp)["arch"] = generate.ArchCompleter()
+			(*comp)["os"] = generate.OSCompleter(con)
+			(*comp)["arch"] = generate.ArchCompleter(con)
 
 			// Todo: URL completer for C2s.
 			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
@@ -659,7 +727,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.StagerStr,
 			Short: "Generate a stager using Metasploit (requires local Metasploit installation)",
 			Long:  help.GetHelpFor([]string{consts.StagerStr}),
-			Run:   generate.GenerateStagerCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.GenerateStagerCmd(cmd, con, args)
+			},
 		}
 		Flags("stager", generateStagerCmd, func(f *pflag.FlagSet) {
 			f.StringP("os", "o", "windows", "operating system")
@@ -679,7 +749,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.CompilerInfoStr,
 			Short: "Get information about the server's compiler",
 			Long:  help.GetHelpFor([]string{consts.CompilerInfoStr}),
-			Run:   generate.GenerateInfoCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.GenerateInfoCmd(cmd, con, args)
+			},
 		}
 		Flags("stager", generateStagerCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
@@ -687,11 +759,13 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		generateCmd.AddCommand(generateInfoCmd)
 
 		regenerateCmd := &cobra.Command{
-			Use:     consts.RegenerateStr,
-			Short:   "Regenerate an implant",
-			Long:    help.GetHelpFor([]string{consts.RegenerateStr}),
-			Args:    cobra.ExactArgs(1),
-			Run:     generate.RegenerateCmd,
+			Use:   consts.RegenerateStr,
+			Short: "Regenerate an implant",
+			Long:  help.GetHelpFor([]string{consts.RegenerateStr}),
+			Args:  cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.RegenerateCmd(cmd, con, args)
+			},
 			GroupID: consts.PayloadsHelpGroup,
 		}
 		Flags("regenerate", regenerateCmd, func(f *pflag.FlagSet) {
@@ -701,14 +775,16 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		FlagComps(regenerateCmd, func(comp *carapace.ActionMap) {
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
 		})
-		carapace.Gen(regenerateCmd).PositionalCompletion(generate.ImplantBuildNameCompleter())
+		carapace.Gen(regenerateCmd).PositionalCompletion(generate.ImplantBuildNameCompleter(con))
 		server.AddCommand(regenerateCmd)
 
 		profilesCmd := &cobra.Command{
-			Use:     consts.ProfilesStr,
-			Short:   "List existing profiles",
-			Long:    help.GetHelpFor([]string{consts.ProfilesStr}),
-			Run:     generate.ProfilesCmd,
+			Use:   consts.ProfilesStr,
+			Short: "List existing profiles",
+			Long:  help.GetHelpFor([]string{consts.ProfilesStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.ProfilesCmd(cmd, con, args)
+			},
 			GroupID: consts.PayloadsHelpGroup,
 		}
 		Flags("profiles", profilesCmd, func(f *pflag.FlagSet) {
@@ -721,7 +797,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Generate implant from a profile",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.GenerateStr}),
 			Args:  cobra.ExactArgs(1),
-			Run:   generate.ProfilesGenerateCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.ProfilesGenerateCmd(cmd, con, args)
+			},
 		}
 		Flags("profiles", profilesGenerateCmd, func(f *pflag.FlagSet) {
 			f.StringP("save", "s", "", "directory/file to the binary to")
@@ -731,7 +809,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		FlagComps(profilesGenerateCmd, func(comp *carapace.ActionMap) {
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
 		})
-		carapace.Gen(profilesGenerateCmd).PositionalCompletion(generate.ProfileNameCompleter())
+		carapace.Gen(profilesGenerateCmd).PositionalCompletion(generate.ProfileNameCompleter(con))
 		profilesCmd.AddCommand(profilesGenerateCmd)
 
 		profilesNewCmd := &cobra.Command{
@@ -739,7 +817,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Create a new implant profile (interactive session)",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.NewStr}),
 			// Args: cobra.ExactArgs(1), // 	a.String("name", "name of the profile", grumble.Default(""))
-			Run: generate.ProfilesNewCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.ProfilesNewCmd(cmd, con, args)
+			},
 		}
 		Flags("session", profilesNewCmd, func(f *pflag.FlagSet) {
 			f.StringP("os", "o", "windows", "operating system")
@@ -785,8 +865,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(profilesNewCmd, func(comp *carapace.ActionMap) {
-			(*comp)["os"] = generate.OSCompleter()
-			(*comp)["arch"] = generate.ArchCompleter()
+			(*comp)["os"] = generate.OSCompleter(con)
+			(*comp)["arch"] = generate.ArchCompleter(con)
 
 			// Todo: URL completer for C2s.
 			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
@@ -807,7 +887,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Create a new implant profile (beacon)",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.NewStr, consts.BeaconStr}),
 			// Args: cobra.ExactArgs(1), // 	a.String("name", "name of the profile", grumble.Default(""))
-			Run: generate.ProfilesNewBeaconCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.ProfilesNewBeaconCmd(cmd, con, args)
+			},
 		}
 		Flags("beacon", profilesNewBeaconCmd, func(f *pflag.FlagSet) {
 			f.Int64P("days", "D", 0, "beacon interval days")
@@ -860,8 +942,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(profilesNewBeaconCmd, func(comp *carapace.ActionMap) {
-			(*comp)["os"] = generate.OSCompleter()
-			(*comp)["arch"] = generate.ArchCompleter()
+			(*comp)["os"] = generate.OSCompleter(con)
+			(*comp)["arch"] = generate.ArchCompleter(con)
 
 			// Todo: URL completer for C2s.
 			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
@@ -881,19 +963,23 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Remove a profile",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.RmStr}),
 			Args:  cobra.ExactArgs(1),
-			Run:   generate.ProfilesRmCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.ProfilesRmCmd(cmd, con, args)
+			},
 		}
 		Flags("profiles", profilesRmCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		carapace.Gen(profilesRmCmd).PositionalCompletion(generate.ProfileNameCompleter())
+		carapace.Gen(profilesRmCmd).PositionalCompletion(generate.ProfileNameCompleter(con))
 		profilesCmd.AddCommand(profilesRmCmd)
 
 		implantBuildsCmd := &cobra.Command{
-			Use:     consts.ImplantBuildsStr,
-			Short:   "List implant builds",
-			Long:    help.GetHelpFor([]string{consts.ImplantBuildsStr}),
-			Run:     generate.ImplantsCmd,
+			Use:   consts.ImplantBuildsStr,
+			Short: "List implant builds",
+			Long:  help.GetHelpFor([]string{consts.ImplantBuildsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.ImplantsCmd(cmd, con, args)
+			},
 			GroupID: consts.PayloadsHelpGroup,
 		}
 		Flags("implants", implantBuildsCmd, func(f *pflag.FlagSet) {
@@ -907,8 +993,8 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(profilesNewBeaconCmd, func(comp *carapace.ActionMap) {
-			(*comp)["os"] = generate.OSCompleter()
-			(*comp)["arch"] = generate.ArchCompleter()
+			(*comp)["os"] = generate.OSCompleter(con)
+			(*comp)["arch"] = generate.ArchCompleter(con)
 			(*comp)["format"] = generate.FormatCompleter()
 		})
 		server.AddCommand(implantBuildsCmd)
@@ -918,19 +1004,23 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Remove implant build",
 			Long:  help.GetHelpFor([]string{consts.ImplantBuildsStr, consts.RmStr}),
 			Args:  cobra.ExactArgs(1),
-			Run:   generate.ImplantsRmCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.ImplantsRmCmd(cmd, con, args)
+			},
 		}
 		Flags("implants", implantsRmCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		carapace.Gen(implantsRmCmd).PositionalCompletion(generate.ImplantBuildNameCompleter())
+		carapace.Gen(implantsRmCmd).PositionalCompletion(generate.ImplantBuildNameCompleter(con))
 		implantBuildsCmd.AddCommand(implantsRmCmd)
 
 		canariesCmd := &cobra.Command{
-			Use:     consts.CanariesStr,
-			Short:   "List previously generated canaries",
-			Long:    help.GetHelpFor([]string{consts.CanariesStr}),
-			Run:     generate.CanariesCmd,
+			Use:   consts.CanariesStr,
+			Short: "List previously generated canaries",
+			Long:  help.GetHelpFor([]string{consts.CanariesStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				generate.CanariesCmd(cmd, con, args)
+			},
 			GroupID: consts.PayloadsHelpGroup,
 		}
 		Flags("canaries", canariesCmd, func(f *pflag.FlagSet) {
@@ -944,7 +1034,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.WebsitesStr,
 			Short: "Host static content (used with HTTP C2)",
 			Long:  help.GetHelpFor([]string{consts.WebsitesStr}),
-			Run:   websites.WebsitesCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				websites.WebsitesCmd(cmd, con, args)
+			},
 			// Args: func(a *grumble.Args) {
 			// 	a.String("name", "website name", grumble.Default(""))
 			// },
@@ -959,7 +1051,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.RmStr,
 			Short: "Remove an entire website and all of its contents",
 			Long:  help.GetHelpFor([]string{consts.WebsitesStr, consts.RmStr}),
-			Run:   websites.WebsiteRmCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				websites.WebsiteRmCmd(cmd, con, args)
+			},
 			// Args: func(a *grumble.Args) {
 			// 	a.String("name", "website name", grumble.Default(""))
 			// },
@@ -973,7 +1067,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.RmWebContentStr,
 			Short: "Remove specific content from a website",
 			Long:  help.GetHelpFor([]string{consts.WebsitesStr, consts.RmWebContentStr}),
-			Run:   websites.WebsitesRmContent,
+			Run: func(cmd *cobra.Command, args []string) {
+				websites.WebsitesRmContent(cmd, con, args)
+			},
 		}
 		Flags("websites", websitesRmWebContentCmd, func(f *pflag.FlagSet) {
 			f.BoolP("recursive", "r", false, "recursively add/rm content")
@@ -987,7 +1083,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.AddWebContentStr,
 			Short: "Add content to a website",
 			Long:  help.GetHelpFor([]string{consts.WebsitesStr, consts.RmWebContentStr}),
-			Run:   websites.WebsitesAddContentCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				websites.WebsitesAddContentCmd(cmd, con, args)
+			},
 		}
 		Flags("websites", websitesContentCmd, func(f *pflag.FlagSet) {
 			f.StringP("website", "w", "", "website name")
@@ -1006,7 +1104,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.WebContentTypeStr,
 			Short: "Update a path's content-type",
 			Long:  help.GetHelpFor([]string{consts.WebsitesStr, consts.WebContentTypeStr}),
-			Run:   websites.WebsitesUpdateContentCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				websites.WebsitesUpdateContentCmd(cmd, con, args)
+			},
 		}
 		Flags("websites", websitesContentTypeCmd, func(f *pflag.FlagSet) {
 			f.StringP("website", "w", "", "website name")
@@ -1024,7 +1124,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Manage beacons",
 			Long:    help.GetHelpFor([]string{consts.BeaconsStr}),
 			GroupID: consts.SliverHelpGroup,
-			Run:     beacons.BeaconsCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				beacons.BeaconsCmd(cmd, con, args)
+			},
 		}
 		Flags("beacons", beaconsCmd, func(f *pflag.FlagSet) {
 			f.StringP("kill", "k", "", "kill the designated beacon")
@@ -1037,25 +1139,29 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(beaconsCmd, func(comp *carapace.ActionMap) {
-			(*comp)["kill"] = use.BeaconIDCompleter()
+			(*comp)["kill"] = use.BeaconIDCompleter(con)
 		})
 		beaconsRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
 			Short: "Remove a beacon",
 			Long:  help.GetHelpFor([]string{consts.BeaconsStr, consts.RmStr}),
-			Run:   beacons.BeaconsRmCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				beacons.BeaconsRmCmd(cmd, con, args)
+			},
 		}
 		Flags("beacons", beaconsRmCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		carapace.Gen(beaconsRmCmd).PositionalCompletion(use.BeaconIDCompleter())
+		carapace.Gen(beaconsRmCmd).PositionalCompletion(use.BeaconIDCompleter(con))
 		beaconsCmd.AddCommand(beaconsRmCmd)
 
 		beaconsWatchCmd := &cobra.Command{
 			Use:   consts.WatchStr,
 			Short: "Watch your beacons",
 			Long:  help.GetHelpFor([]string{consts.BeaconsStr, consts.WatchStr}),
-			Run:   beacons.BeaconsWatchCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				beacons.BeaconsWatchCmd(cmd, con, args)
+			},
 		}
 		Flags("beacons", beaconsWatchCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
@@ -1066,7 +1172,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.PruneStr,
 			Short: "Prune stale beacons automatically",
 			Long:  help.GetHelpFor([]string{consts.BeaconsStr, consts.PruneStr}),
-			Run:   beacons.BeaconsPruneCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				beacons.BeaconsPruneCmd(cmd, con, args)
+			},
 		}
 		Flags("beacons", beaconsPruneCmd, func(f *pflag.FlagSet) {
 			f.StringP("duration", "d", "1h", "duration to prune beacons that have missed their last checkin")
@@ -1082,9 +1190,7 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short: "Open source licenses",
 			Long:  help.GetHelpFor([]string{consts.LicensesStr}),
 			Run: func(cmd *cobra.Command, args []string) {
-				log.Println()
-				log.Println(licenses.All)
-				log.Println()
+				con.Println(licenses.All)
 			},
 			GroupID: consts.GenericHelpGroup,
 		})
@@ -1092,10 +1198,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ WireGuard ] --------------------------------------------------------------
 
 		wgConfigCmd := &cobra.Command{
-			Use:     consts.WgConfigStr,
-			Short:   "Generate a new WireGuard client config",
-			Long:    help.GetHelpFor([]string{consts.WgConfigStr}),
-			Run:     wireguard.WGConfigCmd,
+			Use:   consts.WgConfigStr,
+			Short: "Generate a new WireGuard client config",
+			Long:  help.GetHelpFor([]string{consts.WgConfigStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				wireguard.WGConfigCmd(cmd, con, args)
+			},
 			GroupID: consts.NetworkHelpGroup,
 		}
 		server.AddCommand(wgConfigCmd)
@@ -1118,22 +1226,28 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		monitorCmd.AddCommand(&cobra.Command{
 			Use:   "start",
 			Short: "Start the monitoring loops",
-			Run:   monitor.MonitorStartCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				monitor.MonitorStartCmd(cmd, con, args)
+			},
 		})
 		monitorCmd.AddCommand(&cobra.Command{
 			Use:   "stop",
 			Short: "Stop the monitoring loops",
-			Run:   monitor.MonitorStopCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				monitor.MonitorStopCmd(cmd, con, args)
+			},
 		})
 		server.AddCommand(monitorCmd)
 
 		// [ Loot ] --------------------------------------------------------------
 
 		lootCmd := &cobra.Command{
-			Use:     consts.LootStr,
-			Short:   "Manage the server's loot store",
-			Long:    help.GetHelpFor([]string{consts.LootStr}),
-			Run:     loot.LootCmd,
+			Use:   consts.LootStr,
+			Short: "Manage the server's loot store",
+			Long:  help.GetHelpFor([]string{consts.LootStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				loot.LootCmd(cmd, con, args)
+			},
 			GroupID: consts.SliverHelpGroup,
 		}
 		Flags("loot", lootCmd, func(f *pflag.FlagSet) {
@@ -1145,8 +1259,10 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.LootLocalStr,
 			Short: "Add a local file to the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.LootLocalStr}),
-			Run:   loot.LootAddLocalCmd,
-			Args:  cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
+				loot.LootAddLocalCmd(cmd, con, args)
+			},
+			Args: cobra.ExactArgs(1),
 		}
 		lootCmd.AddCommand(lootAddCmd)
 		Flags("loot", lootAddCmd, func(f *pflag.FlagSet) {
@@ -1162,8 +1278,10 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.LootRemoteStr,
 			Short: "Add a remote file from the current session to the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.LootRemoteStr}),
-			Run:   loot.LootAddRemoteCmd,
-			Args:  cobra.ExactArgs(1), // 	a.String("path", "The file path on the remote host to the loot")
+			Run: func(cmd *cobra.Command, args []string) {
+				loot.LootAddRemoteCmd(cmd, con, args)
+			},
+			Args: cobra.ExactArgs(1), // 	a.String("path", "The file path on the remote host to the loot")
 		}
 		lootCmd.AddCommand(lootRemoteCmd)
 		Flags("loot", lootRemoteCmd, func(f *pflag.FlagSet) {
@@ -1177,7 +1295,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.LootCredsStr,
 			Short: "Add credentials to the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.LootCredsStr}),
-			Run:   loot.LootAddCredentialCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				loot.LootAddCredentialCmd(cmd, con, args)
+			},
 		}
 		lootCmd.AddCommand(lootCredsCmd)
 		Flags("loot", lootCredsCmd, func(f *pflag.FlagSet) {
@@ -1189,7 +1309,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.RenameStr,
 			Short: "Re-name a piece of existing loot",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.RenameStr}),
-			Run:   loot.LootRenameCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				loot.LootRenameCmd(cmd, con, args)
+			},
 		}
 		lootCmd.AddCommand(lootRenameCmd)
 		Flags("loot", lootRenameCmd, func(f *pflag.FlagSet) {
@@ -1200,7 +1322,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.FetchStr,
 			Short: "Fetch a piece of loot from the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.FetchStr}),
-			Run:   loot.LootFetchCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				loot.LootFetchCmd(cmd, con, args)
+			},
 		}
 		lootCmd.AddCommand(lootFetchCmd)
 		Flags("loot", lootFetchCmd, func(f *pflag.FlagSet) {
@@ -1216,7 +1340,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.RmStr,
 			Short: "Remove a piece of loot from the server's loot store",
 			Long:  help.GetHelpFor([]string{consts.LootStr, consts.RmStr}),
-			Run:   loot.LootRmCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				loot.LootRmCmd(cmd, con, args)
+			},
 		}
 		lootCmd.AddCommand(lootRmCmd)
 		Flags("loot", lootRmCmd, func(f *pflag.FlagSet) {
@@ -1228,10 +1354,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 
 		// [ Hosts ] --------------------------------------------------------------
 		hostsCmd := &cobra.Command{
-			Use:     consts.HostsStr,
-			Short:   "Manage the database of hosts",
-			Long:    help.GetHelpFor([]string{consts.HostsStr}),
-			Run:     hosts.HostsCmd,
+			Use:   consts.HostsStr,
+			Short: "Manage the database of hosts",
+			Long:  help.GetHelpFor([]string{consts.HostsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				hosts.HostsCmd(cmd, con, args)
+			},
 			GroupID: consts.SliverHelpGroup,
 		}
 		server.AddCommand(hostsCmd)
@@ -1243,7 +1371,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.RmStr,
 			Short: "Remove a host from the database",
 			Long:  help.GetHelpFor([]string{consts.HostsStr, consts.RmStr}),
-			Run:   hosts.HostsRmCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				hosts.HostsRmCmd(cmd, con, args)
+			},
 		}
 		hostsCmd.AddCommand(hostsRmCmd)
 		Flags("hosts", hostsRmCmd, func(f *pflag.FlagSet) {
@@ -1254,7 +1384,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.IOCStr,
 			Short: "Manage tracked IOCs on a given host",
 			Long:  help.GetHelpFor([]string{consts.HostsStr, consts.IOCStr}),
-			Run:   hosts.HostsIOCCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				hosts.HostsIOCCmd(cmd, con, args)
+			},
 		}
 		hostsCmd.AddCommand(hostsIOCCmd)
 		Flags("iocs", hostsIOCCmd, func(f *pflag.FlagSet) {
@@ -1265,7 +1397,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.RmStr,
 			Short: "Delete IOCs from the database",
 			Long:  help.GetHelpFor([]string{consts.HostsStr, consts.IOCStr, consts.RmStr}),
-			Run:   hosts.HostsIOCRmCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				hosts.HostsIOCRmCmd(cmd, con, args)
+			},
 		}
 		hostsIOCCmd.AddCommand(hostsIOCRmCmd)
 		Flags("iocs", hostsIOCRmCmd, func(f *pflag.FlagSet) {
@@ -1275,10 +1409,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Reactions ] -----------------------------------------------------------------
 
 		reactionCmd := &cobra.Command{
-			Use:     consts.ReactionStr,
-			Short:   "Manage automatic reactions to events",
-			Long:    help.GetHelpFor([]string{consts.ReactionStr}),
-			Run:     reaction.ReactionCmd,
+			Use:   consts.ReactionStr,
+			Short: "Manage automatic reactions to events",
+			Long:  help.GetHelpFor([]string{consts.ReactionStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				reaction.ReactionCmd(cmd, con, args)
+			},
 			GroupID: consts.SliverHelpGroup,
 		}
 		server.AddCommand(reactionCmd)
@@ -1287,7 +1423,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.SetStr,
 			Short: "Set a reaction to an event",
 			Long:  help.GetHelpFor([]string{consts.ReactionStr, consts.SetStr}),
-			Run:   reaction.ReactionSetCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				reaction.ReactionSetCmd(cmd, con, args)
+			},
 		}
 		reactionCmd.AddCommand(reactionSetCmd)
 		Flags("reactions", reactionSetCmd, func(f *pflag.FlagSet) {
@@ -1298,7 +1436,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.UnsetStr,
 			Short: "Unset an existing reaction",
 			Long:  help.GetHelpFor([]string{consts.ReactionStr, consts.UnsetStr}),
-			Run:   reaction.ReactionUnsetCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				reaction.ReactionUnsetCmd(cmd, con, args)
+			},
 		}
 		reactionCmd.AddCommand(reactionUnsetCmd)
 		Flags("reactions", reactionUnsetCmd, func(f *pflag.FlagSet) {
@@ -1309,7 +1449,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.SaveStr,
 			Short: "Save current reactions to disk",
 			Long:  help.GetHelpFor([]string{consts.ReactionStr, consts.SaveStr}),
-			Run:   reaction.ReactionSaveCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				reaction.ReactionSaveCmd(cmd, con, args)
+			},
 		}
 		reactionCmd.AddCommand(reactionSaveCmd)
 
@@ -1317,7 +1459,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.ReloadStr,
 			Short: "Reload reactions from disk, replaces the running configuration",
 			Long:  help.GetHelpFor([]string{consts.ReactionStr, consts.ReloadStr}),
-			Run:   reaction.ReactionReloadCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				reaction.ReactionReloadCmd(cmd, con, args)
+			},
 		}
 		reactionCmd.AddCommand(reactionReloadCmd)
 
@@ -1327,7 +1471,9 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Short:   "Manage connection to Prelude's Operator",
 			Long:    help.GetHelpFor([]string{consts.PreludeOperatorStr}),
 			GroupID: consts.GenericHelpGroup,
-			Run:     operator.OperatorCmd,
+			Run: func(cmd *cobra.Command, args []string) {
+				operator.OperatorCmd(cmd, con, args)
+			},
 		}
 		server.AddCommand(operatorCmd)
 
@@ -1335,8 +1481,10 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 			Use:   consts.ConnectStr,
 			Short: "Connect with Prelude's Operator",
 			Long:  help.GetHelpFor([]string{consts.PreludeOperatorStr, consts.ConnectStr}),
-			Run:   operator.ConnectCmd,
-			Args:  cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
+				operator.ConnectCmd(cmd, con, args)
+			},
+			Args: cobra.ExactArgs(1),
 		}
 		operatorCmd.AddCommand(operatorConnectCmd)
 		Flags("operator", operatorConnectCmd, func(f *pflag.FlagSet) {
@@ -1350,10 +1498,12 @@ func ServerCommands(serverCmds func() []*cobra.Command) console.Commands {
 		// [ Builders ] ---------------------------------------------
 
 		buildersCmd := &cobra.Command{
-			Use:     consts.BuildersStr,
-			Short:   "List external builders",
-			Long:    help.GetHelpFor([]string{consts.BuildersStr}),
-			Run:     builders.BuildersCmd,
+			Use:   consts.BuildersStr,
+			Short: "List external builders",
+			Long:  help.GetHelpFor([]string{consts.BuildersStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				builders.BuildersCmd(cmd, con, args)
+			},
 			GroupID: consts.PayloadsHelpGroup,
 		}
 		server.AddCommand(buildersCmd)

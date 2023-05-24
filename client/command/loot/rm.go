@@ -24,23 +24,21 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
-func LootRmCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func LootRmCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	loot, err := SelectLoot(cmd, con.Rpc)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 
 	_, err = con.Rpc.LootRm(context.Background(), loot)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	con.Println()
-	log.Infof("Removed loot from server\n")
+	con.PrintInfof("Removed loot from server\n")
 }

@@ -24,23 +24,21 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // SettingsAutoAdultCmd - The client settings command
-func SettingsAutoAdultCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func SettingsAutoAdultCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	}
 	con.Settings.AutoAdult = !con.Settings.AutoAdult
-	log.Infof("Auto Adult = %v\n", con.Settings.AutoAdult)
+	con.PrintInfof("Auto Adult = %v\n", con.Settings.AutoAdult)
 }
 
 // IsUserAnAdult - This should be called for any dangerous (OPSEC-wise) functions

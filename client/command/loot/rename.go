@@ -25,17 +25,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // LootRenameCmd - Rename a piece of loot
-func LootRenameCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func LootRenameCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	loot, err := SelectLoot(cmd, con.Rpc)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	oldName := loot.Name
@@ -48,8 +46,8 @@ func LootRenameCmd(cmd *cobra.Command, args []string) {
 		Name:   newName,
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
-	log.Infof("Renamed %s -> %s\n", oldName, loot.Name)
+	con.PrintInfof("Renamed %s -> %s\n", oldName, loot.Name)
 }

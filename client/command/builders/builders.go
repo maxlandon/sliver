@@ -28,22 +28,20 @@ import (
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
 // BuildersCmd - List external builders
-func BuildersCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func BuildersCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	builders, err := con.Rpc.Builders(context.Background(), &commonpb.Empty{})
 	if err != nil {
-		log.Errorf("%s", err)
+		con.PrintErrorf("%s", err)
 		return
 	}
 	if len(builders.Builders) == 0 {
-		log.Infof("No external builders connected to server\n")
+		con.PrintInfof("No external builders connected to server\n")
 	} else {
 		PrintBuilders(builders.Builders, con)
 	}
@@ -71,5 +69,5 @@ func PrintBuilders(externalBuilders []*clientpb.Builder, con *console.SliverCons
 		}
 		tw.AppendRow(table.Row(row))
 	}
-	log.Printf("%s\n", tw.Render())
+	con.Printf("%s\n", tw.Render())
 }

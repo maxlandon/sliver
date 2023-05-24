@@ -23,21 +23,19 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // SettingsBeaconsAutoResultCmd - The client settings command
-func SettingsBeaconsAutoResultCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func SettingsBeaconsAutoResultCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	}
 	con.Settings.BeaconAutoResults = !con.Settings.BeaconAutoResults
-	log.Infof("Beacon Auto Result = %v\n", con.Settings.BeaconAutoResults)
+	con.PrintInfof("Beacon Auto Result = %v\n", con.Settings.BeaconAutoResults)
 }

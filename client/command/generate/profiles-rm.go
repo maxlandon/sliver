@@ -26,13 +26,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // ProfilesRmCmd - Delete an implant profile
-func ProfilesRmCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ProfilesRmCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var name string
 	if len(args) > 0 {
@@ -40,12 +38,12 @@ func ProfilesRmCmd(cmd *cobra.Command, args []string) {
 	}
 	// name := ctx.Args.String("name")
 	if name == "" {
-		log.Errorf("No profile name specified\n")
+		con.PrintErrorf("No profile name specified\n")
 		return
 	}
 	profile := GetImplantProfileByName(name, con)
 	if profile == nil {
-		log.Errorf("No profile found with name '%s'\n", name)
+		con.PrintErrorf("No profile found with name '%s'\n", name)
 		return
 	}
 	confirm := false
@@ -58,7 +56,7 @@ func ProfilesRmCmd(cmd *cobra.Command, args []string) {
 		Name: name,
 	})
 	if err != nil {
-		log.Errorf("Failed to delete profile %s\n", err)
+		con.PrintErrorf("Failed to delete profile %s\n", err)
 		return
 	}
 }

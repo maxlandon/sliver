@@ -26,13 +26,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // HTTPSListenerCmd - Start an HTTPS listener
-func HTTPSListenerCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func HTTPSListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	domain, _ := cmd.Flags().GetString("domain")
 	lhost, _ := cmd.Flags().GetString("lhost")
@@ -47,23 +45,23 @@ func HTTPSListenerCmd(cmd *cobra.Command, args []string) {
 
 	longPollTimeout, err := time.ParseDuration(pollTimeout)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	longPollJitter, err := time.ParseDuration(pollJitter)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 
 	cert, key, err := getLocalCertificatePair(cmd)
 	if err != nil {
 		con.Println()
-		log.Errorf("Failed to load local certificate %s\n", err)
+		con.PrintErrorf("Failed to load local certificate %s\n", err)
 		return
 	}
 
-	log.Infof("Starting HTTPS %s:%d listener ...\n", domain, lport)
+	con.PrintInfof("Starting HTTPS %s:%d listener ...\n", domain, lport)
 	https, err := con.Rpc.StartHTTPSListener(context.Background(), &clientpb.HTTPListenerReq{
 		Domain:          domain,
 		Website:         website,
@@ -81,9 +79,9 @@ func HTTPSListenerCmd(cmd *cobra.Command, args []string) {
 	})
 	con.Println()
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	} else {
-		log.Infof("Successfully started job #%d\n", https.JobID)
+		con.PrintInfof("Successfully started job #%d\n", https.JobID)
 	}
 }
 

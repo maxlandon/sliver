@@ -27,18 +27,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // ShikataGaNaiCmd - Command wrapper for the Shikata Ga Nai shellcode encoder
-func ShikataGaNaiCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ShikataGaNaiCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	shellcodeFile := args[0]
 	rawShellcode, err := ioutil.ReadFile(shellcodeFile)
 	if err != nil {
-		log.Errorf("Failed to read shellcode file: %s", err)
+		con.PrintErrorf("Failed to read shellcode file: %s", err)
 		return
 	}
 
@@ -47,11 +45,11 @@ func ShikataGaNaiCmd(cmd *cobra.Command, args []string) {
 	rawBadChars, _ := cmd.Flags().GetString("bad-chars")
 	badChars, err := hex.DecodeString(rawBadChars)
 	if err != nil {
-		log.Errorf("Failed to decode bad chars: %s", err)
+		con.PrintErrorf("Failed to decode bad chars: %s", err)
 		return
 	}
 
-	log.Infof("Encoding shellcode with %d iterations and %d bad chars\n", iterations, len(badChars))
+	con.PrintInfof("Encoding shellcode with %d iterations and %d bad chars\n", iterations, len(badChars))
 
 	shellcodeResp, err := con.Rpc.ShellcodeEncoder(context.Background(), &clientpb.ShellcodeEncodeReq{
 		Encoder:      clientpb.ShellcodeEncoder_SHIKATA_GA_NAI,
@@ -62,11 +60,11 @@ func ShikataGaNaiCmd(cmd *cobra.Command, args []string) {
 		Request:      con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	if shellcodeResp.Response != nil && shellcodeResp.Response.Err != "" {
-		log.Errorf("%s\n", shellcodeResp.Response.Err)
+		con.PrintErrorf("%s\n", shellcodeResp.Response.Err)
 		return
 	}
 
@@ -78,8 +76,8 @@ func ShikataGaNaiCmd(cmd *cobra.Command, args []string) {
 
 	err = ioutil.WriteFile(outputFile, shellcodeResp.Data, 0o644)
 	if err != nil {
-		log.Errorf("Failed to write shellcode file: %s", err)
+		con.PrintErrorf("Failed to write shellcode file: %s", err)
 		return
 	}
-	log.Infof("Shellcode written to %s (%d bytes)\n", outputFile, len(shellcodeResp.Data))
+	con.PrintInfof("Shellcode written to %s (%d bytes)\n", outputFile, len(shellcodeResp.Data))
 }

@@ -30,18 +30,16 @@ import (
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // ReactionUnsetCmd - Unset a reaction upon an event
-func ReactionUnsetCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ReactionUnsetCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	reactionID, _ := cmd.Flags().GetInt("id")
 	if reactionID == 0 {
 		reaction, err := selectReaction(con)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 		reactionID = reaction.ID
@@ -49,9 +47,9 @@ func ReactionUnsetCmd(cmd *cobra.Command, args []string) {
 	success := core.Reactions.Remove(reactionID)
 	if success {
 		con.Println()
-		log.Infof("Successfully removed reaction with id %d", reactionID)
+		con.PrintInfof("Successfully removed reaction with id %d", reactionID)
 	} else {
-		log.Errorf("No reaction found with id %d", reactionID)
+		con.PrintErrorf("No reaction found with id %d", reactionID)
 	}
 	con.Println()
 }

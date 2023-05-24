@@ -6,7 +6,6 @@ import (
 	"github.com/rsteube/carapace"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
@@ -24,7 +23,7 @@ func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverConsol
 	_, ok := builds.GetConfigs()[implantName]
 	if implantName == "" || !ok {
 		// no built implant found for profile, generate a new one
-		log.Infof("No builds found for profile %s, generating a new one\n", profile.GetName())
+		con.PrintInfof("No builds found for profile %s, generating a new one\n", profile.GetName())
 		ctrl := make(chan bool)
 		con.SpinUntil("Compiling, please wait ...", ctrl)
 
@@ -34,19 +33,19 @@ func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverConsol
 		ctrl <- true
 		<-ctrl
 		if err != nil {
-			log.Errorf("Error generating implant\n")
+			con.PrintErrorf("Error generating implant\n")
 			return data, err
 		}
 		data = generated.GetFile().GetData()
 		profile.Config.FileName = generated.File.Name
 		_, err = con.Rpc.SaveImplantProfile(context.Background(), profile)
 		if err != nil {
-			log.Errorf("Error updating implant profile\n")
+			con.PrintErrorf("Error updating implant profile\n")
 			return data, err
 		}
 	} else {
 		// Found a build, reuse that one
-		log.Infof("Sliver name for profile: %s\n", implantName)
+		con.PrintInfof("Sliver name for profile: %s\n", implantName)
 		regenerate, err := con.Rpc.Regenerate(context.Background(), &clientpb.RegenerateReq{
 			ImplantName: implantName,
 		})
@@ -59,8 +58,8 @@ func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverConsol
 }
 
 // FormatCompleter completes builds' architectures.
-func ArchCompleter() carapace.Action {
-	compiler, err := console.Client.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
+func ArchCompleter(con *console.SliverConsole) carapace.Action {
+	compiler, err := con.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return carapace.ActionMessage("No compiler info: %s", err.Error())
 	}
@@ -91,8 +90,8 @@ nextUnsupported:
 }
 
 // FormatCompleter completes build operating systems
-func OSCompleter() carapace.Action {
-	compiler, err := console.Client.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
+func OSCompleter(con *console.SliverConsole) carapace.Action {
+	compiler, err := con.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return carapace.ActionMessage("No compiler info: %s", err.Error())
 	}

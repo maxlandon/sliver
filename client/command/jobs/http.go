@@ -25,13 +25,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
 // HTTPListenerCmd - Start an HTTP listener
-func HTTPListenerCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func HTTPListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	domain, _ := cmd.Flags().GetString("domain")
 	lhost, _ := cmd.Flags().GetString("lhost")
@@ -44,16 +42,16 @@ func HTTPListenerCmd(cmd *cobra.Command, args []string) {
 
 	longPollTimeout, err := time.ParseDuration(pollTimeout)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	longPollJitter, err := time.ParseDuration(pollJitter)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 
-	log.Infof("Starting HTTP %s:%d listener ...\n", domain, lport)
+	con.PrintInfof("Starting HTTP %s:%d listener ...\n", domain, lport)
 	http, err := con.Rpc.StartHTTPListener(context.Background(), &clientpb.HTTPListenerReq{
 		Domain:          domain,
 		Website:         website,
@@ -66,8 +64,8 @@ func HTTPListenerCmd(cmd *cobra.Command, args []string) {
 		LongPollJitter:  int64(longPollJitter),
 	})
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	} else {
-		log.Infof("Successfully started job #%d\n", http.JobID)
+		con.PrintInfof("Successfully started job #%d\n", http.JobID)
 	}
 }

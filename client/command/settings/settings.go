@@ -27,18 +27,16 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // SettingsCmd - The client settings command
-func SettingsCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func SettingsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	}
@@ -52,34 +50,32 @@ func SettingsCmd(cmd *cobra.Command, args []string) {
 	tw.AppendRow(table.Row{"Small Term Width", con.Settings.SmallTermWidth, "Omit some table columns when terminal width is less than this value"})
 	tw.AppendRow(table.Row{"Always Overflow", con.Settings.AlwaysOverflow, "Disable table pagination"})
 	tw.AppendRow(table.Row{"Vim mode", con.Settings.VimMode, "Navigation mode, vim style"})
-	log.Printf("%s\n", tw.Render())
+	con.Printf("%s\n", tw.Render())
 }
 
 // SettingsAlwaysOverflow - Toggle always overflow
-func SettingsAlwaysOverflow(cmd *cobra.Command, args []string) {
-	con := console.Client
+func SettingsAlwaysOverflow(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	}
 	con.Settings.AlwaysOverflow = !con.Settings.AlwaysOverflow
-	log.Infof("Always overflow = %v\n", con.Settings.AlwaysOverflow)
+	con.PrintInfof("Always overflow = %v\n", con.Settings.AlwaysOverflow)
 }
 
 // SettingsSmallTerm - Modify small terminal width value
-func SettingsSmallTerm(cmd *cobra.Command, args []string) {
-	con := console.Client
+func SettingsSmallTerm(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	}
@@ -87,31 +83,30 @@ func SettingsSmallTerm(cmd *cobra.Command, args []string) {
 	prompt := &survey.Input{Message: "Set small width:"}
 	err = survey.AskOne(prompt, &result)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	newWidth, err := strconv.Atoi(result)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	if newWidth < 1 {
-		log.Errorf("Invalid width (too small)\n")
+		con.PrintErrorf("Invalid width (too small)\n")
 		return
 	}
 	con.Settings.SmallTermWidth = newWidth
-	log.Infof("Small terminal width set to %d\n", con.Settings.SmallTermWidth)
+	con.PrintInfof("Small terminal width set to %d\n", con.Settings.SmallTermWidth)
 }
 
 // SettingsTablesCmd - The client settings command
-func SettingsTablesCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func SettingsTablesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	}
@@ -127,32 +122,31 @@ func SettingsTablesCmd(cmd *cobra.Command, args []string) {
 	}
 	err = survey.AskOne(prompt, &style)
 	if err != nil {
-		log.Errorf("No selection\n")
+		con.PrintErrorf("No selection\n")
 		return
 	}
 	if _, ok := tableStyles[style]; ok {
 		con.Settings.TableStyle = style
 	} else {
-		log.Errorf("Invalid style\n")
+		con.PrintErrorf("Invalid style\n")
 	}
 }
 
 // SettingsSaveCmd - The client settings command
-func SettingsSaveCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func SettingsSaveCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	}
 	err = assets.SaveSettings(con.Settings)
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	} else {
-		log.Infof("Settings saved to disk\n")
+		con.PrintInfof("Settings saved to disk\n")
 	}
 }

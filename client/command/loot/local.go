@@ -28,18 +28,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
 // LootAddLocalCmd - Add a local file to the server as loot
-func LootAddLocalCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func LootAddLocalCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	localPath := args[0]
 	if _, err := os.Stat(localPath); os.IsNotExist(err) {
-		log.Errorf("Path '%s' not found\n", localPath)
+		con.PrintErrorf("Path '%s' not found\n", localPath)
 		return
 	}
 
@@ -54,7 +52,7 @@ func LootAddLocalCmd(cmd *cobra.Command, args []string) {
 	if lootTypeStr != "" {
 		lootType, err = lootTypeFromHumanStr(lootTypeStr)
 		if err == ErrInvalidLootType {
-			log.Errorf("Invalid loot type %s\n", lootTypeStr)
+			con.PrintErrorf("Invalid loot type %s\n", lootTypeStr)
 			return
 		}
 	} else {
@@ -66,7 +64,7 @@ func LootAddLocalCmd(cmd *cobra.Command, args []string) {
 	if lootFileTypeStr != "" {
 		lootFileType, err = lootFileTypeFromHumanStr(lootFileTypeStr)
 		if err != nil {
-			log.Errorf("%s\n", err)
+			con.PrintErrorf("%s\n", err)
 			return
 		}
 	} else {
@@ -78,7 +76,7 @@ func LootAddLocalCmd(cmd *cobra.Command, args []string) {
 	}
 	data, err := ioutil.ReadFile(localPath)
 	if err != nil {
-		log.Errorf("Failed to read file %s\n", err)
+		con.PrintErrorf("Failed to read file %s\n", err)
 		return
 	}
 
@@ -101,8 +99,8 @@ func LootAddLocalCmd(cmd *cobra.Command, args []string) {
 	ctrl <- true
 	<-ctrl
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 	}
 
-	log.Infof("Successfully added loot to server (%s)\n", loot.LootID)
+	con.PrintInfof("Successfully added loot to server (%s)\n", loot.LootID)
 }

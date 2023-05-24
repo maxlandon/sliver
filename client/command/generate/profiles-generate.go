@@ -27,12 +27,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 // ProfilesGenerateCmd - Generate an implant binary based on a profile
-func ProfilesGenerateCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ProfilesGenerateCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	var name string
 	if len(args) > 0 {
@@ -40,7 +38,7 @@ func ProfilesGenerateCmd(cmd *cobra.Command, args []string) {
 	}
 
 	if name == "" {
-		log.Errorf("No profile name specified\n")
+		con.PrintErrorf("No profile name specified\n")
 		return
 	}
 	save, _ := cmd.Flags().GetString("save")
@@ -57,11 +55,11 @@ func ProfilesGenerateCmd(cmd *cobra.Command, args []string) {
 		profile.Config.Name = buildImplantName(implantFile.Name)
 		_, err = con.Rpc.SaveImplantProfile(context.Background(), profile)
 		if err != nil {
-			log.Errorf("could not update implant profile: %v\n", err)
+			con.PrintErrorf("could not update implant profile: %v\n", err)
 			return
 		}
 	} else {
-		log.Errorf("No profile with name '%s'", name)
+		con.PrintErrorf("No profile with name '%s'", name)
 	}
 }
 

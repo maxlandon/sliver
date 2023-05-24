@@ -21,14 +21,14 @@ package operator
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/bishopfox/sliver/client/log"
+	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/prelude"
 )
 
-func OperatorCmd(cmd *cobra.Command, args []string) {
+func OperatorCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	if prelude.ImplantMapper != nil {
-		log.Infof("Connected to Operator at %s\n", prelude.ImplantMapper.GetConfig().OperatorURL)
+		con.PrintInfof("Connected to Operator at %s\n", prelude.ImplantMapper.GetConfig().OperatorURL)
 		return
 	}
-	log.Infof("Not connected to any Operator server. Use `operator connect` to connect to one.")
+	con.PrintInfof("Not connected to any Operator server. Use `operator connect` to connect to one.")
 }

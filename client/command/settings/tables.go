@@ -29,7 +29,6 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 )
 
 var (
@@ -207,7 +206,7 @@ func PaginateTable(tw table.Writer, skipPages int, overflow bool, interactive bo
 			if len(line) == 0 {
 				continue
 			}
-			log.Printf("%s\n", line)
+			con.Printf("%s\n", line)
 		}
 		con.Println()
 		if interactive {
@@ -223,12 +222,12 @@ func PaginateTable(tw table.Writer, skipPages int, overflow bool, interactive bo
 					}
 					con.Println()
 				} else {
-					log.Printf(console.Bold+"Page [%d/%d]\n", pageNumber+1, len(pages))
+					con.Printf(console.Bold+"Page [%d/%d]\n", pageNumber+1, len(pages))
 				}
 			}
 		} else {
 			if 1 < len(pages) {
-				log.Printf(console.Bold+"Page [%d/%d]\n", pageNumber+1, len(pages))
+				con.Printf(console.Bold+"Page [%d/%d]\n", pageNumber+1, len(pages))
 			}
 			break
 		}

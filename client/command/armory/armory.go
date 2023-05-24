@@ -36,7 +36,6 @@ import (
 	"github.com/bishopfox/sliver/client/command/extensions"
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/server/cryptography/minisign"
 )
 
@@ -106,28 +105,27 @@ var (
 )
 
 // ArmoryCmd - The main armory command
-func ArmoryCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
+func ArmoryCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 	armoriesConfig := assets.GetArmoriesConfig()
-	log.Infof("Fetching %d armory index(es) ... ", len(armoriesConfig))
+	con.PrintInfof("Fetching %d armory index(es) ... ", len(armoriesConfig))
 	clientConfig := parseArmoryHTTPConfig(cmd)
 	indexes := fetchIndexes(armoriesConfig, clientConfig)
 	if len(indexes) != len(armoriesConfig) {
-		log.Printf("errors!\n")
+		con.Printf("errors!\n")
 		indexCache.Range(func(key, value interface{}) bool {
 			cacheEntry := value.(indexCacheEntry)
 			if cacheEntry.LastErr != nil {
-				log.Errorf("%s - %s\n", cacheEntry.RepoURL, cacheEntry.LastErr)
+				con.PrintErrorf("%s - %s\n", cacheEntry.RepoURL, cacheEntry.LastErr)
 			}
 			return true
 		})
 	} else {
-		log.Printf("done!\n")
+		con.Printf("done!\n")
 	}
 
 	if 0 < len(indexes) {
-		log.Infof("Fetching package information ... ")
+		con.PrintInfof("Fetching package information ... ")
 		fetchPackageSignatures(indexes, clientConfig)
 		errorCount := 0
 		aliases := []*alias.AliasManifest{}
@@ -137,9 +135,9 @@ func ArmoryCmd(cmd *cobra.Command, args []string) {
 			if cacheEntry.LastErr != nil {
 				errorCount++
 				if errorCount == 0 {
-					log.Printf("errors!\n")
+					con.Printf("errors!\n")
 				}
-				log.Errorf("%s - %s\n", cacheEntry.RepoURL, cacheEntry.LastErr)
+				con.PrintErrorf("%s - %s\n", cacheEntry.RepoURL, cacheEntry.LastErr)
 			} else {
 				if cacheEntry.Pkg.IsAlias {
 					aliases = append(aliases, cacheEntry.Alias)
@@ -150,13 +148,13 @@ func ArmoryCmd(cmd *cobra.Command, args []string) {
 			return true
 		})
 		if errorCount == 0 {
-			log.Printf("done!\n")
+			con.Printf("done!\n")
 		}
 		if 0 < len(aliases) || 0 < len(exts) {
 			con.Println()
 			PrintArmoryPackages(aliases, exts, con)
 		} else {
-			log.Infof("No packages found\n")
+			con.PrintInfof("No packages found\n")
 		}
 
 		con.Println()
@@ -164,10 +162,10 @@ func ArmoryCmd(cmd *cobra.Command, args []string) {
 		if 0 < len(bundles) {
 			PrintArmoryBundles(bundles, con)
 		} else {
-			log.Infof("No bundles found\n")
+			con.PrintInfof("No bundles found\n")
 		}
 	} else {
-		log.Infof("No indexes found\n")
+		con.PrintInfof("No indexes found\n")
 	}
 }
 
@@ -328,7 +326,7 @@ func PrintArmoryPackages(aliases []*alias.AliasManifest, exts []*extensions.Exte
 		}
 	}
 	tw.AppendRows(rows)
-	log.Printf("%s\n", tw.Render())
+	con.Printf("%s\n", tw.Render())
 }
 
 // PrintArmoryBundles - Prints the armory bundles
@@ -366,7 +364,7 @@ func PrintArmoryBundles(bundles []*ArmoryBundle, con *console.SliverConsole) {
 			packages,
 		})
 	}
-	log.Printf("%s\n", tw.Render())
+	con.Printf("%s\n", tw.Render())
 }
 
 func parseArmoryHTTPConfig(cmd *cobra.Command) ArmoryHTTPConfig {

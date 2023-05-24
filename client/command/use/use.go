@@ -32,7 +32,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/log"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
@@ -40,9 +39,7 @@ import (
 var ErrNoSelection = errors.New("no selection")
 
 // UseCmd - Change the active session
-func UseCmd(cmd *cobra.Command, args []string) {
-	con := console.Client
-
+func UseCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	var session *clientpb.Session
 	var beacon *clientpb.Beacon
 	var err error
@@ -59,17 +56,15 @@ func UseCmd(cmd *cobra.Command, args []string) {
 		session, beacon, err = SelectSessionOrBeacon(con)
 	}
 	if err != nil {
-		log.Errorf("%s\n", err)
+		con.PrintErrorf("%s\n", err)
 		return
 	}
 	if session != nil {
-		log.Infof("Active session %s (%s)\n", session.Name, session.ID)
+		con.PrintInfof("Active session %s (%s)\n", session.Name, session.ID)
 		con.ActiveTarget.Set(session, nil)
-		con.ExposeCommands()
 	} else if beacon != nil {
-		log.Infof("Active beacon %s (%s)\n", beacon.Name, beacon.ID)
+		con.PrintInfof("Active beacon %s (%s)\n", beacon.Name, beacon.ID)
 		con.ActiveTarget.Set(nil, beacon)
-		con.ExposeCommands()
 	}
 }
 
@@ -187,13 +182,13 @@ func SelectSessionOrBeacon(con *console.SliverConsole) (*clientpb.Session, *clie
 }
 
 // BeaconAndSessionIDCompleter - BeaconAndSessionIDCompleter for beacon / session ids
-func BeaconAndSessionIDCompleter() carapace.Action {
+func BeaconAndSessionIDCompleter(con *console.SliverConsole) carapace.Action {
 	comps := func(ctx carapace.Context) carapace.Action {
 		var action carapace.Action
 
 		return action.Invoke(ctx).Merge(
-			SessionIDCompleter().Invoke(ctx),
-			BeaconIDCompleter().Invoke(ctx),
+			SessionIDCompleter(con).Invoke(ctx),
+			BeaconIDCompleter(con).Invoke(ctx),
 		).ToA()
 	}
 
@@ -201,9 +196,7 @@ func BeaconAndSessionIDCompleter() carapace.Action {
 }
 
 // SessionIDCompleter completes session IDs
-func SessionIDCompleter() carapace.Action {
-	con := console.Client
-
+func SessionIDCompleter(con *console.SliverConsole) carapace.Action {
 	results := make([]string, 0)
 
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
@@ -222,9 +215,7 @@ func SessionIDCompleter() carapace.Action {
 }
 
 // BeaconIDCompleter completes beacon IDs
-func BeaconIDCompleter() carapace.Action {
-	con := console.Client
-
+func BeaconIDCompleter(con *console.SliverConsole) carapace.Action {
 	results := make([]string, 0)
 
 	beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
