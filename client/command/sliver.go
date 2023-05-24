@@ -1,6 +1,8 @@
 package command
 
 import (
+	"io"
+
 	"github.com/reeflective/console"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
@@ -21,6 +23,11 @@ import (
 
 // SliverCommands returns all commands bound to the implant menu.
 func SliverCommands(con *client.SliverConsole) console.Commands {
+	// Interrupts: trigger functionality with keystrokes.
+	con.App.Menu("implant").AddInterrupt(io.EOF, func(_ *console.Console) {
+		sessions.BackgroundCmd(con.App.CurrentMenu().Command, con, nil)
+	})
+
 	sliverCommands := func() *cobra.Command {
 		sliver := &cobra.Command{
 			Short: "Implant commands",

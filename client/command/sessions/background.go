@@ -8,7 +8,6 @@ import (
 
 // BackgroundCmd - Background the active session
 func BackgroundCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	con.ActiveTarget.Background()
-	con.PrintInfof("Background ...")
+	con.PrintInfof("Background ...\n")
 }

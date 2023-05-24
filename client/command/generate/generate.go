@@ -36,6 +36,7 @@ import (
 
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/bishopfox/sliver/client/spin"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/util"
@@ -680,7 +681,7 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 	listenerID, listener := con.CreateEventListener()
 
 	waiting := true
-	// spinner := spin.New()
+	spinner := spin.New()
 
 	sigint := make(chan os.Signal, 1) // Catch keyboard interrupts
 	signal.Notify(sigint, os.Interrupt)
@@ -697,15 +698,15 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 	con.Printf("done\n")
 
 	var name string
-	// msgF := "Waiting for external builder to acknowledge build (template: %s) ... %s"
+	msgF := "Waiting for external builder to acknowledge build (template: %s) ... %s"
 	for waiting {
 		select {
 
-		// case <-time.After(100 * time.Millisecond):
-		// 	elapsed := time.Since(start)
-		// 	msg := fmt.Sprintf(msgF, externalImplantConfig.Config.TemplateName, elapsed.Round(time.Second))
-		// 	fmt.Fprintf(con.App.CurrentMenu(), console.Clearln+" %s  %s", spinner.Next(), msg)
-		//
+		case <-time.After(100 * time.Millisecond):
+			elapsed := time.Since(start)
+			msg := fmt.Sprintf(msgF, externalImplantConfig.Config.TemplateName, elapsed.Round(time.Second))
+			fmt.Fprintf(con.App.CurrentMenu().OutOrStdout(), console.Clearln+" %s  %s", spinner.Next(), msg)
+
 		case event := <-listener:
 			switch event.EventType {
 
@@ -721,7 +722,7 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 
 			case consts.AcknowledgeBuildEvent:
 				if string(event.Data) == externalImplantConfig.Config.ID {
-					// msgF = "External build acknowledged by builder (template: %s) ... %s"
+					msgF = "External build acknowledged by builder (template: %s) ... %s"
 				}
 
 			case consts.ExternalBuildCompletedEvent:
