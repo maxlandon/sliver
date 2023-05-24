@@ -292,9 +292,10 @@ const (
 )
 
 // Command types / filters (per OS/type/C2/etc)
+// Should not be changed: extension.json artifact file (architecture/OS) rely on some of the values below,
 const (
-	SessionCmdsFilter   = "session-commands"
-	BeaconCmdsFilter    = "beacon-commands"
-	WindowsCmdsFilter   = "windows-commands"
-	WireguardCmdsFilter = "wireguard-commands"
+	SessionCmdsFilter   = "session"
+	BeaconCmdsFilter    = "beacon"
+	WindowsCmdsFilter   = "windows"
+	WireguardCmdsFilter = "wireguard"
 )
