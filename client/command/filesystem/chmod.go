@@ -35,14 +35,14 @@ func ChmodCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 		return
 	}
 
-	filePath := args[1]
+	filePath := args[0]
 
 	if filePath == "" {
 		con.PrintErrorf("Missing parameter: file or directory name\n")
 		return
 	}
 
-	fileMode := args[0]
+	fileMode := args[1]
 
 	if fileMode == "" {
 		con.PrintErrorf("Missing parameter: file permissions (mode)\n")

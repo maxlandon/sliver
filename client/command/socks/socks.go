@@ -19,9 +19,12 @@ package socks
 */
 
 import (
+	"fmt"
 	"sort"
+	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/command/settings"
@@ -54,4 +57,25 @@ func SocksCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	}
 
 	con.Printf("%s\n", tw.Render())
+}
+
+// SocksIDCompleter completes IDs of remote of socks proxy servers
+func SocksIDCompleter(_ *console.SliverConsole) carapace.Action {
+	callback := func(_ carapace.Context) carapace.Action {
+		results := make([]string, 0)
+
+		socks := core.SocksProxies.List()
+		if len(socks) == 0 {
+			return carapace.ActionMessage("no active Socks proxies")
+		}
+
+		for _, serv := range socks {
+			results = append(results, strconv.Itoa(int(serv.ID)))
+			results = append(results, fmt.Sprintf("%s [%s] (%s)", serv.BindAddr, serv.Username, serv.SessionID))
+		}
+
+		return carapace.ActionValuesDescribed(results...).Tag("socks servers")
+	}
+
+	return carapace.ActionCallback(callback)
 }

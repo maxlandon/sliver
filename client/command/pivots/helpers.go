@@ -20,12 +20,15 @@ package pivots
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/rsteube/carapace"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -61,4 +64,27 @@ func SelectPivotListener(listeners []*sliverpb.PivotListener, con *console.Slive
 		}
 	}
 	return nil, errors.New("task not found")
+}
+
+// PivotIDCompleter completes pivot listeners' IDs.
+func PivotIDCompleter(con *console.SliverConsole) carapace.Action {
+	callback := func(_ carapace.Context) carapace.Action {
+		results := make([]string, 0)
+
+		pivotListeners, err := con.Rpc.PivotSessionListeners(context.Background(), &sliverpb.PivotListenersReq{
+			Request: con.ActiveTarget.Request(con.App.CurrentMenu().Root()),
+		})
+		if err != nil {
+			return carapace.ActionMessage("failed to get remote pivots: %s", err.Error())
+		}
+
+		for _, listener := range pivotListeners.Listeners {
+			results = append(results, strconv.Itoa(int(listener.ID)))
+			results = append(results, fmt.Sprintf("[%s] %s (%d pivots)", listener.Type, listener.BindAddress, len(listener.Pivots)))
+		}
+
+		return carapace.ActionValuesDescribed(results...).Tag("pivot listeners")
+	}
+
+	return carapace.ActionCallback(callback)
 }

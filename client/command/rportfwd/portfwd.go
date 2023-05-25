@@ -20,8 +20,11 @@ package rportfwd
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -73,4 +76,29 @@ func PrintRportFwdListeners(rportfwdListeners *sliverpb.RportFwdListeners, flags
 		})
 	}
 	con.Printf("%s\n", tw.Render())
+}
+
+// PortfwdIDCompleter completes IDs of remote portforwarders
+func PortfwdIDCompleter(con *console.SliverConsole) carapace.Action {
+	callback := func(_ carapace.Context) carapace.Action {
+		results := make([]string, 0)
+
+		rportfwdListeners, err := con.Rpc.GetRportFwdListeners(context.Background(), &sliverpb.RportFwdListenersReq{
+			Request: con.ActiveTarget.Request(con.App.CurrentMenu().Root()),
+		})
+		if err != nil {
+			return carapace.ActionMessage("failed to get remote port forwarders: %s", err.Error())
+		}
+
+		for _, fwd := range rportfwdListeners.Listeners {
+			results = append(results, strconv.Itoa(int(fwd.ID)))
+			faddr := fmt.Sprintf("%s:%d", fwd.ForwardAddress, fwd.ForwardPort)
+			laddr := fmt.Sprintf("%s:%d", fwd.BindAddress, fwd.BindPort)
+			results = append(results, fmt.Sprintf("%s <- %s", laddr, faddr))
+		}
+
+		return carapace.ActionValuesDescribed(results...).Tag("remote port forwarders")
+	}
+
+	return carapace.ActionCallback(callback)
 }

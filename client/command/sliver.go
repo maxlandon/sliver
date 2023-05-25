@@ -103,9 +103,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.ReconfigStr,
 			Short: "Reconfigure the active beacon/session",
 			Long:  help.GetHelpFor([]string{consts.ReconfigStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				reconfig.ReconfigCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.SliverCoreHelpGroup,
 			Annotations: HideCommand(consts.BeaconCmdsFilter),
@@ -122,9 +121,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.RenameStr,
 			Short: "Rename the active beacon/session",
 			Long:  help.GetHelpFor([]string{consts.RenameStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				reconfig.RenameCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
@@ -196,9 +194,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.KillStr,
 			Short: "Kill a session",
 			Long:  help.GetHelpFor([]string{consts.KillStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				kill.KillCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
@@ -212,9 +209,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.InteractiveStr,
 			Short: "Task a beacon to open an interactive session (Beacon only)",
 			Long:  help.GetHelpFor([]string{consts.InteractiveStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				sessions.InteractiveCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.SliverCoreHelpGroup,
 			Annotations: HideCommand(consts.BeaconCmdsFilter),
@@ -238,9 +234,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.CloseStr,
 			Short: "Close an interactive session without killing the remote process",
 			Long:  help.GetHelpFor([]string{consts.CloseStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				sessions.CloseSessionCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
@@ -255,12 +250,12 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.TasksStr,
 			Short: "Beacon task management",
 			Long:  help.GetHelpFor([]string{consts.TasksStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				tasks.TasksCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
+		sliver.AddCommand(tasksCmd)
 		Flags("", tasksCmd, func(f *pflag.FlagSet) {
 			f.BoolP("overflow", "O", false, "overflow terminal width (display truncated rows)")
 			f.IntP("skip-pages", "S", 0, "skip the first n page(s)")
@@ -268,16 +263,14 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		sliver.AddCommand(tasksCmd)
 
 		fetchCmd := &cobra.Command{
 			Use:   consts.FetchStr,
 			Short: "Fetch the details of a beacon task",
 			Long:  help.GetHelpFor([]string{consts.TasksStr, consts.FetchStr}),
 			Args:  cobra.RangeArgs(0, 1), // 	a.String("id", "beacon task ID", grumble.Default(""))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				tasks.TasksFetchCmd(cmd, con, args)
-				return nil
 			},
 		}
 		tasksCmd.AddCommand(fetchCmd)
@@ -288,15 +281,15 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(fetchCmd).PositionalCompletion(tasks.BeaconTaskIDCompleter(con).Usage("beacon task ID"))
 
 		cancelCmd := &cobra.Command{
 			Use:   consts.CancelStr,
 			Short: "Cancel a pending beacon task",
 			Long:  help.GetHelpFor([]string{consts.TasksStr, consts.CancelStr}),
-			Args:  cobra.RangeArgs(0, 1), // 	a.String("id", "beacon task ID", grumble.Default(""))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Args:  cobra.RangeArgs(0, 1),
+			Run: func(cmd *cobra.Command, args []string) {
 				tasks.TasksCancelCmd(cmd, con, args)
-				return nil
 			},
 		}
 		tasksCmd.AddCommand(cancelCmd)
@@ -307,6 +300,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(cancelCmd).PositionalCompletion(tasks.BeaconPendingTasksCompleter(con).Usage("beacon task ID"))
 
 		// [ Info ] --------------------------------------------------------------
 
@@ -329,9 +323,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.PingStr,
 			Short: "Send round trip message to implant (does not use ICMP)",
 			Long:  help.GetHelpFor([]string{consts.PingStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				info.PingCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.InfoHelpGroup,
 		}
@@ -344,9 +337,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.GetPIDStr,
 			Short: "Get session pid",
 			Long:  help.GetHelpFor([]string{consts.GetPIDStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				info.PIDCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.InfoHelpGroup,
 		}
@@ -359,9 +351,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.GetUIDStr,
 			Short: "Get session process UID",
 			Long:  help.GetHelpFor([]string{consts.GetUIDStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				info.UIDCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.InfoHelpGroup,
 		}
@@ -374,9 +365,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.GetGIDStr,
 			Short: "Get session process GID",
 			Long:  help.GetHelpFor([]string{consts.GetGIDStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				info.GIDCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.InfoHelpGroup,
 		}
@@ -389,9 +379,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.WhoamiStr,
 			Short: "Get session user execution context",
 			Long:  help.GetHelpFor([]string{consts.WhoamiStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				info.WhoamiCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.InfoHelpGroup,
 		}
@@ -406,9 +395,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.ShellStr,
 			Short: "Start an interactive shell",
 			Long:  help.GetHelpFor([]string{consts.ShellStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				shell.ShellCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.ExecutionHelpGroup,
 			Annotations: HideCommand(consts.SessionCmdsFilter),
@@ -428,11 +416,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "Execute a program on the remote system",
 			Long:  help.GetHelpFor([]string{consts.ExecuteStr}),
 			Args:  cobra.MinimumNArgs(1),
-			// 	a.String("command", "command to execute")
-			// 	a.StringList("arguments", "arguments to the command")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				exec.ExecuteCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.ExecutionHelpGroup,
 		}
@@ -450,17 +435,16 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(executeCmd).PositionalCompletion(carapace.ActionValues().Usage("command to execute (required)"))
+		carapace.Gen(executeCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("arguments to the command (optional)"))
 
 		executeAssemblyCmd := &cobra.Command{
 			Use:   consts.ExecuteAssemblyStr,
 			Short: "Loads and executes a .NET assembly in a child process (Windows Only)",
 			Long:  help.GetHelpFor([]string{consts.ExecuteAssemblyStr}),
 			Args:  cobra.MinimumNArgs(1),
-			// 	a.String("filepath", "path the assembly file")
-			// 	a.StringList("arguments", "arguments to pass to the assembly entrypoint", grumble.Default([]string{}))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				exec.ExecuteAssemblyCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.ExecutionHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
@@ -484,15 +468,16 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(executeAssemblyCmd).PositionalCompletion(carapace.ActionFiles().Usage("path to assembly file (required)"))
+		carapace.Gen(executeAssemblyCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("arguments to pass to the assembly entrypoint (optional)"))
 
 		executeShellcodeCmd := &cobra.Command{
 			Use:   consts.ExecuteShellcodeStr,
 			Short: "Executes the given shellcode in the sliver process",
 			Long:  help.GetHelpFor([]string{consts.ExecuteShellcodeStr}),
-			Args:  cobra.ExactArgs(1), // 	a.String("filepath", "path the shellcode file")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Args:  cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
 				exec.ExecuteShellcodeCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.ExecutionHelpGroup,
 		}
@@ -508,17 +493,15 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(executeShellcodeCmd).PositionalCompletion(carapace.ActionFiles().Usage("path to shellcode file (required)"))
 
 		sideloadCmd := &cobra.Command{
 			Use:   consts.SideloadStr,
 			Short: "Load and execute a shared object (shared library/DLL) in a remote process",
 			Long:  help.GetHelpFor([]string{consts.SideloadStr}),
 			Args:  cobra.MinimumNArgs(1),
-			// 	a.String("filepath", "path the shared library file")
-			// 	a.StringList("args", "arguments for the binary", grumble.Default([]string{}))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				exec.SideloadCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.ExecutionHelpGroup,
 		}
@@ -536,17 +519,16 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(sideloadCmd).PositionalCompletion(carapace.ActionFiles().Usage("path to shared library file (required)"))
+		carapace.Gen(sideloadCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("arguments to pass to the binary (optional)"))
 
 		spawnDllCmd := &cobra.Command{
 			Use:   consts.SpawnDllStr,
 			Short: "Load and execute a Reflective DLL in a remote process",
 			Long:  help.GetHelpFor([]string{consts.SpawnDllStr}),
 			Args:  cobra.MinimumNArgs(1),
-			// 	a.String("filepath", "path the DLL file")
-			// 	a.StringList("arguments", "arguments to pass to the DLL entrypoint", grumble.Default([]string{}))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				exec.SpawnDllCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.ExecutionHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
@@ -564,15 +546,16 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(spawnDllCmd).PositionalCompletion(carapace.ActionFiles().Usage("path to DLL file (required)"))
+		carapace.Gen(spawnDllCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("arguments to pass to the DLL entrypoint (optional)"))
 
 		migrateCmd := &cobra.Command{
 			Use:   consts.MigrateStr,
 			Short: "Migrate into a remote process",
 			Long:  help.GetHelpFor([]string{consts.MigrateStr}),
 			Args:  cobra.ExactArgs(1), // 	a.Uint("pid", "pid")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				exec.MigrateCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.ExecutionHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
@@ -582,14 +565,14 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("disable-sgn", "S", true, "disable shikata ga nai shellcode encoder")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(migrateCmd).PositionalCompletion(carapace.ActionValues().Usage("PID of process to migrate into"))
 
 		msfCmd := &cobra.Command{
 			Use:   consts.MsfStr,
 			Short: "Execute an MSF payload in the current process",
 			Long:  help.GetHelpFor([]string{consts.MsfStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				exec.MsfCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.ExecutionHelpGroup,
 		}
@@ -608,9 +591,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.MsfInjectStr,
 			Short: "Inject an MSF payload into a process",
 			Long:  help.GetHelpFor([]string{consts.MsfInjectStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				exec.MsfInjectCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.ExecutionHelpGroup,
 		}
@@ -630,10 +612,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.PsExecStr,
 			Short: "Start a sliver service on a remote target",
 			Long:  help.GetHelpFor([]string{consts.PsExecStr}),
-			Args:  cobra.ExactArgs(1), // 	a.String("hostname", "hostname")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Args:  cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
 				exec.PsExecCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.ExecutionHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
@@ -648,17 +629,18 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(psExecCmd, func(comp *carapace.ActionMap) {
+			(*comp)["custom-exe"] = carapace.ActionFiles()
+		})
+		carapace.Gen(psExecCmd).PositionalCompletion(carapace.ActionValues().Usage("hostname (required)"))
 
 		sshCmd := &cobra.Command{
 			Use:   consts.SSHStr,
 			Short: "Run a SSH command on a remote host",
 			Long:  help.GetHelpFor([]string{consts.SSHStr}),
 			Args:  cobra.MinimumNArgs(1),
-			// 	a.String("hostname", "remote host to SSH to")
-			// 	a.StringList("command", "command line with arguments")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				exec.SSHCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.ExecutionHelpGroup,
 		}
@@ -675,6 +657,12 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(sshCmd, func(comp *carapace.ActionMap) {
+			(*comp)["private-key"] = carapace.ActionFiles()
+			(*comp)["kerberos-keytab"] = carapace.ActionFiles()
+		})
+		carapace.Gen(sshCmd).PositionalCompletion(carapace.ActionValues().Usage("remote host to SSH to (required)"))
+		carapace.Gen(sshCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("command line with arguments"))
 
 		// [ Filesystem ] ---------------------------------------------
 
@@ -683,11 +671,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "Move or rename a file",
 			Long:  help.GetHelpFor([]string{consts.MvStr}),
 			Args:  cobra.ExactArgs(2),
-			// 	a.String("src", "path to source file")
-			// 	a.String("dst", "path to dest file")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.MvCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.FilesystemHelpGroup,
 		}
@@ -695,12 +680,16 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		Flags("", mvCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(mvCmd).PositionalCompletion(
+			carapace.ActionValues().Usage("path to source file (required)"),
+			carapace.ActionValues().Usage("path to dest file (required)"),
+		)
 
 		lsCmd := &cobra.Command{
 			Use:   consts.LsStr,
 			Short: "List current directory",
 			Long:  help.GetHelpFor([]string{consts.LsStr}),
-			Args:  cobra.RangeArgs(0, 1), // 	a.String("path", "path to enumerate", grumble.Default("."))
+			Args:  cobra.RangeArgs(0, 1),
 			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.LsCmd(cmd, con, args)
 			},
@@ -713,15 +702,15 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("size", "s", false, "sort by size")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(lsCmd).PositionalCompletion(carapace.ActionValues().Usage("path to enumerate (optional)"))
 
 		rmCmd := &cobra.Command{
 			Use:   consts.RmStr,
 			Short: "Remove a file or directory",
 			Long:  help.GetHelpFor([]string{consts.RmStr}),
-			Args:  cobra.ExactArgs(1), // 	a.String("path", "path to the file to remove")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Args:  cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.RmCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.FilesystemHelpGroup,
 		}
@@ -731,16 +720,15 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("force", "F", false, "ignore safety and forcefully remove files")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(rmCmd).PositionalCompletion(carapace.ActionValues().Usage("path to the file to remove"))
 
 		mkdirCmd := &cobra.Command{
 			Use:   consts.MkdirStr,
 			Short: "Make a directory",
 			Long:  help.GetHelpFor([]string{consts.MkdirStr}),
 			Args:  cobra.ExactArgs(1),
-			// 	a.String("path", "path to the directory to create")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.MkdirCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.FilesystemHelpGroup,
 		}
@@ -748,12 +736,13 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		Flags("", mkdirCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(mkdirCmd).PositionalCompletion(carapace.ActionValues().Usage("path to the directory to create"))
 
 		cdCmd := &cobra.Command{
 			Use:   consts.CdStr,
 			Short: "Change directory",
 			Long:  help.GetHelpFor([]string{consts.CdStr}),
-			Args:  cobra.RangeArgs(0, 1), // 	a.String("path", "path to the directory", grumble.Default("."))
+			Args:  cobra.RangeArgs(0, 1),
 			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.CdCmd(cmd, con, args)
 			},
@@ -763,14 +752,14 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		Flags("", cdCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(cdCmd).PositionalCompletion(carapace.ActionValues().Usage("path to the directory"))
 
 		pwdCmd := &cobra.Command{
 			Use:   consts.PwdStr,
 			Short: "Print working directory",
 			Long:  help.GetHelpFor([]string{consts.PwdStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.PwdCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.FilesystemHelpGroup,
 		}
@@ -784,10 +773,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "Dump file to stdout",
 			Long:  help.GetHelpFor([]string{consts.CatStr}),
 			Args:  cobra.ExactArgs(1),
-			// 	a.String("path", "path to the file to print")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.CatCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.FilesystemHelpGroup,
 		}
@@ -801,17 +788,15 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("file-type", "F", "", "force a specific file type (binary/text) if looting (optional)")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(catCmd).PositionalCompletion(carapace.ActionValues().Usage("path to the file to print"))
 
 		downloadCmd := &cobra.Command{
 			Use:   consts.DownloadStr,
 			Short: "Download a file",
 			Long:  help.GetHelpFor([]string{consts.DownloadStr}),
 			Args:  cobra.RangeArgs(1, 2),
-			// 	a.String("remote-path", "path to the file or directory to download")
-			// 	a.String("local-path", "local path where the downloaded file will be saved", grumble.Default("."))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.DownloadCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.FilesystemHelpGroup,
 		}
@@ -824,17 +809,18 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("recurse", "r", false, "recursively download all files in a directory")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(downloadCmd).PositionalCompletion(
+			carapace.ActionValues().Usage("path to the file or directory to download"),
+			carapace.ActionFiles().Usage("local path where the downloaded file will be saved (optional)"),
+		)
 
 		uploadCmd := &cobra.Command{
 			Use:   consts.UploadStr,
 			Short: "Upload a file",
 			Long:  help.GetHelpFor([]string{consts.UploadStr}),
 			Args:  cobra.RangeArgs(1, 2),
-			// 	a.String("local-path", "local path to the file to upload")
-			// 	a.String("remote-path", "path to the file or directory to upload to", grumble.Default(""))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.UploadCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.FilesystemHelpGroup,
 		}
@@ -843,6 +829,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("ioc", "i", false, "track uploaded file as an ioc")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(uploadCmd).PositionalCompletion(
+			carapace.ActionFiles().Usage("local path to the file to upload"),
+			carapace.ActionValues().Usage("path to the file or directory to upload to (optional)"),
+		)
 
 		// [ Network ] ---------------------------------------------
 
@@ -850,9 +840,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.IfconfigStr,
 			Short: "View network interface configurations",
 			Long:  help.GetHelpFor([]string{consts.IfconfigStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				network.IfconfigCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.NetworkHelpGroup,
 		}
@@ -866,9 +855,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.NetstatStr,
 			Short: "Print network connection information",
 			Long:  help.GetHelpFor([]string{consts.NetstatStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				network.NetstatCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.NetworkHelpGroup,
 		}
@@ -889,9 +877,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.PsStr,
 			Short: "List remote processes",
 			Long:  help.GetHelpFor([]string{consts.PsStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				processes.PsCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.ProcessHelpGroup,
 		}
@@ -912,9 +899,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.ProcdumpStr,
 			Short: "Dump process memory",
 			Long:  help.GetHelpFor([]string{consts.ProcdumpStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				processes.ProcdumpCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.ProcessHelpGroup,
 		}
@@ -933,10 +919,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.TerminateStr,
 			Short: "Terminate a process on the remote system",
 			Long:  help.GetHelpFor([]string{consts.TerminateStr}),
-			Args:  cobra.ExactArgs(1), // 	a.Uint("pid", "pid")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Args:  cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
 				processes.TerminateCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.ProcessHelpGroup,
 		}
@@ -945,6 +930,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("force", "F", false, "disregard safety and kill the PID")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(terminateCmd).PositionalCompletion(carapace.ActionValues().Usage("process ID"))
 
 		// [ Privileges ] ---------------------------------------------
 
@@ -952,9 +938,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.RunAsStr,
 			Short: "Run a new process in the context of the designated user (Windows Only)",
 			Long:  help.GetHelpFor([]string{consts.RunAsStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				privilege.RunAsCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.PrivilegesHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
@@ -977,10 +962,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "Impersonate a logged in user.",
 			Long:  help.GetHelpFor([]string{consts.ImpersonateStr}),
 			Args:  cobra.ExactArgs(1),
-			// 	a.String("username", "name of the user account to impersonate")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				privilege.ImpersonateCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.PrivilegesHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
@@ -989,14 +972,14 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		Flags("", impersonateCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(impersonateCmd).PositionalCompletion(carapace.ActionValues().Usage("name of the user account to impersonate"))
 
 		revToSelfCmd := &cobra.Command{
 			Use:   consts.RevToSelfStr,
 			Short: "Revert to self: lose stolen Windows token",
 			Long:  help.GetHelpFor([]string{consts.RevToSelfStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				privilege.RevToSelfCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.PrivilegesHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
@@ -1010,9 +993,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.GetSystemStr,
 			Short: "Spawns a new sliver session as the NT AUTHORITY\\SYSTEM user (Windows Only)",
 			Long:  help.GetHelpFor([]string{consts.GetSystemStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				privilege.GetSystemCmd(cmd, con, args)
-				return nil
 			},
 			GroupID:     consts.PrivilegesHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
@@ -1029,9 +1011,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Long:        help.GetHelpFor([]string{consts.MakeTokenStr}),
 			GroupID:     consts.PrivilegesHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				privilege.MakeTokenCmd(cmd, con, args)
-				return nil
 			},
 		}
 		sliver.AddCommand(makeTokenCmd)
@@ -1048,11 +1029,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "Change permissions on a file or directory",
 			Long:  help.GetHelpFor([]string{consts.ChmodStr}),
 			Args:  cobra.ExactArgs(2),
-			// 	a.String("path", "path to the file to remove")
-			// 	a.String("mode", "file permissions in octal, e.g. 0644")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.ChmodCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.PrivilegesHelpGroup,
 		}
@@ -1061,18 +1039,18 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("recursive", "r", false, "recursively change permissions on files")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(chmodCmd).PositionalCompletion(
+			carapace.ActionValues().Usage("path to file to change mod perms"),
+			carapace.ActionValues().Usage("file permissions in octal (eg. 0644)"),
+		)
 
 		chownCmd := &cobra.Command{
 			Use:   consts.ChownStr,
 			Short: "Change owner on a file or directory",
 			Long:  help.GetHelpFor([]string{consts.ChownStr}),
 			Args:  cobra.ExactArgs(3),
-			// 	a.String("path", "path to the file to remove")
-			// 	a.String("uid", "User, e.g. root")
-			// 	a.String("gid", "Group, e.g. root")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.ChownCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.PrivilegesHelpGroup,
 		}
@@ -1081,18 +1059,19 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("recursive", "r", false, "recursively change permissions on files")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(chownCmd).PositionalCompletion(
+			carapace.ActionValues().Usage("path to file to change owner for"),
+			carapace.ActionValues().Usage("user ID"),
+			carapace.ActionValues().Usage("group ID (required)"),
+		)
 
 		chtimesCmd := &cobra.Command{
 			Use:   consts.ChtimesStr,
 			Short: "Change access and modification times on a file (timestomp)",
 			Long:  help.GetHelpFor([]string{consts.ChtimesStr}),
 			Args:  cobra.ExactArgs(3),
-			// 	a.String("path", "path to the file to remove")
-			// 	a.String("atime", "Last accessed time in DateTime format, i.e. 2006-01-02 15:04:05")
-			// 	a.String("mtime", "Last modified time in DateTime format, i.e. 2006-01-02 15:04:05")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				filesystem.ChtimesCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.PrivilegesHelpGroup,
 		}
@@ -1100,6 +1079,11 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		Flags("", chtimesCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(chtimesCmd).PositionalCompletion(
+			carapace.ActionValues().Usage("path to file to change access timestamps"),
+			carapace.ActionValues().Usage("last accessed time in DateTime format, i.e. 2006-01-02 15:04:05"),
+			carapace.ActionValues().Usage("last modified time in DateTime format, i.e. 2006-01-02 15:04:05"),
+		)
 
 		// [ Screenshot ] ---------------------------------------------
 
@@ -1107,9 +1091,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.ScreenshotStr,
 			Short: "Take a screenshot",
 			Long:  help.GetHelpFor([]string{consts.ScreenshotStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				screenshot.ScreenshotCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.InfoHelpGroup,
 		}
@@ -1121,20 +1104,21 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(screenshotCmd, func(comp *carapace.ActionMap) {
+			(*comp)["save"] = carapace.ActionFiles()
+		})
 
 		// [ Backdoor ] ---------------------------------------------
 
 		backdoorCmd := &cobra.Command{
-			Use:   consts.BackdoorStr,
-			Short: "Infect a remote file with a sliver shellcode",
-			Long:  help.GetHelpFor([]string{consts.BackdoorStr}),
-			Args:  cobra.ExactArgs(1),
-			// 	a.String("remote-file", "path to the file to backdoor")
+			Use:         consts.BackdoorStr,
+			Short:       "Infect a remote file with a sliver shellcode",
+			Long:        help.GetHelpFor([]string{consts.BackdoorStr}),
+			Args:        cobra.ExactArgs(1),
 			GroupID:     consts.ExecutionHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				backdoor.BackdoorCmd(cmd, con, args)
-				return nil
 			},
 		}
 		sliver.AddCommand(backdoorCmd)
@@ -1142,6 +1126,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("profile", "p", "", "profile to use for service binary")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(screenshotCmd, func(comp *carapace.ActionMap) {
+			(*comp)["profile"] = generate.ProfileNameCompleter(con)
+		})
+		carapace.Gen(backdoorCmd).PositionalCompletion(carapace.ActionValues().Usage("path to the remote file to backdoor"))
 
 		// // [ DLL Hijack ] -----------------------------------------------------------------
 
@@ -1152,10 +1140,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID:     consts.ExecutionHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
 			Args:        cobra.ExactArgs(1),
-			// 	a.String("target-path", "Path to upload the DLL to on the remote system")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				dllhijack.DllHijackCmd(cmd, con, args)
-				return nil
 			},
 		}
 		sliver.AddCommand(dllhijackCmd)
@@ -1166,6 +1152,12 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("profile", "p", "", "Profile name to use as a base DLL")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(dllhijackCmd, func(comp *carapace.ActionMap) {
+			(*comp)["reference-file"] = carapace.ActionFiles()
+			(*comp)["file"] = carapace.ActionFiles()
+			(*comp)["profile"] = generate.ProfileNameCompleter(con)
+		})
+		carapace.Gen(dllhijackCmd).PositionalCompletion(carapace.ActionValues().Usage("Path to upload the DLL to on the remote system"))
 
 		// [ Get Privs ] -----------------------------------------------------------------
 		getprivsCmd := &cobra.Command{
@@ -1174,9 +1166,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Long:        help.GetHelpFor([]string{consts.GetPrivsStr}),
 			GroupID:     consts.PrivilegesHelpGroup,
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				privilege.GetPrivsCmd(cmd, con, args)
-				return nil
 			},
 		}
 		sliver.AddCommand(getprivsCmd)
@@ -1192,10 +1183,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "List environment variables",
 			Long:  help.GetHelpFor([]string{consts.EnvStr}),
 			Args:  cobra.RangeArgs(0, 1),
-			// 	a.String("name", "environment variable to fetch", grumble.Default(""))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				environment.EnvGetCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.InfoHelpGroup,
 		}
@@ -1203,39 +1192,40 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		Flags("", envCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(envCmd).PositionalCompletion(carapace.ActionValues().Usage("environment variable to fetch (optional)"))
 
 		envSetCmd := &cobra.Command{
 			Use:   consts.SetStr,
 			Short: "Set environment variables",
 			Long:  help.GetHelpFor([]string{consts.EnvStr, consts.SetStr}),
 			Args:  cobra.ExactArgs(2),
-			// 	a.String("name", "environment variable name")
-			// 	a.String("value", "value to assign")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				environment.EnvSetCmd(cmd, con, args)
-				return nil
 			},
 		}
 		envCmd.AddCommand(envSetCmd)
 		Flags("", envSetCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(envSetCmd).PositionalCompletion(
+			carapace.ActionValues().Usage("environment variable name"),
+			carapace.ActionValues().Usage("value to assign"),
+		)
 
 		envUnsetCmd := &cobra.Command{
 			Use:   consts.UnsetStr,
 			Short: "Clear environment variables",
 			Long:  help.GetHelpFor([]string{consts.EnvStr, consts.UnsetStr}),
 			Args:  cobra.ExactArgs(1),
-			// 	a.String("name", "environment variable name")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				environment.EnvUnsetCmd(cmd, con, args)
-				return nil
 			},
 		}
 		envCmd.AddCommand(envUnsetCmd)
 		Flags("", envUnsetCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(envUnsetCmd).PositionalCompletion(carapace.ActionValues().Usage("environment variable name"))
 
 		// [ Registry ] ---------------------------------------------
 
@@ -1253,10 +1243,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "Read values from the Windows registry",
 			Long:  help.GetHelpFor([]string{consts.RegistryReadStr}),
 			Args:  cobra.ExactArgs(1),
-			// 	a.String("registry-path", "registry path")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				registry.RegReadCmd(cmd, con, args)
-				return nil
 			},
 		}
 		registryCmd.AddCommand(registryReadCmd)
@@ -1265,17 +1253,15 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("hostname", "o", "", "remote host to read values from")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(registryReadCmd).PositionalCompletion(carapace.ActionValues().Usage("registry path"))
 
 		registryWriteCmd := &cobra.Command{
 			Use:   consts.RegistryWriteStr,
 			Short: "Write values to the Windows registry",
 			Long:  help.GetHelpFor([]string{consts.RegistryWriteStr}),
 			Args:  cobra.ExactArgs(2),
-			// 	a.String("registry-path", "registry path")
-			// 	a.String("value", "value to write")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				registry.RegWriteCmd(cmd, con, args)
-				return nil
 			},
 		}
 		registryCmd.AddCommand(registryWriteCmd)
@@ -1286,16 +1272,18 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("path", "p", "", "path to the binary file to write")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(registryWriteCmd).PositionalCompletion(
+			carapace.ActionValues().Usage("registry path"),
+			carapace.ActionValues().Usage("value to write"),
+		)
 
 		registryCreateKeyCmd := &cobra.Command{
 			Use:   consts.RegistryCreateKeyStr,
 			Short: "Create a registry key",
 			Long:  help.GetHelpFor([]string{consts.RegistryCreateKeyStr}),
 			Args:  cobra.ExactArgs(1),
-			// 	a.String("registry-path", "registry path")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				registry.RegCreateKeyCmd(cmd, con, args)
-				return nil
 			},
 		}
 		registryCmd.AddCommand(registryCreateKeyCmd)
@@ -1304,16 +1292,15 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("hostname", "o", "", "remote host to write values to")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(registryCreateKeyCmd).PositionalCompletion(carapace.ActionValues().Usage("registry path"))
 
 		registryDeleteKeyCmd := &cobra.Command{
 			Use:   consts.RegistryDeleteKeyStr,
 			Short: "Remove a registry key",
 			Long:  help.GetHelpFor([]string{consts.RegistryDeleteKeyStr}),
 			Args:  cobra.ExactArgs(1),
-			// 	a.String("registry-path", "registry path")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				registry.RegDeleteKeyCmd(cmd, con, args)
-				return nil
 			},
 		}
 		registryCmd.AddCommand(registryDeleteKeyCmd)
@@ -1322,16 +1309,15 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("hostname", "o", "", "remote host to remove value from")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(registryDeleteKeyCmd).PositionalCompletion(carapace.ActionValues().Usage("registry path"))
 
 		registryListSubCmd := &cobra.Command{
 			Use:   consts.RegistryListSubStr,
 			Short: "List the sub keys under a registry key",
 			Long:  help.GetHelpFor([]string{consts.RegistryListSubStr}),
 			Args:  cobra.ExactArgs(1),
-			// 	a.String("registry-path", "registry path")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				registry.RegListSubKeysCmd(cmd, con, args)
-				return nil
 			},
 		}
 		registryCmd.AddCommand(registryListSubCmd)
@@ -1340,16 +1326,15 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("hostname", "o", "", "remote host to write values to")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(registryListSubCmd).PositionalCompletion(carapace.ActionValues().Usage("registry path"))
 
 		registryListValuesCmd := &cobra.Command{
 			Use:   consts.RegistryListValuesStr,
 			Short: "List the values for a registry key",
 			Long:  help.GetHelpFor([]string{consts.RegistryListValuesStr}),
 			Args:  cobra.ExactArgs(1),
-			// 	a.String("registry-path", "registry path")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				registry.RegListValuesCmd(cmd, con, args)
-				return nil
 			},
 		}
 		registryCmd.AddCommand(registryListValuesCmd)
@@ -1358,6 +1343,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("hostname", "o", "", "remote host to write values to")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(registryListValuesCmd).PositionalCompletion(carapace.ActionValues().Usage("registry path"))
 
 		// [ Reverse Port Forwarding ] --------------------------------------------------------------
 
@@ -1365,9 +1351,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.RportfwdStr,
 			Short: "reverse port forwardings",
 			Long:  help.GetHelpFor([]string{consts.RportfwdStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				rportfwd.RportFwdListenersCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.NetworkHelpGroup,
 		}
@@ -1380,9 +1365,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.AddStr,
 			Short: "Add and start reverse port forwarding",
 			Long:  help.GetHelpFor([]string{consts.RportfwdStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				rportfwd.StartRportFwdListenerCmd(cmd, con, args)
-				return nil
 			},
 		}
 		rportfwdCmd.AddCommand(rportfwdAddCmd)
@@ -1396,15 +1380,17 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.RmStr,
 			Short: "Stop and remove reverse port forwarding",
 			Long:  help.GetHelpFor([]string{consts.RportfwdStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				rportfwd.StopRportFwdListenerCmd(cmd, con, args)
-				return nil
 			},
 		}
 		rportfwdCmd.AddCommand(rportfwdRmCmd)
 		Flags("", rportfwdRmCmd, func(f *pflag.FlagSet) {
 			f.Uint32P("id", "i", 0, "id of portfwd to remove")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(rportfwdRmCmd, func(comp *carapace.ActionMap) {
+			(*comp)["id"] = rportfwd.PortfwdIDCompleter(con)
 		})
 
 		// [ Pivots ] --------------------------------------------------------------
@@ -1413,9 +1399,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.PivotsStr,
 			Short: "List pivots for active session",
 			Long:  help.GetHelpFor([]string{consts.PivotsStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				pivots.PivotsCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
@@ -1428,9 +1413,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.NamedPipeStr,
 			Short: "Start a named pipe pivot listener",
 			Long:  help.GetHelpFor([]string{consts.PivotsStr, consts.NamedPipeStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				pivots.StartNamedPipeListenerCmd(cmd, con, args)
-				return nil
 			},
 		}
 		pivotsCmd.AddCommand(namedPipeCmd)
@@ -1444,9 +1428,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.TCPListenerStr,
 			Short: "Start a TCP pivot listener",
 			Long:  help.GetHelpFor([]string{consts.PivotsStr, consts.TCPListenerStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				pivots.StartTCPListenerCmd(cmd, con, args)
-				return nil
 			},
 		}
 		pivotsCmd.AddCommand(tcpListenerCmd)
@@ -1461,9 +1444,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.StopStr,
 			Short: "Stop a pivot listener",
 			Long:  help.GetHelpFor([]string{consts.PivotsStr, consts.StopStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				pivots.StopPivotListenerCmd(cmd, con, args)
-				return nil
 			},
 		}
 		pivotsCmd.AddCommand(pivotStopCmd)
@@ -1471,14 +1453,16 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.Uint32P("id", "i", 0, "id of the pivot listener to stop")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(pivotStopCmd, func(comp *carapace.ActionMap) {
+			(*comp)["id"] = pivots.PivotIDCompleter(con)
+		})
 
 		pivotDetailsCmd := &cobra.Command{
 			Use:   consts.DetailsStr,
 			Short: "Get details of a pivot listener",
 			Long:  help.GetHelpFor([]string{consts.PivotsStr, consts.StopStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				pivots.PivotDetailsCmd(cmd, con, args)
-				return nil
 			},
 		}
 		pivotsCmd.AddCommand(pivotDetailsCmd)
@@ -1486,14 +1470,16 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.IntP("id", "i", 0, "id of the pivot listener to get details for")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(pivotDetailsCmd, func(comp *carapace.ActionMap) {
+			(*comp)["id"] = pivots.PivotIDCompleter(con)
+		})
 
 		graphCmd := &cobra.Command{
 			Use:   consts.GraphStr,
 			Short: "Get pivot listeners graph",
 			Long:  help.GetHelpFor([]string{consts.PivotsStr, "graph"}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				pivots.PivotsGraphCmd(cmd, con, args)
-				return nil
 			},
 		}
 		pivotsCmd.AddCommand(graphCmd)
@@ -1504,9 +1490,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.PortfwdStr,
 			Short: "In-band TCP port forwarding",
 			Long:  help.GetHelpFor([]string{consts.PortfwdStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				portfwd.PortfwdCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.NetworkHelpGroup,
 		}
@@ -1519,9 +1504,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.AddStr,
 			Short: "Create a new port forwarding tunnel",
 			Long:  help.GetHelpFor([]string{consts.PortfwdStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				portfwd.PortfwdAddCmd(cmd, con, args)
-				return nil
 			},
 		}
 		portfwdCmd.AddCommand(addCmd)
@@ -1535,15 +1519,17 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.RmStr,
 			Short: "Remove a port forwarding tunnel",
 			Long:  help.GetHelpFor([]string{consts.PortfwdStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				portfwd.PortfwdRmCmd(cmd, con, args)
-				return nil
 			},
 		}
 		portfwdCmd.AddCommand(portfwdRmCmd)
 		Flags("", portfwdRmCmd, func(f *pflag.FlagSet) {
 			f.IntP("id", "i", 0, "id of portfwd to remove")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(portfwdRmCmd, func(comp *carapace.ActionMap) {
+			(*comp)["id"] = portfwd.PortfwdIDCompleter(con)
 		})
 
 		// [ Socks ] --------------------------------------------------------------
@@ -1552,9 +1538,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.Socks5Str,
 			Short: "In-band SOCKS5 Proxy",
 			Long:  help.GetHelpFor([]string{consts.Socks5Str}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				socks.SocksCmd(cmd, con, args)
-				return nil
 			},
 			GroupID: consts.NetworkHelpGroup,
 		}
@@ -1567,9 +1552,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.StartStr,
 			Short: "Start an in-band SOCKS5 proxy",
 			Long:  help.GetHelpFor([]string{consts.Socks5Str}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				socks.SocksStartCmd(cmd, con, args)
-				return nil
 			},
 		}
 		socksCmd.AddCommand(socksStartCmd)
@@ -1583,15 +1567,17 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.StopStr,
 			Short: "Stop a SOCKS5 proxy",
 			Long:  help.GetHelpFor([]string{consts.Socks5Str}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				socks.SocksStopCmd(cmd, con, args)
-				return nil
 			},
 		}
 		socksCmd.AddCommand(socksStopCmd)
 		Flags("", socksStopCmd, func(f *pflag.FlagSet) {
 			f.Uint64P("id", "i", 0, "id of portfwd to remove")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(socksStopCmd, func(comp *carapace.ActionMap) {
+			(*comp)["id"] = socks.SocksIDCompleter(con)
 		})
 
 		// [ WireGuard ] --------------------------------------------------------------
@@ -1609,6 +1595,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		Flags("wg portforward", wgPortFwdCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		sliver.AddCommand(wgPortFwdCmd)
 
 		wgPortFwdAddCmd := &cobra.Command{
 			Use:   consts.AddStr,
@@ -1629,7 +1616,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.RmStr,
 			Short: "Remove a port forward from the WireGuard tun interface",
 			Long:  help.GetHelpFor([]string{consts.WgPortFwdStr, consts.RmStr}),
-			Args:  cobra.ExactArgs(1), // 	a.Int("id", "forwarder id")
+			Args:  cobra.ExactArgs(1),
 			Run: func(cmd *cobra.Command, args []string) {
 				wireguard.WGPortFwdRmCmd(cmd, con, args)
 			},
@@ -1638,7 +1625,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		wgPortFwdCmd.AddCommand(wgPortFwdRmCmd)
-		sliver.AddCommand(wgPortFwdCmd)
+
+		carapace.Gen(wgPortFwdRmCmd).PositionalCompletion(wireguard.PortfwdIDCompleter(con).Usage("forwarder ID"))
 
 		wgSocksCmd := &cobra.Command{
 			Use:   consts.WgSocksStr,
@@ -1653,6 +1641,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		Flags("wg socks", wgSocksCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		sliver.AddCommand(wgSocksCmd)
 
 		wgSocksStartCmd := &cobra.Command{
 			Use:   consts.StartStr,
@@ -1675,13 +1664,13 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Run: func(cmd *cobra.Command, args []string) {
 				wireguard.WGSocksStopCmd(cmd, con, args)
 			},
-			Args: cobra.ExactArgs(1), // 	a.Int("id", "forwarder id")
+			Args: cobra.ExactArgs(1),
 		}
 		wgSocksCmd.AddCommand(wgSocksStopCmd)
 		Flags("wg socks", wgSocksStopCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		sliver.AddCommand(wgSocksCmd)
+		carapace.Gen(wgSocksStopCmd).PositionalCompletion(wireguard.SocksIDCompleter(con).Usage("Socks server ID"))
 
 		// [ Curse Commands ] ------------------------------------------------------------
 
@@ -1690,9 +1679,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short:   "Chrome/electron post-exploitation tool kit (∩｀-´)⊃━☆ﾟ.*･｡ﾟ",
 			Long:    help.GetHelpFor([]string{consts.Cursed}),
 			GroupID: consts.ExecutionHelpGroup,
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedCmd(cmd, con, args)
-				return nil
 			},
 		}
 		sliver.AddCommand(cursedCmd)
@@ -1705,9 +1693,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "Remove a Curse from a process",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedConsole}),
 			Args:  cobra.ExactArgs(1), // 	a.Int("bind-port", "bind port of the Cursed process to stop")
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedRmCmd(cmd, con, args)
-				return nil
 			},
 		}
 		cursedCmd.AddCommand(cursedRmCmd)
@@ -1720,9 +1707,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.CursedConsole,
 			Short: "Start a JavaScript console connected to a debug target",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedConsole}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedConsoleCmd(cmd, con, args)
-				return nil
 			},
 		}
 		cursedCmd.AddCommand(cursedConsoleCmd)
@@ -1736,9 +1722,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "Automatically inject a Cursed Chrome payload into a remote Chrome extension",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedChrome}),
 			// 	a.StringList("args", "additional chrome cli arguments", grumble.Default([]string{}))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedChromeCmd(cmd, con, args)
-				return nil
 			},
 		}
 		cursedCmd.AddCommand(cursedChromeCmd)
@@ -1759,9 +1744,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "Automatically inject a Cursed Chrome payload into a remote Edge extension",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedEdge}),
 			// 	a.StringList("args", "additional edge cli arguments", grumble.Default([]string{}))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedEdgeCmd(cmd, con, args)
-				return nil
 			},
 		}
 		cursedCmd.AddCommand(cursedEdgeCmd)
@@ -1782,9 +1766,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short: "Curse a remote Electron application",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedElectron}),
 			// 	a.StringList("args", "additional electron cli arguments", grumble.Default([]string{}))
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedElectronCmd(cmd, con, args)
-				return nil
 			},
 		}
 		cursedCmd.AddCommand(cursedElectronCmd)
@@ -1798,9 +1781,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.CursedCookies,
 			Short: "Dump all cookies from cursed process",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedCookies}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedCookiesCmd(cmd, con, args)
-				return nil
 			},
 		}
 		cursedCmd.AddCommand(CursedCookiesCmd)
@@ -1813,9 +1795,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.ScreenshotStr,
 			Short: "Take a screenshot of a cursed process debug target",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.ScreenshotStr}),
-			RunE: func(cmd *cobra.Command, args []string) error {
+			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedScreenshotCmd(cmd, con, args)
-				return nil
 			},
 		}
 		cursedCmd.AddCommand(cursedScreenshotCmd)

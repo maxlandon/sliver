@@ -37,15 +37,13 @@ func ChtimesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	}
 	// DateTime layout (https://pkg.go.dev/time)
 	layout := "2006-01-02 15:04:05"
-	// filePath := ctx.Args.String("path")
-	filePath := args[2]
+	filePath := args[0]
 
 	if filePath == "" {
 		con.PrintErrorf("Missing parameter: file or directory name\n")
 		return
 	}
 
-	// atime := ctx.Args.String("atime")
 	atime := args[1]
 
 	if atime == "" {
@@ -60,8 +58,7 @@ func ChtimesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	}
 	unixAtime := t_a.Unix()
 
-	mtime := args[0]
-	// mtime := ctx.Args.String("mtime")
+	mtime := args[2]
 
 	if mtime == "" {
 		con.PrintErrorf("Missing parameter: Last modified time id\n")

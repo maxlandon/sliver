@@ -20,8 +20,10 @@ package wireguard
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/command/settings"
@@ -31,7 +33,6 @@ import (
 
 // WGSocksListCmd - List WireGuard SOCKS proxies
 func WGSocksListCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
@@ -70,4 +71,27 @@ func WGSocksListCmd(cmd *cobra.Command, con *console.SliverConsole, args []strin
 			con.Println(tw.Render())
 		}
 	}
+}
+
+// SocksIDCompleter IDs of WireGuard socks servers.
+func SocksIDCompleter(con *console.SliverConsole) carapace.Action {
+	callback := func(_ carapace.Context) carapace.Action {
+		results := make([]string, 0)
+
+		socksList, err := con.Rpc.WGListSocksServers(context.Background(), &sliverpb.WGSocksServersReq{
+			Request: con.ActiveTarget.Request(con.App.CurrentMenu().Root()),
+		})
+		if err != nil {
+			return carapace.ActionMessage("failed to get Wireguard Socks servers: %s", err.Error())
+		}
+
+		for _, serv := range socksList.Servers {
+			results = append(results, strconv.Itoa(int(serv.ID)))
+			results = append(results, serv.LocalAddr)
+		}
+
+		return carapace.ActionValuesDescribed(results...).Tag("wireguard socks servers")
+	}
+
+	return carapace.ActionCallback(callback)
 }

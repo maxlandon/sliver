@@ -122,17 +122,17 @@ func GetImplantProfileByName(name string, con *console.SliverConsole) *clientpb.
 
 // ProfileNameCompleter - Completer for implant build names
 func ProfileNameCompleter(con *console.SliverConsole) carapace.Action {
-	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
-	if err != nil {
-		return carapace.ActionMessage(fmt.Sprintf("No profiles, err: %s", err.Error()))
-	}
-
-	if len(pbProfiles.Profiles) == 0 {
-		return carapace.ActionMessage("No saved implant profiles")
-	}
-
 	comps := func(ctx carapace.Context) carapace.Action {
 		var action carapace.Action
+
+		pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
+		if err != nil {
+			return carapace.ActionMessage(fmt.Sprintf("No profiles, err: %s", err.Error()))
+		}
+
+		if len(pbProfiles.Profiles) == 0 {
+			return carapace.ActionMessage("No saved implant profiles")
+		}
 
 		results := []string{}
 		sessions := []string{}

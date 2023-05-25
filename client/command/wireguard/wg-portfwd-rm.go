@@ -20,8 +20,10 @@ package wireguard
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
@@ -30,7 +32,6 @@ import (
 
 // WGPortFwdRmCmd - Remove a WireGuard port forward
 func WGPortFwdRmCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
@@ -63,4 +64,27 @@ func WGPortFwdRmCmd(cmd *cobra.Command, con *console.SliverConsole, args []strin
 	if stopReq.Forwarder != nil {
 		con.PrintInfof("Removed port forwarding rule %s -> %s\n", stopReq.Forwarder.LocalAddr, stopReq.Forwarder.RemoteAddr)
 	}
+}
+
+// PortfwdIDCompleter completes IDs of WireGuard remote portforwarders
+func PortfwdIDCompleter(con *console.SliverConsole) carapace.Action {
+	callback := func(_ carapace.Context) carapace.Action {
+		results := make([]string, 0)
+
+		fwdList, err := con.Rpc.WGListForwarders(context.Background(), &sliverpb.WGTCPForwardersReq{
+			Request: con.ActiveTarget.Request(con.App.CurrentMenu().Root()),
+		})
+		if err != nil {
+			return carapace.ActionMessage("failed to get Wireguard port forwarders: %s", err.Error())
+		}
+
+		for _, fwd := range fwdList.Forwarders {
+			results = append(results, strconv.Itoa(int(fwd.ID)))
+			results = append(results, fmt.Sprintf("%s <- %s", fwd.LocalAddr, fwd.RemoteAddr))
+		}
+
+		return carapace.ActionValuesDescribed(results...).Tag("wireguard port forwarders")
+	}
+
+	return carapace.ActionCallback(callback)
 }

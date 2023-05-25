@@ -35,24 +35,21 @@ func ChownCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 		return
 	}
 
-	filePath := args[2]
-	// filePath := ctx.Args.String("path")
+	filePath := args[0]
 
 	if filePath == "" {
 		con.PrintErrorf("Missing parameter: file or directory name\n")
 		return
 	}
 
-	uid := args[0]
-	// uid := ctx.Args.String("uid")
+	uid := args[1]
 
 	if uid == "" {
 		con.PrintErrorf("Missing parameter: user id\n")
 		return
 	}
 
-	gid := args[1]
-	// gid := ctx.Args.String("gid")
+	gid := args[2]
 
 	if gid == "" {
 		con.PrintErrorf("Missing parameter: group id\n")

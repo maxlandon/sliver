@@ -19,9 +19,12 @@ package portfwd
 */
 
 import (
+	"fmt"
 	"sort"
+	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/command/settings"
@@ -62,4 +65,25 @@ func PrintPortfwd(con *console.SliverConsole) {
 		})
 	}
 	con.Printf("%s\n", tw.Render())
+}
+
+// PortfwdIDCompleter completes IDs of local portforwarders
+func PortfwdIDCompleter(_ *console.SliverConsole) carapace.Action {
+	callback := func(_ carapace.Context) carapace.Action {
+		results := make([]string, 0)
+
+		portfwds := core.Portfwds.List()
+		if len(portfwds) == 0 {
+			return carapace.ActionMessage("no active local port forwarders")
+		}
+
+		for _, fwd := range portfwds {
+			results = append(results, strconv.Itoa(int(fwd.ID)))
+			results = append(results, fmt.Sprintf("%s (%s)", fwd.BindAddr, fwd.SessionID))
+		}
+
+		return carapace.ActionValuesDescribed(results...).Tag("local port forwarders")
+	}
+
+	return carapace.ActionCallback(callback)
 }
