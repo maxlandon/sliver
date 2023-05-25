@@ -21,8 +21,8 @@ package socks
 import (
 	"sort"
 
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
@@ -30,7 +30,7 @@ import (
 )
 
 // SocksCmd - Display information about tunneled port forward(s)
-func SocksCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SocksCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	socks := core.SocksProxies.List()
 	if len(socks) == 0 {
 		con.PrintInfof("No socks5 proxies\n")

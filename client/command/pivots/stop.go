@@ -21,22 +21,22 @@ package pivots
 import (
 	"context"
 
-	"github.com/desertbit/grumble"
-
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
 )
 
 // StopPivotListenerCmd - Start a TCP pivot listener on the remote system
-func StopPivotListenerCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func StopPivotListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
-	id := uint32(ctx.Flags.Int("id"))
+
+	id, _ := cmd.Flags().GetUint32("id")
 	if id == uint32(0) {
 		pivotListeners, err := con.Rpc.PivotSessionListeners(context.Background(), &sliverpb.PivotListenersReq{
-			Request: con.ActiveTarget.Request(ctx),
+			Request: con.ActiveTarget.Request(cmd),
 		})
 		if err != nil {
 			con.PrintErrorf("%s\n", err)
@@ -55,7 +55,7 @@ func StopPivotListenerCmd(ctx *grumble.Context, con *console.SliverConsoleClient
 	}
 	_, err := con.Rpc.PivotStopListener(context.Background(), &sliverpb.PivotStopListenerReq{
 		ID:      id,
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

@@ -21,8 +21,9 @@ package rportfwd
 import (
 	"context"
 
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
@@ -30,23 +31,23 @@ import (
 )
 
 // StartRportFwdListenerCmd - Start listener for reverse port forwarding on implant
-func RportFwdListenersCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func RportFwdListenersCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
 
 	rportfwdListeners, err := con.Rpc.GetRportFwdListeners(context.Background(), &sliverpb.RportFwdListenersReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintWarnf("%s\n", err)
 		return
 	}
-	PrintRportFwdListeners(rportfwdListeners, ctx.Flags, con)
+	PrintRportFwdListeners(rportfwdListeners, cmd.Flags(), con)
 }
 
-func PrintRportFwdListeners(rportfwdListeners *sliverpb.RportFwdListeners, flags grumble.FlagMap, con *console.SliverConsoleClient) {
+func PrintRportFwdListeners(rportfwdListeners *sliverpb.RportFwdListeners, flags *pflag.FlagSet, con *console.SliverConsole) {
 	if rportfwdListeners.Response != nil && rportfwdListeners.Response.Err != "" {
 		con.PrintErrorf("%s\n", rportfwdListeners.Response.Err)
 		return

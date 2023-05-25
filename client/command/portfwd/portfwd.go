@@ -21,8 +21,8 @@ package portfwd
 import (
 	"sort"
 
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
@@ -30,12 +30,12 @@ import (
 )
 
 // PortfwdCmd - Display information about tunneled port forward(s)
-func PortfwdCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func PortfwdCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	PrintPortfwd(con)
 }
 
 // PrintPortfwd - Print the port forward(s)
-func PrintPortfwd(con *console.SliverConsoleClient) {
+func PrintPortfwd(con *console.SliverConsole) {
 	portfwds := core.Portfwds.List()
 	if len(portfwds) == 0 {
 		con.PrintInfof("No port forwards\n")

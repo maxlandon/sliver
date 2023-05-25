@@ -22,8 +22,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
@@ -31,13 +31,13 @@ import (
 )
 
 // PivotDetailsCmd - Display pivots for all sessions
-func PivotDetailsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func PivotDetailsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
 	}
 	pivotListeners, err := con.Rpc.PivotSessionListeners(context.Background(), &sliverpb.PivotListenersReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -48,7 +48,7 @@ func PivotDetailsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		return
 	}
 
-	id := uint32(ctx.Flags.Int("id"))
+	id, _ := cmd.Flags().GetUint32("id")
 	if id == uint32(0) {
 		selectedListener, err := SelectPivotListener(pivotListeners.Listeners, con)
 		if err != nil {
@@ -71,7 +71,7 @@ func PivotDetailsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintPivotListenerDetails - Print details of a single pivot listener
-func PrintPivotListenerDetails(listener *sliverpb.PivotListener, con *console.SliverConsoleClient) {
+func PrintPivotListenerDetails(listener *sliverpb.PivotListener, con *console.SliverConsole) {
 	con.Printf("\n")
 	con.Printf("               ID: %d\n", listener.ID)
 	con.Printf("         Protocol: %s\n", PivotTypeToString(listener.Type))

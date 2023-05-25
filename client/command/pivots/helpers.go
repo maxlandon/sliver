@@ -32,8 +32,7 @@ import (
 )
 
 // SelectPivotListener - Interactive menu to select a pivot listener
-func SelectPivotListener(listeners []*sliverpb.PivotListener, con *console.SliverConsoleClient) (*sliverpb.PivotListener, error) {
-
+func SelectPivotListener(listeners []*sliverpb.PivotListener, con *console.SliverConsole) (*sliverpb.PivotListener, error) {
 	// Render selection table
 	buf := bytes.NewBufferString("")
 	table := tabwriter.NewWriter(buf, 0, 2, 2, ' ', 0)
