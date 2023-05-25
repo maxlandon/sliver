@@ -40,15 +40,15 @@ func SocksStartCmd(cmd *cobra.Command, con *console.SliverConsole, args []string
 	}
 
 	// listener
-	host ,_ := cmd.Flags().GetString("host")
-	port ,_ := cmd.Flags().GetString("port")
+	host, _ := cmd.Flags().GetString("host")
+	port, _ := cmd.Flags().GetString("port")
 	bindAddr := fmt.Sprintf("%s:%s", host, port)
 	ln, err := net.Listen("tcp", bindAddr)
 	if err != nil {
 		con.PrintErrorf("Socks5 Listen %s \n", err.Error())
 		return
 	}
-	username ,_ := cmd.Flags().GetString("user")
+	username, _ := cmd.Flags().GetString("user")
 	if err != nil {
 		return
 	}

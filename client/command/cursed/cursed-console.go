@@ -27,15 +27,15 @@ import (
 	"text/tabwriter"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/desertbit/grumble"
 	"github.com/desertbit/readline"
+	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/client/overlord"
 )
 
-func CursedConsoleCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func CursedConsoleCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	curse := selectCursedProcess(con)
 	if curse == nil {
 		return
@@ -56,7 +56,7 @@ func CursedConsoleCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	startCursedConsole(curse, true, target, con)
 }
 
-func selectDebugTarget(targets []overlord.ChromeDebugTarget, con *console.SliverConsoleClient) *overlord.ChromeDebugTarget {
+func selectDebugTarget(targets []overlord.ChromeDebugTarget, con *console.SliverConsole) *overlord.ChromeDebugTarget {
 	if len(targets) < 1 {
 		con.PrintErrorf("No debug targets\n")
 		return nil
@@ -90,13 +90,11 @@ func selectDebugTarget(targets []overlord.ChromeDebugTarget, con *console.Sliver
 	return &selectedTarget
 }
 
-var (
-	helperHooks = []string{
-		"console.log = (...a) => {return a;}", // console.log
-	}
-)
+var helperHooks = []string{
+	"console.log = (...a) => {return a;}", // console.log
+}
 
-func startCursedConsole(curse *core.CursedProcess, helpers bool, target *overlord.ChromeDebugTarget, con *console.SliverConsoleClient) {
+func startCursedConsole(curse *core.CursedProcess, helpers bool, target *overlord.ChromeDebugTarget, con *console.SliverConsole) {
 	tmpFile, _ := ioutil.TempFile("", "cursed")
 	reader, err := readline.NewEx(&readline.Config{
 		Prompt:      "\033[31mcursed »\033[0m ",
