@@ -33,7 +33,6 @@ import (
 
 // OperatorsCmd - Display operators and current online status
 func OperatorsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	operators, err := con.Rpc.GetOperators(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

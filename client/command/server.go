@@ -533,6 +533,13 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 				settings.SettingsSmallTerm(cmd, con, args)
 			},
 		})
+		settingsCmd.AddCommand(&cobra.Command{
+			Use:   "user-connect",
+			Short: "Enable user connections/disconnections (can be very verbose when they use CLI)",
+			Run: func(cmd *cobra.Command, args []string) {
+				settings.SettingsUserConnect(cmd, con, args)
+			},
+		})
 		server.AddCommand(settingsCmd)
 
 		// [ Info ] --------------------------------------------------------------
@@ -1533,6 +1540,9 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 		Flags("builders", buildersCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+
+		server.InitDefaultHelpCmd()
+		server.SetHelpCommandGroupID(consts.GenericHelpGroup)
 
 		return server
 	}

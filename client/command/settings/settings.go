@@ -31,7 +31,6 @@ import (
 
 // SettingsCmd - The client settings command
 func SettingsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
@@ -55,7 +54,6 @@ func SettingsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) 
 
 // SettingsAlwaysOverflow - Toggle always overflow
 func SettingsAlwaysOverflow(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
@@ -70,7 +68,6 @@ func SettingsAlwaysOverflow(cmd *cobra.Command, con *console.SliverConsole, args
 
 // SettingsSmallTerm - Modify small terminal width value
 func SettingsSmallTerm(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
@@ -101,7 +98,6 @@ func SettingsSmallTerm(cmd *cobra.Command, con *console.SliverConsole, args []st
 
 // SettingsTablesCmd - The client settings command
 func SettingsTablesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
@@ -134,7 +130,6 @@ func SettingsTablesCmd(cmd *cobra.Command, con *console.SliverConsole, args []st
 
 // SettingsSaveCmd - The client settings command
 func SettingsSaveCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
@@ -149,4 +144,18 @@ func SettingsSaveCmd(cmd *cobra.Command, con *console.SliverConsole, args []stri
 	} else {
 		con.PrintInfof("Settings saved to disk\n")
 	}
+}
+
+// SettingsAlwaysOverflow - Toggle always overflow
+func SettingsUserConnect(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+	var err error
+	if con.Settings == nil {
+		con.Settings, err = assets.LoadSettings()
+		if err != nil {
+			con.PrintErrorf("%s\n", err)
+			return
+		}
+	}
+	con.Settings.UserConnect = !con.Settings.UserConnect
+	con.PrintInfof("User connect events = %v\n", con.Settings.UserConnect)
 }

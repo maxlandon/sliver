@@ -36,6 +36,7 @@ type ClientSettings struct {
 	SmallTermWidth    int    `json:"small_term_width"`
 	AlwaysOverflow    bool   `json:"always_overflow"`
 	VimMode           bool   `json:"vim_mode"`
+	UserConnect       bool   `json:"user_connect"`
 }
 
 // LoadSettings - Load the client settings from disk
@@ -74,6 +75,6 @@ func SaveSettings(settings *ClientSettings) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath.Join(rootDir, settingsFileName), data, 0600)
+	err = ioutil.WriteFile(filepath.Join(rootDir, settingsFileName), data, 0o600)
 	return err
 }

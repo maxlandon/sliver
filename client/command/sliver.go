@@ -65,6 +65,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		}
 		sliver.AddGroup(groups...)
 
+		// Help command
+		sliver.InitDefaultHelpCmd()
+		sliver.SetHelpCommandGroupID(consts.SliverCoreHelpGroup)
+
 		// Load Aliases
 		aliasManifests := assets.GetInstalledAliasManifests()
 		n := 0
@@ -663,6 +667,62 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		})
 		carapace.Gen(sshCmd).PositionalCompletion(carapace.ActionValues().Usage("remote host to SSH to (required)"))
 		carapace.Gen(sshCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("command line with arguments"))
+
+		// [ Extensions ] -----------------------------------------------------------------
+		extensionCmd := &cobra.Command{
+			Use:     consts.ExtensionsStr,
+			Short:   "Manage extensions",
+			Long:    help.GetHelpFor([]string{consts.ExtensionsStr}),
+			GroupID: consts.ExtensionHelpGroup,
+			Run: func(cmd *cobra.Command, _ []string) {
+				extensions.ExtensionsCmd(cmd, con)
+			},
+		}
+		sliver.AddCommand(extensionCmd)
+
+		extensionCmd.AddCommand(&cobra.Command{
+			Use:   consts.ListStr,
+			Short: "List extensions loaded in the current session or beacon",
+			Long:  help.GetHelpFor([]string{consts.ExtensionsStr, consts.ListStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				extensions.ExtensionsListCmd(cmd, con, args)
+			},
+		})
+
+		extensionLoadCmd := &cobra.Command{
+			Use:   consts.LoadStr,
+			Short: "Temporarily load an extension from a local directory",
+			Long:  help.GetHelpFor([]string{consts.ExtensionsStr, consts.LoadStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				extensions.ExtensionLoadCmd(cmd, con, args)
+			},
+		}
+		extensionCmd.AddCommand(extensionLoadCmd)
+		carapace.Gen(extensionLoadCmd).PositionalCompletion(carapace.ActionDirectories().Usage("path to the extension directory"))
+
+		extensionInstallCmd := &cobra.Command{
+			Use:   consts.InstallStr,
+			Short: "Install an extension from a local directory or .tar.gz file",
+			Long:  help.GetHelpFor([]string{consts.ExtensionsStr, consts.InstallStr}),
+			Args:  cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
+				extensions.ExtensionsInstallCmd(cmd, con, args)
+			},
+		}
+		extensionCmd.AddCommand(extensionInstallCmd)
+		carapace.Gen(extensionInstallCmd).PositionalCompletion(carapace.ActionFiles().Usage("path to the extension .tar.gz or directory"))
+
+		extensionRmCmd := &cobra.Command{
+			Use:   consts.RmStr,
+			Short: "Remove an installed extension",
+			Args:  cobra.ExactArgs(1),
+			Long:  help.GetHelpFor([]string{consts.ExtensionsStr, consts.RmStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				extensions.ExtensionsRemoveCmd(cmd, con, args)
+			},
+		}
+		extensionCmd.AddCommand(extensionRmCmd)
+		carapace.Gen(extensionRmCmd).PositionalCompletion(extensions.ExtensionsCommandNameCompleter(con).Usage("the command name of the extension to remove"))
 
 		// [ Filesystem ] ---------------------------------------------
 
@@ -1807,9 +1867,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		})
 
 		con.ExposeCommands()
-		// if client.Client != nil {
-		// 	client.Client.ExposeCommands()
-		// }
 
 		return sliver
 	}

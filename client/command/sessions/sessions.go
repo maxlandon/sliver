@@ -38,7 +38,6 @@ import (
 
 // SessionsCmd - Display/interact with sessions
 func SessionsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	interact, _ := cmd.Flags().GetString("interact")
 	killFlag, _ := cmd.Flags().GetString("kill")
 	killAll, _ := cmd.Flags().GetBool("kill-all")

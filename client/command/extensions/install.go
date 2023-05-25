@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
@@ -33,8 +33,9 @@ import (
 )
 
 // ExtensionsInstallCmd - Install an extension
-func ExtensionsInstallCmd(ctx *grumble.Context, con *console.SliverConsole) {
-	extLocalPath := ctx.Args.String("path")
+func ExtensionsInstallCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+	extLocalPath := args[0]
+
 	fi, err := os.Stat(extLocalPath)
 	if os.IsNotExist(err) {
 		con.PrintErrorf("Extension path '%s' does not exist", extLocalPath)

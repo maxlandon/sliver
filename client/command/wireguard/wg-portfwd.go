@@ -31,7 +31,6 @@ import (
 
 // WGPortFwdListCmd - List WireGuard port forwards
 func WGPortFwdListCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return

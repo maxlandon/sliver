@@ -42,7 +42,7 @@ const (
 )
 
 // BindCommands - Bind commands to a App
-func BindCommands(con *console.SliverConsoleClient) {
+func BindCommands(con *console.SliverConsole) {
 	// // Load Reactions
 	// n, err := reaction.LoadReactions()
 	// if err != nil && !os.IsNotExist(err) {
