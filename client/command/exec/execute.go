@@ -23,31 +23,32 @@ import (
 	"strings"
 	"time"
 
-	"github.com/desertbit/grumble"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/command/loot"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
 )
 
 // ExecuteCmd - Run a command on the remote system
-func ExecuteCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func ExecuteCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 
-	cmdPath := ctx.Args.String("command")
-	args := ctx.Args.StringList("arguments")
-	token := ctx.Flags.Bool("token")
-	output := ctx.Flags.Bool("output")
-	stdout := ctx.Flags.String("stdout")
-	stderr := ctx.Flags.String("stderr")
-	saveLoot := ctx.Flags.Bool("loot")
-	saveOutput := ctx.Flags.Bool("save")
-	ppid := ctx.Flags.Uint("ppid")
+	cmdPath := args[0]
+	args = args[1:]
+
+	token, _ := cmd.Flags().GetBool("token")
+	output, _ := cmd.Flags().GetBool("output")
+	stdout, _ := cmd.Flags().GetString("stdout")
+	stderr, _ := cmd.Flags().GetString("stderr")
+	saveLoot, _ := cmd.Flags().GetBool("loot")
+	saveOutput, _ := cmd.Flags().GetBool("save")
+	ppid, _ := cmd.Flags().GetUint("ppid")
 	hostName := getHostname(session, beacon)
 
 	// If the user wants to loot or save the output, we have to capture it regardless of if they specified -o
@@ -64,7 +65,7 @@ func ExecuteCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	con.SpinUntil(fmt.Sprintf("Executing %s %s ...", cmdPath, strings.Join(args, " ")), ctrl)
 	if token || ppid != 0 {
 		exec, err = con.Rpc.ExecuteWindows(context.Background(), &sliverpb.ExecuteWindowsReq{
-			Request:  con.ActiveTarget.Request(ctx),
+			Request:  con.ActiveTarget.Request(cmd),
 			Path:     cmdPath,
 			Args:     args,
 			Output:   captureOutput,
@@ -75,7 +76,7 @@ func ExecuteCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		})
 	} else {
 		exec, err = con.Rpc.Execute(context.Background(), &sliverpb.ExecuteReq{
-			Request: con.ActiveTarget.Request(ctx),
+			Request: con.ActiveTarget.Request(cmd),
 			Path:    cmdPath,
 			Args:    args,
 			Output:  captureOutput,
@@ -97,44 +98,44 @@ func ExecuteCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 				con.PrintErrorf("Failed to decode response %s\n", err)
 				return
 			}
-			HandleExecuteResponse(exec, cmdPath, hostName, ctx, con)
+			HandleExecuteResponse(exec, cmdPath, hostName, cmd, con)
 		})
 		con.PrintAsyncResponse(exec.Response)
 	} else {
-		HandleExecuteResponse(exec, cmdPath, hostName, ctx, con)
+		HandleExecuteResponse(exec, cmdPath, hostName, cmd, con)
 	}
 }
 
-func HandleExecuteResponse(exec *sliverpb.Execute, cmdPath string, hostName string, ctx *grumble.Context, con *console.SliverConsoleClient) {
+func HandleExecuteResponse(exec *sliverpb.Execute, cmdPath string, hostName string, cmd *cobra.Command, con *console.SliverConsole) {
 	var lootedOutput []byte
-	stdout := ctx.Flags.String("stdout")
-	saveLoot := ctx.Flags.Bool("loot")
-	saveOutput := ctx.Flags.Bool("save")
-	lootName := ctx.Flags.String("name")
-	ignoreStderr := ctx.Flags.Bool("ignore-stderr")
+	stdout, _ := cmd.Flags().GetString("stdout")
+	saveLoot, _ := cmd.Flags().GetBool("loot")
+	saveOutput, _ := cmd.Flags().GetBool("save")
+	lootName, _ := cmd.Flags().GetString("name")
+	ignoreStderr, _ := cmd.Flags().GetBool("ignore-stderr")
 
 	if saveLoot || saveOutput {
 		lootedOutput = combineCommandOutput(exec, stdout == "", !ignoreStderr && 0 < len(exec.Stderr))
 	}
 
 	if saveLoot {
-		LootExecute(lootedOutput, lootName, ctx.Command.Name, cmdPath, hostName, con)
+		LootExecute(lootedOutput, lootName, cmd.Name(), cmdPath, hostName, con)
 	}
 
 	if saveOutput {
-		SaveExecutionOutput(string(lootedOutput), ctx.Command.Name, hostName, con)
+		SaveExecutionOutput(string(lootedOutput), cmd.Name(), hostName, con)
 	}
 
-	PrintExecute(exec, ctx, con)
+	PrintExecute(exec, cmd, con)
 }
 
 // PrintExecute - Print the output of an executed command
-func PrintExecute(exec *sliverpb.Execute, ctx *grumble.Context, con *console.SliverConsoleClient) {
-	ignoreStderr := ctx.Flags.Bool("ignore-stderr")
-	stdout := ctx.Flags.String("stdout")
-	stderr := ctx.Flags.String("stderr")
+func PrintExecute(exec *sliverpb.Execute, cmd *cobra.Command, con *console.SliverConsole) {
+	ignoreStderr, _ := cmd.Flags().GetBool("ignore-stderr")
+	stdout, _ := cmd.Flags().GetString("stdout")
+	stderr, _ := cmd.Flags().GetString("stderr")
 
-	output := ctx.Flags.Bool("output")
+	output, _ := cmd.Flags().GetBool("output")
 	if !output {
 		if exec.Status == 0 {
 			con.PrintInfof("Command executed successfully\n")
@@ -202,7 +203,7 @@ func combineCommandOutput(exec *sliverpb.Execute, combineStdOut bool, combineStd
 	return []byte(outputString)
 }
 
-func LootExecute(commandOutput []byte, lootName string, sliverCmdName string, cmdName string, hostName string, con *console.SliverConsoleClient) {
+func LootExecute(commandOutput []byte, lootName string, sliverCmdName string, cmdName string, hostName string, con *console.SliverConsole) {
 	if len(commandOutput) == 0 {
 		con.PrintInfof("There was no output from execution, so there is nothing to loot.\n")
 		return
@@ -221,7 +222,7 @@ func LootExecute(commandOutput []byte, lootName string, sliverCmdName string, cm
 	loot.SendLootMessage(lootMessage, con)
 }
 
-func PrintExecutionOutput(executionOutput string, saveOutput bool, commandName string, hostName string, con *console.SliverConsoleClient) {
+func PrintExecutionOutput(executionOutput string, saveOutput bool, commandName string, hostName string, con *console.SliverConsole) {
 	con.PrintInfof("Output:\n%s", executionOutput)
 
 	if saveOutput {
@@ -229,7 +230,7 @@ func PrintExecutionOutput(executionOutput string, saveOutput bool, commandName s
 	}
 }
 
-func SaveExecutionOutput(executionOutput string, commandName string, hostName string, con *console.SliverConsoleClient) {
+func SaveExecutionOutput(executionOutput string, commandName string, hostName string, con *console.SliverConsole) {
 	var outFilePath *os.File
 	var err error
 

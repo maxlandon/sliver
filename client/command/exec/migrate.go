@@ -21,24 +21,28 @@ package exec
 import (
 	"context"
 	"fmt"
-
-	"github.com/desertbit/grumble"
+	"strconv"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/spf13/cobra"
 )
 
 // MigrateCmd - Windows only, inject an implant into another process
-func MigrateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func MigrateCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session := con.ActiveTarget.GetSession()
 	if session == nil {
 		return
 	}
 
-	pid := ctx.Args.Uint("pid")
+	pid, err := strconv.Atoi(args[0])
+	if err != nil {
+		con.PrintErrorf("Invalid PID argument: %s (could not parse to int)", args[0])
+	}
+
 	config := con.GetActiveSessionConfig()
 	encoder := clientpb.ShellcodeEncoder_SHIKATA_GA_NAI
-	if ctx.Flags.Bool("disable-sgn") {
+	if disableSgn, _ := cmd.Flags().GetBool("disable-sgn"); disableSgn {
 		encoder = clientpb.ShellcodeEncoder_NONE
 	}
 
@@ -48,7 +52,7 @@ func MigrateCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	migrate, err := con.Rpc.Migrate(context.Background(), &clientpb.MigrateReq{
 		Pid:     uint32(pid),
 		Config:  config,
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 		Encoder: encoder,
 	})
 	ctrl <- true

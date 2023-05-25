@@ -28,23 +28,22 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // MsfInjectCmd - Inject a metasploit payload into a remote process
-func MsfInjectCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func MsfInjectCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 
-	payloadName := ctx.Flags.String("payload")
-	lhost := ctx.Flags.String("lhost")
-	lport := ctx.Flags.Int("lport")
-	encoder := ctx.Flags.String("encoder")
-	iterations := ctx.Flags.Int("iterations")
-	pid := ctx.Flags.Int("pid")
+	payloadName, _ := cmd.Flags().GetString("payload")
+	lhost, _ := cmd.Flags().GetString("lhost")
+	lport, _ := cmd.Flags().GetInt("lport")
+	encoder, _ := cmd.Flags().GetString("encoder")
+	iterations, _ := cmd.Flags().GetInt("iterations")
+	pid, _ := cmd.Flags().GetInt("pid")
 
 	if lhost == "" {
 		con.PrintErrorf("Invalid lhost '%s', see `help %s`\n", lhost, consts.MsfInjectStr)
@@ -69,7 +68,7 @@ func MsfInjectCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		payloadName, goos, goarch, lhost, lport)
 	con.SpinUntil(msg, ctrl)
 	msfTask, err := con.Rpc.MsfRemote(context.Background(), &clientpb.MSFRemoteReq{
-		Request:    con.ActiveTarget.Request(ctx),
+		Request:    con.ActiveTarget.Request(cmd),
 		Payload:    payloadName,
 		LHost:      lhost,
 		LPort:      uint32(lport),
@@ -100,7 +99,7 @@ func MsfInjectCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintMsfRemote - Print the results of the remote injection attempt
-func PrintMsfRemote(msfRemote *sliverpb.Task, con *console.SliverConsoleClient) {
+func PrintMsfRemote(msfRemote *sliverpb.Task, con *console.SliverConsole) {
 	if msfRemote.Response == nil {
 		con.PrintErrorf("Empty response from msf payload injection task")
 		return

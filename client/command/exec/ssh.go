@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/command/loot"
@@ -34,7 +34,7 @@ import (
 )
 
 // SSHCmd - A built-in SSH client command for the remote system (doesn't shell out)
-func SSHCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func SSHCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	var (
 		privKey []byte
 		err     error
@@ -44,13 +44,13 @@ func SSHCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		return
 	}
 
-	username := ctx.Flags.String("login")
+	username, _ := cmd.Flags().GetString("login")
 	if username == "" {
 		username = session.GetUsername()
 	}
 
-	port := ctx.Flags.Uint("port")
-	privateKeyPath := ctx.Flags.String("private-key")
+	port, _ := cmd.Flags().GetUint("port")
+	privateKeyPath, _ := cmd.Flags().GetString("private-key")
 	if privateKeyPath != "" {
 		privKey, err = os.ReadFile(privateKeyPath)
 		if err != nil {
@@ -58,13 +58,14 @@ func SSHCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 			return
 		}
 	}
-	password := ctx.Flags.String("password")
+	password, _ := cmd.Flags().GetString("password")
 
-	hostname := ctx.Args.String("hostname")
-	command := ctx.Args.StringList("command")
-	kerberosRealm := ctx.Flags.String("kerberos-realm")
-	kerberosConfig := ctx.Flags.String("kerberos-config")
-	kerberosKeytabFile := ctx.Flags.String("kerberos-keytab")
+	hostname := args[0]
+	command := args[1:]
+
+	kerberosRealm, _ := cmd.Flags().GetString("kerberos-realm")
+	kerberosConfig, _ := cmd.Flags().GetString("kerberos-config")
+	kerberosKeytabFile, _ := cmd.Flags().GetString("kerberos-keytab")
 
 	if kerberosRealm != "" && kerberosKeytabFile == "" {
 		con.PrintErrorf("You must specify a keytab file with the --kerberos-keytab flag\n")
@@ -79,7 +80,9 @@ func SSHCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		}
 	}
 
-	if password == "" && len(privKey) == 0 && !ctx.Flags.Bool("skip-loot") {
+	skipLoot, _ := cmd.Flags().GetBool("skip-loot")
+
+	if password == "" && len(privKey) == 0 && !skipLoot {
 		oldUsername := username
 		username, password, privKey = tryCredsFromLoot(con)
 		if username == "" {
@@ -97,7 +100,7 @@ func SSHCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		Realm:    kerberosRealm,
 		Krb5Conf: kerberosConfig,
 		Keytab:   kerberosKeytab,
-		Request:  con.ActiveTarget.Request(ctx),
+		Request:  con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -119,7 +122,7 @@ func SSHCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintSSHCmd - Print the ssh command response
-func PrintSSHCmd(sshCmd *sliverpb.SSHCommand, con *console.SliverConsoleClient) {
+func PrintSSHCmd(sshCmd *sliverpb.SSHCommand, con *console.SliverConsole) {
 	if sshCmd.Response != nil && sshCmd.Response.Err != "" {
 		con.PrintErrorf("Error: %s\n", sshCmd.Response.Err)
 		if sshCmd.StdErr != "" {
@@ -137,7 +140,7 @@ func PrintSSHCmd(sshCmd *sliverpb.SSHCommand, con *console.SliverConsoleClient) 
 	}
 }
 
-func tryCredsFromLoot(con *console.SliverConsoleClient) (string, string, []byte) {
+func tryCredsFromLoot(con *console.SliverConsole) (string, string, []byte) {
 	var (
 		username string
 		password string
