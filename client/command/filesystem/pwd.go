@@ -26,18 +26,17 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // PwdCmd - Print the remote working directory
-func PwdCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func PwdCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 	pwd, err := con.Rpc.Pwd(context.Background(), &sliverpb.PwdReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -59,7 +58,7 @@ func PwdCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintPwd - Print the remote working directory
-func PrintPwd(pwd *sliverpb.Pwd, con *console.SliverConsoleClient) {
+func PrintPwd(pwd *sliverpb.Pwd, con *console.SliverConsole) {
 	if pwd.Response != nil && pwd.Response.Err != "" {
 		con.PrintErrorf("%s\n", pwd.Response.Err)
 		return

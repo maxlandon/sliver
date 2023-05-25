@@ -31,20 +31,21 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/util/encoders"
-
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // UploadCmd - Upload a file to the remote system
-func UploadCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func UploadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 
-	localPath := ctx.Args.String("local-path")
-	remotePath := ctx.Args.String("remote-path")
-	isIOC := ctx.Flags.Bool("ioc")
+	localPath := args[0]
+	remotePath := args[1]
+	// localPath := ctx.Args.String("local-path")
+	// remotePath := ctx.Args.String("remote-path")
+	isIOC, _ := cmd.Flags().GetBool("ioc")
 
 	if localPath == "" {
 		con.PrintErrorf("Missing parameter, see `help upload`\n")
@@ -74,7 +75,7 @@ func UploadCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	ctrl := make(chan bool)
 	con.SpinUntil(fmt.Sprintf("%s -> %s", src, dst), ctrl)
 	upload, err := con.Rpc.Upload(context.Background(), &sliverpb.UploadReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 		Path:    dst,
 		Data:    uploadGzip,
 		Encoder: "gzip",
@@ -102,7 +103,7 @@ func UploadCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintUpload - Print the result of the upload command
-func PrintUpload(upload *sliverpb.Upload, con *console.SliverConsoleClient) {
+func PrintUpload(upload *sliverpb.Upload, con *console.SliverConsole) {
 	if upload.Response != nil && upload.Response.Err != "" {
 		con.PrintErrorf("%s\n", upload.Response.Err)
 		return

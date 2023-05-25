@@ -26,18 +26,18 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 )
 
 // MkdirCmd - Make a remote directory
-func MkdirCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func MkdirCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 
-	filePath := ctx.Args.String("path")
+	filePath := args[0]
+	// filePath := ctx.Args.String("path")
 
 	if filePath == "" {
 		con.PrintErrorf("Missing parameter: directory name\n")
@@ -45,7 +45,7 @@ func MkdirCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	}
 
 	mkdir, err := con.Rpc.Mkdir(context.Background(), &sliverpb.MkdirReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 		Path:    filePath,
 	})
 	if err != nil {
@@ -68,7 +68,7 @@ func MkdirCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintMkdir - Print make directory
-func PrintMkdir(mkdir *sliverpb.Mkdir, con *console.SliverConsoleClient) {
+func PrintMkdir(mkdir *sliverpb.Mkdir, con *console.SliverConsole) {
 	if mkdir.Response != nil && mkdir.Response.Err != "" {
 		con.PrintErrorf("%s\n", mkdir.Response.Err)
 		return

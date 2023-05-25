@@ -25,8 +25,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/command/settings"
@@ -36,19 +36,19 @@ import (
 )
 
 // IfconfigCmd - Display network interfaces on the remote system
-func IfconfigCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func IfconfigCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 	ifconfig, err := con.Rpc.Ifconfig(context.Background(), &sliverpb.IfconfigReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
 		return
 	}
-	all := ctx.Flags.Bool("all")
+	all, _ := cmd.Flags().GetBool("all")
 	if ifconfig.Response != nil && ifconfig.Response.Async {
 		con.AddBeaconCallback(ifconfig.Response.TaskID, func(task *clientpb.BeaconTask) {
 			err = proto.Unmarshal(task.Response, ifconfig)
@@ -65,7 +65,7 @@ func IfconfigCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintIfconfig - Print the ifconfig response
-func PrintIfconfig(ifconfig *sliverpb.Ifconfig, all bool, con *console.SliverConsoleClient) {
+func PrintIfconfig(ifconfig *sliverpb.Ifconfig, all bool, con *console.SliverConsole) {
 	var err error
 	interfaces := ifconfig.NetInterfaces
 	sort.Slice(interfaces, func(i, j int) bool {

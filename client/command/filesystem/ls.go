@@ -33,21 +33,26 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/util"
-
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // LsCmd - List the contents of a remote directory
-func LsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func LsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 
-	remotePath := ctx.Args.String("path")
+	var remotePath string
+	if len(args) == 1 {
+		remotePath = args[0]
+	} else {
+		remotePath = "."
+	}
 
 	ls, err := con.Rpc.Ls(context.Background(), &sliverpb.LsReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 		Path:    remotePath,
 	})
 	if err != nil {
@@ -61,16 +66,16 @@ func LsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 				con.PrintErrorf("Failed to decode response %s\n", err)
 				return
 			}
-			PrintLs(ls, ctx.Flags, con)
+			PrintLs(ls, cmd.Flags(), con)
 		})
 		con.PrintAsyncResponse(ls.Response)
 	} else {
-		PrintLs(ls, ctx.Flags, con)
+		PrintLs(ls, cmd.Flags(), con)
 	}
 }
 
 // PrintLs - Display an sliverpb.Ls object
-func PrintLs(ls *sliverpb.Ls, flags grumble.FlagMap, con *console.SliverConsoleClient) {
+func PrintLs(ls *sliverpb.Ls, flags *pflag.FlagSet, con *console.SliverConsole) {
 	if ls.Response != nil && ls.Response.Err != "" {
 		con.PrintErrorf("%s\n", ls.Response.Err)
 		return
@@ -98,9 +103,9 @@ func PrintLs(ls *sliverpb.Ls, flags grumble.FlagMap, con *console.SliverConsoleC
 	table := tabwriter.NewWriter(outputBuf, 0, 2, 2, ' ', 0)
 
 	// Extract the flags
-	reverseSort := flags.Bool("reverse")
-	sortByTime := flags.Bool("modified")
-	sortBySize := flags.Bool("size")
+	reverseSort, _ := flags.GetBool("reverse")
+	sortByTime, _ := flags.GetBool("modified")
+	sortBySize, _ := flags.GetBool("size")
 
 	/*
 		By default, name sorting is case sensitive.  Upper case entries come before
