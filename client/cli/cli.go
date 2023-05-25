@@ -66,7 +66,7 @@ func init() {
 	// Client console.
 	// All commands and RPC connection are generated WITHIN the command RunE():
 	// that means there should be no redundant command tree/RPC connections with
-	// other commands below, such as the implant one.
+	// other command trees below, such as the implant one.
 	rootCmd.AddCommand(consoleCmd(con))
 
 	// Implant.

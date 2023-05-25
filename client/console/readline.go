@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/desertbit/go-shlex"
 	"github.com/gofrs/uuid"
 	"github.com/reeflective/console"
 	"github.com/spf13/cobra"
@@ -41,9 +42,10 @@ type SliverConsole struct {
 	EventListeners           *sync.Map
 	BeaconTaskCallbacks      map[string]BeaconTaskCallback
 	BeaconTaskCallbacksMutex *sync.Mutex
+	Settings                 *assets.ClientSettings
 	IsServer                 bool
 	IsCLI                    bool
-	Settings                 *assets.ClientSettings
+	log                      func(format string, args ...any) (int, error)
 }
 
 // NewConsole creates the sliver client (and console), creating menus and prompts.
@@ -98,8 +100,19 @@ func NewConsole(isServer bool) *SliverConsole {
 // Init requires a working RPC connection to the sliver server, and 2 different sets of commands.
 // If run is true, the console application is started, making this call blocking. Otherwise, commands and
 // RPC connection are bound to the console (making the console ready to run), but the console does not start.
-func Init(con *SliverConsole, rpc rpcpb.SliverRPCClient, serverCmds, sliverCmds console.Commands) {
+func StartClient(con *SliverConsole, rpc rpcpb.SliverRPCClient, serverCmds, sliverCmds console.Commands, run bool) error {
 	con.Rpc = rpc
+	con.IsCLI = !run
+
+	// The console application needs to query the terminal for cursor positions
+	// when asynchronously printing logs (that is, when no command is running).
+	// If ran from a system shell, however, those queries will block because
+	// the system shell is in control of stdin. So just use the classic Printf.
+	if con.IsCLI {
+		con.log = fmt.Printf
+	} else {
+		con.log = con.App.TransientPrintf
+	}
 
 	// Bind commands to the app
 	server := con.App.CurrentMenu()
@@ -111,6 +124,12 @@ func Init(con *SliverConsole, rpc rpcpb.SliverRPCClient, serverCmds, sliverCmds 
 	// Events
 	go con.startEventLoop()
 	go core.TunnelLoop(rpc)
+
+	if !con.IsCLI {
+		return con.App.Run()
+	}
+
+	return nil
 }
 
 func (con *SliverConsole) startEventLoop() {
@@ -260,10 +279,14 @@ func (con *SliverConsole) triggerReactions(event *clientpb.Event) {
 		con.ActiveTarget.Set(currentActiveSession, currentActiveBeacon)
 	}()
 
-	con.ActiveTarget.Set(nil, nil)
+	// con.ActiveTarget.Set(nil, nil)
 	if event.EventType == consts.SessionOpenedEvent {
+		con.ActiveTarget.Set(nil, nil)
+
 		con.ActiveTarget.Set(event.Session, nil)
 	} else if event.EventType == consts.BeaconRegisteredEvent {
+		con.ActiveTarget.Set(nil, nil)
+
 		beacon := &clientpb.Beacon{}
 		proto.Unmarshal(event.Data, beacon)
 		con.ActiveTarget.Set(nil, beacon)
@@ -271,16 +294,17 @@ func (con *SliverConsole) triggerReactions(event *clientpb.Event) {
 
 	for _, reaction := range reactions {
 		for _, line := range reaction.Commands {
-			con.PrintInfof("Execute reaction: '%s'\n", line)
-			// args, err := shlex.Split(line, true)
-			// if err != nil {
-			// 	con.PrintErrorf("Reaction command has invalid args: %s\n", err)
-			// 	continue
-			// }
-			// err = con.App.RunCommand(args)
-			// if err != nil {
-			// 	con.PrintErrorf("Reaction command error: %s\n", err)
-			// }
+			con.PrintInfof(Bold+"Execute reaction: '%s'"+Normal, line)
+			args, err := shlex.Split(line, true)
+			if err != nil {
+				con.PrintErrorf("Reaction command has invalid args: %s\n", err)
+				continue
+			}
+
+			err = con.App.CurrentMenu().RunCommand(args)
+			if err != nil {
+				con.PrintErrorf("Reaction command error: %s\n", err)
+			}
 		}
 	}
 }
@@ -479,48 +503,48 @@ func (con *SliverConsole) PrintAsyncResponse(resp *commonpb.Response) {
 }
 
 func (con *SliverConsole) Printf(format string, args ...any) {
-	con.App.CurrentMenu().TransientPrintf(format, args...)
+	con.log(format, args...)
 }
 
 // Println prints an output without status and immediately below the last line of output.
 func (con *SliverConsole) Println(args ...any) {
 	format := strings.Repeat("%s", len(args))
-	con.App.CurrentMenu().TransientPrintf(format, args...)
+	con.log(format, args...)
 }
 
 // PrintInfof prints an info message immediately below the last line of output.
 func (con *SliverConsole) PrintInfof(format string, args ...any) {
-	con.App.CurrentMenu().TransientPrintf(Clearln+Info+format, args...)
+	con.log(Clearln+Info+format, args...)
 }
 
 // PrintSuccessf prints a success message immediately below the last line of output.
 func (con *SliverConsole) PrintSuccessf(format string, args ...any) {
-	con.App.CurrentMenu().TransientPrintf(Clearln+Success+format, args...)
+	con.log(Clearln+Success+format, args...)
 }
 
 // PrintWarnf a warning message immediately below the last line of output.
 func (con *SliverConsole) PrintWarnf(format string, args ...any) {
-	con.App.CurrentMenu().TransientPrintf(Clearln+"⚠️  "+Normal+format, args...)
+	con.log(Clearln+"⚠️  "+Normal+format, args...)
 }
 
 // PrintErrorf prints an error message immediately below the last line of output.
 func (con *SliverConsole) PrintErrorf(format string, args ...any) {
-	con.App.CurrentMenu().TransientPrintf(Clearln+Warn+format, args...)
+	con.log(Clearln+Warn+format, args...)
 }
 
 // PrintEventInfof prints an info message with a leading/trailing newline for emphasis.
 func (con *SliverConsole) PrintEventInfof(format string, args ...any) {
-	con.App.CurrentMenu().TransientPrintf(Clearln+"\n"+Info+format+"\r", args...)
+	con.log(Clearln+"\n"+Info+format+"\r", args...)
 }
 
 // PrintEventErrorf prints an error message with a leading/trailing newline for emphasis.
 func (con *SliverConsole) PrintEventErrorf(format string, args ...any) {
-	con.App.CurrentMenu().TransientPrintf(Clearln+"\n"+Warn+format+"\r", args...)
+	con.log(Clearln+"\n"+Warn+format+"\r", args...)
 }
 
 // PrintEventSuccessf a success message with a leading/trailing newline for emphasis.
 func (con *SliverConsole) PrintEventSuccessf(format string, args ...any) {
-	con.App.CurrentMenu().TransientPrintf(Clearln+"\n"+Success+format+"\r", args...)
+	con.log(Clearln+"\n"+Success+format+"\r", args...)
 }
 
 func (con *SliverConsole) SpinUntil(message string, ctrl chan bool) {

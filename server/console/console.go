@@ -62,7 +62,7 @@ func Start() {
 	}
 
 	con := console.NewConsole(false)
-	console.Init(con, localRPC, command.ServerCommands(con, nil), command.SliverCommands(con))
+	console.StartClient(con, localRPC, command.ServerCommands(con, nil), command.SliverCommands(con), true)
 
 	con.App.Run()
 }

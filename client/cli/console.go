@@ -35,20 +35,18 @@ func consoleRunnerCmd(con *console.SliverConsole, run bool) func(cmd *cobra.Comm
 			return nil
 		}
 
-		fmt.Printf("Connecting to %s:%d ...\n", config.LHost, config.LPort)
-		rpc, ln, err := transport.MTLSConnect(config)
+		// Don't clobber output when running a command from system shell.
+		if run {
+			fmt.Printf("Connecting to %s:%d ...\n", config.LHost, config.LPort)
+		}
+
+		rpc, _, err := transport.MTLSConnect(config)
 		if err != nil {
 			fmt.Printf("Connection to server failed %s", err)
 			return nil
 		}
-		defer ln.Close()
+		// defer ln.Close()
 
-		console.Init(con, rpc, command.ServerCommands(con, nil), command.SliverCommands(con))
-
-		if run {
-			return con.App.Run()
-		}
-
-		return nil
+		return console.StartClient(con, rpc, command.ServerCommands(con, nil), command.SliverCommands(con), run)
 	}
 }
