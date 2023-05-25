@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/command/settings"
@@ -107,4 +108,24 @@ func PrintWebsite(web *clientpb.Website, con *console.SliverConsole) {
 		})
 	}
 	con.Println(tw.Render())
+}
+
+// WebsiteNameCompleter completes the names of available websites.
+func WebsiteNameCompleter(con *console.SliverConsole) carapace.Action {
+	results := make([]string, 0)
+
+	websites, err := con.Rpc.Websites(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		return carapace.ActionMessage("Failed to list websites %s", err)
+	}
+
+	for _, ws := range websites.Websites {
+		results = append(results, ws.Name)
+	}
+
+	// if len(results) == 0 {
+	// 	return carapace.ActionMessage("no available websites")
+	// }
+
+	return carapace.ActionValues(results...).Tag("websites").Usage("website name")
 }

@@ -33,7 +33,6 @@ import (
 
 // ReactionCmd - Manage reactions to events
 func ReactionCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	totalReactions := 0
 	for _, eventType := range core.ReactableEvents {
 		reactions := core.Reactions.On(eventType)

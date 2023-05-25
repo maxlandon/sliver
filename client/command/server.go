@@ -816,7 +816,6 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			Use:   consts.NewStr,
 			Short: "Create a new implant profile (interactive session)",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.NewStr}),
-			// Args: cobra.ExactArgs(1), // 	a.String("name", "name of the profile", grumble.Default(""))
 			Run: func(cmd *cobra.Command, args []string) {
 				generate.ProfilesNewCmd(cmd, con, args)
 			},
@@ -878,7 +877,7 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			(*comp)["format"] = generate.FormatCompleter()
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
 		})
-		carapace.Gen(profilesNewCmd).PositionalCompletion(carapace.ActionValues().Usage("name of the profile (optional)"))
+		carapace.Gen(profilesNewCmd).PositionalCompletion(carapace.ActionValues().Usage("name of the session profile (optional)"))
 		profilesCmd.AddCommand(profilesNewCmd)
 
 		// New Beacon Profile Command
@@ -886,7 +885,6 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			Use:   consts.BeaconStr,
 			Short: "Create a new implant profile (beacon)",
 			Long:  help.GetHelpFor([]string{consts.ProfilesStr, consts.NewStr, consts.BeaconStr}),
-			// Args: cobra.ExactArgs(1), // 	a.String("name", "name of the profile", grumble.Default(""))
 			Run: func(cmd *cobra.Command, args []string) {
 				generate.ProfilesNewBeaconCmd(cmd, con, args)
 			},
@@ -955,7 +953,7 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			(*comp)["format"] = generate.FormatCompleter()
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
 		})
-		carapace.Gen(profilesNewBeaconCmd).PositionalCompletion(carapace.ActionValues().Usage("name of the profile (optional)"))
+		carapace.Gen(profilesNewBeaconCmd).PositionalCompletion(carapace.ActionValues().Usage("name of the beacon profile (optional)"))
 		profilesNewCmd.AddCommand(profilesNewBeaconCmd)
 
 		profilesRmCmd := &cobra.Command{
@@ -1037,15 +1035,13 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			Run: func(cmd *cobra.Command, args []string) {
 				websites.WebsitesCmd(cmd, con, args)
 			},
-			// Args: func(a *grumble.Args) {
-			// 	a.String("name", "website name", grumble.Default(""))
-			// },
 			GroupID: consts.NetworkHelpGroup,
 		}
+		server.AddCommand(websitesCmd)
 		Flags("websites", websitesCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		// carapace.Gen(websitesCmd).PositionalCompletion(carapace.ActionMessage("website name"))
+		carapace.Gen(websitesCmd).PositionalCompletion(websites.WebsiteNameCompleter(con))
 
 		websitesRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
@@ -1054,13 +1050,11 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			Run: func(cmd *cobra.Command, args []string) {
 				websites.WebsiteRmCmd(cmd, con, args)
 			},
-			// Args: func(a *grumble.Args) {
-			// 	a.String("name", "website name", grumble.Default(""))
-			// },
 		}
 		Flags("websites", websitesRmCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(websitesRmCmd).PositionalCompletion(websites.WebsiteNameCompleter(con))
 		websitesCmd.AddCommand(websitesRmCmd)
 
 		websitesRmWebContentCmd := &cobra.Command{
@@ -1078,6 +1072,9 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		websitesCmd.AddCommand(websitesRmWebContentCmd)
+		FlagComps(websitesRmWebContentCmd, func(comp *carapace.ActionMap) {
+			(*comp)["website"] = websites.WebsiteNameCompleter(con)
+		})
 
 		websitesContentCmd := &cobra.Command{
 			Use:   consts.AddWebContentStr,
@@ -1097,6 +1094,7 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 		})
 		FlagComps(websitesContentCmd, func(comp *carapace.ActionMap) {
 			(*comp)["content"] = carapace.ActionFiles().Tag("content directory/files")
+			(*comp)["website"] = websites.WebsiteNameCompleter(con)
 		})
 		websitesCmd.AddCommand(websitesContentCmd)
 
@@ -1115,7 +1113,9 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		websitesCmd.AddCommand(websitesContentTypeCmd)
-		server.AddCommand(websitesCmd)
+		FlagComps(websitesContentTypeCmd, func(comp *carapace.ActionMap) {
+			(*comp)["website"] = websites.WebsiteNameCompleter(con)
+		})
 
 		// [ Beacons ] ---------------------------------------------
 
@@ -1271,6 +1271,10 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			f.StringP("file-type", "F", "", "force a specific file type (binary/text)")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		FlagComps(lootAddCmd, func(comp *carapace.ActionMap) {
+			(*comp)["type"] = carapace.ActionValues("file", "cred").Tag("loot type")
+			(*comp)["file-type"] = carapace.ActionValues("binary", "text").Tag("loot file type")
+		})
 		carapace.Gen(lootAddCmd).PositionalCompletion(
 			carapace.ActionFiles().Tag("local loot file").Usage("The local file path to the loot"))
 
@@ -1289,6 +1293,10 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			f.StringP("type", "T", "", "force a specific loot type (file/cred)")
 			f.StringP("file-type", "F", "", "force a specific file type (binary/text)")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(lootRemoteCmd, func(comp *carapace.ActionMap) {
+			(*comp)["type"] = carapace.ActionValues("file", "cred").Tag("loot type")
+			(*comp)["file-type"] = carapace.ActionValues("binary", "text").Tag("loot file type")
 		})
 
 		lootCredsCmd := &cobra.Command{
@@ -1455,6 +1463,9 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 		reactionCmd.AddCommand(reactionUnsetCmd)
 		Flags("reactions", reactionUnsetCmd, func(f *pflag.FlagSet) {
 			f.IntP("id", "i", 0, "the id of the reaction to remove")
+		})
+		FlagComps(reactionUnsetCmd, func(comp *carapace.ActionMap) {
+			(*comp)["id"] = reaction.ReactionIDCompleter(con)
 		})
 
 		reactionSaveCmd := &cobra.Command{

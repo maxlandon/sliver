@@ -34,7 +34,6 @@ var ErrNonReactableEvent = errors.New("non-reactable event type")
 
 // ReactionSetCmd - Set a reaction upon an event
 func ReactionSetCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	eventType, err := getEventType(cmd, con)
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
