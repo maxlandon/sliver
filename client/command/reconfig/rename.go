@@ -21,22 +21,21 @@ package reconfig
 import (
 	"context"
 
-	"github.com/desertbit/grumble"
-
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/util"
+	"github.com/spf13/cobra"
 )
 
 // RecnameCmd - Reconfigure metadata about a sessions
-func RenameCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func RenameCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 
 	// Option to change the agent name
-	name := ctx.Flags.String("name")
+	name, _ := cmd.Flags().GetString("name")
 	if err := util.AllowedName(name); err != nil {
 		con.PrintErrorf("%s\n", err)
 		return

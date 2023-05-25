@@ -28,6 +28,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/command/environment"
@@ -46,7 +47,7 @@ import (
 )
 
 // TasksFetchCmd - Manage beacon tasks
-func TasksFetchCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func TasksFetchCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	beacon := con.ActiveTarget.GetBeaconInteractive()
 	if beacon == nil {
 		return
@@ -62,7 +63,10 @@ func TasksFetchCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		return
 	}
 
-	idArg := ctx.Args.String("id")
+	var idArg string
+	if len(args) > 0 {
+		idArg = args[0]
+	}
 	if idArg != "" {
 		tasks = filterTasksByID(idArg, tasks)
 		if len(tasks) == 0 {
@@ -71,7 +75,7 @@ func TasksFetchCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		}
 	}
 
-	filter := ctx.Flags.String("filter")
+	filter, _ := cmd.Flags().GetString("filter")
 	if filter != "" {
 		tasks = filterTasksByTaskType(filter, tasks)
 		if len(tasks) == 0 {
@@ -120,7 +124,7 @@ func filterTasksByTaskType(taskType string, tasks []*clientpb.BeaconTask) []*cli
 }
 
 // PrintTask - Print the details of a beacon task
-func PrintTask(task *clientpb.BeaconTask, con *console.SliverConsoleClient) {
+func PrintTask(task *clientpb.BeaconTask, con *console.SliverConsole) {
 	tw := table.NewWriter()
 	tw.SetStyle(settings.GetTableWithBordersStyle(con))
 	tw.AppendRow(table.Row{console.Bold + "Beacon Task" + console.Normal, task.ID})
@@ -167,7 +171,7 @@ func emojiState(state string) string {
 }
 
 // Decode and render message specific content
-func renderTaskResponse(task *clientpb.BeaconTask, con *console.SliverConsoleClient) {
+func renderTaskResponse(task *clientpb.BeaconTask, con *console.SliverConsole) {
 	reqEnvelope := &sliverpb.Envelope{}
 	proto.Unmarshal(task.Request, reqEnvelope)
 	switch reqEnvelope.Type {
@@ -709,7 +713,7 @@ func renderTaskResponse(task *clientpb.BeaconTask, con *console.SliverConsoleCli
 	}
 }
 
-func taskResponseDownload(download *sliverpb.Download, con *console.SliverConsoleClient) {
+func taskResponseDownload(download *sliverpb.Download, con *console.SliverConsole) {
 	const (
 		dump   = "Dump Contents"
 		saveTo = "Save to File ..."
@@ -732,7 +736,7 @@ func taskResponseDownload(download *sliverpb.Download, con *console.SliverConsol
 	}
 }
 
-func promptSaveToFile(data []byte, con *console.SliverConsoleClient) {
+func promptSaveToFile(data []byte, con *console.SliverConsole) {
 	saveTo := ""
 	saveToPrompt := &survey.Input{Message: "Save to: "}
 	err := survey.AskOne(saveToPrompt, &saveTo)
@@ -748,7 +752,7 @@ func promptSaveToFile(data []byte, con *console.SliverConsoleClient) {
 			return
 		}
 	}
-	err = ioutil.WriteFile(saveTo, data, 0600)
+	err = ioutil.WriteFile(saveTo, data, 0o600)
 	if err != nil {
 		con.PrintErrorf("Failed to save file: %s\n", err)
 		return

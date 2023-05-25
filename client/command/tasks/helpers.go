@@ -14,7 +14,6 @@ import (
 
 // SelectBeaconTask - Select a beacon task interactively
 func SelectBeaconTask(tasks []*clientpb.BeaconTask) (*clientpb.BeaconTask, error) {
-
 	// Render selection table
 	buf := bytes.NewBufferString("")
 	table := tabwriter.NewWriter(buf, 0, 2, 2, ' ', 0)

@@ -1352,7 +1352,8 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 
 		server.AddCommand(lootCmd)
 
-		// [ Hosts ] --------------------------------------------------------------
+		// [ Hosts ] ---------------------------------------------------------------------
+
 		hostsCmd := &cobra.Command{
 			Use:   consts.HostsStr,
 			Short: "Manage the database of hosts",
@@ -1430,6 +1431,17 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 		reactionCmd.AddCommand(reactionSetCmd)
 		Flags("reactions", reactionSetCmd, func(f *pflag.FlagSet) {
 			f.StringP("event", "e", "", "specify the event type to react to")
+		})
+
+		FlagComps(reactionSetCmd, func(comp *carapace.ActionMap) {
+			(*comp)["event"] = carapace.ActionValues(
+				consts.SessionOpenedEvent,
+				consts.SessionClosedEvent,
+				consts.SessionUpdateEvent,
+				consts.BeaconRegisteredEvent,
+				consts.CanaryEvent,
+				consts.WatchtowerEvent,
+			)
 		})
 
 		reactionUnsetCmd := &cobra.Command{

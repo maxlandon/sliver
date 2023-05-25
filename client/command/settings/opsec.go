@@ -28,7 +28,6 @@ import (
 
 // SettingsAutoAdultCmd - The client settings command
 func SettingsAutoAdultCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	var err error
 	if con.Settings == nil {
 		con.Settings, err = assets.LoadSettings()
@@ -42,7 +41,7 @@ func SettingsAutoAdultCmd(cmd *cobra.Command, con *console.SliverConsole, args [
 }
 
 // IsUserAnAdult - This should be called for any dangerous (OPSEC-wise) functions
-func IsUserAnAdult(con *console.SliverConsoleClient) bool {
+func IsUserAnAdult(con *console.SliverConsole) bool {
 	if GetAutoAdult(con) {
 		return true
 	}
@@ -53,7 +52,7 @@ func IsUserAnAdult(con *console.SliverConsoleClient) bool {
 }
 
 // GetAutoAdult - Get the current auto adult setting
-func GetAutoAdult(con *console.SliverConsoleClient) bool {
+func GetAutoAdult(con *console.SliverConsole) bool {
 	if con.Settings == nil {
 		con.Settings, _ = assets.LoadSettings()
 	}

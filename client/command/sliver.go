@@ -11,10 +11,15 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/extensions"
+	"github.com/bishopfox/sliver/client/command/filesystem"
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/command/help"
 	"github.com/bishopfox/sliver/client/command/info"
+	"github.com/bishopfox/sliver/client/command/kill"
+	"github.com/bishopfox/sliver/client/command/reconfig"
 	"github.com/bishopfox/sliver/client/command/sessions"
+	"github.com/bishopfox/sliver/client/command/shell"
+	"github.com/bishopfox/sliver/client/command/tasks"
 	"github.com/bishopfox/sliver/client/command/use"
 	"github.com/bishopfox/sliver/client/command/wireguard"
 	client "github.com/bishopfox/sliver/client/console"
@@ -58,13 +63,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			}
 			n++
 		}
-		// if 0 < n {
-		// 	if n == 1 {
-		// 		con.PrintInfof("Loaded %d alias from disk\n", n)
-		// 	} else {
-		// 		con.PrintInfof("Loaded %d aliases from disk\n", n)
-		// 	}
-		// }
 
 		// Load Extensions
 		extensionManifests := assets.GetInstalledExtensionManifests()
@@ -91,12 +89,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.ReconfigStr,
 			Short: "Reconfigure the active beacon/session",
 			Long:  help.GetHelpFor([]string{consts.ReconfigStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	reconfig.ReconfigCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				reconfig.ReconfigCmd(cmd, con, args)
+				return nil
+			},
 			GroupID:     consts.SliverCoreHelpGroup,
 			Annotations: HideCommand(consts.BeaconCmdsFilter),
 		}
@@ -112,12 +108,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.RenameStr,
 			Short: "Rename the active beacon/session",
 			Long:  help.GetHelpFor([]string{consts.RenameStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	reconfig.RenameCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				reconfig.RenameCmd(cmd, con, args)
+				return nil
+			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
 		sliver.AddCommand(renameCmd)
@@ -188,12 +182,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.KillStr,
 			Short: "Kill a session",
 			Long:  help.GetHelpFor([]string{consts.KillStr}),
-			// Run: func(cmd *cobra.Command, args []) *grumble.Context) error {
-			// 	con.Println()
-			// 	kill.KillCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				kill.KillCmd(cmd, con, args)
+				return nil
+			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
 		sliver.AddCommand(killCmd)
@@ -206,12 +198,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.InteractiveStr,
 			Short: "Task a beacon to open an interactive session (Beacon only)",
 			Long:  help.GetHelpFor([]string{consts.InteractiveStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	sessions.InteractiveCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				sessions.InteractiveCmd(cmd, con, args)
+				return nil
+			},
 			GroupID:     consts.SliverCoreHelpGroup,
 			Annotations: HideCommand(consts.BeaconCmdsFilter),
 		}
@@ -234,12 +224,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.CloseStr,
 			Short: "Close an interactive session without killing the remote process",
 			Long:  help.GetHelpFor([]string{consts.CloseStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	sessions.CloseSessionCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				sessions.CloseSessionCmd(cmd, con, args)
+				return nil
+			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
 		sliver.AddCommand(closeSessionCmd)
@@ -253,12 +241,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.TasksStr,
 			Short: "Beacon task management",
 			Long:  help.GetHelpFor([]string{consts.TasksStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	tasks.TasksCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				tasks.TasksCmd(cmd, con, args)
+				return nil
+			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
 		Flags("", tasksCmd, func(f *pflag.FlagSet) {
@@ -274,16 +260,11 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.FetchStr,
 			Short: "Fetch the details of a beacon task",
 			Long:  help.GetHelpFor([]string{consts.TasksStr, consts.FetchStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.String("id", "beacon task ID", grumble.Default(""))
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	tasks.TasksFetchCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
-			// GroupID: consts.GenericHelpGroup,
+			Args:  cobra.RangeArgs(0, 1), // 	a.String("id", "beacon task ID", grumble.Default(""))
+			RunE: func(cmd *cobra.Command, args []string) error {
+				tasks.TasksFetchCmd(cmd, con, args)
+				return nil
+			},
 		}
 		tasksCmd.AddCommand(fetchCmd)
 		Flags("", fetchCmd, func(f *pflag.FlagSet) {
@@ -298,15 +279,11 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.CancelStr,
 			Short: "Cancel a pending beacon task",
 			Long:  help.GetHelpFor([]string{consts.TasksStr, consts.CancelStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.String("id", "beacon task ID", grumble.Default(""))
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	tasks.TasksCancelCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Args:  cobra.RangeArgs(0, 1), // 	a.String("id", "beacon task ID", grumble.Default(""))
+			RunE: func(cmd *cobra.Command, args []string) error {
+				tasks.TasksCancelCmd(cmd, con, args)
+				return nil
+			},
 		}
 		tasksCmd.AddCommand(cancelCmd)
 		Flags("", cancelCmd, func(f *pflag.FlagSet) {
@@ -338,12 +315,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.PingStr,
 			Short: "Send round trip message to implant (does not use ICMP)",
 			Long:  help.GetHelpFor([]string{consts.PingStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	info.PingCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				info.PingCmd(cmd, con, args)
+				return nil
+			},
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(pingCmd)
@@ -355,12 +330,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.GetPIDStr,
 			Short: "Get session pid",
 			Long:  help.GetHelpFor([]string{consts.GetPIDStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	info.PIDCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				info.PIDCmd(cmd, con, args)
+				return nil
+			},
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(getPIDCmd)
@@ -372,12 +345,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.GetUIDStr,
 			Short: "Get session process UID",
 			Long:  help.GetHelpFor([]string{consts.GetUIDStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	info.UIDCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				info.UIDCmd(cmd, con, args)
+				return nil
+			},
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(getUIDCmd)
@@ -389,12 +360,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.GetGIDStr,
 			Short: "Get session process GID",
 			Long:  help.GetHelpFor([]string{consts.GetGIDStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	info.GIDCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				info.GIDCmd(cmd, con, args)
+				return nil
+			},
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(getGIDCmd)
@@ -406,12 +375,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.WhoamiStr,
 			Short: "Get session user execution context",
 			Long:  help.GetHelpFor([]string{consts.WhoamiStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	info.WhoamiCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				info.WhoamiCmd(cmd, con, args)
+				return nil
+			},
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(whoamiCmd)
@@ -425,12 +392,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.ShellStr,
 			Short: "Start an interactive shell",
 			Long:  help.GetHelpFor([]string{consts.ShellStr}),
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	shell.ShellCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			RunE: func(cmd *cobra.Command, args []string) error {
+				shell.ShellCmd(cmd, con, args)
+				return nil
+			},
 			GroupID:     consts.ExecutionHelpGroup,
 			Annotations: HideCommand(consts.SessionCmdsFilter),
 		}
@@ -753,15 +718,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.LsStr,
 			Short: "List current directory",
 			Long:  help.GetHelpFor([]string{consts.LsStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.String("path", "path to enumerate", grumble.Default("."))
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	filesystem.LsCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Args:  cobra.RangeArgs(0, 1), // 	a.String("path", "path to enumerate", grumble.Default("."))
+			Run: func(cmd *cobra.Command, args []string) {
+				filesystem.LsCmd(cmd, con, args)
+			},
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(lsCmd)
@@ -818,15 +778,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.CdStr,
 			Short: "Change directory",
 			Long:  help.GetHelpFor([]string{consts.CdStr}),
-			// Args: func(a *grumble.Args) {
-			// 	a.String("path", "path to the directory", grumble.Default("."))
-			// },
-			// Run: func(ctx *grumble.Context) error {
-			// 	con.Println()
-			// 	filesystem.CdCmd(ctx, con)
-			// 	con.Println()
-			// 	return nil
-			// },
+			Args:  cobra.RangeArgs(0, 1), // 	a.String("path", "path to the directory", grumble.Default("."))
+			Run: func(cmd *cobra.Command, args []string) {
+				filesystem.CdCmd(cmd, con, args)
+			},
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(cdCmd)
@@ -1024,14 +979,12 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.TerminateStr,
 			Short: "Terminate a process on the remote system",
 			Long:  help.GetHelpFor([]string{consts.TerminateStr}),
+			Args:  cobra.ExactArgs(1), // 	a.Uint("pid", "pid")
 			// Run: func(ctx *grumble.Context) error {
 			// 	con.Println()
 			// 	processes.TerminateCmd(ctx, con)
 			// 	con.Println()
 			// 	return nil
-			// },
-			// Args: func(a *grumble.Args) {
-			// 	a.Uint("pid", "pid")
 			// },
 			GroupID: consts.ProcessHelpGroup,
 		}

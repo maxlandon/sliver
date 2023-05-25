@@ -34,7 +34,6 @@ import (
 
 // KillCmd - Kill the active session (not to be confused with TerminateCmd)
 func KillCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	session, beacon := con.ActiveTarget.GetInteractive()
 	// Confirm with the user, just in case they confused kill with terminate
 	confirm := false
