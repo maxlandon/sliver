@@ -26,9 +26,9 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/desertbit/grumble"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/command/environment"
@@ -41,6 +41,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/registry"
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/util"
@@ -250,15 +251,16 @@ func renderTaskResponse(task *clientpb.BeaconTask, con *console.SliverConsole) {
 			hostname = beacon.Hostname
 		}
 		assemblyPath := ""
-		ctx := &grumble.Context{
-			Command: &grumble.Command{Name: "execute-assembly"},
-			Flags: grumble.FlagMap{
-				"save": &grumble.FlagMapItem{Value: false, IsDefault: true},
-				"loot": &grumble.FlagMapItem{Value: false, IsDefault: true},
-				"name": &grumble.FlagMapItem{Value: "", IsDefault: true},
-			},
-		}
-		exec.HandleExecuteAssemblyResponse(execAssembly, assemblyPath, hostname, ctx, con)
+
+		f := pflag.NewFlagSet(constants.ExecuteAssemblyStr, pflag.ContinueOnError)
+		f.BoolP("save", "s", false, "save output to file")
+		f.BoolP("loot", "X", false, "save output as loot")
+		f.StringP("name", "n", "", "name to assign loot (optional)")
+
+		assemblyCmd := &cobra.Command{Use: constants.ExecuteAssemblyStr}
+		assemblyCmd.Flags().AddFlagSet(f)
+
+		exec.HandleExecuteAssemblyResponse(execAssembly, assemblyPath, hostname, assemblyCmd, con)
 
 	// execute-shellcode
 	case sliverpb.MsgTaskReq:
@@ -283,20 +285,19 @@ func renderTaskResponse(task *clientpb.BeaconTask, con *console.SliverConsole) {
 			con.PrintErrorf("Failed to decode task response: %s\n", err)
 			return
 		}
-		ctx := &grumble.Context{
-			Flags: grumble.FlagMap{
-				"ignore-stderr": &grumble.FlagMapItem{Value: false},
-				"loot":          &grumble.FlagMapItem{Value: false},
-				"stdout":        &grumble.FlagMapItem{Value: ""},
-				"stderr":        &grumble.FlagMapItem{Value: ""},
-				"output":        &grumble.FlagMapItem{Value: true},
-			},
-			Args: grumble.ArgMap{
-				"command":   &grumble.ArgMapItem{Value: execReq.Path},
-				"arguments": &grumble.ArgMapItem{Value: execReq.Args},
-			},
-		}
-		exec.PrintExecute(execResult, ctx, con)
+
+		f := pflag.NewFlagSet(constants.ExecuteStr, pflag.ContinueOnError)
+		f.BoolP("output", "o", true, "capture command output")
+		f.BoolP("loot", "X", false, "save output as loot")
+		f.BoolP("ignore-stderr", "S", false, "don't print STDERR output")
+		f.StringP("stdout", "O", "", "remote path to redirect STDOUT to")
+		f.StringP("stderr", "E", "", "remote path to redirect STDERR to")
+
+		execCmd := &cobra.Command{Use: constants.ExecuteStr}
+		execCmd.Flags().AddFlagSet(f)
+		execCmd.SetArgs(append([]string{execReq.Path}, execReq.Args...))
+
+		exec.PrintExecute(execResult, execCmd, con)
 
 	case sliverpb.MsgSideloadReq:
 		sideload := &sliverpb.Sideload{}
@@ -310,14 +311,15 @@ func renderTaskResponse(task *clientpb.BeaconTask, con *console.SliverConsole) {
 		if beacon != nil {
 			hostname = beacon.Hostname
 		}
-		ctx := &grumble.Context{
-			Command: &grumble.Command{Name: "sideload"},
-			Flags: grumble.FlagMap{
-				"save": &grumble.FlagMapItem{Value: false},
-				"loot": &grumble.FlagMapItem{Value: false},
-			},
-		}
-		exec.HandleSideloadResponse(sideload, "", hostname, ctx, con)
+
+		f := pflag.NewFlagSet(constants.SideloadStr, pflag.ContinueOnError)
+		f.BoolP("save", "s", false, "save output to file")
+		f.BoolP("loot", "X", false, "save output as loot")
+
+		sideloadCmd := &cobra.Command{Use: constants.SideloadStr}
+		sideloadCmd.Flags().AddFlagSet(f)
+
+		exec.HandleSideloadResponse(sideload, "", hostname, sideloadCmd, con)
 
 	case sliverpb.MsgSpawnDllReq:
 		spawnDll := &sliverpb.SpawnDll{}
@@ -331,14 +333,15 @@ func renderTaskResponse(task *clientpb.BeaconTask, con *console.SliverConsole) {
 		if beacon != nil {
 			hostname = beacon.Hostname
 		}
-		ctx := &grumble.Context{
-			Command: &grumble.Command{Name: "spawndll"},
-			Flags: grumble.FlagMap{
-				"save": &grumble.FlagMapItem{Value: false},
-				"loot": &grumble.FlagMapItem{Value: false},
-			},
-		}
-		exec.HandleSpawnDLLResponse(spawnDll, "", hostname, ctx, con)
+
+		f := pflag.NewFlagSet(constants.SpawnDllStr, pflag.ContinueOnError)
+		f.BoolP("save", "s", false, "save output to file")
+		f.BoolP("loot", "X", false, "save output as loot")
+
+		spawnDllCmd := &cobra.Command{Use: constants.SpawnDllStr}
+		spawnDllCmd.Flags().AddFlagSet(f)
+
+		exec.HandleSpawnDLLResponse(spawnDll, "", hostname, spawnDllCmd, con)
 
 	case sliverpb.MsgSSHCommandReq:
 		sshCommand := &sliverpb.SSHCommand{}
@@ -378,12 +381,13 @@ func renderTaskResponse(task *clientpb.BeaconTask, con *console.SliverConsole) {
 			con.PrintErrorf("Failed to decode task response: %s\n", err)
 			return
 		}
-		flags := grumble.FlagMap{
-			"reverse":  &grumble.FlagMapItem{Value: false},
-			"modified": &grumble.FlagMapItem{Value: false},
-			"size":     &grumble.FlagMapItem{Value: false},
-		}
-		filesystem.PrintLs(ls, flags, con)
+
+		f := pflag.NewFlagSet("ls", pflag.ContinueOnError)
+		f.BoolP("reverse", "r", false, "reverse sort order")
+		f.BoolP("modified", "m", false, "sort by modified time")
+		f.BoolP("size", "s", false, "sort by size")
+
+		filesystem.PrintLs(ls, f, con)
 
 	case sliverpb.MsgMvReq:
 		mv := &sliverpb.Mv{}
@@ -590,18 +594,17 @@ func renderTaskResponse(task *clientpb.BeaconTask, con *console.SliverConsole) {
 			con.PrintErrorf("Failed to get beacon: %s\n", err)
 			return
 		}
-		ctx := &grumble.Context{
-			Flags: grumble.FlagMap{
-				"pid":           &grumble.FlagMapItem{Value: -1},
-				"exe":           &grumble.FlagMapItem{Value: ""},
-				"owner":         &grumble.FlagMapItem{Value: ""},
-				"overflow":      &grumble.FlagMapItem{Value: false},
-				"skip-pages":    &grumble.FlagMapItem{Value: 0},
-				"print-cmdline": &grumble.FlagMapItem{Value: true},
-				"tree":          &grumble.FlagMapItem{Value: false},
-			},
-		}
-		processes.PrintPS(beacon.OS, ps, true, ctx, con)
+
+		f := pflag.NewFlagSet("ps", pflag.ContinueOnError) // Create the flag set.
+		f.IntP("pid", "p", -1, "filter based on pid")
+		f.StringP("exe", "e", "", "filter based on executable name")
+		f.StringP("owner", "o", "", "filter based on owner")
+		f.BoolP("print-cmdline", "c", true, "print command line arguments")
+		f.BoolP("overflow", "O", false, "overflow terminal width (display truncated rows)")
+		f.IntP("skip-pages", "S", 0, "skip the first n page(s)")
+		f.BoolP("tree", "T", false, "print process tree")
+
+		processes.PrintPS(beacon.OS, ps, true, f, con)
 
 	case sliverpb.MsgTerminateReq:
 		terminate := &sliverpb.Terminate{}

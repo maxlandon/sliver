@@ -21,16 +21,16 @@ package registry
 import (
 	"context"
 
-	"github.com/desertbit/grumble"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
 )
 
 // RegListSubKeysCmd - List sub registry keys
-func RegListSubKeysCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func RegListSubKeysCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -41,15 +41,15 @@ func RegListSubKeysCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		return
 	}
 
-	regPath := ctx.Args.String("registry-path")
-	hive := ctx.Flags.String("hive")
-	hostname := ctx.Flags.String("hostname")
+	regPath := args[0]
+	hive, _ := cmd.Flags().GetString("hive")
+	hostname, _ := cmd.Flags().GetString("hostname")
 
 	regList, err := con.Rpc.RegistryListSubKeys(context.Background(), &sliverpb.RegistrySubKeyListReq{
 		Hive:     hive,
 		Hostname: hostname,
 		Path:     regPath,
-		Request:  con.ActiveTarget.Request(ctx),
+		Request:  con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -72,7 +72,7 @@ func RegListSubKeysCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintListSubKeys - Print the list sub keys command result
-func PrintListSubKeys(regList *sliverpb.RegistrySubKeyList, hive string, regPath string, con *console.SliverConsoleClient) {
+func PrintListSubKeys(regList *sliverpb.RegistrySubKeyList, hive string, regPath string, con *console.SliverConsole) {
 	if regList.Response != nil && regList.Response.Err != "" {
 		con.PrintErrorf("%s\n", regList.Response.Err)
 		return
@@ -86,21 +86,21 @@ func PrintListSubKeys(regList *sliverpb.RegistrySubKeyList, hive string, regPath
 }
 
 // RegListValuesCmd - List registry values
-func RegListValuesCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func RegListValuesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 
-	regPath := ctx.Args.String("registry-path")
-	hive := ctx.Flags.String("hive")
-	hostname := ctx.Flags.String("hostname")
+	regPath := args[0]
+	hive, _ := cmd.Flags().GetString("hive")
+	hostname, _ := cmd.Flags().GetString("hostname")
 
 	regList, err := con.Rpc.RegistryListValues(context.Background(), &sliverpb.RegistryListValuesReq{
 		Hive:     hive,
 		Hostname: hostname,
 		Path:     regPath,
-		Request:  con.ActiveTarget.Request(ctx),
+		Request:  con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -123,7 +123,7 @@ func RegListValuesCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintListValues - Print the registry list values
-func PrintListValues(regList *sliverpb.RegistryValuesList, hive string, regPath string, con *console.SliverConsoleClient) {
+func PrintListValues(regList *sliverpb.RegistryValuesList, hive string, regPath string, con *console.SliverConsole) {
 	if regList.Response != nil && regList.Response.Err != "" {
 		con.PrintErrorf("%s\n", regList.Response.Err)
 		return

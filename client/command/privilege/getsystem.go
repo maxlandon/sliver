@@ -21,16 +21,16 @@ package privilege
 import (
 	"context"
 
-	"github.com/desertbit/grumble"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
 )
 
 // GetSystemCmd - Windows only, attempt to get SYSTEM on the remote system
-func GetSystemCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func GetSystemCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -41,13 +41,13 @@ func GetSystemCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		return
 	}
 
-	process := ctx.Flags.String("process")
+	process, _ := cmd.Flags().GetString("process")
 	config := con.GetActiveSessionConfig()
 	ctrl := make(chan bool)
 	con.SpinUntil("Attempting to create a new sliver session as 'NT AUTHORITY\\SYSTEM'...", ctrl)
 
 	getSystem, err := con.Rpc.GetSystem(context.Background(), &clientpb.GetSystemReq{
-		Request:        con.ActiveTarget.Request(ctx),
+		Request:        con.ActiveTarget.Request(cmd),
 		Config:         config,
 		HostingProcess: process,
 	})
@@ -74,7 +74,7 @@ func GetSystemCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintGetSystem - Print the results of get system
-func PrintGetSystem(getsystemResp *sliverpb.GetSystem, con *console.SliverConsoleClient) {
+func PrintGetSystem(getsystemResp *sliverpb.GetSystem, con *console.SliverConsole) {
 	if getsystemResp.Response != nil && getsystemResp.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", getsystemResp.GetResponse().GetErr())
 		return

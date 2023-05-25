@@ -21,23 +21,23 @@ package privilege
 import (
 	"context"
 
-	"github.com/desertbit/grumble"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
 )
 
 // RevToSelfCmd - Drop any impersonated tokens
-func RevToSelfCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func RevToSelfCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 
 	revert, err := con.Rpc.RevToSelf(context.Background(), &sliverpb.RevToSelfReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -60,7 +60,7 @@ func RevToSelfCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintRev2Self - Print the result of revert to self
-func PrintRev2Self(revert *sliverpb.RevToSelf, con *console.SliverConsoleClient) {
+func PrintRev2Self(revert *sliverpb.RevToSelf, con *console.SliverConsole) {
 	if revert.Response != nil && revert.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", revert.Response.GetErr())
 		return

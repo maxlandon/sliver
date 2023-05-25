@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/desertbit/grumble"
+	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/console"
@@ -32,7 +32,7 @@ import (
 )
 
 // GetPrivsCmd - Get the current process privileges (Windows only)
-func GetPrivsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func GetPrivsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -44,7 +44,7 @@ func GetPrivsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	}
 
 	privs, err := con.Rpc.GetPrivs(context.Background(), &sliverpb.GetPrivsReq{
-		Request: con.ActiveTarget.Request(ctx),
+		Request: con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -67,7 +67,7 @@ func GetPrivsCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintGetPrivs - Print the results of the get privs command
-func PrintGetPrivs(privs *sliverpb.GetPrivs, pid int32, con *console.SliverConsoleClient) {
+func PrintGetPrivs(privs *sliverpb.GetPrivs, pid int32, con *console.SliverConsole) {
 	// Response is the Envelope (see RPC API), Err is part of it.
 	if privs.Response != nil && privs.Response.Err != "" {
 		con.PrintErrorf("NOTE: Information may be incomplete due to an error:\n")

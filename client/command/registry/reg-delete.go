@@ -22,16 +22,16 @@ import (
 	"context"
 	"strings"
 
-	"github.com/desertbit/grumble"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
 )
 
 // RegDeleteKeyCmd - Remove a Windows registry key
-func RegDeleteKeyCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func RegDeleteKeyCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -42,14 +42,14 @@ func RegDeleteKeyCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		return
 	}
 
-	hostname := ctx.Flags.String("hostname")
-	hive := ctx.Flags.String("hive")
+	hostname, _ := cmd.Flags().GetString("hostname")
+	hive, _ := cmd.Flags().GetString("hive")
 	if err := checkHive(hive); err != nil {
 		con.PrintErrorf("%s\n", err)
 		return
 	}
 
-	regPath := ctx.Args.String("registry-path")
+	regPath := args[0]
 	if regPath == "" {
 		con.PrintErrorf("You must provide a path\n")
 		return
@@ -74,7 +74,7 @@ func RegDeleteKeyCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		Path:     finalPath,
 		Key:      key,
 		Hostname: hostname,
-		Request:  con.ActiveTarget.Request(ctx),
+		Request:  con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -97,7 +97,7 @@ func RegDeleteKeyCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintDeleteKey - Print the results of the delete key command
-func PrintDeleteKey(deleteKey *sliverpb.RegistryDeleteKey, regPath string, key string, con *console.SliverConsoleClient) {
+func PrintDeleteKey(deleteKey *sliverpb.RegistryDeleteKey, regPath string, key string, con *console.SliverConsole) {
 	if deleteKey.Response != nil && deleteKey.Response.Err != "" {
 		con.PrintErrorf("%s", deleteKey.Response.Err)
 		return

@@ -22,16 +22,16 @@ import (
 	"context"
 	"strings"
 
-	"github.com/desertbit/grumble"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
 )
 
 // RegCreateKeyCmd - Create a new Windows registry key
-func RegCreateKeyCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func RegCreateKeyCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -42,14 +42,14 @@ func RegCreateKeyCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		return
 	}
 
-	hostname := ctx.Flags.String("hostname")
-	hive := ctx.Flags.String("hive")
+	hostname, _ := cmd.Flags().GetString("hostname")
+	hive, _ := cmd.Flags().GetString("hive")
 	if err := checkHive(hive); err != nil {
 		con.PrintErrorf("%s\n", err)
 		return
 	}
 
-	regPath := ctx.Args.String("registry-path")
+	regPath := args[0]
 	if regPath == "" {
 		con.PrintErrorf("You must provide a path\n")
 		return
@@ -74,7 +74,7 @@ func RegCreateKeyCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 		Path:     finalPath,
 		Key:      key,
 		Hostname: hostname,
-		Request:  con.ActiveTarget.Request(ctx),
+		Request:  con.ActiveTarget.Request(cmd),
 	})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -97,7 +97,7 @@ func RegCreateKeyCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintCreateKey - Print the results of the create key command
-func PrintCreateKey(createKey *sliverpb.RegistryCreateKey, regPath string, key string, con *console.SliverConsoleClient) {
+func PrintCreateKey(createKey *sliverpb.RegistryCreateKey, regPath string, key string, con *console.SliverConsole) {
 	if createKey.Response != nil && createKey.Response.Err != "" {
 		con.PrintErrorf("%s", createKey.Response.Err)
 		return

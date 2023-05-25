@@ -26,6 +26,7 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/command/settings"
@@ -103,7 +104,7 @@ func PsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 				con.PrintErrorf("Failed to decode response %s\n", err)
 				return
 			}
-			PrintPS(os, ps, false, cmd, con)
+			PrintPS(os, ps, false, cmd.Flags(), con)
 			products := findKnownSecurityProducts(ps)
 			if 0 < len(products) {
 				con.Println()
@@ -112,7 +113,7 @@ func PsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 		})
 		con.PrintAsyncResponse(ps.Response)
 	} else {
-		PrintPS(os, ps, true, cmd, con)
+		PrintPS(os, ps, true, cmd.Flags(), con)
 		products := findKnownSecurityProducts(ps)
 		if 0 < len(products) {
 			con.Println()
@@ -131,13 +132,13 @@ func getOS(session *clientpb.Session, beacon *clientpb.Beacon) string {
 }
 
 // PrintPS - Prints the process list
-func PrintPS(os string, ps *sliverpb.Ps, interactive bool, cmd *cobra.Command, con *console.SliverConsole) {
-	pidFilter, _ := cmd.Flags().GetInt("pid")
-	exeFilter, _ := cmd.Flags().GetString("exe")
-	ownerFilter, _ := cmd.Flags().GetString("owner")
-	overflow, _ := cmd.Flags().GetBool("overflow")
-	skipPages, _ := cmd.Flags().GetInt("skip-pages")
-	pstree, _ := cmd.Flags().GetBool("tree")
+func PrintPS(os string, ps *sliverpb.Ps, interactive bool, flags *pflag.FlagSet, con *console.SliverConsole) {
+	pidFilter, _ := flags.GetInt("pid")
+	exeFilter, _ := flags.GetString("exe")
+	ownerFilter, _ := flags.GetString("owner")
+	overflow, _ := flags.GetBool("overflow")
+	skipPages, _ := flags.GetInt("skip-pages")
+	pstree, _ := flags.GetBool("tree")
 
 	if pstree {
 		var currentPID int32
@@ -171,7 +172,7 @@ func PrintPS(os string, ps *sliverpb.Ps, interactive bool, cmd *cobra.Command, c
 		tw.AppendHeader(table.Row{"pid", "ppid", "owner", "arch", "executable"})
 	}
 
-	cmdLine, _ := cmd.Flags().GetBool("print-cmdline")
+	cmdLine, _ := flags.GetBool("print-cmdline")
 	for _, proc := range ps.Processes {
 		if pidFilter != -1 && proc.Pid != int32(pidFilter) {
 			continue

@@ -21,12 +21,12 @@ package privilege
 import (
 	"context"
 
-	"github.com/desertbit/grumble"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
 )
 
 var logonTypes = map[string]uint32{
@@ -40,16 +40,16 @@ var logonTypes = map[string]uint32{
 }
 
 // MakeTokenCmd - Windows only, create a token using "valid" credentails
-func MakeTokenCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
+func MakeTokenCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
 	}
 
-	username := ctx.Flags.String("username")
-	password := ctx.Flags.String("password")
-	domain := ctx.Flags.String("domain")
-	logonType := ctx.Flags.String("logon-type")
+	username, _ := cmd.Flags().GetString("username")
+	password, _ := cmd.Flags().GetString("password")
+	domain, _ := cmd.Flags().GetString("domain")
+	logonType, _ := cmd.Flags().GetString("logon-type")
 
 	if _, ok := logonTypes[logonType]; !ok {
 		con.PrintErrorf("Invalid logon type: %s\n", logonType)
@@ -65,7 +65,7 @@ func MakeTokenCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 	con.SpinUntil("Creating new logon session ...", ctrl)
 
 	makeToken, err := con.Rpc.MakeToken(context.Background(), &sliverpb.MakeTokenReq{
-		Request:   con.ActiveTarget.Request(ctx),
+		Request:   con.ActiveTarget.Request(cmd),
 		Username:  username,
 		Domain:    domain,
 		Password:  password,
@@ -94,7 +94,7 @@ func MakeTokenCmd(ctx *grumble.Context, con *console.SliverConsoleClient) {
 }
 
 // PrintMakeToken - Print the results of attempting to make a token
-func PrintMakeToken(makeToken *sliverpb.MakeToken, domain string, username string, con *console.SliverConsoleClient) {
+func PrintMakeToken(makeToken *sliverpb.MakeToken, domain string, username string, con *console.SliverConsole) {
 	if makeToken.Response != nil && makeToken.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", makeToken.Response.GetErr())
 		return
