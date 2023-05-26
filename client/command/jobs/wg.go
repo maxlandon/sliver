@@ -29,7 +29,6 @@ import (
 
 // WGListenerCmd - Start a WireGuard listener
 func WGListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	lport, _ := cmd.Flags().GetUint32("lport")
 	nport, _ := cmd.Flags().GetUint32("nport")
 	keyExchangePort, _ := cmd.Flags().GetUint32("key-port")

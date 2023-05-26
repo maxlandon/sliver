@@ -30,7 +30,6 @@ import (
 
 // HTTPListenerCmd - Start an HTTP listener
 func HTTPListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	domain, _ := cmd.Flags().GetString("domain")
 	lhost, _ := cmd.Flags().GetString("lhost")
 	lport, _ := cmd.Flags().GetUint32("lport")

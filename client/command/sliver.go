@@ -478,7 +478,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("interactive", "i", false, "Inject into a new process and interact with it")
 			f.BoolP("shikata-ga-nai", "S", false, "encode shellcode using shikata ga nai prior to execution")
 			f.StringP("architecture", "A", "amd64", "architecture of the shellcode: 386, amd64 (used with --shikata-ga-nai flag)")
-			f.IntP("iterations", "I", 1, "number of encoding iterations (used with --shikata-ga-nai flag)")
+			f.Uint32P("iterations", "I", 1, "number of encoding iterations (used with --shikata-ga-nai flag)")
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})

@@ -30,7 +30,6 @@ import (
 
 // DNSListenerCmd - Start a DNS lisenter
 func DNSListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	domainsF, _ := cmd.Flags().GetString("domains")
 	domains := strings.Split(domainsF, ",")
 	for index, domain := range domains {
@@ -40,7 +39,7 @@ func DNSListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []strin
 	}
 
 	lhost, _ := cmd.Flags().GetString("lhost")
-	lport, _ := cmd.Flags().GetInt("lport")
+	lport, _ := cmd.Flags().GetUint32("lport")
 	canaries, _ := cmd.Flags().GetBool("no-canaries")
 	persistent, _ := cmd.Flags().GetBool("persistent")
 	enforceOTP, _ := cmd.Flags().GetBool("disable-otp")
@@ -49,7 +48,7 @@ func DNSListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []strin
 	dns, err := con.Rpc.StartDNSListener(context.Background(), &clientpb.DNSListenerReq{
 		Domains:    domains,
 		Host:       lhost,
-		Port:       uint32(lport),
+		Port:       lport,
 		Canaries:   !canaries,
 		Persistent: persistent,
 		EnforceOTP: !enforceOTP,

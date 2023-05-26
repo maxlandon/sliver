@@ -48,11 +48,11 @@ func ExecuteCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	stderr, _ := cmd.Flags().GetString("stderr")
 	saveLoot, _ := cmd.Flags().GetBool("loot")
 	saveOutput, _ := cmd.Flags().GetBool("save")
-	ppid, _ := cmd.Flags().GetUint("ppid")
+	ppid, _ := cmd.Flags().GetUint32("ppid")
 	hostName := getHostname(session, beacon)
 
 	// If the user wants to loot or save the output, we have to capture it regardless of if they specified -o
-	var captureOutput bool = output || saveLoot || saveOutput
+	captureOutput := output || saveLoot || saveOutput
 
 	if output && beacon != nil {
 		con.PrintWarnf("Using --output in beacon mode, if the command blocks the task will never complete\n\n")
@@ -72,7 +72,7 @@ func ExecuteCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 			Stderr:   stderr,
 			Stdout:   stdout,
 			UseToken: token,
-			PPid:     uint32(ppid),
+			PPid:     ppid,
 		})
 	} else {
 		exec, err = con.Rpc.Execute(context.Background(), &sliverpb.ExecuteReq{

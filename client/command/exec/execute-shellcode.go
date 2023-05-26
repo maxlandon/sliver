@@ -50,7 +50,7 @@ func ExecuteShellcodeCmd(cmd *cobra.Command, con *console.SliverConsole, args []
 		return
 	}
 
-	pid, _ := cmd.Flags().GetUint("pid")
+	pid, _ := cmd.Flags().GetUint32("pid")
 	shellcodePath := args[0]
 	shellcodeBin, err := os.ReadFile(shellcodePath)
 	if err != nil {
@@ -72,12 +72,12 @@ func ExecuteShellcodeCmd(cmd *cobra.Command, con *console.SliverConsole, args []
 			con.PrintErrorf("Invalid shikata ga nai architecture (must be 386 or amd64)\n")
 			return
 		}
-		iter, _ := cmd.Flags().GetInt("iterations")
+		iter, _ := cmd.Flags().GetUint32("iterations")
 		con.PrintInfof("Encoding shellcode ...\n")
 		resp, err := con.Rpc.ShellcodeEncoder(context.Background(), &clientpb.ShellcodeEncodeReq{
 			Encoder:      clientpb.ShellcodeEncoder_SHIKATA_GA_NAI,
 			Architecture: arch,
-			Iterations:   uint32(iter),
+			Iterations:   iter,
 			BadChars:     []byte{},
 			Data:         shellcodeBin,
 		})
@@ -102,7 +102,7 @@ func ExecuteShellcodeCmd(cmd *cobra.Command, con *console.SliverConsole, args []
 	shellcodeTask, err := con.Rpc.Task(context.Background(), &sliverpb.TaskReq{
 		Data:     shellcodeBin,
 		RWXPages: rwxPages,
-		Pid:      uint32(pid),
+		Pid:      pid,
 		Request:  con.ActiveTarget.Request(cmd),
 	})
 	ctrl <- true
