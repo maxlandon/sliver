@@ -92,20 +92,24 @@ func PrintJobs(jobs map[uint32]*clientpb.Job, con *console.SliverConsole) {
 
 // JobsIDCompleter completes jobs IDs with descriptions.
 func JobsIDCompleter(con *console.SliverConsole) carapace.Action {
-	jobs, err := con.Rpc.GetJobs(context.Background(), &commonpb.Empty{})
-	if err != nil {
-		return carapace.ActionMessage("No active jobs")
+	callback := func(_ carapace.Context) carapace.Action {
+		jobs, err := con.Rpc.GetJobs(context.Background(), &commonpb.Empty{})
+		if err != nil {
+			return carapace.ActionMessage("No active jobs")
+		}
+
+		results := make([]string, 0)
+
+		for _, job := range jobs.Active {
+			results = append(results, strconv.Itoa(int(job.ID)))
+			desc := fmt.Sprintf("%s  %s %d", job.Protocol, strings.Join(job.Domains, ","), job.Port)
+			results = append(results, desc)
+		}
+
+		return carapace.ActionValuesDescribed(results...).Tag("jobs")
 	}
 
-	results := make([]string, 0)
-
-	for _, job := range jobs.Active {
-		results = append(results, strconv.Itoa(int(job.ID)))
-		desc := fmt.Sprintf("%s  %s %d", job.Protocol, strings.Join(job.Domains, ","), job.Port)
-		results = append(results, desc)
-	}
-
-	return carapace.ActionValuesDescribed(results...).Tag("jobs")
+	return carapace.ActionCallback(callback)
 }
 
 func jobKill(jobID uint32, con *console.SliverConsole) {

@@ -90,6 +90,10 @@ func SocksIDCompleter(con *console.SliverConsole) carapace.Action {
 			results = append(results, serv.LocalAddr)
 		}
 
+		if len(results) == 0 {
+			return carapace.ActionMessage("no Wireguard Socks servers")
+		}
+
 		return carapace.ActionValuesDescribed(results...).Tag("wireguard socks servers")
 	}
 

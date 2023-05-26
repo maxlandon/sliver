@@ -83,6 +83,10 @@ func PivotIDCompleter(con *console.SliverConsole) carapace.Action {
 			results = append(results, fmt.Sprintf("[%s] %s (%d pivots)", listener.Type, listener.BindAddress, len(listener.Pivots)))
 		}
 
+		if len(results) == 0 {
+			return carapace.ActionMessage("no pivot listeners")
+		}
+
 		return carapace.ActionValuesDescribed(results...).Tag("pivot listeners")
 	}
 

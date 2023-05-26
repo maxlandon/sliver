@@ -74,6 +74,10 @@ func SocksIDCompleter(_ *console.SliverConsole) carapace.Action {
 			results = append(results, fmt.Sprintf("%s [%s] (%s)", serv.BindAddr, serv.Username, serv.SessionID))
 		}
 
+		if len(results) == 0 {
+			return carapace.ActionMessage("no Socks servers")
+		}
+
 		return carapace.ActionValuesDescribed(results...).Tag("socks servers")
 	}
 

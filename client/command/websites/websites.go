@@ -112,20 +112,22 @@ func PrintWebsite(web *clientpb.Website, con *console.SliverConsole) {
 
 // WebsiteNameCompleter completes the names of available websites.
 func WebsiteNameCompleter(con *console.SliverConsole) carapace.Action {
-	results := make([]string, 0)
+	return carapace.ActionCallback(func(c carapace.Context) carapace.Action {
+		results := make([]string, 0)
 
-	websites, err := con.Rpc.Websites(context.Background(), &commonpb.Empty{})
-	if err != nil {
-		return carapace.ActionMessage("Failed to list websites %s", err)
-	}
+		websites, err := con.Rpc.Websites(context.Background(), &commonpb.Empty{})
+		if err != nil {
+			return carapace.ActionMessage("Failed to list websites %s", err)
+		}
 
-	for _, ws := range websites.Websites {
-		results = append(results, ws.Name)
-	}
+		for _, ws := range websites.Websites {
+			results = append(results, ws.Name)
+		}
 
-	// if len(results) == 0 {
-	// 	return carapace.ActionMessage("no available websites")
-	// }
+		if len(results) == 0 {
+			return carapace.ActionMessage("no available websites")
+		}
 
-	return carapace.ActionValues(results...).Tag("websites").Usage("website name")
+		return carapace.ActionValues(results...).Tag("websites").Usage("website name")
+	})
 }

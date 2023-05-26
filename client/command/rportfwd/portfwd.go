@@ -97,6 +97,10 @@ func PortfwdIDCompleter(con *console.SliverConsole) carapace.Action {
 			results = append(results, fmt.Sprintf("%s <- %s", laddr, faddr))
 		}
 
+		if len(results) == 0 {
+			return carapace.ActionMessage("no remote port forwarders")
+		}
+
 		return carapace.ActionValuesDescribed(results...).Tag("remote port forwarders")
 	}
 

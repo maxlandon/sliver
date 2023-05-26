@@ -82,6 +82,10 @@ func PortfwdIDCompleter(_ *console.SliverConsole) carapace.Action {
 			results = append(results, fmt.Sprintf("%s (%s)", fwd.BindAddr, fwd.SessionID))
 		}
 
+		if len(results) == 0 {
+			return carapace.ActionMessage("no local port forwarders")
+		}
+
 		return carapace.ActionValuesDescribed(results...).Tag("local port forwarders")
 	}
 

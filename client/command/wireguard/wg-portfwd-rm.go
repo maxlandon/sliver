@@ -83,6 +83,10 @@ func PortfwdIDCompleter(con *console.SliverConsole) carapace.Action {
 			results = append(results, fmt.Sprintf("%s <- %s", fwd.LocalAddr, fwd.RemoteAddr))
 		}
 
+		if len(results) == 0 {
+			return carapace.ActionMessage("no Wireguard port forwarders")
+		}
+
 		return carapace.ActionValuesDescribed(results...).Tag("wireguard port forwarders")
 	}
 
