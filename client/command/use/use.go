@@ -197,38 +197,46 @@ func BeaconAndSessionIDCompleter(con *console.SliverConsole) carapace.Action {
 
 // SessionIDCompleter completes session IDs
 func SessionIDCompleter(con *console.SliverConsole) carapace.Action {
-	results := make([]string, 0)
+	callback := func(_ carapace.Context) carapace.Action {
+		results := make([]string, 0)
 
-	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
-	if err == nil {
-		for _, s := range sessions.Sessions {
-			link := fmt.Sprintf("[%s <- %s]", s.ActiveC2, s.RemoteAddress)
-			id := fmt.Sprintf("%s (%d)", s.Name, s.PID)
-			userHost := fmt.Sprintf("%s@%s", s.Username, s.Hostname)
-			desc := strings.Join([]string{id, userHost, link}, " ")
+		sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
+		if err == nil {
+			for _, s := range sessions.Sessions {
+				link := fmt.Sprintf("[%s <- %s]", s.ActiveC2, s.RemoteAddress)
+				id := fmt.Sprintf("%s (%d)", s.Name, s.PID)
+				userHost := fmt.Sprintf("%s@%s", s.Username, s.Hostname)
+				desc := strings.Join([]string{id, userHost, link}, " ")
 
-			results = append(results, s.ID[:8])
-			results = append(results, desc)
+				results = append(results, s.ID[:8])
+				results = append(results, desc)
+			}
 		}
+		return carapace.ActionValuesDescribed(results...).Tag("sessions")
 	}
-	return carapace.ActionValuesDescribed(results...).Tag("sessions")
+
+	return carapace.ActionCallback(callback)
 }
 
 // BeaconIDCompleter completes beacon IDs
 func BeaconIDCompleter(con *console.SliverConsole) carapace.Action {
-	results := make([]string, 0)
+	callback := func(_ carapace.Context) carapace.Action {
+		results := make([]string, 0)
 
-	beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
-	if err == nil {
-		for _, b := range beacons.Beacons {
-			link := fmt.Sprintf("[%s <- %s]", b.ActiveC2, b.RemoteAddress)
-			id := fmt.Sprintf("%s (%d)", b.Name, b.PID)
-			userHost := fmt.Sprintf("%s@%s", b.Username, b.Hostname)
-			desc := strings.Join([]string{id, userHost, link}, " ")
+		beacons, err := con.Rpc.GetBeacons(context.Background(), &commonpb.Empty{})
+		if err == nil {
+			for _, b := range beacons.Beacons {
+				link := fmt.Sprintf("[%s <- %s]", b.ActiveC2, b.RemoteAddress)
+				id := fmt.Sprintf("%s (%d)", b.Name, b.PID)
+				userHost := fmt.Sprintf("%s@%s", b.Username, b.Hostname)
+				desc := strings.Join([]string{id, userHost, link}, " ")
 
-			results = append(results, b.ID[:8])
-			results = append(results, desc)
+				results = append(results, b.ID[:8])
+				results = append(results, desc)
+			}
 		}
+		return carapace.ActionValuesDescribed(results...).Tag("beacons")
 	}
-	return carapace.ActionValuesDescribed(results...).Tag("beacons")
+
+	return carapace.ActionCallback(callback)
 }

@@ -233,6 +233,48 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
+		// [ Use ] --------------------------------------------------------------
+
+		useCmd := &cobra.Command{
+			Use:   consts.UseStr,
+			Short: "Switch the active session or beacon",
+			Long:  help.GetHelpFor([]string{consts.UseStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				use.UseCmd(cmd, con, args)
+			},
+			GroupID: consts.SliverCoreHelpGroup,
+		}
+		Flags("use", true, useCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		carapace.Gen(useCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter(con))
+
+		if !con.IsCLI {
+			sliver.AddCommand(useCmd)
+		}
+
+		useSessionCmd := &cobra.Command{
+			Use:   consts.SessionsStr,
+			Short: "Switch the active session",
+			Long:  help.GetHelpFor([]string{consts.UseStr, consts.SessionsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				use.UseSessionCmd(cmd, con, args)
+			},
+		}
+		carapace.Gen(useSessionCmd).PositionalCompletion(use.SessionIDCompleter(con))
+		useCmd.AddCommand(useSessionCmd)
+
+		useBeaconCmd := &cobra.Command{
+			Use:   consts.BeaconsStr,
+			Short: "Switch the active beacon",
+			Long:  help.GetHelpFor([]string{consts.UseStr, consts.BeaconsStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				use.UseBeaconCmd(cmd, con, args)
+			},
+		}
+		carapace.Gen(useBeaconCmd).PositionalCompletion(use.BeaconIDCompleter(con))
+		useCmd.AddCommand(useBeaconCmd)
+
 		// [ Close ] --------------------------------------------------------------
 		closeSessionCmd := &cobra.Command{
 			Use:   consts.CloseStr,

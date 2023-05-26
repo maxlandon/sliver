@@ -13,6 +13,8 @@ import (
 )
 
 func implantCmd(con *console.SliverConsole) *cobra.Command {
+	con.IsCLI = true
+
 	makeCommands := command.SliverCommands(con)
 	cmd := makeCommands()
 	cmd.Use = "implant"
@@ -57,7 +59,11 @@ func makeRunners(implantCmd *cobra.Command, con *console.SliverConsole) (pre, po
 }
 
 func makeCompleters(cmd *cobra.Command, con *console.SliverConsole) {
-	carapace.Gen(cmd)
+	comps := carapace.Gen(cmd)
+
+	comps.PreRun(func(cmd *cobra.Command, args []string) {
+		cmd.PersistentPreRunE(cmd, args)
+	})
 
 	// Bind completers to flags (wrap them to use the same pre-runners)
 	command.FlagComps(cmd, func(comp *carapace.ActionMap) {
