@@ -78,7 +78,7 @@ func serverOnlyCmds() (commands []*cobra.Command) {
 		Run:     startMultiplayerModeCmd,
 		GroupID: consts.MultiplayerHelpGroup,
 	}
-	command.Flags("multiplayer", startMultiplayer, func(f *pflag.FlagSet) {
+	command.Flags("multiplayer", false, startMultiplayer, func(f *pflag.FlagSet) {
 		f.StringP("lhost", "L", "", "interface to bind server to")
 		f.Uint16P("lport", "l", 31337, "tcp listen port")
 		f.BoolP("persistent", "p", false, "make persistent across restarts")
@@ -93,7 +93,7 @@ func serverOnlyCmds() (commands []*cobra.Command) {
 		Run:     newOperatorCmd,
 		GroupID: consts.MultiplayerHelpGroup,
 	}
-	command.Flags("operator", newOperator, func(f *pflag.FlagSet) {
+	command.Flags("operator", false, newOperator, func(f *pflag.FlagSet) {
 		f.StringP("lhost", "l", "", "listen host")
 		f.Uint16P("lport", "p", 31337, "listen port")
 		f.StringP("save", "s", "", "directory/file in which to save config")
@@ -112,7 +112,7 @@ func serverOnlyCmds() (commands []*cobra.Command) {
 		GroupID: consts.MultiplayerHelpGroup,
 	}
 
-	command.Flags("operator", kickOperator, func(f *pflag.FlagSet) {
+	command.Flags("operator", false, kickOperator, func(f *pflag.FlagSet) {
 		f.StringP("name", "n", "", "operator name")
 	})
 	commands = append(commands, kickOperator)

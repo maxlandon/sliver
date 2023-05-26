@@ -202,6 +202,7 @@ func ExtensionRegisterCommand(extCmd *ExtensionManifest, cmd *cobra.Command, con
 	f.BoolP("save", "s", false, "Save output to disk")
 	f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 	extensionCmd.Flags().AddFlagSet(f)
+	extensionCmd.Flags().ParseErrorsWhitelist.UnknownFlags = true
 
 	// Completions
 	comps := carapace.Gen(extensionCmd)

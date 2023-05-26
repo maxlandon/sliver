@@ -76,7 +76,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			_, err := alias.LoadAlias(manifest, sliver, con)
 			if err != nil {
 				con.PrintErrorf("Failed to load alias: %s", err)
-				// client.Client.PrintErrorf("Failed to load alias: %s\n", err)
 				continue
 			}
 			n++
@@ -90,7 +89,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			// Absorb error in case there's no extensions manifest
 			if err != nil {
 				con.PrintErrorf("Failed to load extension: %s", err)
-				// client.Client.PrintErrorf("Failed to load extension: %s", err)
 				continue
 			}
 			extensions.ExtensionRegisterCommand(ext, sliver, con)
@@ -466,6 +464,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		executeCmd.Flags().ParseErrorsWhitelist.UnknownFlags = true
+
 		carapace.Gen(executeCmd).PositionalCompletion(carapace.ActionValues().Usage("command to execute (required)"))
 		carapace.Gen(executeCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("arguments to the command (optional)"))
 
@@ -499,6 +499,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		executeAssemblyCmd.Flags().ParseErrorsWhitelist.UnknownFlags = true
+
 		carapace.Gen(executeAssemblyCmd).PositionalCompletion(carapace.ActionFiles().Usage("path to assembly file (required)"))
 		carapace.Gen(executeAssemblyCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("arguments to pass to the assembly entrypoint (optional)"))
 
@@ -550,6 +552,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		sideloadCmd.Flags().ParseErrorsWhitelist.UnknownFlags = true
+
 		carapace.Gen(sideloadCmd).PositionalCompletion(carapace.ActionFiles().Usage("path to shared library file (required)"))
 		carapace.Gen(sideloadCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("arguments to pass to the binary (optional)"))
 
@@ -577,6 +581,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		spawnDllCmd.Flags().ParseErrorsWhitelist.UnknownFlags = true
+
 		carapace.Gen(spawnDllCmd).PositionalCompletion(carapace.ActionFiles().Usage("path to DLL file (required)"))
 		carapace.Gen(spawnDllCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("arguments to pass to the DLL entrypoint (optional)"))
 
@@ -584,7 +590,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.MigrateStr,
 			Short: "Migrate into a remote process",
 			Long:  help.GetHelpFor([]string{consts.MigrateStr}),
-			Args:  cobra.ExactArgs(1), // 	a.Uint("pid", "pid")
+			Args:  cobra.ExactArgs(1),
 			Run: func(cmd *cobra.Command, args []string) {
 				exec.MigrateCmd(cmd, con, args)
 			},
@@ -688,10 +694,13 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		sshCmd.Flags().ParseErrorsWhitelist.UnknownFlags = true
+
 		FlagComps(sshCmd, func(comp *carapace.ActionMap) {
 			(*comp)["private-key"] = carapace.ActionFiles()
 			(*comp)["kerberos-keytab"] = carapace.ActionFiles()
 		})
+
 		carapace.Gen(sshCmd).PositionalCompletion(carapace.ActionValues().Usage("remote host to SSH to (required)"))
 		carapace.Gen(sshCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("command line with arguments"))
 
@@ -1794,6 +1803,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("keep-alive", "k", false, "keeps browser alive after last browser window closes")
 			f.BoolP("headless", "H", false, "start browser process in headless mode")
 		})
+		cursedChromeCmd.Flags().ParseErrorsWhitelist.UnknownFlags = true
 		carapace.Gen(cursedChromeCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("additional Chrome CLI arguments"))
 
 		cursedEdgeCmd := &cobra.Command{
@@ -1814,6 +1824,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.BoolP("keep-alive", "k", false, "keeps browser alive after last browser window closes")
 			f.BoolP("headless", "H", false, "start browser process in headless mode")
 		})
+		cursedEdgeCmd.Flags().ParseErrorsWhitelist.UnknownFlags = true
 		carapace.Gen(cursedEdgeCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("additional Edge CLI arguments"))
 
 		cursedElectronCmd := &cobra.Command{
@@ -1829,6 +1840,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("exe", "e", "", "remote electron executable absolute path")
 			f.IntP("remote-debugging-port", "r", 0, "remote debugging tcp port (0 = random)")
 		})
+		cursedElectronCmd.Flags().ParseErrorsWhitelist.UnknownFlags = true
 		carapace.Gen(cursedElectronCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("additional Electron CLI arguments"))
 
 		CursedCookiesCmd := &cobra.Command{
