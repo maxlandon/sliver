@@ -4,23 +4,30 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/transport"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 )
 
 func consoleCmd(con *console.SliverConsole) *cobra.Command {
-	return &cobra.Command{
+	consoleCmd := &cobra.Command{
 		Use:   "console",
 		Short: "Start the sliver client console",
-		RunE:  consoleRunnerCmd(con, true),
 	}
+
+	consoleCmd.RunE, consoleCmd.PersistentPostRunE = consoleRunnerCmd(con, true)
+
+	return consoleCmd
 }
 
-func consoleRunnerCmd(con *console.SliverConsole, run bool) func(cmd *cobra.Command, args []string) error {
-	return func(_ *cobra.Command, _ []string) error {
+func consoleRunnerCmd(con *console.SliverConsole, run bool) (pre, post func(cmd *cobra.Command, args []string) error) {
+	var ln *grpc.ClientConn
+
+	pre = func(_ *cobra.Command, _ []string) error {
 		appDir := assets.GetRootAppDir()
 		logFile := initLogging(appDir)
 		defer logFile.Close()
@@ -40,13 +47,21 @@ func consoleRunnerCmd(con *console.SliverConsole, run bool) func(cmd *cobra.Comm
 			fmt.Printf("Connecting to %s:%d ...\n", config.LHost, config.LPort)
 		}
 
-		rpc, _, err := transport.MTLSConnect(config)
+		var rpc rpcpb.SliverRPCClient
+		var err error
+
+		rpc, ln, err = transport.MTLSConnect(config)
 		if err != nil {
 			fmt.Printf("Connection to server failed %s", err)
 			return nil
 		}
-		// defer ln.Close()
 
 		return console.StartClient(con, rpc, command.ServerCommands(con, nil), command.SliverCommands(con), run)
 	}
+
+	post = func(cmd *cobra.Command, args []string) error {
+		return ln.Close()
+	}
+
+	return pre, post
 }

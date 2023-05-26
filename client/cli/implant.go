@@ -18,12 +18,12 @@ func implantCmd(con *console.SliverConsole) *cobra.Command {
 	cmd.Use = "implant"
 
 	// Flags
-	command.Flags("sessions", cmd, func(f *pflag.FlagSet) {
+	command.Flags("sessions", false, cmd, func(f *pflag.FlagSet) {
 		f.StringP("use", "s", "", "interact with a session")
 	})
 
 	// Prerunners (console setup, connection, etc)
-	cmd.PersistentPreRunE = makeRunners(cmd, con)
+	cmd.PersistentPreRunE, cmd.PersistentPostRunE = makeRunners(cmd, con)
 
 	// Completions
 	makeCompleters(cmd, con)
@@ -31,11 +31,12 @@ func implantCmd(con *console.SliverConsole) *cobra.Command {
 	return cmd
 }
 
-func makeRunners(implantCmd *cobra.Command, con *console.SliverConsole) func(cmd *cobra.Command, args []string) error {
+func makeRunners(implantCmd *cobra.Command, con *console.SliverConsole) (pre, post func(cmd *cobra.Command, args []string) error) {
+	startConsole, closeConsole := consoleRunnerCmd(con, false)
+
 	// The pre-run function connects to the server and sets up a "fake" console,
 	// so we can have access to active sessions/beacons, and other stuff needed.
-	return func(cmd *cobra.Command, args []string) error {
-		startConsole := consoleRunnerCmd(con, false)
+	pre = func(_ *cobra.Command, args []string) error {
 		startConsole(implantCmd, args)
 
 		// Set the active target.
@@ -51,6 +52,8 @@ func makeRunners(implantCmd *cobra.Command, con *console.SliverConsole) func(cmd
 
 		return nil
 	}
+
+	return pre, closeConsole
 }
 
 func makeCompleters(cmd *cobra.Command, con *console.SliverConsole) {
