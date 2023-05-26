@@ -114,7 +114,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.BeaconCmdsFilter),
 		}
 		sliver.AddCommand(reconfigCmd)
-		Flags("reconfig", reconfigCmd, func(f *pflag.FlagSet) {
+		Flags("reconfig", false, reconfigCmd, func(f *pflag.FlagSet) {
 			f.StringP("reconnect-interval", "r", "", "reconnect interval for implant")
 			f.StringP("beacon-interval", "i", "", "beacon callback interval")
 			f.StringP("beacon-jitter", "j", "", "beacon callback jitter (random up to)")
@@ -132,7 +132,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		}
 		sliver.AddCommand(renameCmd)
 
-		Flags("rename", renameCmd, func(f *pflag.FlagSet) {
+		Flags("rename", false, renameCmd, func(f *pflag.FlagSet) {
 			f.StringP("name", "n", "", "change implant name to")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
@@ -148,7 +148,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
-		Flags("sessions", sessionsCmd, func(f *pflag.FlagSet) {
+		Flags("sessions", true, sessionsCmd, func(f *pflag.FlagSet) {
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		Flags("sessions", false, sessionsCmd, func(f *pflag.FlagSet) {
 			f.StringP("interact", "i", "", "interact with a session")
 			f.StringP("kill", "k", "", "kill the designated session")
 			f.BoolP("kill-all", "K", false, "kill all the sessions")
@@ -157,8 +160,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 
 			f.StringP("filter", "f", "", "filter sessions by substring")
 			f.StringP("filter-re", "e", "", "filter sessions by regular expression")
-
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(sessionsCmd, func(comp *carapace.ActionMap) {
 			(*comp)["interact"] = use.BeaconAndSessionIDCompleter(con)
@@ -174,9 +175,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				sessions.SessionsPruneCmd(cmd, con, args)
 			},
 		}
-		Flags("prune", sessionsCmd, func(f *pflag.FlagSet) {
+		Flags("prune", false, sessionsPruneCmd, func(f *pflag.FlagSet) {
 			f.BoolP("force", "F", false, "Force the killing of stale/dead sessions")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		sessionsCmd.AddCommand(sessionsPruneCmd)
 
@@ -189,7 +189,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
-		Flags("use", backgroundCmd, func(f *pflag.FlagSet) {
+		Flags("use", false, backgroundCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		sliver.AddCommand(backgroundCmd)
@@ -204,7 +204,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.SliverCoreHelpGroup,
 		}
 		sliver.AddCommand(killCmd)
-		Flags("use", backgroundCmd, func(f *pflag.FlagSet) {
+		Flags("use", false, backgroundCmd, func(f *pflag.FlagSet) {
 			f.BoolP("force", "F", false, "Force kill,  does not clean up")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
@@ -220,7 +220,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.BeaconCmdsFilter),
 		}
 		sliver.AddCommand(openSessionCmd)
-		Flags("", openSessionCmd, func(f *pflag.FlagSet) {
+		Flags("interactive", false, openSessionCmd, func(f *pflag.FlagSet) {
 			f.StringP("mtls", "m", "", "mtls connection strings")
 			f.StringP("wg", "g", "", "wg connection strings")
 			f.StringP("http", "b", "", "http(s) connection strings")
@@ -244,7 +244,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.SliverCoreHelpGroup,
 		}
 		sliver.AddCommand(closeSessionCmd)
-		Flags("", closeSessionCmd, func(f *pflag.FlagSet) {
+		Flags("", false, closeSessionCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -259,14 +259,13 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 			GroupID: consts.SliverCoreHelpGroup,
 		}
-		sliver.AddCommand(tasksCmd)
-		Flags("", tasksCmd, func(f *pflag.FlagSet) {
+		Flags("tasks", true, tasksCmd, func(f *pflag.FlagSet) {
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
 			f.BoolP("overflow", "O", false, "overflow terminal width (display truncated rows)")
 			f.IntP("skip-pages", "S", 0, "skip the first n page(s)")
 			f.StringP("filter", "f", "", "filter based on task type (case-insensitive prefix matching)")
-
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		sliver.AddCommand(tasksCmd)
 
 		fetchCmd := &cobra.Command{
 			Use:   consts.FetchStr,
@@ -278,13 +277,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		tasksCmd.AddCommand(fetchCmd)
-		Flags("", fetchCmd, func(f *pflag.FlagSet) {
-			f.BoolP("overflow", "O", false, "overflow terminal width (display truncated rows)")
-			f.IntP("skip-pages", "S", 0, "skip the first n page(s)")
-			f.StringP("filter", "f", "", "filter based on task type (case-insensitive prefix matching)")
-
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
 		carapace.Gen(fetchCmd).PositionalCompletion(tasks.BeaconTaskIDCompleter(con).Usage("beacon task ID"))
 
 		cancelCmd := &cobra.Command{
@@ -297,13 +289,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		tasksCmd.AddCommand(cancelCmd)
-		Flags("", cancelCmd, func(f *pflag.FlagSet) {
-			f.BoolP("overflow", "O", false, "overflow terminal width (display truncated rows)")
-			f.IntP("skip-pages", "S", 0, "skip the first n page(s)")
-			f.StringP("filter", "f", "", "filter based on task type (case-insensitive prefix matching)")
-
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
 		carapace.Gen(cancelCmd).PositionalCompletion(tasks.BeaconPendingTasksCompleter(con).Usage("beacon task ID"))
 
 		// [ Info ] --------------------------------------------------------------
@@ -317,7 +302,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 			GroupID: consts.InfoHelpGroup,
 		}
-		Flags("use", infoCmd, func(f *pflag.FlagSet) {
+		Flags("use", false, infoCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(infoCmd).PositionalCompletion(use.BeaconAndSessionIDCompleter(con))
@@ -333,7 +318,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(pingCmd)
-		Flags("", pingCmd, func(f *pflag.FlagSet) {
+		Flags("", false, pingCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -347,7 +332,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(getPIDCmd)
-		Flags("", getPIDCmd, func(f *pflag.FlagSet) {
+		Flags("", false, getPIDCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -361,7 +346,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(getUIDCmd)
-		Flags("", getUIDCmd, func(f *pflag.FlagSet) {
+		Flags("", false, getUIDCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -375,7 +360,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(getGIDCmd)
-		Flags("", getGIDCmd, func(f *pflag.FlagSet) {
+		Flags("", false, getGIDCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -389,7 +374,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(whoamiCmd)
-		Flags("", whoamiCmd, func(f *pflag.FlagSet) {
+		Flags("", false, whoamiCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -406,7 +391,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.SessionCmdsFilter),
 		}
 		sliver.AddCommand(shellCmd)
-		Flags("", shellCmd, func(f *pflag.FlagSet) {
+		Flags("", false, shellCmd, func(f *pflag.FlagSet) {
 			f.BoolP("no-pty", "y", false, "disable use of pty on macos/linux")
 			f.StringP("shell-path", "s", "", "path to shell interpreter")
 
@@ -426,7 +411,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.ExecutionHelpGroup,
 		}
 		sliver.AddCommand(executeCmd)
-		Flags("", executeCmd, func(f *pflag.FlagSet) {
+		Flags("", false, executeCmd, func(f *pflag.FlagSet) {
 			f.BoolP("token", "T", false, "execute command with current token (windows only)")
 			f.BoolP("output", "o", false, "capture command output")
 			f.BoolP("save", "s", false, "save output to a file")
@@ -454,7 +439,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(executeAssemblyCmd)
-		Flags("", executeAssemblyCmd, func(f *pflag.FlagSet) {
+		Flags("", false, executeAssemblyCmd, func(f *pflag.FlagSet) {
 			f.StringP("process", "p", "notepad.exe", "hosting process to inject into")
 			f.StringP("method", "m", "", "Optional method (a method is required for a .NET DLL)")
 			f.StringP("class", "c", "", "Optional class name (required for .NET DLL)")
@@ -486,7 +471,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.ExecutionHelpGroup,
 		}
 		sliver.AddCommand(executeShellcodeCmd)
-		Flags("", executeShellcodeCmd, func(f *pflag.FlagSet) {
+		Flags("", false, executeShellcodeCmd, func(f *pflag.FlagSet) {
 			f.BoolP("rwx-pages", "r", false, "Use RWX permissions for memory pages")
 			f.Uint32P("pid", "p", 0, "Pid of process to inject into (0 means injection into ourselves)")
 			f.StringP("process", "n", `c:\windows\system32\notepad.exe`, "Process to inject into when running in interactive mode")
@@ -510,7 +495,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.ExecutionHelpGroup,
 		}
 		sliver.AddCommand(sideloadCmd)
-		Flags("", sideloadCmd, func(f *pflag.FlagSet) {
+		Flags("", false, sideloadCmd, func(f *pflag.FlagSet) {
 			f.StringP("entry-point", "e", "", "Entrypoint for the DLL (Windows only)")
 			f.StringP("process", "p", `c:\windows\system32\notepad.exe`, "Path to process to host the shellcode")
 			f.BoolP("unicode", "w", false, "Command line is passed to unmanaged DLL function in UNICODE format. (default is ANSI)")
@@ -538,7 +523,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(spawnDllCmd)
-		Flags("", spawnDllCmd, func(f *pflag.FlagSet) {
+		Flags("", false, spawnDllCmd, func(f *pflag.FlagSet) {
 			f.StringP("process", "p", `c:\windows\system32\notepad.exe`, "Path to process to host the shellcode")
 			f.StringP("export", "e", "ReflectiveLoader", "Entrypoint of the Reflective DLL")
 			f.BoolP("save", "s", false, "save output to file")
@@ -565,7 +550,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(migrateCmd)
-		Flags("", migrateCmd, func(f *pflag.FlagSet) {
+		Flags("", false, migrateCmd, func(f *pflag.FlagSet) {
 			f.BoolP("disable-sgn", "S", true, "disable shikata ga nai shellcode encoder")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
@@ -581,7 +566,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.ExecutionHelpGroup,
 		}
 		sliver.AddCommand(msfCmd)
-		Flags("", msfCmd, func(f *pflag.FlagSet) {
+		Flags("", false, msfCmd, func(f *pflag.FlagSet) {
 			f.StringP("payload", "m", "meterpreter_reverse_https", "msf payload")
 			f.StringP("lhost", "L", "", "listen host")
 			f.IntP("lport", "l", 4444, "listen port")
@@ -601,7 +586,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.ExecutionHelpGroup,
 		}
 		sliver.AddCommand(msfInjectCmd)
-		Flags("", msfInjectCmd, func(f *pflag.FlagSet) {
+		Flags("", false, msfInjectCmd, func(f *pflag.FlagSet) {
 			f.IntP("pid", "p", -1, "pid to inject into")
 			f.StringP("payload", "m", "meterpreter_reverse_https", "msf payload")
 			f.StringP("lhost", "L", "", "listen host")
@@ -624,7 +609,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(psExecCmd)
-		Flags("", psExecCmd, func(f *pflag.FlagSet) {
+		Flags("", false, psExecCmd, func(f *pflag.FlagSet) {
 			f.StringP("service-name", "s", "Sliver", "name that will be used to register the service")
 			f.StringP("service-description", "d", "Sliver implant", "description of the service")
 			f.StringP("profile", "p", "", "profile to use for service binary")
@@ -649,7 +634,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.ExecutionHelpGroup,
 		}
 		sliver.AddCommand(sshCmd)
-		Flags("", sshCmd, func(f *pflag.FlagSet) {
+		Flags("", false, sshCmd, func(f *pflag.FlagSet) {
 			f.UintP("port", "p", 22, "SSH port")
 			f.StringP("private-key", "i", "", "path to private key file")
 			f.StringP("password", "P", "", "SSH user password")
@@ -737,7 +722,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(mvCmd)
-		Flags("", mvCmd, func(f *pflag.FlagSet) {
+		Flags("", false, mvCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(mvCmd).PositionalCompletion(
@@ -756,7 +741,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(lsCmd)
-		Flags("", lsCmd, func(f *pflag.FlagSet) {
+		Flags("", false, lsCmd, func(f *pflag.FlagSet) {
 			f.BoolP("reverse", "r", false, "reverse sort order")
 			f.BoolP("modified", "m", false, "sort by modified time")
 			f.BoolP("size", "s", false, "sort by size")
@@ -775,7 +760,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(rmCmd)
-		Flags("", rmCmd, func(f *pflag.FlagSet) {
+		Flags("", false, rmCmd, func(f *pflag.FlagSet) {
 			f.BoolP("recursive", "r", false, "recursively remove files")
 			f.BoolP("force", "F", false, "ignore safety and forcefully remove files")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
@@ -793,7 +778,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(mkdirCmd)
-		Flags("", mkdirCmd, func(f *pflag.FlagSet) {
+		Flags("", false, mkdirCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(mkdirCmd).PositionalCompletion(carapace.ActionValues().Usage("path to the directory to create"))
@@ -809,7 +794,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(cdCmd)
-		Flags("", cdCmd, func(f *pflag.FlagSet) {
+		Flags("", false, cdCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(cdCmd).PositionalCompletion(carapace.ActionValues().Usage("path to the directory"))
@@ -824,7 +809,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(pwdCmd)
-		Flags("", pwdCmd, func(f *pflag.FlagSet) {
+		Flags("", false, pwdCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -839,7 +824,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(catCmd)
-		Flags("", catCmd, func(f *pflag.FlagSet) {
+		Flags("", false, catCmd, func(f *pflag.FlagSet) {
 			f.BoolP("colorize-output", "c", false, "colorize output")
 			f.BoolP("hex", "x", false, "display as a hex dump")
 			f.BoolP("loot", "X", false, "save output as loot")
@@ -861,7 +846,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(downloadCmd)
-		Flags("", downloadCmd, func(f *pflag.FlagSet) {
+		Flags("", false, downloadCmd, func(f *pflag.FlagSet) {
 			f.BoolP("loot", "X", false, "save output as loot")
 			f.StringP("type", "T", "", "force a specific loot type (file/cred) if looting")
 			f.StringP("file-type", "F", "", "force a specific file type (binary/text) if looting")
@@ -885,7 +870,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.FilesystemHelpGroup,
 		}
 		sliver.AddCommand(uploadCmd)
-		Flags("", uploadCmd, func(f *pflag.FlagSet) {
+		Flags("", false, uploadCmd, func(f *pflag.FlagSet) {
 			f.BoolP("ioc", "i", false, "track uploaded file as an ioc")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
@@ -906,7 +891,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.NetworkHelpGroup,
 		}
 		sliver.AddCommand(ifconfigCmd)
-		Flags("", ifconfigCmd, func(f *pflag.FlagSet) {
+		Flags("", false, ifconfigCmd, func(f *pflag.FlagSet) {
 			f.BoolP("all", "A", false, "show all network adapters (default only shows IPv4)")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
@@ -921,7 +906,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.NetworkHelpGroup,
 		}
 		sliver.AddCommand(netstatCmd)
-		Flags("", netstatCmd, func(f *pflag.FlagSet) {
+		Flags("", false, netstatCmd, func(f *pflag.FlagSet) {
 			f.BoolP("tcp", "T", true, "display information about TCP sockets")
 			f.BoolP("udp", "u", false, "display information about UDP sockets")
 			f.BoolP("ip4", "4", true, "display information about IPv4 sockets")
@@ -943,7 +928,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.ProcessHelpGroup,
 		}
 		sliver.AddCommand(psCmd)
-		Flags("", psCmd, func(f *pflag.FlagSet) {
+		Flags("", false, psCmd, func(f *pflag.FlagSet) {
 			f.IntP("pid", "p", -1, "filter based on pid")
 			f.StringP("exe", "e", "", "filter based on executable name")
 			f.StringP("owner", "o", "", "filter based on owner")
@@ -965,7 +950,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.ProcessHelpGroup,
 		}
 		sliver.AddCommand(procdumpCmd)
-		Flags("", procdumpCmd, func(f *pflag.FlagSet) {
+		Flags("", false, procdumpCmd, func(f *pflag.FlagSet) {
 			f.IntP("pid", "p", -1, "target pid")
 			f.StringP("name", "n", "", "target process name")
 			f.StringP("save", "s", "", "save to file (will overwrite if exists)")
@@ -986,7 +971,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.ProcessHelpGroup,
 		}
 		sliver.AddCommand(terminateCmd)
-		Flags("", terminateCmd, func(f *pflag.FlagSet) {
+		Flags("", false, terminateCmd, func(f *pflag.FlagSet) {
 			f.BoolP("force", "F", false, "disregard safety and kill the PID")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
@@ -1005,7 +990,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(runAsCmd)
-		Flags("", runAsCmd, func(f *pflag.FlagSet) {
+		Flags("", false, runAsCmd, func(f *pflag.FlagSet) {
 			f.StringP("username", "u", "", "user to impersonate")
 			f.StringP("process", "p", "", "process to start")
 			f.StringP("args", "a", "", "arguments for the process")
@@ -1029,7 +1014,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(impersonateCmd)
-		Flags("", impersonateCmd, func(f *pflag.FlagSet) {
+		Flags("", false, impersonateCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(impersonateCmd).PositionalCompletion(carapace.ActionValues().Usage("name of the user account to impersonate"))
@@ -1045,7 +1030,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(revToSelfCmd)
-		Flags("", revToSelfCmd, func(f *pflag.FlagSet) {
+		Flags("", false, revToSelfCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -1060,7 +1045,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(getSystemCmd)
-		Flags("", getSystemCmd, func(f *pflag.FlagSet) {
+		Flags("", false, getSystemCmd, func(f *pflag.FlagSet) {
 			f.StringP("process", "p", "spoolsv.exe", "SYSTEM process to inject into")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
@@ -1076,7 +1061,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		sliver.AddCommand(makeTokenCmd)
-		Flags("", makeTokenCmd, func(f *pflag.FlagSet) {
+		Flags("", false, makeTokenCmd, func(f *pflag.FlagSet) {
 			f.StringP("username", "u", "", "username of the user to impersonate")
 			f.StringP("password", "p", "", "password of the user to impersonate")
 			f.StringP("domain", "d", "", "domain of the user to impersonate")
@@ -1095,7 +1080,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.PrivilegesHelpGroup,
 		}
 		sliver.AddCommand(chmodCmd)
-		Flags("", chmodCmd, func(f *pflag.FlagSet) {
+		Flags("", false, chmodCmd, func(f *pflag.FlagSet) {
 			f.BoolP("recursive", "r", false, "recursively change permissions on files")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
@@ -1115,7 +1100,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.PrivilegesHelpGroup,
 		}
 		sliver.AddCommand(chownCmd)
-		Flags("", chownCmd, func(f *pflag.FlagSet) {
+		Flags("", false, chownCmd, func(f *pflag.FlagSet) {
 			f.BoolP("recursive", "r", false, "recursively change permissions on files")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
@@ -1136,7 +1121,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.PrivilegesHelpGroup,
 		}
 		sliver.AddCommand(chtimesCmd)
-		Flags("", chtimesCmd, func(f *pflag.FlagSet) {
+		Flags("", false, chtimesCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(chtimesCmd).PositionalCompletion(
@@ -1157,7 +1142,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(screenshotCmd)
-		Flags("", screenshotCmd, func(f *pflag.FlagSet) {
+		Flags("", false, screenshotCmd, func(f *pflag.FlagSet) {
 			f.StringP("save", "s", "", "save to file (will overwrite if exists)")
 			f.BoolP("loot", "X", false, "save output as loot")
 			f.StringP("name", "n", "", "name to assign loot (optional)")
@@ -1182,7 +1167,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		sliver.AddCommand(backdoorCmd)
-		Flags("", backdoorCmd, func(f *pflag.FlagSet) {
+		Flags("", false, backdoorCmd, func(f *pflag.FlagSet) {
 			f.StringP("profile", "p", "", "profile to use for service binary")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
@@ -1205,7 +1190,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		sliver.AddCommand(dllhijackCmd)
-		Flags("", dllhijackCmd, func(f *pflag.FlagSet) {
+		Flags("", false, dllhijackCmd, func(f *pflag.FlagSet) {
 			f.StringP("reference-path", "r", "", "Path to the reference DLL on the remote system")
 			f.StringP("reference-file", "R", "", "Path to the reference DLL on the local system")
 			f.StringP("file", "f", "", "Local path to the DLL to plant for the hijack")
@@ -1231,7 +1216,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		sliver.AddCommand(getprivsCmd)
-		Flags("", getprivsCmd, func(f *pflag.FlagSet) {
+		Flags("", false, getprivsCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		//
@@ -1249,7 +1234,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.InfoHelpGroup,
 		}
 		sliver.AddCommand(envCmd)
-		Flags("", envCmd, func(f *pflag.FlagSet) {
+		Flags("", true, envCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(envCmd).PositionalCompletion(carapace.ActionValues().Usage("environment variable to fetch (optional)"))
@@ -1264,9 +1249,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		envCmd.AddCommand(envSetCmd)
-		Flags("", envSetCmd, func(f *pflag.FlagSet) {
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
 		carapace.Gen(envSetCmd).PositionalCompletion(
 			carapace.ActionValues().Usage("environment variable name"),
 			carapace.ActionValues().Usage("value to assign"),
@@ -1282,9 +1264,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		envCmd.AddCommand(envUnsetCmd)
-		Flags("", envUnsetCmd, func(f *pflag.FlagSet) {
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
 		carapace.Gen(envUnsetCmd).PositionalCompletion(carapace.ActionValues().Usage("environment variable name"))
 
 		// [ Registry ] ---------------------------------------------
@@ -1297,6 +1276,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Annotations: HideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(registryCmd)
+		Flags("registry", true, registryCmd, func(f *pflag.FlagSet) {
+			f.IntP("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
 
 		registryReadCmd := &cobra.Command{
 			Use:   consts.RegistryReadStr,
@@ -1308,10 +1290,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		registryCmd.AddCommand(registryReadCmd)
-		Flags("", registryCmd, func(f *pflag.FlagSet) {
+		Flags("", false, registryReadCmd, func(f *pflag.FlagSet) {
 			f.StringP("hive", "H", "HKCU", "registry hive")
 			f.StringP("hostname", "o", "", "remote host to read values from")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(registryReadCmd).PositionalCompletion(carapace.ActionValues().Usage("registry path"))
 
@@ -1325,12 +1306,11 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		registryCmd.AddCommand(registryWriteCmd)
-		Flags("", registryWriteCmd, func(f *pflag.FlagSet) {
+		Flags("", false, registryWriteCmd, func(f *pflag.FlagSet) {
 			f.StringP("hive", "H", "HKCU", "registry hive")
 			f.StringP("hostname", "o", "", "remote host to write values to")
 			f.StringP("type", "T", "string", "type of the value to write (string, dword, qword, binary). If binary, you must provide a path to a file with --path")
 			f.StringP("path", "p", "", "path to the binary file to write")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(registryWriteCmd).PositionalCompletion(
 			carapace.ActionValues().Usage("registry path"),
@@ -1347,10 +1327,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		registryCmd.AddCommand(registryCreateKeyCmd)
-		Flags("", registryCreateKeyCmd, func(f *pflag.FlagSet) {
+		Flags("", false, registryCreateKeyCmd, func(f *pflag.FlagSet) {
 			f.StringP("hive", "H", "HKCU", "registry hive")
 			f.StringP("hostname", "o", "", "remote host to write values to")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(registryCreateKeyCmd).PositionalCompletion(carapace.ActionValues().Usage("registry path"))
 
@@ -1364,10 +1343,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		registryCmd.AddCommand(registryDeleteKeyCmd)
-		Flags("", registryDeleteKeyCmd, func(f *pflag.FlagSet) {
+		Flags("", false, registryDeleteKeyCmd, func(f *pflag.FlagSet) {
 			f.StringP("hive", "H", "HKCU", "registry hive")
 			f.StringP("hostname", "o", "", "remote host to remove value from")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(registryDeleteKeyCmd).PositionalCompletion(carapace.ActionValues().Usage("registry path"))
 
@@ -1381,10 +1359,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		registryCmd.AddCommand(registryListSubCmd)
-		Flags("", registryListSubCmd, func(f *pflag.FlagSet) {
+		Flags("", false, registryListSubCmd, func(f *pflag.FlagSet) {
 			f.StringP("hive", "H", "HKCU", "registry hive")
 			f.StringP("hostname", "o", "", "remote host to write values to")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(registryListSubCmd).PositionalCompletion(carapace.ActionValues().Usage("registry path"))
 
@@ -1398,10 +1375,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		registryCmd.AddCommand(registryListValuesCmd)
-		Flags("", registryListValuesCmd, func(f *pflag.FlagSet) {
+		Flags("", false, registryListValuesCmd, func(f *pflag.FlagSet) {
 			f.StringP("hive", "H", "HKCU", "registry hive")
 			f.StringP("hostname", "o", "", "remote host to write values to")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(registryListValuesCmd).PositionalCompletion(carapace.ActionValues().Usage("registry path"))
 
@@ -1417,7 +1393,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.NetworkHelpGroup,
 		}
 		sliver.AddCommand(rportfwdCmd)
-		Flags("", rportfwdCmd, func(f *pflag.FlagSet) {
+		Flags("", true, rportfwdCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -1430,10 +1406,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		rportfwdCmd.AddCommand(rportfwdAddCmd)
-		Flags("", rportfwdAddCmd, func(f *pflag.FlagSet) {
+		Flags("", false, rportfwdAddCmd, func(f *pflag.FlagSet) {
 			f.StringP("remote", "r", "", "remote address <ip>:<port> connection is forwarded to")
 			f.StringP("bind", "b", "", "bind address <ip>:<port> implants listen on")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
 		rportfwdRmCmd := &cobra.Command{
@@ -1445,9 +1420,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		rportfwdCmd.AddCommand(rportfwdRmCmd)
-		Flags("", rportfwdRmCmd, func(f *pflag.FlagSet) {
+		Flags("", false, rportfwdRmCmd, func(f *pflag.FlagSet) {
 			f.Uint32P("id", "i", 0, "id of portfwd to remove")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(rportfwdRmCmd, func(comp *carapace.ActionMap) {
 			(*comp)["id"] = rportfwd.PortfwdIDCompleter(con)
@@ -1465,7 +1439,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.SliverCoreHelpGroup,
 		}
 		sliver.AddCommand(pivotsCmd)
-		Flags("", pivotsCmd, func(f *pflag.FlagSet) {
+		Flags("", true, pivotsCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -1478,10 +1452,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		pivotsCmd.AddCommand(namedPipeCmd)
-		Flags("", namedPipeCmd, func(f *pflag.FlagSet) {
+		Flags("", false, namedPipeCmd, func(f *pflag.FlagSet) {
 			f.StringP("bind", "b", "", "name of the named pipe to bind pivot listener")
 			f.BoolP("allow-all", "a", false, "allow all users to connect")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
 		tcpListenerCmd := &cobra.Command{
@@ -1493,11 +1466,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		pivotsCmd.AddCommand(tcpListenerCmd)
-		Flags("", tcpListenerCmd, func(f *pflag.FlagSet) {
+		Flags("", false, tcpListenerCmd, func(f *pflag.FlagSet) {
 			f.StringP("bind", "b", "", "remote interface to bind pivot listener")
 			f.Uint16P("lport", "l", generate.DefaultTCPPivotPort, "tcp pivot listener port")
-
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
 		pivotStopCmd := &cobra.Command{
@@ -1509,9 +1480,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		pivotsCmd.AddCommand(pivotStopCmd)
-		Flags("", pivotStopCmd, func(f *pflag.FlagSet) {
+		Flags("", false, pivotStopCmd, func(f *pflag.FlagSet) {
 			f.Uint32P("id", "i", 0, "id of the pivot listener to stop")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(pivotStopCmd, func(comp *carapace.ActionMap) {
 			(*comp)["id"] = pivots.PivotIDCompleter(con)
@@ -1526,9 +1496,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		pivotsCmd.AddCommand(pivotDetailsCmd)
-		Flags("", pivotDetailsCmd, func(f *pflag.FlagSet) {
+		Flags("", false, pivotDetailsCmd, func(f *pflag.FlagSet) {
 			f.IntP("id", "i", 0, "id of the pivot listener to get details for")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(pivotDetailsCmd, func(comp *carapace.ActionMap) {
 			(*comp)["id"] = pivots.PivotIDCompleter(con)
@@ -1556,7 +1525,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.NetworkHelpGroup,
 		}
 		sliver.AddCommand(portfwdCmd)
-		Flags("", portfwdCmd, func(f *pflag.FlagSet) {
+		Flags("", true, portfwdCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -1569,10 +1538,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		portfwdCmd.AddCommand(addCmd)
-		Flags("", addCmd, func(f *pflag.FlagSet) {
+		Flags("", false, addCmd, func(f *pflag.FlagSet) {
 			f.StringP("remote", "r", "", "remote target host:port (e.g., 10.0.0.1:445)")
 			f.StringP("bind", "b", "127.0.0.1:8080", "bind port forward to interface")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
 		portfwdRmCmd := &cobra.Command{
@@ -1584,9 +1552,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		portfwdCmd.AddCommand(portfwdRmCmd)
-		Flags("", portfwdRmCmd, func(f *pflag.FlagSet) {
+		Flags("", false, portfwdRmCmd, func(f *pflag.FlagSet) {
 			f.IntP("id", "i", 0, "id of portfwd to remove")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(portfwdRmCmd, func(comp *carapace.ActionMap) {
 			(*comp)["id"] = portfwd.PortfwdIDCompleter(con)
@@ -1604,7 +1571,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID: consts.NetworkHelpGroup,
 		}
 		sliver.AddCommand(socksCmd)
-		Flags("", socksCmd, func(f *pflag.FlagSet) {
+		Flags("", true, socksCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -1617,7 +1584,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		socksCmd.AddCommand(socksStartCmd)
-		Flags("", socksStartCmd, func(f *pflag.FlagSet) {
+		Flags("", false, socksStartCmd, func(f *pflag.FlagSet) {
 			f.StringP("host", "H", "127.0.0.1", "Bind a Socks5 Host")
 			f.StringP("port", "P", "1081", "Bind a Socks5 Port")
 			f.StringP("user", "u", "", "socks5 auth username (will generate random password)")
@@ -1632,9 +1599,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		socksCmd.AddCommand(socksStopCmd)
-		Flags("", socksStopCmd, func(f *pflag.FlagSet) {
+		Flags("", false, socksStopCmd, func(f *pflag.FlagSet) {
 			f.Uint64P("id", "i", 0, "id of portfwd to remove")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		FlagComps(socksStopCmd, func(comp *carapace.ActionMap) {
 			(*comp)["id"] = socks.SocksIDCompleter(con)
@@ -1652,7 +1618,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID:     consts.NetworkHelpGroup,
 			Annotations: HideCommand(consts.WireguardCmdsFilter),
 		}
-		Flags("wg portforward", wgPortFwdCmd, func(f *pflag.FlagSet) {
+		Flags("wg portforward", true, wgPortFwdCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		sliver.AddCommand(wgPortFwdCmd)
@@ -1665,10 +1631,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				wireguard.WGPortFwdAddCmd(cmd, con, args)
 			},
 		}
-		Flags("wg portforward", wgPortFwdAddCmd, func(f *pflag.FlagSet) {
+		Flags("wg portforward", false, wgPortFwdAddCmd, func(f *pflag.FlagSet) {
 			f.Int32P("bind", "b", 1080, "port to listen on the WireGuard tun interface")
 			f.StringP("remote", "r", "", "remote target host:port (e.g., 10.0.0.1:445)")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		wgPortFwdCmd.AddCommand(wgPortFwdAddCmd)
 
@@ -1681,9 +1646,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				wireguard.WGPortFwdRmCmd(cmd, con, args)
 			},
 		}
-		Flags("wg portforward", wgPortFwdRmCmd, func(f *pflag.FlagSet) {
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
 		wgPortFwdCmd.AddCommand(wgPortFwdRmCmd)
 
 		carapace.Gen(wgPortFwdRmCmd).PositionalCompletion(wireguard.PortfwdIDCompleter(con).Usage("forwarder ID"))
@@ -1698,10 +1660,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			GroupID:     consts.NetworkHelpGroup,
 			Annotations: HideCommand(consts.WireguardCmdsFilter),
 		}
-		Flags("wg socks", wgSocksCmd, func(f *pflag.FlagSet) {
+		sliver.AddCommand(wgSocksCmd)
+		Flags("wg socks", true, wgSocksCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-		sliver.AddCommand(wgSocksCmd)
 
 		wgSocksStartCmd := &cobra.Command{
 			Use:   consts.StartStr,
@@ -1712,9 +1674,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		wgSocksCmd.AddCommand(wgSocksStartCmd)
-		Flags("wg socks", wgSocksStartCmd, func(f *pflag.FlagSet) {
+		Flags("wg socks", false, wgSocksStartCmd, func(f *pflag.FlagSet) {
 			f.Int32P("bind", "b", 3090, "port to listen on the WireGuard tun interface")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
 		wgSocksStopCmd := &cobra.Command{
@@ -1727,9 +1688,6 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Args: cobra.ExactArgs(1),
 		}
 		wgSocksCmd.AddCommand(wgSocksStopCmd)
-		Flags("wg socks", wgSocksStopCmd, func(f *pflag.FlagSet) {
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
-		})
 		carapace.Gen(wgSocksStopCmd).PositionalCompletion(wireguard.SocksIDCompleter(con).Usage("Socks server ID"))
 
 		// [ Curse Commands ] ------------------------------------------------------------
@@ -1744,7 +1702,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		sliver.AddCommand(cursedCmd)
-		Flags("", cursedCmd, func(f *pflag.FlagSet) {
+		Flags("", true, cursedCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
@@ -1752,16 +1710,16 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Use:   consts.RmStr,
 			Short: "Remove a Curse from a process",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedConsole}),
-			Args:  cobra.ExactArgs(1), // 	a.Int("bind-port", "bind port of the Cursed process to stop")
+			Args:  cobra.ExactArgs(1),
 			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedRmCmd(cmd, con, args)
 			},
 		}
 		cursedCmd.AddCommand(cursedRmCmd)
-		Flags("", cursedRmCmd, func(f *pflag.FlagSet) {
+		Flags("", false, cursedRmCmd, func(f *pflag.FlagSet) {
 			f.BoolP("kill", "k", false, "kill the process after removing the curse")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(cursedRmCmd).PositionalCompletion(carapace.ActionValues().Usage("bind port of the Cursed process to stop"))
 
 		cursedConsoleCmd := &cobra.Command{
 			Use:   consts.CursedConsole,
@@ -1772,22 +1730,20 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		cursedCmd.AddCommand(cursedConsoleCmd)
-		Flags("", cursedConsoleCmd, func(f *pflag.FlagSet) {
+		Flags("", false, cursedConsoleCmd, func(f *pflag.FlagSet) {
 			f.IntP("remote-debugging-port", "r", 0, "remote debugging tcp port (0 = random)`")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
 		cursedChromeCmd := &cobra.Command{
 			Use:   consts.CursedChrome,
 			Short: "Automatically inject a Cursed Chrome payload into a remote Chrome extension",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedChrome}),
-			// 	a.StringList("args", "additional chrome cli arguments", grumble.Default([]string{}))
 			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedChromeCmd(cmd, con, args)
 			},
 		}
 		cursedCmd.AddCommand(cursedChromeCmd)
-		Flags("", cursedChromeCmd, func(f *pflag.FlagSet) {
+		Flags("", false, cursedChromeCmd, func(f *pflag.FlagSet) {
 			f.IntP("remote-debugging-port", "r", 0, "remote debugging tcp port (0 = random)")
 			f.BoolP("restore", "R", true, "restore the user's session after process termination")
 			f.StringP("exe", "e", "", "chrome/chromium browser executable path (blank string = auto)")
@@ -1795,21 +1751,19 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("payload", "p", "", "cursed chrome payload file path (.js)")
 			f.BoolP("keep-alive", "k", false, "keeps browser alive after last browser window closes")
 			f.BoolP("headless", "H", false, "start browser process in headless mode")
-
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(cursedChromeCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("additional Chrome CLI arguments"))
 
 		cursedEdgeCmd := &cobra.Command{
 			Use:   consts.CursedEdge,
 			Short: "Automatically inject a Cursed Chrome payload into a remote Edge extension",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedEdge}),
-			// 	a.StringList("args", "additional edge cli arguments", grumble.Default([]string{}))
 			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedEdgeCmd(cmd, con, args)
 			},
 		}
 		cursedCmd.AddCommand(cursedEdgeCmd)
-		Flags("", cursedEdgeCmd, func(f *pflag.FlagSet) {
+		Flags("", false, cursedEdgeCmd, func(f *pflag.FlagSet) {
 			f.IntP("remote-debugging-port", "r", 0, "remote debugging tcp port (0 = random)")
 			f.BoolP("restore", "R", true, "restore the user's session after process termination")
 			f.StringP("exe", "e", "", "edge browser executable path (blank string = auto)")
@@ -1817,25 +1771,23 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("payload", "p", "", "cursed chrome payload file path (.js)")
 			f.BoolP("keep-alive", "k", false, "keeps browser alive after last browser window closes")
 			f.BoolP("headless", "H", false, "start browser process in headless mode")
-
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(cursedEdgeCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("additional Edge CLI arguments"))
 
 		cursedElectronCmd := &cobra.Command{
 			Use:   consts.CursedElectron,
 			Short: "Curse a remote Electron application",
 			Long:  help.GetHelpFor([]string{consts.Cursed, consts.CursedElectron}),
-			// 	a.StringList("args", "additional electron cli arguments", grumble.Default([]string{}))
 			Run: func(cmd *cobra.Command, args []string) {
 				cursed.CursedElectronCmd(cmd, con, args)
 			},
 		}
 		cursedCmd.AddCommand(cursedElectronCmd)
-		Flags("", cursedElectronCmd, func(f *pflag.FlagSet) {
+		Flags("", false, cursedElectronCmd, func(f *pflag.FlagSet) {
 			f.StringP("exe", "e", "", "remote electron executable absolute path")
 			f.IntP("remote-debugging-port", "r", 0, "remote debugging tcp port (0 = random)")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
+		carapace.Gen(cursedElectronCmd).PositionalAnyCompletion(carapace.ActionValues().Usage("additional Electron CLI arguments"))
 
 		CursedCookiesCmd := &cobra.Command{
 			Use:   consts.CursedCookies,
@@ -1846,9 +1798,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		cursedCmd.AddCommand(CursedCookiesCmd)
-		Flags("", CursedCookiesCmd, func(f *pflag.FlagSet) {
+		Flags("", false, CursedCookiesCmd, func(f *pflag.FlagSet) {
 			f.StringP("save", "s", "", "save to file")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
 		cursedScreenshotCmd := &cobra.Command{
@@ -1860,10 +1811,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			},
 		}
 		cursedCmd.AddCommand(cursedScreenshotCmd)
-		Flags("", cursedScreenshotCmd, func(f *pflag.FlagSet) {
+		Flags("", false, cursedScreenshotCmd, func(f *pflag.FlagSet) {
 			f.Int64P("quality", "q", 100, "screenshot quality (1 - 100)")
 			f.StringP("save", "s", "", "save to file")
-			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 
 		con.ExposeCommands()
