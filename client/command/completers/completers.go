@@ -19,76 +19,12 @@ package completers
 */
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
+	"net"
 
 	"github.com/rsteube/carapace"
-
-	"github.com/bishopfox/sliver/client/console"
 )
 
-// LocalPathCompleter - Completes a local file system path
-func LocalPathCompleter(prefix string, args []string, con *console.SliverConsoleClient) []string {
-	var parent string
-	var partial string
-	fi, err := os.Stat(prefix)
-	if os.IsNotExist(err) {
-		parent = filepath.Dir(prefix)
-		partial = filepath.Base(prefix)
-	} else {
-		if fi.IsDir() {
-			parent = prefix
-			partial = ""
-		} else {
-			parent = filepath.Dir(prefix)
-			partial = filepath.Base(prefix)
-		}
-	}
-
-	results := []string{}
-	ls, err := ioutil.ReadDir(parent)
-	if err != nil {
-		return results
-	}
-	for _, fi = range ls {
-		if 0 < len(partial) {
-			if strings.HasPrefix(fi.Name(), partial) {
-				results = append(results, filepath.Join(parent, fi.Name()))
-			}
-		} else {
-			results = append(results, filepath.Join(parent, fi.Name()))
-		}
-	}
-	return results
-}
-
-func WebsiteNameCompleter() carapace.Action {
-	return carapace.ActionMessage("unimplemented completer")
-}
-
 func C2URLCompleter() carapace.Action {
-	return carapace.ActionMessage("unimplemented completer")
-}
-
-func WgPortforwardIDCompleter() carapace.Action {
-	return carapace.ActionMessage("unimplemented completer")
-}
-
-func PortforwardIDCompleter() carapace.Action {
-	return carapace.ActionMessage("unimplemented completer")
-}
-
-func SocksIDCompleter() carapace.Action {
-	return carapace.ActionMessage("unimplemented completer")
-}
-
-func ReactionIDCompleter() carapace.Action {
-	return carapace.ActionMessage("unimplemented completer")
-}
-
-func EventTypeCompleter() carapace.Action {
 	return carapace.ActionMessage("unimplemented completer")
 }
 
@@ -104,6 +40,34 @@ func RemotePathCompleter() carapace.Action {
 	return carapace.ActionMessage("unimplemented completer")
 }
 
-func MakeExtensionArgumentsCompleter() carapace.CompletionCallback {
-	return nil
+// ClientInterfacesCompleter completes interface addresses on the client host.
+func ClientInterfacesCompleter() carapace.Action {
+	return carapace.ActionCallback(func(_ carapace.Context) carapace.Action {
+		ifaces, err := net.Interfaces()
+		if err != nil {
+			return carapace.ActionMessage("failed to get net interfaces: %s", err.Error())
+		}
+
+		results := make([]string, 0)
+
+		for _, i := range ifaces {
+			addrs, err := i.Addrs()
+			if err != nil {
+				continue
+			}
+
+			for _, a := range addrs {
+				switch v := a.(type) {
+				case *net.IPAddr:
+					results = append(results, v.IP.String())
+				case *net.IPNet:
+					results = append(results, v.IP.String())
+				default:
+					results = append(results, v.String())
+				}
+			}
+		}
+
+		return carapace.ActionValues(results...).Tag("client interfaces").NoSpace(':')
+	})
 }

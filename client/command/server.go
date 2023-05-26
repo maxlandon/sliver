@@ -559,12 +559,11 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 			f.StringP("bad-chars", "b", "", "hex encoded bad characters to avoid (e.g. 0001)")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
-
-		carapace.Gen(shikataGaNaiCmd).PositionalCompletion(carapace.ActionFiles().Tag("shellcode file"))
 		FlagComps(shikataGaNaiCmd, func(comp *carapace.ActionMap) {
-			(*comp)["arch"] = generate.ArchCompleter(con) // TODO: only propose shikataGaNaiCmd architectures
+			(*comp)["arch"] = carapace.ActionValues("386", "amd64").Tag("shikata-ga-nai architectures")
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save shellcode")
 		})
+		carapace.Gen(shikataGaNaiCmd).PositionalCompletion(carapace.ActionFiles().Tag("shellcode file"))
 
 		// [ Generate ] --------------------------------------------------------------
 

@@ -11,6 +11,7 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/backdoor"
+	"github.com/bishopfox/sliver/client/command/completers"
 	"github.com/bishopfox/sliver/client/command/cursed"
 	"github.com/bishopfox/sliver/client/command/dllhijack"
 	"github.com/bishopfox/sliver/client/command/environment"
@@ -525,6 +526,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.Uint32P("iterations", "I", 1, "number of encoding iterations (used with --shikata-ga-nai flag)")
 
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		FlagComps(executeShellcodeCmd, func(comp *carapace.ActionMap) {
+			(*comp)["shikata-ga-nai"] = carapace.ActionValues("386", "amd64").Tag("shikata-ga-nai architectures")
 		})
 		carapace.Gen(executeShellcodeCmd).PositionalCompletion(carapace.ActionFiles().Usage("path to shellcode file (required)"))
 
@@ -1459,7 +1463,10 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		rportfwdCmd.AddCommand(rportfwdAddCmd)
 		Flags("", false, rportfwdAddCmd, func(f *pflag.FlagSet) {
 			f.StringP("remote", "r", "", "remote address <ip>:<port> connection is forwarded to")
-			f.StringP("bind", "b", "", "bind address <ip>:<port> implants listen on")
+			f.StringP("bind", "b", "", "bind address <ip>:<port> for implants to listen on")
+		})
+		FlagComps(rportfwdAddCmd, func(comp *carapace.ActionMap) {
+			(*comp)["remote"] = completers.ClientInterfacesCompleter()
 		})
 
 		rportfwdRmCmd := &cobra.Command{
@@ -1593,6 +1600,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("remote", "r", "", "remote target host:port (e.g., 10.0.0.1:445)")
 			f.StringP("bind", "b", "127.0.0.1:8080", "bind port forward to interface")
 		})
+		FlagComps(addCmd, func(comp *carapace.ActionMap) {
+			(*comp)["bind"] = completers.ClientInterfacesCompleter()
+		})
 
 		portfwdRmCmd := &cobra.Command{
 			Use:   consts.RmStr,
@@ -1639,6 +1649,9 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			f.StringP("host", "H", "127.0.0.1", "Bind a Socks5 Host")
 			f.StringP("port", "P", "1081", "Bind a Socks5 Port")
 			f.StringP("user", "u", "", "socks5 auth username (will generate random password)")
+		})
+		FlagComps(socksStartCmd, func(comp *carapace.ActionMap) {
+			(*comp)["host"] = completers.ClientInterfacesCompleter()
 		})
 
 		socksStopCmd := &cobra.Command{
