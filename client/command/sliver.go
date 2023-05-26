@@ -111,7 +111,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				reconfig.ReconfigCmd(cmd, con, args)
 			},
 			GroupID:     consts.SliverCoreHelpGroup,
-			Annotations: HideCommand(consts.BeaconCmdsFilter),
+			Annotations: hideCommand(consts.BeaconCmdsFilter),
 		}
 		sliver.AddCommand(reconfigCmd)
 		Flags("reconfig", false, reconfigCmd, func(f *pflag.FlagSet) {
@@ -217,7 +217,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				sessions.InteractiveCmd(cmd, con, args)
 			},
 			GroupID:     consts.SliverCoreHelpGroup,
-			Annotations: HideCommand(consts.BeaconCmdsFilter),
+			Annotations: hideCommand(consts.BeaconCmdsFilter),
 		}
 		sliver.AddCommand(openSessionCmd)
 		Flags("interactive", false, openSessionCmd, func(f *pflag.FlagSet) {
@@ -430,7 +430,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				shell.ShellCmd(cmd, con, args)
 			},
 			GroupID:     consts.ExecutionHelpGroup,
-			Annotations: HideCommand(consts.SessionCmdsFilter),
+			Annotations: hideCommand(consts.SessionCmdsFilter),
 		}
 		sliver.AddCommand(shellCmd)
 		Flags("", false, shellCmd, func(f *pflag.FlagSet) {
@@ -478,7 +478,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				exec.ExecuteAssemblyCmd(cmd, con, args)
 			},
 			GroupID:     consts.ExecutionHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(executeAssemblyCmd)
 		Flags("", false, executeAssemblyCmd, func(f *pflag.FlagSet) {
@@ -562,7 +562,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				exec.SpawnDllCmd(cmd, con, args)
 			},
 			GroupID:     consts.ExecutionHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(spawnDllCmd)
 		Flags("", false, spawnDllCmd, func(f *pflag.FlagSet) {
@@ -589,7 +589,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				exec.MigrateCmd(cmd, con, args)
 			},
 			GroupID:     consts.ExecutionHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(migrateCmd)
 		Flags("", false, migrateCmd, func(f *pflag.FlagSet) {
@@ -648,7 +648,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				exec.PsExecCmd(cmd, con, args)
 			},
 			GroupID:     consts.ExecutionHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(psExecCmd)
 		Flags("", false, psExecCmd, func(f *pflag.FlagSet) {
@@ -1029,7 +1029,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				privilege.RunAsCmd(cmd, con, args)
 			},
 			GroupID:     consts.PrivilegesHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(runAsCmd)
 		Flags("", false, runAsCmd, func(f *pflag.FlagSet) {
@@ -1053,7 +1053,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				privilege.ImpersonateCmd(cmd, con, args)
 			},
 			GroupID:     consts.PrivilegesHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(impersonateCmd)
 		Flags("", false, impersonateCmd, func(f *pflag.FlagSet) {
@@ -1069,7 +1069,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				privilege.RevToSelfCmd(cmd, con, args)
 			},
 			GroupID:     consts.PrivilegesHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(revToSelfCmd)
 		Flags("", false, revToSelfCmd, func(f *pflag.FlagSet) {
@@ -1084,7 +1084,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				privilege.GetSystemCmd(cmd, con, args)
 			},
 			GroupID:     consts.PrivilegesHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(getSystemCmd)
 		Flags("", false, getSystemCmd, func(f *pflag.FlagSet) {
@@ -1097,7 +1097,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short:       "Create a new Logon Session with the specified credentials",
 			Long:        help.GetHelpFor([]string{consts.MakeTokenStr}),
 			GroupID:     consts.PrivilegesHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 			Run: func(cmd *cobra.Command, args []string) {
 				privilege.MakeTokenCmd(cmd, con, args)
 			},
@@ -1203,7 +1203,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Long:        help.GetHelpFor([]string{consts.BackdoorStr}),
 			Args:        cobra.ExactArgs(1),
 			GroupID:     consts.ExecutionHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 			Run: func(cmd *cobra.Command, args []string) {
 				backdoor.BackdoorCmd(cmd, con, args)
 			},
@@ -1225,7 +1225,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short:       "Plant a DLL for a hijack scenario",
 			Long:        help.GetHelpFor([]string{consts.DLLHijackStr}),
 			GroupID:     consts.ExecutionHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 			Args:        cobra.ExactArgs(1),
 			Run: func(cmd *cobra.Command, args []string) {
 				dllhijack.DllHijackCmd(cmd, con, args)
@@ -1252,7 +1252,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short:       "Get current privileges (Windows only)",
 			Long:        help.GetHelpFor([]string{consts.GetPrivsStr}),
 			GroupID:     consts.PrivilegesHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 			Run: func(cmd *cobra.Command, args []string) {
 				privilege.GetPrivsCmd(cmd, con, args)
 			},
@@ -1315,7 +1315,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			Short:       "Windows registry operations",
 			Long:        help.GetHelpFor([]string{consts.RegistryStr}),
 			GroupID:     consts.InfoHelpGroup,
-			Annotations: HideCommand(consts.WindowsCmdsFilter),
+			Annotations: hideCommand(consts.WindowsCmdsFilter),
 		}
 		sliver.AddCommand(registryCmd)
 		Flags("registry", true, registryCmd, func(f *pflag.FlagSet) {
@@ -1658,7 +1658,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				wireguard.WGPortFwdListCmd(cmd, con, args)
 			},
 			GroupID:     consts.NetworkHelpGroup,
-			Annotations: HideCommand(consts.WireguardCmdsFilter),
+			Annotations: hideCommand(consts.WireguardCmdsFilter),
 		}
 		Flags("wg portforward", true, wgPortFwdCmd, func(f *pflag.FlagSet) {
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
@@ -1700,7 +1700,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 				wireguard.WGSocksListCmd(cmd, con, args)
 			},
 			GroupID:     consts.NetworkHelpGroup,
-			Annotations: HideCommand(consts.WireguardCmdsFilter),
+			Annotations: hideCommand(consts.WireguardCmdsFilter),
 		}
 		sliver.AddCommand(wgSocksCmd)
 		Flags("wg socks", true, wgSocksCmd, func(f *pflag.FlagSet) {

@@ -20,9 +20,8 @@ func implantCmd(con *console.SliverConsole) *cobra.Command {
 	cmd.Use = "implant"
 
 	// Flags
-	command.Flags("sessions", false, cmd, func(f *pflag.FlagSet) {
-		f.StringP("use", "s", "", "interact with a session")
-	})
+	implantFlags := pflag.NewFlagSet("implant", pflag.ContinueOnError)
+	implantFlags.StringP("use", "s", "", "interact with a session")
 
 	// Prerunners (console setup, connection, etc)
 	cmd.PersistentPreRunE, cmd.PersistentPostRunE = makeRunners(cmd, con)

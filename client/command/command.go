@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const defaultTimeout = 60
+
 // Flags is a convenience function to bind flags to a given command.
 // name - The name of the flag set (can be empty).
 // cmd  - The command to which the flags should be bound.
@@ -34,12 +36,12 @@ func FlagComps(cmd *cobra.Command, bind func(comp *carapace.ActionMap)) {
 	carapace.Gen(cmd).FlagCompletion(comps)
 }
 
-// HideCommand generates a cobra annotation map with a single
+// hideCommand generates a cobra annotation map with a single
 // console.CommandHiddenFilter key, which value is a comma-separated list
 // of filters to use in order to expose/hide commands based on requirements.
-// Ex: cmd.Annotations = HideCommand("windows") will hide the cmd
+// Ex: cmd.Annotations = hideCommand("windows") will hide the cmd
 // if the target session/beacon is not a Windows host.
-func HideCommand(filters ...string) map[string]string {
+func hideCommand(filters ...string) map[string]string {
 	if len(filters) == 0 {
 		return nil
 	}
