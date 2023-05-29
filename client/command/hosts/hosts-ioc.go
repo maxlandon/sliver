@@ -35,7 +35,6 @@ import (
 
 // HostsIOCCmd - Remove a host from the database
 func HostsIOCCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	host, err := SelectHost(con)
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

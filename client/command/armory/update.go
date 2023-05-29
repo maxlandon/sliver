@@ -32,7 +32,6 @@ import (
 
 // ArmoryUpdateCmd - Update all installed extensions/aliases
 func ArmoryUpdateCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	con.PrintInfof("Refreshing package cache ... ")
 	clientConfig := parseArmoryHTTPConfig(cmd)
 	refresh(clientConfig)

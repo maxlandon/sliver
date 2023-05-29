@@ -29,7 +29,6 @@ import (
 
 // WebsiteRmCmd - Remove a website and all its static content
 func WebsiteRmCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	var name string
 	if len(args) > 0 {
 		name = args[0]

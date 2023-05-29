@@ -29,7 +29,6 @@ import (
 
 // MonitorStartCmd - Start monitoring threat intel for implants
 func MonitorStartCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	resp, err := con.Rpc.MonitorStart(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

@@ -15,7 +15,6 @@ import (
 
 // CanariesCmd - Display canaries from the database and their status
 func CanariesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	canaries, err := con.Rpc.Canaries(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("Failed to list canaries %s", err)

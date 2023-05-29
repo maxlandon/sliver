@@ -34,7 +34,6 @@ import (
 
 // InfoCmd - Display information about the active session
 func InfoCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	var err error
 
 	// Check if we have an active target via 'use'
@@ -105,7 +104,6 @@ func InfoCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 // PIDCmd - Get the active session's PID
 func PIDCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -119,7 +117,6 @@ func PIDCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 // UIDCmd - Get the active session's UID
 func UIDCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -133,7 +130,6 @@ func UIDCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 // GIDCmd - Get the active session's GID
 func GIDCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -147,7 +143,6 @@ func GIDCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 
 // WhoamiCmd - Displays the current user of the active session
 func WhoamiCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return

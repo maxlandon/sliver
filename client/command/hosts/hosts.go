@@ -48,7 +48,6 @@ var (
 
 // HostsCmd - Main hosts command
 func HostsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	allHosts, err := con.Rpc.Hosts(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s", err)

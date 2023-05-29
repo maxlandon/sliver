@@ -127,7 +127,6 @@ func (t *PsTree) Print() string {
 		t.addToTree(current, t.procTree.Children[int32(pid)].Children)
 	}
 	return t.printableTree.String()
-
 }
 
 func (t *PsTree) addToTree(tree treeprint.Tree, procs map[int32]*node) {

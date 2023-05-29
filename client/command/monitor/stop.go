@@ -29,7 +29,6 @@ import (
 
 // MonitorStopCmd - Stop monitoring threat intel for implants
 func MonitorStopCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	_, err := con.Rpc.MonitorStop(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

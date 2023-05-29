@@ -29,7 +29,6 @@ import (
 
 // ReactionSaveCmd - Manage reactions to events
 func ReactionReloadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	if _, err := os.Stat(GetReactionFilePath()); os.IsNotExist(err) {
 		con.PrintErrorf("Missing reaction file %s\n", GetReactionFilePath())
 		return

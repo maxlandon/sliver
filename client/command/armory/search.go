@@ -30,7 +30,6 @@ import (
 
 // ArmorySearchCmd - Search for packages by name
 func ArmorySearchCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	con.PrintInfof("Refreshing package cache ... ")
 	clientConfig := parseArmoryHTTPConfig(cmd)
 	refresh(clientConfig)

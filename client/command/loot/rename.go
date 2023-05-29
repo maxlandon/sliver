@@ -30,7 +30,6 @@ import (
 
 // LootRenameCmd - Rename a piece of loot
 func LootRenameCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	loot, err := SelectLoot(cmd, con.Rpc)
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

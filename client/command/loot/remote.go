@@ -228,7 +228,6 @@ func LootDownload(download *sliverpb.Download, lootName string, lootType clientp
 
 // LootAddRemoteCmd - Add a file from the remote system to the server as loot
 func LootAddRemoteCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return

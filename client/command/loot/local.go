@@ -34,7 +34,6 @@ import (
 
 // LootAddLocalCmd - Add a local file to the server as loot
 func LootAddLocalCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	localPath := args[0]
 	if _, err := os.Stat(localPath); os.IsNotExist(err) {
 		con.PrintErrorf("Path '%s' not found\n", localPath)

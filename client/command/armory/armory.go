@@ -106,7 +106,6 @@ var (
 
 // ArmoryCmd - The main armory command
 func ArmoryCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	armoriesConfig := assets.GetArmoriesConfig()
 	con.PrintInfof("Fetching %d armory index(es) ... ", len(armoriesConfig))
 	clientConfig := parseArmoryHTTPConfig(cmd)

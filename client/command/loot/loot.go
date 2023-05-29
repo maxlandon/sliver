@@ -41,7 +41,6 @@ import (
 
 // LootCmd - The loot root command
 func LootCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	filter, _ := cmd.Flags().GetString("filter")
 	var allLoot *clientpb.AllLoot
 	var err error

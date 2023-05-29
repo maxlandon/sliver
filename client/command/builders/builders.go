@@ -34,7 +34,6 @@ import (
 
 // BuildersCmd - List external builders
 func BuildersCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	builders, err := con.Rpc.Builders(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s", err)

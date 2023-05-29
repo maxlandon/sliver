@@ -39,7 +39,6 @@ import (
 
 // StageListenerCmd --url [tcp://ip:port | http://ip:port ] --profile name
 func StageListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	profileName, _ := cmd.Flags().GetString("profile")
 	listenerURL, _ := cmd.Flags().GetString("url")
 	aesEncryptKey, _ := cmd.Flags().GetString("aes-encrypt-key")

@@ -34,7 +34,6 @@ import (
 
 // ReactionUnsetCmd - Unset a reaction upon an event
 func ReactionUnsetCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	reactionID, _ := cmd.Flags().GetInt("id")
 	if reactionID == 0 {
 		reaction, err := selectReaction(con)

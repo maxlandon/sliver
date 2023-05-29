@@ -30,7 +30,6 @@ import (
 
 // LootAddCredentialCmd - Add a credential type loot
 func LootAddCredentialCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	prompt := &survey.Select{
 		Message: "Choose a credential type:",
 		Options: []string{

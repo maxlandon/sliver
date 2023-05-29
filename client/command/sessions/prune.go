@@ -30,7 +30,6 @@ import (
 
 // SessionsPruneCmd - Forcefully kill stale sessions
 func SessionsPruneCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
-
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
