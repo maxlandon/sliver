@@ -705,7 +705,7 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 		case <-time.After(100 * time.Millisecond):
 			elapsed := time.Since(start)
 			msg := fmt.Sprintf(msgF, externalImplantConfig.Config.TemplateName, elapsed.Round(time.Second))
-			fmt.Fprintf(con.App.CurrentMenu().OutOrStdout(), console.Clearln+" %s  %s", spinner.Next(), msg)
+			fmt.Fprintf(con.App.ActiveMenu().OutOrStdout(), console.Clearln+" %s  %s", spinner.Next(), msg)
 
 		case event := <-listener:
 			switch event.EventType {
