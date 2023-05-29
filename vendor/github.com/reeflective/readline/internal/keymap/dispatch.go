@@ -169,13 +169,13 @@ func (m *Engine) matchBind(keys []byte, binds map[string]inputrc.Bind) (inputrc.
 	// Iterate over the sorted list of sequences and find all binds
 	// that match the sequence either by prefix or exactly.
 	for _, sequence := range sequences {
-		sequence = strutil.ConvertMeta([]rune(sequence))
+		seq := strutil.ConvertMeta([]rune(sequence))
 
-		if len(string(keys)) < len(sequence) && strings.HasPrefix(sequence, string(keys)) {
+		if len(string(keys)) < len(seq) && strings.HasPrefix(seq, string(keys)) {
 			prefixed = append(prefixed, binds[sequence])
 		}
 
-		if string(keys) == sequence {
+		if string(keys) == seq {
 			match = binds[sequence]
 		}
 	}
@@ -210,7 +210,7 @@ func (m *Engine) handleEscape(main bool) (bind inputrc.Bind, cmd func(), pref bo
 		// the search and return to the main keymap.
 		bind = inputrc.Bind{Action: "emacs-editing-mode"}
 
-		m.keys.Pop()
+		core.PopForce(m.keys)
 
 	case !main:
 		// When using the local keymap, we simply drop any prefixed
@@ -229,7 +229,7 @@ func (m *Engine) handleEscape(main bool) (bind inputrc.Bind, cmd func(), pref bo
 
 	// Drop the escape key in the stack
 	if main {
-		m.keys.Pop()
+		core.PopForce(m.keys)
 	}
 
 	return bind, cmd, pref

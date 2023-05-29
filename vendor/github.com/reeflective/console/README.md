@@ -1,12 +1,9 @@
 
 <div align="center">
-  <a href="https://github.com/reeflective/console">
-    <img alt="" src="" width="600">
-  </a>
   <br> <h1> Console </h1>
 
   <p>  Closed-loop application library for Cobra commands  </p>
-  <p>  (Menus, oh-my-posh prompts, bells and whistles, easy to use)  </p>
+  <p>  (ready-to-use menus, prompts, completions, and more)  </p>
 </div>
 
 
@@ -58,9 +55,9 @@ the various features below almost for free.
 - Bind handlers to special interrupt errors (eg. `CtrlC`/`CtrlD`), per menu.
 
 ### Shell interface
-- Shell interface is powered by a [readline](https://github.com/reeflective/readline) instance.
+- Shell is powered by a [readline](https://github.com/reeflective/readline) instance, with full `inputrc` support and extended functionality.
 - All features of readline are supported in the console. It also allows the console to give:
-- Configurable bind keymaps, with live reload and sane defaults, and system-wide configuration.
+- Configurable bind keymaps, commands and options, sane defaults, and per-application configuration.
 - Out-of-the-box, advanced completions for commands, flags, positional and flag arguments.
 - Provided by readline and [carapace](https://github.com/rsteube/carapace): automatic usage & validation command/flags/args hints.
 - Syntax highlighting for commands (might be extended in the future).
@@ -78,13 +75,14 @@ will give you a taste of the behavior and supported features. The following docu
 is also available in the [wiki](https://github.com/reeflective/console/wiki):
 
 * [Getting started](https://github.com/reeflective/console/wiki/Getting-Started) 
-* [Shell readline](https://github.com/reeflective/console/wiki/Readline-Shell)
 * [Menus](https://github.com/reeflective/console/wiki/Menus)
 * [Prompts](https://github.com/reeflective/console/wiki/Prompts)
 * [Binding commands](https://github.com/reeflective/console/wiki/Binding-Commands)
 * [Interrupt handlers](https://github.com/reeflective/console/wiki/Interrupt-Handlers)
 * [History Sources](https://github.com/reeflective/console/wiki/History-Sources)
 * [Logging](https://github.com/reeflective/console/wiki/Logging)
+* [Readline shell](https://github.com/reeflective/readline/wiki)
+* [Other utilities](https://github.com/reeflective/console/wiki/Other-Utililites)
 
 
 ## Showcase
@@ -96,6 +94,7 @@ is also available in the [wiki](https://github.com/reeflective/console/wiki):
 The library is in a pre-release candidate status:
 - Although quite simple and small, it has not been tested heavily.
 - There are probably some features/improvements to be made.
+- The API is quite stable. It is unlikely to change much in future versions.
 
 Please open a PR or an issue if you wish to bring enhancements to it. 
 Other contributions, as well as bug fixes and reviews are also welcome.

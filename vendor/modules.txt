@@ -153,18 +153,9 @@ github.com/davecgh/go-spew/spew
 # github.com/demisto/goxforce v0.0.0-20160322194047-db8357535b1d
 ## explicit
 github.com/demisto/goxforce
-# github.com/desertbit/closer/v3 v3.1.2
-## explicit; go 1.12
-github.com/desertbit/closer/v3
-# github.com/desertbit/columnize v2.1.0+incompatible
-## explicit
-github.com/desertbit/columnize
 # github.com/desertbit/go-shlex v0.1.1
 ## explicit; go 1.14
 github.com/desertbit/go-shlex
-# github.com/desertbit/grumble v1.1.1 => github.com/moloch--/grumble v1.1.6
-## explicit; go 1.12
-github.com/desertbit/grumble
 # github.com/desertbit/readline v1.5.1
 ## explicit; go 1.12
 github.com/desertbit/readline
@@ -226,12 +217,6 @@ github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus
 github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus/ctxlogrus
 github.com/grpc-ecosystem/go-grpc-middleware/tags
 github.com/grpc-ecosystem/go-grpc-middleware/util/metautils
-# github.com/hashicorp/errwrap v1.1.0
-## explicit
-github.com/hashicorp/errwrap
-# github.com/hashicorp/go-multierror v1.1.1
-## explicit; go 1.13
-github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-uuid v1.0.2
 ## explicit
 github.com/hashicorp/go-uuid
@@ -328,10 +313,10 @@ github.com/pquerna/otp
 github.com/pquerna/otp/hotp
 github.com/pquerna/otp/internal
 github.com/pquerna/otp/totp
-# github.com/reeflective/console v0.0.0-20230523131959-d2d8ffc07993
-## explicit; go 1.19
+# github.com/reeflective/console v0.1.1
+## explicit; go 1.20
 github.com/reeflective/console
-# github.com/reeflective/readline v0.1.0-beta.0.20230523012110-bad9da7f3303
+# github.com/reeflective/readline v1.0.0
 ## explicit; go 1.20
 github.com/reeflective/readline
 github.com/reeflective/readline/inputrc
@@ -794,3 +779,4 @@ modernc.org/strutil
 # modernc.org/token v1.0.1
 ## explicit
 modernc.org/token
+# github.com/desertbit/grumble v1.1.1 => github.com/moloch--/grumble v1.1.6

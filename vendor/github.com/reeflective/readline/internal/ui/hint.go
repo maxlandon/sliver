@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/reeflective/readline/inputrc"
 	"github.com/reeflective/readline/internal/color"
 	"github.com/reeflective/readline/internal/strutil"
 	"github.com/reeflective/readline/internal/term"
@@ -95,14 +94,16 @@ func DisplayHint(hint *Hint) {
 	}
 
 	if len(hint.text) > 0 {
-		text += string(hint.text)
+		text += string(hint.text) + "\n"
 	}
 
 	if strutil.RealLength(text) == 0 {
 		return
 	}
 
-	text = "\r" + strings.TrimSuffix(text, "\n") + term.ClearLineAfter + string(inputrc.Newline) + color.Reset
+	text = strings.Join(strings.Split(text, "\n"), term.ClearLineAfter+"\n")
+
+	text = "\r" + text + term.ClearLineAfter + color.Reset
 
 	if len(text) > 0 {
 		fmt.Print(text)

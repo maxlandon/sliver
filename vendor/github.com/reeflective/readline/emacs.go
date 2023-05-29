@@ -1100,8 +1100,7 @@ func (rl *Shell) startKeyboardMacro() {
 // Stop saving the characters typed into the current
 // keyboard macro and store the definition.
 func (rl *Shell) endKeyboardMacro() {
-	keys := rl.Keys.Caller()
-	rl.Macros.StopRecord(keys)
+	rl.Macros.StopRecord()
 }
 
 // Re-execute the last keyboard macro defined, by making the
@@ -1128,8 +1127,7 @@ func (rl *Shell) printLastKeyboardMacro() {
 // when using Vim editing mode.
 func (rl *Shell) macroToggleRecord() {
 	if rl.Macros.Recording() {
-		keys := rl.Keys.Caller()
-		rl.Macros.StopRecord(keys)
+		rl.Macros.StopRecord()
 
 		return
 	}
@@ -1180,6 +1178,8 @@ func (rl *Shell) reReadInitFile() {
 		rl.Hint.SetTemporary(color.FgRed + "Inputrc reload error: " + err.Error())
 		return
 	}
+
+	defer rl.Keymap.UpdateCursor()
 
 	// Reload keymap settings and cursor
 	newMain := rl.Keymap.Main()
