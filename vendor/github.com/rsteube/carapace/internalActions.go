@@ -20,10 +20,16 @@ func actionPath(fileSuffixes []string, dirOnly bool) Action {
 		}
 
 		displayFolder := filepath.Dir(c.Value)
-		if displayFolder == "." {
-			displayFolder = ""
-		} else if !strings.HasSuffix(displayFolder, "/") {
-			displayFolder = displayFolder + "/"
+
+		// Always try to trim/adapt for absolute Windows paths (starting with C:).
+		// On all other platforms, adapt as usual
+		displayFolder, trimmed := windowsDisplayTrimmed(abs, c.Value, displayFolder)
+		if !trimmed {
+			if displayFolder == "." {
+				displayFolder = ""
+			} else if !strings.HasSuffix(displayFolder, "/") {
+				displayFolder = displayFolder + "/"
+			}
 		}
 
 		actualFolder := filepath.Dir(abs)
@@ -48,14 +54,18 @@ func actionPath(fileSuffixes []string, dirOnly bool) Action {
 			}
 
 			if resolvedFile.IsDir() {
-				vals = append(vals, displayFolder+file.Name()+"/", style.ForPath(filepath.Clean(actualFolder+"/"+file.Name()+"/"), c))
+				// Use forward slahes regardless of the OS, since even Powershell understands them.
+				slashed := filepath.ToSlash(displayFolder + file.Name() + "/")
+				vals = append(vals, slashed, style.ForPath(filepath.Clean(actualFolder+"/"+file.Name()+"/"), c))
 			} else if !dirOnly {
 				if len(fileSuffixes) == 0 {
 					fileSuffixes = []string{""}
 				}
 				for _, suffix := range fileSuffixes {
 					if strings.HasSuffix(file.Name(), suffix) {
-						vals = append(vals, displayFolder+file.Name(), style.ForPath(filepath.Clean(actualFolder+"/"+file.Name()), c))
+						// Use forward slahes regardless of the OS, since even Powershell understands them.
+						slashed := filepath.ToSlash(displayFolder + file.Name())
+						vals = append(vals, slashed, style.ForPath(filepath.Clean(actualFolder+"/"+file.Name()), c))
 						break
 					}
 				}
@@ -70,8 +80,13 @@ func actionPath(fileSuffixes []string, dirOnly bool) Action {
 
 func actionFlags(cmd *cobra.Command) Action {
 	return ActionCallback(func(c Context) Action {
+		cmd.InitDefaultHelpFlag()
+		cmd.InitDefaultVersionFlag()
+
 		flagSet := pflagfork.FlagSet{FlagSet: cmd.Flags()}
 		isShorthandSeries := flagSet.IsShorthandSeries(c.Value)
+
+		needsMultipart := false
 
 		vals := make([]string, 0)
 		flagSet.VisitAll(func(f *pflagfork.Flag) {
@@ -104,13 +119,25 @@ func actionFlags(cmd *cobra.Command) Action {
 				if f.Shorthand != "" && f.ShorthandDeprecated == "" {
 					vals = append(vals, "-"+f.Shorthand, f.Usage, f.Style())
 				}
+
+				if strings.Contains(f.Name, ".") {
+					needsMultipart = true
+				}
 			}
 		})
 
 		if isShorthandSeries {
 			return ActionStyledValuesDescribed(vals...).Prefix(c.Value).NoSpace('*')
 		}
-		return ActionStyledValuesDescribed(vals...).MultiParts(".") // multiparts completion for flags grouped with `.`
+
+		action := ActionStyledValuesDescribed(vals...)
+
+		// multiparts completion for flags grouped with `.`
+		if needsMultipart {
+			action = action.MultiParts(".")
+		}
+
+		return action
 	}).Tag("flags")
 }
 
@@ -128,4 +155,27 @@ func actionSubcommands(cmd *cobra.Command) Action {
 		}
 		return batch.ToA()
 	})
+}
+
+func initHelpCompletion(cmd *cobra.Command) {
+	helpCmd, _, err := cmd.Find([]string{"help"})
+	if err != nil {
+		return
+	}
+
+	if helpCmd.Name() != "help" ||
+		helpCmd.Short != "Help about any command" ||
+		!strings.HasPrefix(helpCmd.Long, `Help provides help for any command in the application.`) {
+		return
+	}
+
+	Gen(helpCmd).PositionalAnyCompletion(
+		ActionCallback(func(c Context) Action {
+			lastCmd, _, err := cmd.Find(c.Args)
+			if err != nil {
+				return ActionMessage(err.Error())
+			}
+			return actionSubcommands(lastCmd)
+		}),
+	)
 }

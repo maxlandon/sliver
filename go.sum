@@ -66,8 +66,6 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/demisto/goxforce v0.0.0-20160322194047-db8357535b1d h1:hmOGJg3cq5XK2aMs7R4kXXVSHqHMaC5hI5fwkX7V2zE=
 github.com/demisto/goxforce v0.0.0-20160322194047-db8357535b1d/go.mod h1:q72QzdO6OUjwTqnLCFJczIQ7GsBa4ffzkQiQcq6rVTY=
-github.com/desertbit/go-shlex v0.1.1 h1:c65HnbgX1QyC6kPL1dMzUpZ4puNUE6ai/eVucWNLNsk=
-github.com/desertbit/go-shlex v0.1.1/go.mod h1:Qbb+mJNud5AypgHZ81EL8syOGaWlwvAOTqS7XmWI4pQ=
 github.com/desertbit/readline v1.5.1 h1:/wOIZkWYl1s+IvJm/5bOknfUgs6MhS9svRNZpFM53Os=
 github.com/desertbit/readline v1.5.1/go.mod h1:pHQgTsCFs9Cpfh5mlSUFi9Xa5kkL4d8L1Jo4UVWzPw0=
 github.com/dlclark/regexp2 v1.4.0 h1:F1rxgk7p4uKjwIQxBs9oAXe5CqrXlCduYEJvrF4u93E=
@@ -81,8 +79,6 @@ github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
 github.com/fatih/color v1.15.0 h1:kOqh6YHBtK8aywxGerMG2Eq3H6Qgoqeo13Bk2Mv/nBs=
 github.com/fatih/color v1.15.0/go.mod h1:0h5ZqXfHYED7Bhv2ZJamyIOUej9KtShiJESRwBDUSsw=
-github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568 h1:BHsljHzVlRcyQhjrss6TZTdY2VfCqZPbv5k3iBFa2ZQ=
-github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
 github.com/gen2brain/shm v0.0.0-20200228170931-49f9650110c5 h1:Y5Q2mEwfzjMt5+3u70Gtw93ZOu2UuPeeeTBDntF7FoY=
 github.com/gen2brain/shm v0.0.0-20200228170931-49f9650110c5/go.mod h1:uF6rMu/1nvu+5DpiRLwusA6xB8zlkNoGzKn8lmYONUo=
 github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
@@ -212,8 +208,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/pquerna/otp v1.4.0 h1:wZvl1TIVxKRThZIBiwOOHOGP/1+nZyWBil9Y2XNEDzg=
 github.com/pquerna/otp v1.4.0/go.mod h1:dkJfzwRKNiegxyNb54X/3fLwhCynbMspSyWKnvi1AEg=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
-github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6 h1:3HHTRiXvaEz8iACxwlOBc9jHDYxYNvW60U63Q97/31w=
-github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6/go.mod h1:jkLt41Ne2TD2xPuMdX/2O05Smhy8vMgG7O2TYvC0yOc=
+github.com/reeflective/carapace v0.25.2-0.20230528175244-867bc044ad0e h1:Z8IuOiKnxYrHOU8CyjM+L4G4e/qBEz14wxcAenKHssQ=
+github.com/reeflective/carapace v0.25.2-0.20230528175244-867bc044ad0e/go.mod h1:jkLt41Ne2TD2xPuMdX/2O05Smhy8vMgG7O2TYvC0yOc=
 github.com/reeflective/console v0.1.1 h1:0gO3UH7KcxUpUkESRJHOkAfg6J/rBwfe+a5sSwE5LXU=
 github.com/reeflective/console v0.1.1/go.mod h1:WqNxL0jH9A6qWmBJIgCHcZeIQZl4dRiweM+3o35Ajpw=
 github.com/reeflective/readline v1.0.0 h1:K104UvRHWAAtoer7WM9QvKn8xxUO6gWh0j1IWewtZmE=

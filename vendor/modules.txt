@@ -153,9 +153,6 @@ github.com/davecgh/go-spew/spew
 # github.com/demisto/goxforce v0.0.0-20160322194047-db8357535b1d
 ## explicit
 github.com/demisto/goxforce
-# github.com/desertbit/go-shlex v0.1.1
-## explicit; go 1.14
-github.com/desertbit/go-shlex
 # github.com/desertbit/readline v1.5.1
 ## explicit; go 1.12
 github.com/desertbit/readline
@@ -337,12 +334,13 @@ github.com/remyoudompheng/bigfft
 # github.com/rivo/uniseg v0.4.4
 ## explicit; go 1.18
 github.com/rivo/uniseg
-# github.com/rsteube/carapace v0.36.1 => github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6
+# github.com/rsteube/carapace v0.36.1 => github.com/reeflective/carapace v0.25.2-0.20230528175244-867bc044ad0e
 ## explicit; go 1.15
 github.com/rsteube/carapace
 github.com/rsteube/carapace/internal/cache
 github.com/rsteube/carapace/internal/common
 github.com/rsteube/carapace/internal/config
+github.com/rsteube/carapace/internal/env
 github.com/rsteube/carapace/internal/export
 github.com/rsteube/carapace/internal/man
 github.com/rsteube/carapace/internal/pflagfork
@@ -353,6 +351,7 @@ github.com/rsteube/carapace/internal/shell/elvish
 github.com/rsteube/carapace/internal/shell/export
 github.com/rsteube/carapace/internal/shell/fish
 github.com/rsteube/carapace/internal/shell/ion
+github.com/rsteube/carapace/internal/shell/library
 github.com/rsteube/carapace/internal/shell/nushell
 github.com/rsteube/carapace/internal/shell/oil
 github.com/rsteube/carapace/internal/shell/powershell

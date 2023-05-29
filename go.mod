@@ -4,7 +4,7 @@ go 1.18
 
 replace github.com/desertbit/grumble v1.1.1 => github.com/moloch--/grumble v1.1.6
 
-replace github.com/rsteube/carapace v0.36.1 => github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6
+replace github.com/rsteube/carapace v0.36.1 => github.com/reeflective/carapace v0.25.2-0.20230528175244-867bc044ad0e
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
@@ -17,7 +17,6 @@ require (
 	github.com/cheggaaa/pb/v3 v3.1.2
 	github.com/chromedp/cdproto v0.0.0-20230220211738-2b1ec77315c9
 	github.com/chromedp/chromedp v0.9.1
-	github.com/desertbit/go-shlex v0.1.1
 	github.com/desertbit/readline v1.5.1
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/google/uuid v1.3.0

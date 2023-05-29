@@ -3,6 +3,7 @@ package carapace
 import (
 	"github.com/rsteube/carapace/internal/common"
 	"github.com/rsteube/carapace/internal/config"
+	"github.com/rsteube/carapace/internal/shell/library"
 	"github.com/rsteube/carapace/pkg/ps"
 	"github.com/rsteube/carapace/pkg/style"
 	"github.com/spf13/cobra"
@@ -17,13 +18,22 @@ import (
 // Also, and before calling `onFinalize` if not nil, the completion storage is cleared.
 func Complete(cmd *cobra.Command, args []string, onFinalize func()) (common.RawValues, common.Meta) {
 	// Generate the completion as normally done for an external system shell
-	// action, current := generate(cmd, args)
+	initHelpCompletion(cmd)
 	action, context := traverse(cmd, args[2:])
+
+	if err := config.Load(); err != nil {
+		action = ActionMessage("failed to load config: " + err.Error())
+	}
+
+	if onFinalize != nil {
+		storage = make(_storage)
+
+		onFinalize()
+	}
 
 	invoked := action.Invoke(context)
 
-	// And adapt/fetch the results from invoked action
-	return internalValues(invoked, context.Value, onFinalize)
+	return library.ActionRawValues(context.Value, invoked.meta, invoked.rawValues)
 }
 
 func complete(cmd *cobra.Command, args []string) (string, error) {
@@ -33,6 +43,7 @@ func complete(cmd *cobra.Command, args []string) (string, error) {
 	case 1:
 		return Gen(cmd).Snippet(args[0])
 	default:
+		initHelpCompletion(cmd)
 		action, context := traverse(cmd, args[2:])
 		if err := config.Load(); err != nil {
 			action = ActionMessage("failed to load config: " + err.Error())

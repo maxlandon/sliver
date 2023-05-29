@@ -29,9 +29,13 @@ func command(cmd *cobra.Command) Command {
 		if flag.Hidden {
 			return
 		}
+
+		if cmd.PersistentFlags().Lookup(flag.Name) != nil {
+			return
+		}
+
 		f := pflagfork.Flag{Flag: flag}
 		c.Flags[f.Definition()] = f.Usage
-
 	})
 
 	cmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
@@ -40,7 +44,6 @@ func command(cmd *cobra.Command) Command {
 		}
 		f := pflagfork.Flag{Flag: flag}
 		c.PersistentFlags[f.Definition()] = f.Usage
-
 	})
 
 	for _, subcmd := range cmd.Commands() {

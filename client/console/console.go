@@ -21,7 +21,6 @@ package console
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -34,9 +33,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/desertbit/go-shlex"
 	"github.com/gofrs/uuid"
 	"github.com/reeflective/console"
+	"github.com/reeflective/readline"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
 
@@ -140,7 +139,7 @@ func NewConsole(isServer bool) *SliverConsole {
 	server := con.App.Menu(consts.ServerMenu)
 	server.Short = "Server commands"
 	server.Prompt().Primary = con.GetPrompt
-	server.AddInterrupt(errors.New(os.Interrupt.String()), con.exitConsole) // Ctrl-C
+	server.AddInterrupt(readline.ErrInterrupt, con.exitConsole) // Ctrl-C
 
 	server.AddHistorySourceFile("server history", filepath.Join(assets.GetRootAppDir(), "history"))
 
@@ -359,13 +358,7 @@ func (con *SliverConsole) triggerReactions(event *clientpb.Event) {
 	for _, reaction := range reactions {
 		for _, line := range reaction.Commands {
 			con.PrintInfof(Bold+"Execute reaction: '%s'"+Normal, line)
-			args, err := shlex.Split(line, true)
-			if err != nil {
-				con.PrintErrorf("Reaction command has invalid args: %s\n", err)
-				continue
-			}
-
-			err = con.App.ActiveMenu().RunCommand(args)
+			err := con.App.ActiveMenu().RunCommand(line)
 			if err != nil {
 				con.PrintErrorf("Reaction command error: %s\n", err)
 			}
