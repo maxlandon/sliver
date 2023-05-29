@@ -79,7 +79,7 @@ func SocksIDCompleter(con *console.SliverConsole) carapace.Action {
 		results := make([]string, 0)
 
 		socksList, err := con.Rpc.WGListSocksServers(context.Background(), &sliverpb.WGSocksServersReq{
-			Request: con.ActiveTarget.Request(con.App.CurrentMenu().Root()),
+			Request: con.ActiveTarget.Request(con.App.ActiveMenu().Root()),
 		})
 		if err != nil {
 			return carapace.ActionMessage("failed to get Wireguard Socks servers: %s", err.Error())

@@ -84,7 +84,7 @@ func PortfwdIDCompleter(con *console.SliverConsole) carapace.Action {
 		results := make([]string, 0)
 
 		rportfwdListeners, err := con.Rpc.GetRportFwdListeners(context.Background(), &sliverpb.RportFwdListenersReq{
-			Request: con.ActiveTarget.Request(con.App.CurrentMenu().Root()),
+			Request: con.ActiveTarget.Request(con.App.ActiveMenu().Root()),
 		})
 		if err != nil {
 			return carapace.ActionMessage("failed to get remote port forwarders: %s", err.Error())

@@ -40,6 +40,9 @@ func ServerCommands(con *client.SliverConsole, serverCmds func() []*cobra.Comman
 	serverCommands := func() *cobra.Command {
 		server := &cobra.Command{
 			Short: "Server commands",
+			CompletionOptions: cobra.CompletionOptions{
+				HiddenDefaultCmd: true,
+			},
 		}
 
 		// Load Reactions

@@ -29,6 +29,12 @@ const (
 	LastUpdateCheckFileName = "last_update_check"
 )
 
+// Console
+const (
+	ImplantMenu = "implant"
+	ServerMenu  = ""
+)
+
 // Events
 const (
 	// UpdateStr - "update"

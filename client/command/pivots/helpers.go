@@ -72,7 +72,7 @@ func PivotIDCompleter(con *console.SliverConsole) carapace.Action {
 		results := make([]string, 0)
 
 		pivotListeners, err := con.Rpc.PivotSessionListeners(context.Background(), &sliverpb.PivotListenersReq{
-			Request: con.ActiveTarget.Request(con.App.CurrentMenu().Root()),
+			Request: con.ActiveTarget.Request(con.App.ActiveMenu().Root()),
 		})
 		if err != nil {
 			return carapace.ActionMessage("failed to get remote pivots: %s", err.Error())

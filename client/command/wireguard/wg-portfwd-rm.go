@@ -72,7 +72,7 @@ func PortfwdIDCompleter(con *console.SliverConsole) carapace.Action {
 		results := make([]string, 0)
 
 		fwdList, err := con.Rpc.WGListForwarders(context.Background(), &sliverpb.WGTCPForwardersReq{
-			Request: con.ActiveTarget.Request(con.App.CurrentMenu().Root()),
+			Request: con.ActiveTarget.Request(con.App.ActiveMenu().Root()),
 		})
 		if err != nil {
 			return carapace.ActionMessage("failed to get Wireguard port forwarders: %s", err.Error())

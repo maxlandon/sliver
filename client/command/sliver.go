@@ -1,8 +1,6 @@
 package command
 
 import (
-	"io"
-
 	"github.com/reeflective/console"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
@@ -43,14 +41,12 @@ import (
 
 // SliverCommands returns all commands bound to the implant menu.
 func SliverCommands(con *client.SliverConsole) console.Commands {
-	// Interrupts: trigger functionality with keystrokes.
-	con.App.Menu("implant").AddInterrupt(io.EOF, func(_ *console.Console) {
-		sessions.BackgroundCmd(con.App.CurrentMenu().Command, con, nil)
-	})
-
 	sliverCommands := func() *cobra.Command {
 		sliver := &cobra.Command{
 			Short: "Implant commands",
+			CompletionOptions: cobra.CompletionOptions{
+				HiddenDefaultCmd: true,
+			},
 		}
 
 		groups := []*cobra.Group{
@@ -95,10 +91,7 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 			extensions.ExtensionRegisterCommand(ext, sliver, con)
 			n++
 		}
-		// if 0 < n {
-		// 	con.PrintInfof("Loaded %d extension(s) from disk\n", n)
-		// }
-		// .App.SetPrintHelp(help.HelpCmd(con)) // Responsible for display long-form help templates, etc.
+		// SetPrintHelp(help.HelpCmd(con)) // Responsible for display long-form help templates, etc.
 
 		// [ Reconfig ] ---------------------------------------------------------------
 
