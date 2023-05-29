@@ -19,7 +19,9 @@ package console
 */
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -120,6 +122,9 @@ func NewConsole(isServer bool) *SliverConsole {
 		IsServer:                 isServer,
 		Settings:                 settings,
 	}
+
+	// The active target needs access to the console
+	// to automatically switch between command menus.
 	con.ActiveTarget.con = con
 
 	// Readline-shell (edition) settings
@@ -132,16 +137,18 @@ func NewConsole(isServer bool) *SliverConsole {
 	con.App.NewlineAfter = true
 
 	// Server menu.
-	server := con.App.CurrentMenu()
+	server := con.App.Menu(consts.ServerMenu)
 	server.Short = "Server commands"
 	server.Prompt().Primary = con.GetPrompt
+	server.AddInterrupt(errors.New(os.Interrupt.String()), con.exitConsole) // Ctrl-C
 
 	server.AddHistorySourceFile("server history", filepath.Join(assets.GetRootAppDir(), "history"))
 
 	// Implant menu.
-	sliver := con.App.NewMenu("implant")
+	sliver := con.App.NewMenu(consts.ImplantMenu)
 	sliver.Short = "Implant commands"
 	sliver.Prompt().Primary = con.GetPrompt
+	sliver.AddInterrupt(io.EOF, con.exitImplantMenu) // Ctrl-D
 
 	con.App.SetPrintLogo(func(_ *console.Console) {
 		con.PrintLogo()
@@ -168,10 +175,10 @@ func StartClient(con *SliverConsole, rpc rpcpb.SliverRPCClient, serverCmds, sliv
 	}
 
 	// Bind commands to the app
-	server := con.App.CurrentMenu()
+	server := con.App.Menu(consts.ServerMenu)
 	server.SetCommands(serverCmds)
 
-	sliver := con.App.Menu("implant")
+	sliver := con.App.Menu(consts.ImplantMenu)
 	sliver.SetCommands(sliverCmds)
 
 	// Events
@@ -179,7 +186,7 @@ func StartClient(con *SliverConsole, rpc rpcpb.SliverRPCClient, serverCmds, sliv
 	go core.TunnelLoop(rpc)
 
 	if !con.IsCLI {
-		return con.App.Run()
+		return con.App.Start()
 	}
 
 	return nil
@@ -358,7 +365,7 @@ func (con *SliverConsole) triggerReactions(event *clientpb.Event) {
 				continue
 			}
 
-			err = con.App.CurrentMenu().RunCommand(args)
+			err = con.App.ActiveMenu().RunCommand(args)
 			if err != nil {
 				con.PrintErrorf("Reaction command error: %s\n", err)
 			}
@@ -538,6 +545,25 @@ func (con *SliverConsole) GetActiveSessionConfig() *clientpb.ImplantConfig {
 		C2:                  c2s,
 	}
 	return config
+}
+
+// exitConsole prompts the user for confirmation to exit the console.
+func (c *SliverConsole) exitConsole(_ *console.Console) {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Confirm exit (Y/y, Ctrl-C): ")
+	text, _ := reader.ReadString('\n')
+	answer := strings.TrimSpace(text)
+
+	if (answer == "Y") || (answer == "y") {
+		os.Exit(0)
+	}
+}
+
+// exitImplantMenu uses the background command to detach from the implant menu.
+func (c *SliverConsole) exitImplantMenu(_ *console.Console) {
+	root := c.App.Menu(consts.ImplantMenu).Command
+	root.SetArgs([]string{"background"})
+	root.Execute()
 }
 
 //
@@ -753,8 +779,8 @@ func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 		}
 
 		// Switch back to server menu.
-		if s.con.App.CurrentMenu().Name() == "implant" {
-			s.con.App.SwitchMenu("")
+		if s.con.App.ActiveMenu().Name() == consts.ImplantMenu {
+			s.con.App.SwitchMenu(consts.ServerMenu)
 		}
 
 		return
@@ -780,8 +806,8 @@ func (s *ActiveTarget) Set(session *clientpb.Session, beacon *clientpb.Beacon) {
 	}
 
 	// Update menus, prompts and commands
-	if s.con.App.CurrentMenu().Name() != "implant" {
-		s.con.App.SwitchMenu("implant")
+	if s.con.App.ActiveMenu().Name() != consts.ImplantMenu {
+		s.con.App.SwitchMenu(consts.ImplantMenu)
 	}
 }
 
@@ -796,8 +822,8 @@ func (s *ActiveTarget) Background() {
 	}
 
 	// Switch back to server menu.
-	if !s.con.IsCLI && s.con.App.CurrentMenu().Name() == "implant" {
-		s.con.App.SwitchMenu("")
+	if !s.con.IsCLI && s.con.App.ActiveMenu().Name() == consts.ImplantMenu {
+		s.con.App.SwitchMenu(consts.ServerMenu)
 	}
 }
 

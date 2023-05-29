@@ -60,7 +60,11 @@ func consoleRunnerCmd(con *console.SliverConsole, run bool) (pre, post func(cmd 
 	}
 
 	post = func(cmd *cobra.Command, args []string) error {
-		return ln.Close()
+		if ln != nil {
+			return ln.Close()
+		}
+
+		return nil
 	}
 
 	return pre, post

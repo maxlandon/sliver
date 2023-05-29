@@ -10,6 +10,7 @@ import (
 	"github.com/bishopfox/sliver/client/command"
 	"github.com/bishopfox/sliver/client/command/use"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/constants"
 )
 
 func implantCmd(con *console.SliverConsole) *cobra.Command {
@@ -17,10 +18,10 @@ func implantCmd(con *console.SliverConsole) *cobra.Command {
 
 	makeCommands := command.SliverCommands(con)
 	cmd := makeCommands()
-	cmd.Use = "implant"
+	cmd.Use = constants.ImplantMenu
 
 	// Flags
-	implantFlags := pflag.NewFlagSet("implant", pflag.ContinueOnError)
+	implantFlags := pflag.NewFlagSet(constants.ImplantMenu, pflag.ContinueOnError)
 	implantFlags.StringP("use", "s", "", "interact with a session")
 
 	// Prerunners (console setup, connection, etc)
