@@ -41,7 +41,7 @@ const (
 )
 
 // ShellCmd - Start an interactive shell on the remote system
-func ShellCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func ShellCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
@@ -60,7 +60,7 @@ func ShellCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 	con.Println("Shell exited")
 }
 
-func runInteractive(cmd *cobra.Command, shellPath string, noPty bool, con *console.SliverConsole) {
+func runInteractive(cmd *cobra.Command, shellPath string, noPty bool, con *console.SliverConsoleClient) {
 	con.Println()
 	con.PrintInfof("Wait approximately 10 seconds after exit, and press <enter> to continue\n")
 	con.PrintInfof("Opening shell tunnel (EOF to exit) ...\n\n")

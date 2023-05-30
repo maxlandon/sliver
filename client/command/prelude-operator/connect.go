@@ -29,7 +29,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
-func ConnectCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func ConnectCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	url := args[0]
 	aesKey, _ := cmd.Flags().GetString("aes-key")
 	agentRange, _ := cmd.Flags().GetString("range")

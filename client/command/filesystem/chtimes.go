@@ -30,7 +30,7 @@ import (
 )
 
 // ChtimesCmd - Change the access and modified time of a file on the remote file system
-func ChtimesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func ChtimesCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -98,7 +98,7 @@ func ChtimesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 }
 
 // PrintChtimes - Print the Chtimes response
-func PrintChtimes(chtimes *sliverpb.Chtimes, con *console.SliverConsole) {
+func PrintChtimes(chtimes *sliverpb.Chtimes, con *console.SliverConsoleClient) {
 	if chtimes.Response != nil && chtimes.Response.Err != "" {
 		con.PrintErrorf("%s\n", chtimes.Response.Err)
 		return

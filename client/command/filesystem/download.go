@@ -39,7 +39,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func DownloadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func DownloadCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -104,7 +104,7 @@ func prettifyDownloadName(path string) string {
 	return filteredString
 }
 
-func HandleDownloadResponse(download *sliverpb.Download, cmd *cobra.Command, args []string, con *console.SliverConsole) {
+func HandleDownloadResponse(download *sliverpb.Download, cmd *cobra.Command, args []string, con *console.SliverConsoleClient) {
 	var err error
 	if download.Response != nil && download.Response.Err != "" {
 		con.PrintErrorf("%s\n", download.Response.Err)

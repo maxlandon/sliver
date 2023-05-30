@@ -30,7 +30,7 @@ import (
 )
 
 // CdCmd - Change directory on the remote system
-func CdCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func CdCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return

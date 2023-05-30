@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func MvCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) (err error) {
+func MvCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) (err error) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -77,7 +77,7 @@ func MvCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) (err e
 }
 
 // PrintMv - Print the renamed file
-func PrintMv(mv *sliverpb.Mv, con *console.SliverConsole) {
+func PrintMv(mv *sliverpb.Mv, con *console.SliverConsoleClient) {
 	if mv.Response != nil && mv.Response.Err != "" {
 		con.PrintErrorf("%s\n", mv.Response.Err)
 		return

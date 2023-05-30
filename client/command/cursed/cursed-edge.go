@@ -35,7 +35,7 @@ import (
 )
 
 // CursedChromeCmd - Execute a .NET assembly in-memory
-func CursedEdgeCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func CursedEdgeCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
@@ -95,7 +95,7 @@ func CursedEdgeCmd(cmd *cobra.Command, con *console.SliverConsole, args []string
 	}
 }
 
-func avadaKedavraEdge(session *clientpb.Session, cmd *cobra.Command, con *console.SliverConsole, cargs []string) *core.CursedProcess {
+func avadaKedavraEdge(session *clientpb.Session, cmd *cobra.Command, con *console.SliverConsoleClient, cargs []string) *core.CursedProcess {
 	edgeProcess, err := getEdgeProcess(session, cmd, con)
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -152,7 +152,7 @@ func isEdgeProcess(executable string) bool {
 	return false
 }
 
-func getEdgeProcess(session *clientpb.Session, cmd *cobra.Command, con *console.SliverConsole) (*commonpb.Process, error) {
+func getEdgeProcess(session *clientpb.Session, cmd *cobra.Command, con *console.SliverConsoleClient) (*commonpb.Process, error) {
 	ps, err := con.Rpc.Ps(context.Background(), &sliverpb.PsReq{
 		Request: con.ActiveTarget.Request(cmd),
 	})

@@ -29,7 +29,7 @@ import (
 )
 
 // ChownCmd - Change the owner of a file on the remote file system
-func ChownCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func ChownCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -85,7 +85,7 @@ func ChownCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 }
 
 // PrintChown - Print the chown response
-func PrintChown(chown *sliverpb.Chown, con *console.SliverConsole) {
+func PrintChown(chown *sliverpb.Chown, con *console.SliverConsoleClient) {
 	if chown.Response != nil && chown.Response.Err != "" {
 		con.PrintErrorf("%s\n", chown.Response.Err)
 		return

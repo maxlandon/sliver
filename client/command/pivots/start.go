@@ -28,7 +28,7 @@ import (
 )
 
 // StartTCPListenerCmd - Start a TCP pivot listener on the remote system
-func StartTCPListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func StartTCPListenerCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
@@ -52,7 +52,7 @@ func StartTCPListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []
 }
 
 // StartNamedPipeListenerCmd - Start a TCP pivot listener on the remote system
-func StartNamedPipeListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func StartNamedPipeListenerCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return

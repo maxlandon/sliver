@@ -34,7 +34,7 @@ import (
 )
 
 // SideloadCmd - Sideload a shared library on the remote system
-func SideloadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func SideloadCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -95,7 +95,7 @@ func SideloadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) 
 	}
 }
 
-func HandleSideloadResponse(sideload *sliverpb.Sideload, binPath string, hostName string, cmd *cobra.Command, con *console.SliverConsole) {
+func HandleSideloadResponse(sideload *sliverpb.Sideload, binPath string, hostName string, cmd *cobra.Command, con *console.SliverConsoleClient) {
 	saveLoot, _ := cmd.Flags().GetBool("loot")
 	lootName, _ := cmd.Flags().GetString("name")
 

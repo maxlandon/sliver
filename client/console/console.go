@@ -89,7 +89,7 @@ type (
 	BeaconTaskCallback func(*clientpb.BeaconTask)
 )
 
-type SliverConsole struct {
+type SliverConsoleClient struct {
 	App                      *console.Console
 	Rpc                      rpcpb.SliverRPCClient
 	ActiveTarget             *ActiveTarget
@@ -105,11 +105,11 @@ type SliverConsole struct {
 // NewConsole creates the sliver client (and console), creating menus and prompts.
 // The returned console does neither have commands nor a working RPC connection yet,
 // thus has not started monitoring any server events, or started the application.
-func NewConsole(isServer bool) *SliverConsole {
+func NewConsole(isServer bool) *SliverConsoleClient {
 	assets.Setup(false, false)
 	settings, _ := assets.LoadSettings()
 
-	con := &SliverConsole{
+	con := &SliverConsoleClient{
 		App: console.New("sliver"),
 		ActiveTarget: &ActiveTarget{
 			observers:  map[int]Observer{},
@@ -159,7 +159,7 @@ func NewConsole(isServer bool) *SliverConsole {
 // Init requires a working RPC connection to the sliver server, and 2 different sets of commands.
 // If run is true, the console application is started, making this call blocking. Otherwise, commands and
 // RPC connection are bound to the console (making the console ready to run), but the console does not start.
-func StartClient(con *SliverConsole, rpc rpcpb.SliverRPCClient, serverCmds, sliverCmds console.Commands, run bool) error {
+func StartClient(con *SliverConsoleClient, rpc rpcpb.SliverRPCClient, serverCmds, sliverCmds console.Commands, run bool) error {
 	con.Rpc = rpc
 	con.IsCLI = !run
 
@@ -191,7 +191,7 @@ func StartClient(con *SliverConsole, rpc rpcpb.SliverRPCClient, serverCmds, sliv
 	return nil
 }
 
-func (con *SliverConsole) startEventLoop() {
+func (con *SliverConsoleClient) startEventLoop() {
 	eventStream, err := con.Rpc.Events(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		fmt.Printf(Warn+"%s\n", err)
@@ -307,21 +307,21 @@ func (con *SliverConsole) startEventLoop() {
 	}
 }
 
-func (con *SliverConsole) CreateEventListener() (string, <-chan *clientpb.Event) {
+func (con *SliverConsoleClient) CreateEventListener() (string, <-chan *clientpb.Event) {
 	listener := make(chan *clientpb.Event, 100)
 	listenerID, _ := uuid.NewV4()
 	con.EventListeners.Store(listenerID.String(), listener)
 	return listenerID.String(), listener
 }
 
-func (con *SliverConsole) RemoveEventListener(listenerID string) {
+func (con *SliverConsoleClient) RemoveEventListener(listenerID string) {
 	value, ok := con.EventListeners.LoadAndDelete(listenerID)
 	if ok {
 		close(value.(chan *clientpb.Event))
 	}
 }
 
-func (con *SliverConsole) triggerEventListeners(event *clientpb.Event) {
+func (con *SliverConsoleClient) triggerEventListeners(event *clientpb.Event) {
 	con.EventListeners.Range(func(key, value interface{}) bool {
 		listener := value.(chan *clientpb.Event)
 		listener <- event // Do not block while sending the event to the listener
@@ -329,7 +329,7 @@ func (con *SliverConsole) triggerEventListeners(event *clientpb.Event) {
 	})
 }
 
-func (con *SliverConsole) triggerReactions(event *clientpb.Event) {
+func (con *SliverConsoleClient) triggerReactions(event *clientpb.Event) {
 	reactions := core.Reactions.On(event.EventType)
 	if len(reactions) == 0 {
 		return
@@ -367,7 +367,7 @@ func (con *SliverConsole) triggerReactions(event *clientpb.Event) {
 }
 
 // triggerBeaconTaskCallback - Triggers the callback for a beacon task
-func (con *SliverConsole) triggerBeaconTaskCallback(data []byte) {
+func (con *SliverConsoleClient) triggerBeaconTaskCallback(data []byte) {
 	task := &clientpb.BeaconTask{}
 	err := proto.Unmarshal(data, task)
 	if err != nil {
@@ -403,13 +403,13 @@ func (con *SliverConsole) triggerBeaconTaskCallback(data []byte) {
 	}
 }
 
-func (con *SliverConsole) AddBeaconCallback(taskID string, callback BeaconTaskCallback) {
+func (con *SliverConsoleClient) AddBeaconCallback(taskID string, callback BeaconTaskCallback) {
 	con.BeaconTaskCallbacksMutex.Lock()
 	defer con.BeaconTaskCallbacksMutex.Unlock()
 	con.BeaconTaskCallbacks[taskID] = callback
 }
 
-func (con *SliverConsole) GetPrompt() string {
+func (con *SliverConsoleClient) GetPrompt() string {
 	prompt := Underline + "sliver" + Normal
 	if con.IsServer {
 		prompt = Bold + "[server] " + Normal + Underline + "sliver" + Normal
@@ -423,7 +423,7 @@ func (con *SliverConsole) GetPrompt() string {
 	return Clearln + prompt
 }
 
-func (con *SliverConsole) PrintLogo() {
+func (con *SliverConsoleClient) PrintLogo() {
 	serverVer, err := con.Rpc.GetVersion(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		panic(err.Error())
@@ -448,7 +448,7 @@ func (con *SliverConsole) PrintLogo() {
 	con.CheckLastUpdate()
 }
 
-func (con *SliverConsole) CheckLastUpdate() {
+func (con *SliverConsoleClient) CheckLastUpdate() {
 	now := time.Now()
 	lastUpdate := getLastUpdateCheck()
 	compiledAt, err := version.Compiled()
@@ -482,7 +482,7 @@ func getLastUpdateCheck() *time.Time {
 	return &lastUpdate
 }
 
-func (con *SliverConsole) GetSession(arg string) *clientpb.Session {
+func (con *SliverConsoleClient) GetSession(arg string) *clientpb.Session {
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintWarnf("%s", err)
@@ -497,7 +497,7 @@ func (con *SliverConsole) GetSession(arg string) *clientpb.Session {
 }
 
 // GetSessionsByName - Return all sessions for an Implant by name
-func (con *SliverConsole) GetSessionsByName(name string) []*clientpb.Session {
+func (con *SliverConsoleClient) GetSessionsByName(name string) []*clientpb.Session {
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		fmt.Printf(Warn+"%s\n", err)
@@ -514,7 +514,7 @@ func (con *SliverConsole) GetSessionsByName(name string) []*clientpb.Session {
 
 // GetActiveSessionConfig - Get the active sessions's config
 // TODO: Switch to query config based on ConfigID
-func (con *SliverConsole) GetActiveSessionConfig() *clientpb.ImplantConfig {
+func (con *SliverConsoleClient) GetActiveSessionConfig() *clientpb.ImplantConfig {
 	session := con.ActiveTarget.GetSession()
 	if session == nil {
 		return nil
@@ -541,7 +541,7 @@ func (con *SliverConsole) GetActiveSessionConfig() *clientpb.ImplantConfig {
 }
 
 // exitConsole prompts the user for confirmation to exit the console.
-func (c *SliverConsole) exitConsole(_ *console.Console) {
+func (c *SliverConsoleClient) exitConsole(_ *console.Console) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Confirm exit (Y/y, Ctrl-C): ")
 	text, _ := reader.ReadString('\n')
@@ -553,7 +553,7 @@ func (c *SliverConsole) exitConsole(_ *console.Console) {
 }
 
 // exitImplantMenu uses the background command to detach from the implant menu.
-func (c *SliverConsole) exitImplantMenu(_ *console.Console) {
+func (c *SliverConsoleClient) exitImplantMenu(_ *console.Console) {
 	root := c.App.Menu(consts.ImplantMenu).Command
 	root.SetArgs([]string{"background"})
 	root.Execute()
@@ -567,7 +567,7 @@ func (c *SliverConsole) exitImplantMenu(_ *console.Console) {
 // while those in the log package tie their output to the current menu.
 
 // PrintAsyncResponse - Print the generic async response information
-func (con *SliverConsole) PrintAsyncResponse(resp *commonpb.Response) {
+func (con *SliverConsoleClient) PrintAsyncResponse(resp *commonpb.Response) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	beacon, err := con.Rpc.GetBeacon(ctx, &clientpb.Beacon{ID: resp.BeaconID})
@@ -578,57 +578,57 @@ func (con *SliverConsole) PrintAsyncResponse(resp *commonpb.Response) {
 	con.PrintInfof("Tasked beacon %s (%s)", beacon.Name, strings.Split(resp.TaskID, "-")[0])
 }
 
-func (con *SliverConsole) Printf(format string, args ...any) {
+func (con *SliverConsoleClient) Printf(format string, args ...any) {
 	con.log(format, args...)
 }
 
 // Println prints an output without status and immediately below the last line of output.
-func (con *SliverConsole) Println(args ...any) {
+func (con *SliverConsoleClient) Println(args ...any) {
 	format := strings.Repeat("%s", len(args))
 	con.log(format, args...)
 }
 
 // PrintInfof prints an info message immediately below the last line of output.
-func (con *SliverConsole) PrintInfof(format string, args ...any) {
+func (con *SliverConsoleClient) PrintInfof(format string, args ...any) {
 	con.log(Clearln+Info+format, args...)
 }
 
 // PrintSuccessf prints a success message immediately below the last line of output.
-func (con *SliverConsole) PrintSuccessf(format string, args ...any) {
+func (con *SliverConsoleClient) PrintSuccessf(format string, args ...any) {
 	con.log(Clearln+Success+format, args...)
 }
 
 // PrintWarnf a warning message immediately below the last line of output.
-func (con *SliverConsole) PrintWarnf(format string, args ...any) {
+func (con *SliverConsoleClient) PrintWarnf(format string, args ...any) {
 	con.log(Clearln+"⚠️  "+Normal+format, args...)
 }
 
 // PrintErrorf prints an error message immediately below the last line of output.
-func (con *SliverConsole) PrintErrorf(format string, args ...any) {
+func (con *SliverConsoleClient) PrintErrorf(format string, args ...any) {
 	con.log(Clearln+Warn+format, args...)
 }
 
 // PrintEventInfof prints an info message with a leading/trailing newline for emphasis.
-func (con *SliverConsole) PrintEventInfof(format string, args ...any) {
+func (con *SliverConsoleClient) PrintEventInfof(format string, args ...any) {
 	con.log(Clearln+"\n"+Info+format+"\r", args...)
 }
 
 // PrintEventErrorf prints an error message with a leading/trailing newline for emphasis.
-func (con *SliverConsole) PrintEventErrorf(format string, args ...any) {
+func (con *SliverConsoleClient) PrintEventErrorf(format string, args ...any) {
 	con.log(Clearln+"\n"+Warn+format+"\r", args...)
 }
 
 // PrintEventSuccessf a success message with a leading/trailing newline for emphasis.
-func (con *SliverConsole) PrintEventSuccessf(format string, args ...any) {
+func (con *SliverConsoleClient) PrintEventSuccessf(format string, args ...any) {
 	con.log(Clearln+"\n"+Success+format+"\r", args...)
 }
 
-func (con *SliverConsole) SpinUntil(message string, ctrl chan bool) {
+func (con *SliverConsoleClient) SpinUntil(message string, ctrl chan bool) {
 	go spin.Until(os.Stdout, message, ctrl)
 }
 
 // FormatDateDelta - Generate formatted date string of the time delta between then and now
-func (con *SliverConsole) FormatDateDelta(t time.Time, includeDate bool, color bool) string {
+func (con *SliverConsoleClient) FormatDateDelta(t time.Time, includeDate bool, color bool) string {
 	nextTime := t.Format(time.UnixDate)
 
 	var interval string
@@ -664,7 +664,7 @@ type ActiveTarget struct {
 	beacon     *clientpb.Beacon
 	observers  map[int]Observer
 	observerID int
-	con        *SliverConsole
+	con        *SliverConsoleClient
 }
 
 // GetSessionInteractive - Get the active target(s)
@@ -822,7 +822,7 @@ func (s *ActiveTarget) Background() {
 
 // Expose or hide commands if the active target does support them (or not).
 // Ex; hide Windows commands on Linux implants, Wireguard tools on HTTP C2, etc.
-func (con *SliverConsole) ExposeCommands() {
+func (con *SliverConsoleClient) ExposeCommands() {
 	if con.ActiveTarget.session == nil && con.ActiveTarget.beacon == nil {
 		con.App.ShowCommands()
 		return

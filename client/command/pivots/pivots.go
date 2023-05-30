@@ -30,7 +30,7 @@ import (
 )
 
 // PivotsCmd - Display pivots for all sessions
-func PivotsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func PivotsCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return
@@ -55,7 +55,7 @@ func PivotsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 }
 
 // PrintPivotListeners - Print a table of pivot listeners
-func PrintPivotListeners(pivotListeners []*sliverpb.PivotListener, con *console.SliverConsole) {
+func PrintPivotListeners(pivotListeners []*sliverpb.PivotListener, con *console.SliverConsoleClient) {
 	tw := table.NewWriter()
 	tw.SetStyle(settings.GetTableStyle(con))
 	tw.AppendHeader(table.Row{

@@ -145,6 +145,7 @@ const (
 	LoadStr    = "load"
 	TablesStr  = "tables"
 	DetailsStr = "details"
+	GraphStr   = "graph"
 
 	LootStr       = "loot"
 	LootLocalStr  = "local"
@@ -196,11 +197,8 @@ const (
 	ChmodStr    = "chmod"
 	ChownStr    = "chown"
 	ChtimesStr  = "chtimes"
-<<<<<<< HEAD
-=======
 
 	MemfilesStr = "memfiles"
->>>>>>> master
 
 	ProcdumpStr         = "procdump"
 	ImpersonateStr      = "impersonate"

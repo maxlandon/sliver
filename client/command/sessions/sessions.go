@@ -37,7 +37,7 @@ import (
 )
 
 // SessionsCmd - Display/interact with sessions
-func SessionsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func SessionsCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	interact, _ := cmd.Flags().GetString("interact")
 	killFlag, _ := cmd.Flags().GetString("kill")
 	killAll, _ := cmd.Flags().GetBool("kill-all")
@@ -127,7 +127,7 @@ func SessionsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) 
 }
 
 // PrintSessions - Print the current sessions
-func PrintSessions(sessions map[string]*clientpb.Session, filter string, filterRegex *regexp.Regexp, con *console.SliverConsole) {
+func PrintSessions(sessions map[string]*clientpb.Session, filter string, filterRegex *regexp.Regexp, con *console.SliverConsoleClient) {
 	width, _, err := term.GetSize(0)
 	if err != nil {
 		width = 999

@@ -112,7 +112,7 @@ func AddLootAPIKey(rpc rpcpb.SliverRPCClient, name string, apiKey string) error 
 }
 
 // SelectCredentials - An interactive menu for the user to select a piece of loot
-func SelectCredentials(con *console.SliverConsole) (*clientpb.Loot, error) {
+func SelectCredentials(con *console.SliverConsoleClient) (*clientpb.Loot, error) {
 	allLoot, err := con.Rpc.LootAllOf(context.Background(), &clientpb.Loot{
 		Type: clientpb.LootType_LOOT_CREDENTIAL,
 	})

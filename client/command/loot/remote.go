@@ -76,7 +76,7 @@ func ValidateLootFileType(lootFileTypeInput string, data []byte) clientpb.FileTy
 Eventually this function needs to be refactored out, but we made the decision to
 duplicate it for now
 */
-func PerformDownload(remotePath string, fileName string, cmd *cobra.Command, con *console.SliverConsole) (*sliverpb.Download, error) {
+func PerformDownload(remotePath string, fileName string, cmd *cobra.Command, con *console.SliverConsoleClient) (*sliverpb.Download, error) {
 	ctrl := make(chan bool)
 	con.SpinUntil(fmt.Sprintf("%s -> %s", fileName, "loot"), ctrl)
 	download, err := con.Rpc.Download(context.Background(), &sliverpb.DownloadReq{
@@ -135,7 +135,7 @@ func CreateLootMessage(fileName string, lootName string, lootType clientpb.LootT
 	return lootMessage
 }
 
-func SendLootMessage(loot *clientpb.Loot, con *console.SliverConsole) {
+func SendLootMessage(loot *clientpb.Loot, con *console.SliverConsoleClient) {
 	control := make(chan bool)
 	con.SpinUntil(fmt.Sprintf("Sending looted file (%s) to the server...", loot.Name), control)
 
@@ -155,7 +155,7 @@ func SendLootMessage(loot *clientpb.Loot, con *console.SliverConsole) {
 	return
 }
 
-func LootDownload(download *sliverpb.Download, lootName string, lootType clientpb.LootType, fileType clientpb.FileType, cmd *cobra.Command, con *console.SliverConsole) {
+func LootDownload(download *sliverpb.Download, lootName string, lootType clientpb.LootType, fileType clientpb.FileType, cmd *cobra.Command, con *console.SliverConsoleClient) {
 	// Was the download successful?
 	if download.Response != nil && download.Response.Err != "" {
 		con.PrintErrorf("%s\n", download.Response.Err)
@@ -227,7 +227,7 @@ func LootDownload(download *sliverpb.Download, lootName string, lootType clientp
 }
 
 // LootAddRemoteCmd - Add a file from the remote system to the server as loot
-func LootAddRemoteCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func LootAddRemoteCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return

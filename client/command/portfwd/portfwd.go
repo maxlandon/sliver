@@ -33,12 +33,12 @@ import (
 )
 
 // PortfwdCmd - Display information about tunneled port forward(s)
-func PortfwdCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func PortfwdCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	PrintPortfwd(con)
 }
 
 // PrintPortfwd - Print the port forward(s)
-func PrintPortfwd(con *console.SliverConsole) {
+func PrintPortfwd(con *console.SliverConsoleClient) {
 	portfwds := core.Portfwds.List()
 	if len(portfwds) == 0 {
 		con.PrintInfof("No port forwards\n")
@@ -68,7 +68,7 @@ func PrintPortfwd(con *console.SliverConsole) {
 }
 
 // PortfwdIDCompleter completes IDs of local portforwarders
-func PortfwdIDCompleter(_ *console.SliverConsole) carapace.Action {
+func PortfwdIDCompleter(_ *console.SliverConsoleClient) carapace.Action {
 	callback := func(_ carapace.Context) carapace.Action {
 		results := make([]string, 0)
 

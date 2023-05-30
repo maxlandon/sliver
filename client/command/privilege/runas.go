@@ -30,7 +30,7 @@ import (
 )
 
 // RunAsCmd - Run a command as another user on the remote system
-func RunAsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func RunAsCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -86,7 +86,7 @@ func RunAsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 }
 
 // PrintRunAs - Print the result of run as
-func PrintRunAs(runAs *sliverpb.RunAs, process string, args string, name string, con *console.SliverConsole) {
+func PrintRunAs(runAs *sliverpb.RunAs, process string, args string, name string, con *console.SliverConsoleClient) {
 	if runAs.Response != nil && runAs.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", runAs.Response.GetErr())
 		return

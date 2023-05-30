@@ -33,7 +33,7 @@ import (
 )
 
 // ReactionUnsetCmd - Unset a reaction upon an event
-func ReactionUnsetCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func ReactionUnsetCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	reactionID, _ := cmd.Flags().GetInt("id")
 	if reactionID == 0 {
 		reaction, err := selectReaction(con)
@@ -53,7 +53,7 @@ func ReactionUnsetCmd(cmd *cobra.Command, con *console.SliverConsole, args []str
 	con.Println()
 }
 
-func selectReaction(con *console.SliverConsole) (*core.Reaction, error) {
+func selectReaction(con *console.SliverConsoleClient) (*core.Reaction, error) {
 	outputBuf := bytes.NewBufferString("")
 	table := tabwriter.NewWriter(outputBuf, 0, 2, 2, ' ', 0)
 	allReactions := core.Reactions.All()

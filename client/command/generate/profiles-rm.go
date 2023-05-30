@@ -30,7 +30,7 @@ import (
 )
 
 // ProfilesRmCmd - Delete an implant profile
-func ProfilesRmCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func ProfilesRmCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	var name string
 	if len(args) > 0 {
 		name = args[0]

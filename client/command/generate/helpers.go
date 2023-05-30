@@ -11,7 +11,7 @@ import (
 )
 
 // GetSliverBinary - Get the binary of an implant based on it's profile
-func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverConsole) ([]byte, error) {
+func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverConsoleClient) ([]byte, error) {
 	var data []byte
 	// get implant builds
 	builds, err := con.Rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
@@ -58,7 +58,7 @@ func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverConsol
 }
 
 // FormatCompleter completes builds' architectures.
-func ArchCompleter(con *console.SliverConsole) carapace.Action {
+func ArchCompleter(con *console.SliverConsoleClient) carapace.Action {
 	return carapace.ActionCallback(func(_ carapace.Context) carapace.Action {
 		compiler, err := con.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
 		if err != nil {
@@ -92,7 +92,7 @@ func ArchCompleter(con *console.SliverConsole) carapace.Action {
 }
 
 // FormatCompleter completes build operating systems
-func OSCompleter(con *console.SliverConsole) carapace.Action {
+func OSCompleter(con *console.SliverConsoleClient) carapace.Action {
 	return carapace.ActionCallback(func(_ carapace.Context) carapace.Action {
 		compiler, err := con.Rpc.GetCompiler(context.Background(), &commonpb.Empty{})
 		if err != nil {

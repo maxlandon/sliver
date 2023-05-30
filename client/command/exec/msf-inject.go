@@ -32,7 +32,7 @@ import (
 )
 
 // MsfInjectCmd - Inject a metasploit payload into a remote process
-func MsfInjectCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func MsfInjectCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -99,7 +99,7 @@ func MsfInjectCmd(cmd *cobra.Command, con *console.SliverConsole, args []string)
 }
 
 // PrintMsfRemote - Print the results of the remote injection attempt
-func PrintMsfRemote(msfRemote *sliverpb.Task, con *console.SliverConsole) {
+func PrintMsfRemote(msfRemote *sliverpb.Task, con *console.SliverConsoleClient) {
 	if msfRemote.Response == nil {
 		con.PrintErrorf("Empty response from msf payload injection task")
 		return

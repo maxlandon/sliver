@@ -30,7 +30,7 @@ import (
 )
 
 // MkdirCmd - Make a remote directory
-func MkdirCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func MkdirCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -68,7 +68,7 @@ func MkdirCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 }
 
 // PrintMkdir - Print make directory
-func PrintMkdir(mkdir *sliverpb.Mkdir, con *console.SliverConsole) {
+func PrintMkdir(mkdir *sliverpb.Mkdir, con *console.SliverConsoleClient) {
 	if mkdir.Response != nil && mkdir.Response.Err != "" {
 		con.PrintErrorf("%s\n", mkdir.Response.Err)
 		return

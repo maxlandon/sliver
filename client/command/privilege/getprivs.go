@@ -32,7 +32,7 @@ import (
 )
 
 // GetPrivsCmd - Get the current process privileges (Windows only)
-func GetPrivsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func GetPrivsCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -67,7 +67,7 @@ func GetPrivsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) 
 }
 
 // PrintGetPrivs - Print the results of the get privs command
-func PrintGetPrivs(privs *sliverpb.GetPrivs, pid int32, con *console.SliverConsole) {
+func PrintGetPrivs(privs *sliverpb.GetPrivs, pid int32, con *console.SliverConsoleClient) {
 	// Response is the Envelope (see RPC API), Err is part of it.
 	if privs.Response != nil && privs.Response.Err != "" {
 		con.PrintErrorf("NOTE: Information may be incomplete due to an error:\n")

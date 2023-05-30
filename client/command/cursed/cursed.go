@@ -36,7 +36,7 @@ import (
 )
 
 // CursedChromeCmd - Execute a .NET assembly in-memory
-func CursedCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func CursedCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	// Collect existing curses from core
 	cursedProcesses := [][]string{}
 	core.CursedProcesses.Range(func(key, value interface{}) bool {
@@ -72,7 +72,7 @@ func CursedCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 }
 
 // selectCursedProcess - Interactively select a cursed process from a list
-func selectCursedProcess(con *console.SliverConsole) *core.CursedProcess {
+func selectCursedProcess(con *console.SliverConsoleClient) *core.CursedProcess {
 	cursedProcesses := []*core.CursedProcess{}
 	core.CursedProcesses.Range(func(key, value interface{}) bool {
 		cursedProcesses = append(cursedProcesses, value.(*core.CursedProcess))

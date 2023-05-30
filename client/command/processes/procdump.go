@@ -36,7 +36,7 @@ import (
 )
 
 // ProcdumpCmd - Dump the memory of a remote process
-func ProcdumpCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func ProcdumpCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -107,7 +107,7 @@ func ProcdumpCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) 
 }
 
 // PrintProcessDump - Handle the results of a process dump
-func PrintProcessDump(dump *sliverpb.ProcessDump, saveTo string, hostname string, pid int, con *console.SliverConsole) {
+func PrintProcessDump(dump *sliverpb.ProcessDump, saveTo string, hostname string, pid int, con *console.SliverConsoleClient) {
 	var err error
 	var saveToFile *os.File
 	if saveTo == "" {
@@ -139,7 +139,7 @@ func getHostname(session *clientpb.Session, beacon *clientpb.Beacon) string {
 	return ""
 }
 
-func LootProcessDump(dump *sliverpb.ProcessDump, lootName string, hostName string, pid int, con *console.SliverConsole) {
+func LootProcessDump(dump *sliverpb.ProcessDump, lootName string, hostName string, pid int, con *console.SliverConsoleClient) {
 	timeNow := time.Now().UTC()
 	dumpFileName := fmt.Sprintf("procdump_%s_%d_%s.dmp", hostName, pid, timeNow.Format("20060102150405"))
 

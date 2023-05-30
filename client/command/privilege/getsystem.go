@@ -30,7 +30,7 @@ import (
 )
 
 // GetSystemCmd - Windows only, attempt to get SYSTEM on the remote system
-func GetSystemCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func GetSystemCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -74,7 +74,7 @@ func GetSystemCmd(cmd *cobra.Command, con *console.SliverConsole, args []string)
 }
 
 // PrintGetSystem - Print the results of get system
-func PrintGetSystem(getsystemResp *sliverpb.GetSystem, con *console.SliverConsole) {
+func PrintGetSystem(getsystemResp *sliverpb.GetSystem, con *console.SliverConsoleClient) {
 	if getsystemResp.Response != nil && getsystemResp.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", getsystemResp.GetResponse().GetErr())
 		return

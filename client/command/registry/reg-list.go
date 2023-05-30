@@ -30,7 +30,7 @@ import (
 )
 
 // RegListSubKeysCmd - List sub registry keys
-func RegListSubKeysCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func RegListSubKeysCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -72,7 +72,7 @@ func RegListSubKeysCmd(cmd *cobra.Command, con *console.SliverConsole, args []st
 }
 
 // PrintListSubKeys - Print the list sub keys command result
-func PrintListSubKeys(regList *sliverpb.RegistrySubKeyList, hive string, regPath string, con *console.SliverConsole) {
+func PrintListSubKeys(regList *sliverpb.RegistrySubKeyList, hive string, regPath string, con *console.SliverConsoleClient) {
 	if regList.Response != nil && regList.Response.Err != "" {
 		con.PrintErrorf("%s\n", regList.Response.Err)
 		return
@@ -86,7 +86,7 @@ func PrintListSubKeys(regList *sliverpb.RegistrySubKeyList, hive string, regPath
 }
 
 // RegListValuesCmd - List registry values
-func RegListValuesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func RegListValuesCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -123,7 +123,7 @@ func RegListValuesCmd(cmd *cobra.Command, con *console.SliverConsole, args []str
 }
 
 // PrintListValues - Print the registry list values
-func PrintListValues(regList *sliverpb.RegistryValuesList, hive string, regPath string, con *console.SliverConsole) {
+func PrintListValues(regList *sliverpb.RegistryValuesList, hive string, regPath string, con *console.SliverConsoleClient) {
 	if regList.Response != nil && regList.Response.Err != "" {
 		con.PrintErrorf("%s\n", regList.Response.Err)
 		return

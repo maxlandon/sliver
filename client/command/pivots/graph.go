@@ -29,7 +29,7 @@ import (
 )
 
 // PivotsGraphCmd - Display pivots for all sessions
-func PivotsGraphCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func PivotsGraphCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	graph, err := con.Rpc.PivotGraph(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)

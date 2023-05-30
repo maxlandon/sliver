@@ -27,7 +27,7 @@ import (
 )
 
 // StopPivotListenerCmd - Start a TCP pivot listener on the remote system
-func StopPivotListenerCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func StopPivotListenerCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return

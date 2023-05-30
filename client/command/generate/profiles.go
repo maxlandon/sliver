@@ -35,7 +35,7 @@ import (
 )
 
 // ProfilesCmd - Display implant profiles
-func ProfilesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func ProfilesCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	profiles := getImplantProfiles(con)
 	if profiles == nil {
 		return
@@ -49,7 +49,7 @@ func ProfilesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) 
 }
 
 // PrintProfiles - Print the profiles
-func PrintProfiles(profiles []*clientpb.ImplantProfile, con *console.SliverConsole) {
+func PrintProfiles(profiles []*clientpb.ImplantProfile, con *console.SliverConsoleClient) {
 	tw := table.NewWriter()
 	tw.SetStyle(settings.GetTableStyle(con))
 	tw.AppendHeader(table.Row{
@@ -96,7 +96,7 @@ func PrintProfiles(profiles []*clientpb.ImplantProfile, con *console.SliverConso
 	con.Printf("%s\n", tw.Render())
 }
 
-func getImplantProfiles(con *console.SliverConsole) []*clientpb.ImplantProfile {
+func getImplantProfiles(con *console.SliverConsoleClient) []*clientpb.ImplantProfile {
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -106,7 +106,7 @@ func getImplantProfiles(con *console.SliverConsole) []*clientpb.ImplantProfile {
 }
 
 // GetImplantProfileByName - Get an implant profile by a specific name
-func GetImplantProfileByName(name string, con *console.SliverConsole) *clientpb.ImplantProfile {
+func GetImplantProfileByName(name string, con *console.SliverConsoleClient) *clientpb.ImplantProfile {
 	pbProfiles, err := con.Rpc.ImplantProfiles(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
@@ -121,7 +121,7 @@ func GetImplantProfileByName(name string, con *console.SliverConsole) *clientpb.
 }
 
 // ProfileNameCompleter - Completer for implant build names
-func ProfileNameCompleter(con *console.SliverConsole) carapace.Action {
+func ProfileNameCompleter(con *console.SliverConsoleClient) carapace.Action {
 	comps := func(ctx carapace.Context) carapace.Action {
 		var action carapace.Action
 

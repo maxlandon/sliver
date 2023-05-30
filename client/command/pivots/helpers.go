@@ -35,7 +35,7 @@ import (
 )
 
 // SelectPivotListener - Interactive menu to select a pivot listener
-func SelectPivotListener(listeners []*sliverpb.PivotListener, con *console.SliverConsole) (*sliverpb.PivotListener, error) {
+func SelectPivotListener(listeners []*sliverpb.PivotListener, con *console.SliverConsoleClient) (*sliverpb.PivotListener, error) {
 	// Render selection table
 	buf := bytes.NewBufferString("")
 	table := tabwriter.NewWriter(buf, 0, 2, 2, ' ', 0)
@@ -67,7 +67,7 @@ func SelectPivotListener(listeners []*sliverpb.PivotListener, con *console.Slive
 }
 
 // PivotIDCompleter completes pivot listeners' IDs.
-func PivotIDCompleter(con *console.SliverConsole) carapace.Action {
+func PivotIDCompleter(con *console.SliverConsoleClient) carapace.Action {
 	callback := func(_ carapace.Context) carapace.Action {
 		results := make([]string, 0)
 

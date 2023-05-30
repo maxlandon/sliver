@@ -35,7 +35,7 @@ import (
 )
 
 // UploadCmd - Upload a file to the remote system
-func UploadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func UploadCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -103,7 +103,7 @@ func UploadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 }
 
 // PrintUpload - Print the result of the upload command
-func PrintUpload(upload *sliverpb.Upload, con *console.SliverConsole) {
+func PrintUpload(upload *sliverpb.Upload, con *console.SliverConsoleClient) {
 	if upload.Response != nil && upload.Response.Err != "" {
 		con.PrintErrorf("%s\n", upload.Response.Err)
 		return

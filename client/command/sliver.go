@@ -40,7 +40,7 @@ import (
 )
 
 // SliverCommands returns all commands bound to the implant menu.
-func SliverCommands(con *client.SliverConsole) console.Commands {
+func SliverCommands(con *client.SliverConsoleClient) console.Commands {
 	sliverCommands := func() *cobra.Command {
 		sliver := &cobra.Command{
 			Short: "Implant commands",
@@ -597,6 +597,8 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		sliver.AddCommand(migrateCmd)
 		Flags("", false, migrateCmd, func(f *pflag.FlagSet) {
 			f.BoolP("disable-sgn", "S", true, "disable shikata ga nai shellcode encoder")
+			f.Uint32P("pid", "p", 0, "process id to migrate into")
+			f.StringP("process-name", "n", "", "name of the process to migrate into")
 			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
 		})
 		carapace.Gen(migrateCmd).PositionalCompletion(carapace.ActionValues().Usage("PID of process to migrate into"))
@@ -925,6 +927,45 @@ func SliverCommands(con *client.SliverConsole) console.Commands {
 		carapace.Gen(uploadCmd).PositionalCompletion(
 			carapace.ActionFiles().Usage("local path to the file to upload"),
 			carapace.ActionValues().Usage("path to the file or directory to upload to (optional)"),
+		)
+
+		memfilesCmd := &cobra.Command{
+			Use:     consts.MemfilesStr,
+			Short:   "List current memfiles",
+			Long:    help.GetHelpFor([]string{consts.MemfilesStr}),
+			GroupID: consts.FilesystemHelpGroup,
+			Run: func(cmd *cobra.Command, args []string) {
+				filesystem.MemfilesListCmd(cmd, con, args)
+			},
+		}
+		Flags("", true, memfilesCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "command timeout in seconds")
+		})
+		sliver.AddCommand(memfilesCmd)
+
+		memfilesAddCmd := &cobra.Command{
+			Use:   consts.AddStr,
+			Short: "Add a memfile",
+			Long:  help.GetHelpFor([]string{consts.MemfilesStr, consts.AddStr}),
+			Run: func(cmd *cobra.Command, args []string) {
+				filesystem.MemfilesAddCmd(cmd, con, args)
+			},
+		}
+		memfilesCmd.AddCommand(memfilesAddCmd)
+
+		memfilesRmCmd := &cobra.Command{
+			Use:   consts.RmStr,
+			Short: "Remove a memfile",
+			Long:  help.GetHelpFor([]string{consts.MemfilesStr, consts.RmStr}),
+			Args:  cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
+				filesystem.MemfilesRmCmd(cmd, con, args)
+			},
+		}
+		memfilesCmd.AddCommand(memfilesRmCmd)
+
+		carapace.Gen(memfilesRmCmd).PositionalCompletion(
+			carapace.ActionFiles().Usage("memfile file descriptor"),
 		)
 
 		// [ Network ] ---------------------------------------------

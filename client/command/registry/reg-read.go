@@ -74,7 +74,7 @@ func getType(t string) (uint32, error) {
 }
 
 // RegReadCmd - Read a windows registry key: registry read --hostname aa.bc.local --hive HKCU "software\google\chrome\blbeacon\version"
-func RegReadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func RegReadCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	var (
 		finalPath string
 		key       string
@@ -145,7 +145,7 @@ func RegReadCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 }
 
 // PrintRegRead - Print the results of the registry read command
-func PrintRegRead(regRead *sliverpb.RegistryRead, con *console.SliverConsole) {
+func PrintRegRead(regRead *sliverpb.RegistryRead, con *console.SliverConsoleClient) {
 	if regRead.Response != nil && regRead.Response.Err != "" {
 		con.PrintErrorf("%s\n", regRead.Response.Err)
 		return

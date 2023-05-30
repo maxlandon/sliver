@@ -88,7 +88,7 @@ var (
 )
 
 // GenerateCmd - The main command used to generate implant binaries
-func GenerateCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func GenerateCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	config := parseCompileFlags(cmd, con)
 	if config == nil {
 		return
@@ -127,7 +127,7 @@ func expandPath(path string) string {
 	return filepath.Join(os.Getenv("HOME"), path[1:])
 }
 
-func saveLocation(save, DefaultName string, con *console.SliverConsole) (string, error) {
+func saveLocation(save, DefaultName string, con *console.SliverConsoleClient) (string, error) {
 	var saveTo string
 	if save == "" {
 		save, _ = os.Getwd()
@@ -184,7 +184,7 @@ func nameOfOutputFormat(value clientpb.OutputFormat) string {
 }
 
 // Shared function that extracts the compile flags from the grumble context
-func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb.ImplantConfig {
+func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsoleClient) *clientpb.ImplantConfig {
 	var name string
 	if nameF, _ := cmd.Flags().GetString("name"); nameF != "" {
 		name = strings.ToLower(nameF)
@@ -393,7 +393,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverConsole) *clientpb
 	return config
 }
 
-func getTargets(targetOS string, targetArch string, con *console.SliverConsole) (string, string) {
+func getTargets(targetOS string, targetArch string, con *console.SliverConsoleClient) (string, string) {
 	/* For UX we convert some synonymous terms */
 	if targetOS == "darwin" || targetOS == "mac" || targetOS == "macos" || targetOS == "osx" {
 		targetOS = "darwin"
@@ -648,7 +648,7 @@ func ParseTCPPivotc2(args string) ([]*clientpb.ImplantC2, error) {
 	return c2s, nil
 }
 
-func externalBuild(config *clientpb.ImplantConfig, save string, con *console.SliverConsole) (*commonpb.File, error) {
+func externalBuild(config *clientpb.ImplantConfig, save string, con *console.SliverConsoleClient) (*commonpb.File, error) {
 	potentialBuilders, err := findExternalBuilders(config, con)
 	if err != nil {
 		return nil, err
@@ -771,7 +771,7 @@ func externalBuild(config *clientpb.ImplantConfig, save string, con *console.Sli
 	return nil, nil
 }
 
-func compile(config *clientpb.ImplantConfig, disableSGN bool, save string, con *console.SliverConsole) (*commonpb.File, error) {
+func compile(config *clientpb.ImplantConfig, disableSGN bool, save string, con *console.SliverConsoleClient) (*commonpb.File, error) {
 	if config.IsBeacon {
 		interval := time.Duration(config.BeaconInterval)
 		con.PrintInfof("Generating new %s/%s beacon implant binary (%v)\n", config.GOOS, config.GOARCH, interval)
@@ -864,7 +864,7 @@ func getLimitsString(config *clientpb.ImplantConfig) string {
 	return strings.Join(limits, "; ")
 }
 
-func checkBuildTargetCompatibility(format clientpb.OutputFormat, targetOS string, targetArch string, con *console.SliverConsole) bool {
+func checkBuildTargetCompatibility(format clientpb.OutputFormat, targetOS string, targetArch string, con *console.SliverConsoleClient) bool {
 	if format == clientpb.OutputFormat_EXECUTABLE {
 		return true // We don't need cross-compilers when targeting EXECUTABLE formats
 	}
@@ -905,7 +905,7 @@ func hasCC(targetOS string, targetArch string, crossCompilers []*clientpb.CrossC
 	return false
 }
 
-func warnMissingCrossCompiler(format clientpb.OutputFormat, targetOS string, targetArch string, con *console.SliverConsole) bool {
+func warnMissingCrossCompiler(format clientpb.OutputFormat, targetOS string, targetArch string, con *console.SliverConsoleClient) bool {
 	con.PrintWarnf("Missing cross-compiler for %s on %s/%s\n", nameOfOutputFormat(format), targetOS, targetArch)
 	switch targetOS {
 	case "windows":
@@ -923,7 +923,7 @@ func warnMissingCrossCompiler(format clientpb.OutputFormat, targetOS string, tar
 	return confirm
 }
 
-func findExternalBuilders(config *clientpb.ImplantConfig, con *console.SliverConsole) ([]*clientpb.Builder, error) {
+func findExternalBuilders(config *clientpb.ImplantConfig, con *console.SliverConsoleClient) ([]*clientpb.Builder, error) {
 	builders, err := con.Rpc.Builders(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return nil, err
@@ -949,7 +949,7 @@ func findExternalBuilders(config *clientpb.ImplantConfig, con *console.SliverCon
 	return validBuilders, nil
 }
 
-func selectExternalBuilder(builders []*clientpb.Builder, con *console.SliverConsole) (*clientpb.Builder, error) {
+func selectExternalBuilder(builders []*clientpb.Builder, con *console.SliverConsoleClient) (*clientpb.Builder, error) {
 	choices := []string{}
 	for _, builder := range builders {
 		choices = append(choices, builder.Name)

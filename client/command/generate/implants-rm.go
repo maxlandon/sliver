@@ -12,7 +12,7 @@ import (
 )
 
 // ImplantsRmCmd - Deletes an archived implant build from the server
-func ImplantsRmCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func ImplantsRmCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	name := args[0]
 	// name := ctx.Args.String("name")
 	if name == "" {

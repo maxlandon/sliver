@@ -31,7 +31,7 @@ import (
 )
 
 // RegCreateKeyCmd - Create a new Windows registry key
-func RegCreateKeyCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func RegCreateKeyCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -97,7 +97,7 @@ func RegCreateKeyCmd(cmd *cobra.Command, con *console.SliverConsole, args []stri
 }
 
 // PrintCreateKey - Print the results of the create key command
-func PrintCreateKey(createKey *sliverpb.RegistryCreateKey, regPath string, key string, con *console.SliverConsole) {
+func PrintCreateKey(createKey *sliverpb.RegistryCreateKey, regPath string, key string, con *console.SliverConsoleClient) {
 	if createKey.Response != nil && createKey.Response.Err != "" {
 		con.PrintErrorf("%s", createKey.Response.Err)
 		return

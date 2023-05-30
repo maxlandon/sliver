@@ -33,7 +33,7 @@ import (
 )
 
 // ExtensionsInstallCmd - Install an extension
-func ExtensionsInstallCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func ExtensionsInstallCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	extLocalPath := args[0]
 
 	fi, err := os.Stat(extLocalPath)
@@ -49,7 +49,7 @@ func ExtensionsInstallCmd(cmd *cobra.Command, con *console.SliverConsole, args [
 }
 
 // Install an extension from a directory
-func installFromDir(extLocalPath string, con *console.SliverConsole) {
+func installFromDir(extLocalPath string, con *console.SliverConsoleClient) {
 	manifestData, err := ioutil.ReadFile(filepath.Join(extLocalPath, ManifestFileName))
 	if err != nil {
 		con.PrintErrorf("Error reading %s: %s", ManifestFileName, err)
@@ -100,7 +100,7 @@ func installFromDir(extLocalPath string, con *console.SliverConsole) {
 }
 
 // InstallFromFilePath - Install an extension from a .tar.gz file
-func InstallFromFilePath(extLocalPath string, autoOverwrite bool, con *console.SliverConsole) *string {
+func InstallFromFilePath(extLocalPath string, autoOverwrite bool, con *console.SliverConsoleClient) *string {
 	manifestData, err := util.ReadFileFromTarGz(extLocalPath, fmt.Sprintf("./%s", ManifestFileName))
 	if err != nil {
 		con.PrintErrorf("Failed to read %s from '%s': %s\n", ManifestFileName, extLocalPath, err)
@@ -151,7 +151,7 @@ func InstallFromFilePath(extLocalPath string, autoOverwrite bool, con *console.S
 	return &installPath
 }
 
-func installArtifact(extGzFilePath string, installPath string, artifactPath string, con *console.SliverConsole) error {
+func installArtifact(extGzFilePath string, installPath string, artifactPath string, con *console.SliverConsoleClient) error {
 	data, err := util.ReadFileFromTarGz(extGzFilePath, "."+artifactPath)
 	if err != nil {
 		return err

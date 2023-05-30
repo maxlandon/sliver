@@ -36,7 +36,7 @@ import (
 )
 
 // AliasesCmd - The alias command
-func AliasesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) error {
+func AliasesCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) error {
 	if 0 < len(loadedAliases) {
 		PrintAliases(con)
 	} else {
@@ -47,7 +47,7 @@ func AliasesCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) e
 }
 
 // PrintAliases - Print a list of loaded aliases
-func PrintAliases(con *console.SliverConsole) {
+func PrintAliases(con *console.SliverConsoleClient) {
 	tw := table.NewWriter()
 	tw.SetStyle(settings.GetTableStyle(con))
 	tw.AppendHeader(table.Row{
@@ -90,7 +90,7 @@ func PrintAliases(con *console.SliverConsole) {
 }
 
 // AliasCommandNameCompleter - Completer for installed extensions command names
-func AliasCommandNameCompleter(prefix string, args []string, con *console.SliverConsole) []string {
+func AliasCommandNameCompleter(prefix string, args []string, con *console.SliverConsoleClient) []string {
 	results := []string{}
 	for name := range loadedAliases {
 		if strings.HasPrefix(name, prefix) {

@@ -85,7 +85,7 @@ func isReactable(reaction core.Reaction) bool {
 }
 
 // ReactionIDCompleter completes saved/available reaction IDs
-func ReactionIDCompleter(_ *console.SliverConsole) carapace.Action {
+func ReactionIDCompleter(_ *console.SliverConsoleClient) carapace.Action {
 	results := make([]string, 0)
 
 	for _, reaction := range core.Reactions.All() {

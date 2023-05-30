@@ -39,7 +39,7 @@ import (
 )
 
 // PsExecCmd - psexec command implementation.
-func PsExecCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func PsExecCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
 		return

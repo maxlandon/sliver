@@ -28,7 +28,7 @@ import (
 )
 
 // WebsitesUpdateContentCmd - Update metadata about static website content
-func WebsitesUpdateContentCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func WebsitesUpdateContentCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	websiteName, _ := cmd.Flags().GetString("website")
 	if websiteName == "" {
 		con.PrintErrorf("Must specify a website name via --website, see --help\n")

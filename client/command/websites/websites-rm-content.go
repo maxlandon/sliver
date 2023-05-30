@@ -29,7 +29,7 @@ import (
 )
 
 // WebsitesRmContent - Remove static content from a website
-func WebsitesRmContent(cmd *cobra.Command, con *console.SliverConsole, args []string) {
+func WebsitesRmContent(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
 	name, _ := cmd.Flags().GetString("website")
 	webPath, _ := cmd.Flags().GetString("web-path")
 	recursive, _ := cmd.Flags().GetBool("recursive")
