@@ -4,7 +4,7 @@ go 1.18
 
 replace github.com/desertbit/grumble v1.1.1 => github.com/moloch--/grumble v1.1.6
 
-replace github.com/rsteube/carapace v0.36.3 => github.com/reeflective/carapace v0.25.2-0.20230528175244-867bc044ad0e
+replace github.com/rsteube/carapace v0.30.0 => github.com/reeflective/carapace v0.25.2-0.20230528175244-867bc044ad0e
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
@@ -17,7 +17,6 @@ require (
 	github.com/cheggaaa/pb/v3 v3.1.2
 	github.com/chromedp/cdproto v0.0.0-20230220211738-2b1ec77315c9
 	github.com/chromedp/chromedp v0.9.1
-	github.com/desertbit/grumble v1.1.1
 	github.com/desertbit/readline v1.5.1
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/google/uuid v1.3.0
@@ -32,8 +31,8 @@ require (
 	github.com/moloch--/memmod v0.0.0-20211120144554-8b37cc654945
 	github.com/pquerna/otp v1.4.0
 	github.com/reeflective/console v0.1.1
-	github.com/reeflective/readline v1.0.0
-	github.com/rsteube/carapace v0.36.3
+	github.com/reeflective/readline v1.0.1
+	github.com/rsteube/carapace v0.30.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -71,9 +70,6 @@ require (
 	github.com/chromedp/sysutil v1.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/demisto/goxforce v0.0.0-20160322194047-db8357535b1d // indirect
-	github.com/desertbit/closer/v3 v3.1.2 // indirect
-	github.com/desertbit/columnize v2.1.0+incompatible // indirect
-	github.com/desertbit/go-shlex v0.1.1 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fatih/color v1.15.0 // indirect
@@ -84,8 +80,6 @@ require (
 	github.com/gobwas/ws v1.1.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/btree v1.0.1 // indirect
-	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
