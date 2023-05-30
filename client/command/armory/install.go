@@ -32,6 +32,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/extensions"
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/server/cryptography/minisign"
 )
 
@@ -177,7 +178,7 @@ func installAliasPackageByName(name string, clientConfig ArmoryHTTPConfig, con *
 		return errors.New("failed to install alias")
 	}
 
-	menuCmd := con.App.Menu("implant").Root()
+	menuCmd := con.App.Menu(constants.ImplantMenu).Root()
 
 	_, err = alias.LoadAlias(filepath.Join(*installPath, alias.ManifestFileName), menuCmd, con)
 	if err != nil {
@@ -189,7 +190,7 @@ func installAliasPackageByName(name string, clientConfig ArmoryHTTPConfig, con *
 func installExtension(ext *extensions.ExtensionManifest, clientConfig ArmoryHTTPConfig, con *console.SliverConsoleClient) {
 	deps := make(map[string]struct{})
 	resolveExtensionPackageDependencies(ext.CommandName, deps, clientConfig, con)
-	sliverMenu := con.App.Menu("implant")
+	sliverMenu := con.App.Menu(constants.ImplantMenu)
 	for dep := range deps {
 		if extensions.CmdExists(dep, sliverMenu.Command) {
 			continue // Dependency is already installed
@@ -306,7 +307,7 @@ func installExtensionPackageByName(name string, clientConfig ArmoryHTTPConfig, c
 		return err
 	}
 
-	sliverMenu := con.App.Menu("implant")
+	sliverMenu := con.App.Menu(constants.ImplantMenu)
 	//
 	// if extensions.CmdExists(extCmd.Name, sliverMenu.Command) {
 	// 	con.App.Commands().Remove(extCmd.Name)

@@ -75,12 +75,12 @@ func installFromDir(extLocalPath string, con *console.SliverConsoleClient) {
 	con.PrintInfof("Installing extension '%s' (%s) ... ", manifest.CommandName, manifest.Version)
 	err = os.MkdirAll(installPath, 0o700)
 	if err != nil {
-		con.PrintErrorf("\nError creating extension directory: %s\n", err)
+		con.PrintErrorf("Error creating extension directory: %s\n", err)
 		return
 	}
 	err = ioutil.WriteFile(filepath.Join(installPath, ManifestFileName), manifestData, 0o600)
 	if err != nil {
-		con.PrintErrorf("\nFailed to write %s: %s\n", ManifestFileName, err)
+		con.PrintErrorf("Failed to write %s: %s\n", ManifestFileName, err)
 		forceRemoveAll(installPath)
 		return
 	}
@@ -91,7 +91,7 @@ func installFromDir(extLocalPath string, con *console.SliverConsoleClient) {
 			dst := filepath.Join(installPath, util.ResolvePath(manifestFile.Path))
 			err := util.CopyFile(src, dst)
 			if err != nil {
-				con.PrintErrorf("\nError copying file '%s' -> '%s': %s\n", src, dst, err)
+				con.PrintErrorf("Error copying file '%s' -> '%s': %s\n", src, dst, err)
 				forceRemoveAll(installPath)
 				return
 			}
@@ -128,12 +128,12 @@ func InstallFromFilePath(extLocalPath string, autoOverwrite bool, con *console.S
 	con.PrintInfof("Installing extension '%s' (%s) ... ", manifest.CommandName, manifest.Version)
 	err = os.MkdirAll(installPath, 0o700)
 	if err != nil {
-		con.PrintErrorf("\nFailed to create extension directory: %s\n", err)
+		con.PrintErrorf("Failed to create extension directory: %s\n", err)
 		return nil
 	}
 	err = ioutil.WriteFile(filepath.Join(installPath, ManifestFileName), manifestData, 0o600)
 	if err != nil {
-		con.PrintErrorf("\nFailed to write %s: %s\n", ManifestFileName, err)
+		con.PrintErrorf("Failed to write %s: %s\n", ManifestFileName, err)
 		forceRemoveAll(installPath)
 		return nil
 	}
@@ -141,7 +141,7 @@ func InstallFromFilePath(extLocalPath string, autoOverwrite bool, con *console.S
 		if manifestFile.Path != "" {
 			err = installArtifact(extLocalPath, installPath, manifestFile.Path, con)
 			if err != nil {
-				con.PrintErrorf("\nFailed to install file: %s\n", err)
+				con.PrintErrorf("Failed to install file: %s\n", err)
 				forceRemoveAll(installPath)
 				return nil
 			}
@@ -152,7 +152,7 @@ func InstallFromFilePath(extLocalPath string, autoOverwrite bool, con *console.S
 }
 
 func installArtifact(extGzFilePath string, installPath string, artifactPath string, con *console.SliverConsoleClient) error {
-	data, err := util.ReadFileFromTarGz(extGzFilePath, "."+artifactPath)
+	data, err := util.ReadFileFromTarGz(extGzFilePath, "."+filepath.ToSlash(artifactPath))
 	if err != nil {
 		return err
 	}
