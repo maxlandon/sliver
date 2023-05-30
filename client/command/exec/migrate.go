@@ -21,11 +21,16 @@ package exec
 import (
 	"context"
 	"fmt"
-	"strconv"
+	"strings"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/spf13/cobra"
+
+	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/desertbit/grumble"
 )
 
 // MigrateCmd - Windows only, inject an implant into another process
@@ -35,11 +40,36 @@ func MigrateCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) {
 		return
 	}
 
-	pid, err := strconv.Atoi(args[0])
-	if err != nil {
-		con.PrintErrorf("Invalid PID argument: %s (could not parse to int)", args[0])
+	pid, _ := cmd.Flags().GetUint("pid")
+	procName := ctx.Flags.String("process-name")
+	if pid == 0 && procName == "" {
+		con.PrintErrorf("Error: Must specify either a PID or process name\n")
+		return
 	}
-
+	if procName != "" {
+		procCtrl := make(chan bool)
+		con.SpinUntil(fmt.Sprintf("Searching for %s ...", procName), procCtrl)
+		proc, err := con.Rpc.Ps(context.Background(), &sliverpb.PsReq{
+			Request: con.ActiveTarget.Request(ctx),
+		})
+		if err != nil {
+			con.PrintErrorf("Error: %v\n", err)
+			return
+		}
+		procCtrl <- true
+		<-procCtrl
+		for _, p := range proc.GetProcesses() {
+			if strings.ToLower(p.Executable) == strings.ToLower(procName) {
+				pid = uint(p.Pid)
+				break
+			}
+		}
+		if pid == 0 {
+			con.PrintErrorf("Error: Could not find process %s\n", procName)
+			return
+		}
+		con.PrintInfof("Process name specified, overriding PID with %d\n", pid)
+	}
 	config := con.GetActiveSessionConfig()
 	encoder := clientpb.ShellcodeEncoder_SHIKATA_GA_NAI
 	if disableSgn, _ := cmd.Flags().GetBool("disable-sgn"); disableSgn {

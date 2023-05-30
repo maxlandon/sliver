@@ -81,6 +81,11 @@ var knownSecurityTools = map[string][]string{
 	"TaniumClient.exe":                {console.Red, "Tanium"},                       // Tanium
 	"TaniumCX.exe":                    {console.Red, "Tanium"},                       // Tanium
 	"TaniumDetectEngine.exe":          {console.Red, "Tanium"},                       // Tanium
+	"collector.exe":                   {console.Red, "Rapid 7 Collector"},            // Rapid 7 Insight Platform Collector
+	"ir_agent.exe":                    {console.Red, "Rapid 7 Insight Agent"},        // Rapid 7 Insight Agent
+	"eguiproxy.exe":                   {console.Red, "ESET Security"},                // ESET Internet Security
+	"ekrn.exe":                        {console.Red, "ESET Security"},                // ESET Internet Security
+	"efwd.exe":                        {console.Red, "ESET Security"},                // ESET Internet Security
 }
 
 // PsCmd - List processes on the remote system

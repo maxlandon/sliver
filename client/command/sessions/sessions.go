@@ -78,6 +78,10 @@ func SessionsCmd(cmd *cobra.Command, con *console.SliverConsole, args []string) 
 	}
 	if killFlag != "" {
 		session := con.GetSession(killFlag)
+		if session == nil {
+			con.PrintErrorf("Invalid session name or session number: %s\n", killFlag)
+			return
+		}
 		activeSession := con.ActiveTarget.GetSession()
 		if activeSession != nil && session.ID == activeSession.ID {
 			con.ActiveTarget.Background()

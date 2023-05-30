@@ -196,6 +196,11 @@ const (
 	ChmodStr    = "chmod"
 	ChownStr    = "chown"
 	ChtimesStr  = "chtimes"
+<<<<<<< HEAD
+=======
+
+	MemfilesStr = "memfiles"
+>>>>>>> master
 
 	ProcdumpStr         = "procdump"
 	ImpersonateStr      = "impersonate"
@@ -232,18 +237,15 @@ const (
 	RegistryListValuesStr = "list-values"
 	RegistryCreateKeyStr  = "create"
 	RegistryDeleteKeyStr  = "delete"
-
-	PivotsStr = "pivots"
-	GraphStr  = "graph"
-
-	WgConfigStr    = "wg-config"
-	WgSocksStr     = "wg-socks"
-	WgPortFwdStr   = "wg-portfwd"
-	MonitorStr     = "monitor"
-	SSHStr         = "ssh"
-	DLLHijackStr   = "dllhijack"
-	InteractiveStr = "interactive"
-	CloseStr       = "close"
+	PivotsStr             = "pivots"
+	WgConfigStr           = "wg-config"
+	WgSocksStr            = "wg-socks"
+	WgPortFwdStr          = "wg-portfwd"
+	MonitorStr            = "monitor"
+	SSHStr                = "ssh"
+	DLLHijackStr          = "dllhijack"
+	InteractiveStr        = "interactive"
+	CloseStr              = "close"
 
 	PortfwdStr  = "portfwd"
 	Socks5Str   = "socks5"
