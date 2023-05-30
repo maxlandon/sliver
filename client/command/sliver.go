@@ -964,9 +964,7 @@ func SliverCommands(con *client.SliverConsoleClient) console.Commands {
 		}
 		memfilesCmd.AddCommand(memfilesRmCmd)
 
-		carapace.Gen(memfilesRmCmd).PositionalCompletion(
-			carapace.ActionFiles().Usage("memfile file descriptor"),
-		)
+		carapace.Gen(memfilesRmCmd).PositionalCompletion(carapace.ActionValues().Usage("memfile file descriptor"))
 
 		// [ Network ] ---------------------------------------------
 
