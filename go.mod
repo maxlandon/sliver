@@ -2,8 +2,6 @@ module github.com/bishopfox/sliver
 
 go 1.18
 
-replace github.com/desertbit/grumble v1.1.1 => github.com/moloch--/grumble v1.1.6
-
 replace github.com/rsteube/carapace v0.36.3 => github.com/reeflective/carapace v0.25.2-0.20230528175244-867bc044ad0e
 
 require (

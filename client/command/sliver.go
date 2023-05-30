@@ -91,7 +91,6 @@ func SliverCommands(con *client.SliverConsoleClient) console.Commands {
 			extensions.ExtensionRegisterCommand(ext, sliver, con)
 			n++
 		}
-		// SetPrintHelp(help.HelpCmd(con)) // Responsible for display long-form help templates, etc.
 
 		// [ Reconfig ] ---------------------------------------------------------------
 
@@ -305,7 +304,7 @@ func SliverCommands(con *client.SliverConsoleClient) console.Commands {
 			Use:   consts.FetchStr,
 			Short: "Fetch the details of a beacon task",
 			Long:  help.GetHelpFor([]string{consts.TasksStr, consts.FetchStr}),
-			Args:  cobra.RangeArgs(0, 1), // 	a.String("id", "beacon task ID", grumble.Default(""))
+			Args:  cobra.RangeArgs(0, 1),
 			Run: func(cmd *cobra.Command, args []string) {
 				tasks.TasksFetchCmd(cmd, con, args)
 			},

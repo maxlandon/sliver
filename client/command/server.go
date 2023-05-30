@@ -626,13 +626,6 @@ func ServerCommands(con *client.SliverConsoleClient, serverCmds func() []*cobra.
 		FlagComps(generateCmd, func(comp *carapace.ActionMap) {
 			(*comp)["os"] = generate.OSCompleter(con)
 			(*comp)["arch"] = generate.ArchCompleter(con)
-
-			// Todo: URL completer for C2s.
-			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["http"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["dns"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["tcp-pivot"] = use.BeaconAndSessionIDCompleter()
-
 			(*comp)["strategy"] = carapace.ActionValuesDescribed([]string{"r", "random", "rd", "random domain", "s", "sequential"}...).Tag("C2 strategy")
 			(*comp)["format"] = generate.FormatCompleter()
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
@@ -698,13 +691,6 @@ func ServerCommands(con *client.SliverConsoleClient, serverCmds func() []*cobra.
 		FlagComps(generateBeaconCmd, func(comp *carapace.ActionMap) {
 			(*comp)["os"] = generate.OSCompleter(con)
 			(*comp)["arch"] = generate.ArchCompleter(con)
-
-			// Todo: URL completer for C2s.
-			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["http"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["dns"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["tcp-pivot"] = use.BeaconAndSessionIDCompleter()
-
 			(*comp)["strategy"] = carapace.ActionValuesDescribed([]string{"r", "random", "rd", "random domain", "s", "sequential"}...).Tag("C2 strategy")
 			(*comp)["format"] = generate.FormatCompleter()
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
@@ -845,13 +831,6 @@ func ServerCommands(con *client.SliverConsoleClient, serverCmds func() []*cobra.
 		FlagComps(profilesNewCmd, func(comp *carapace.ActionMap) {
 			(*comp)["os"] = generate.OSCompleter(con)
 			(*comp)["arch"] = generate.ArchCompleter(con)
-
-			// Todo: URL completer for C2s.
-			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["http"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["dns"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["tcp-pivot"] = use.BeaconAndSessionIDCompleter()
-
 			(*comp)["strategy"] = carapace.ActionValuesDescribed([]string{"r", "random", "rd", "random domain", "s", "sequential"}...).Tag("C2 strategy")
 			(*comp)["format"] = generate.FormatCompleter()
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")
@@ -919,13 +898,6 @@ func ServerCommands(con *client.SliverConsoleClient, serverCmds func() []*cobra.
 		FlagComps(profilesNewBeaconCmd, func(comp *carapace.ActionMap) {
 			(*comp)["os"] = generate.OSCompleter(con)
 			(*comp)["arch"] = generate.ArchCompleter(con)
-
-			// Todo: URL completer for C2s.
-			// (*comp)["mtls"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["http"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["dns"] = use.BeaconAndSessionIDCompleter()
-			// (*comp)["tcp-pivot"] = use.BeaconAndSessionIDCompleter()
-
 			(*comp)["strategy"] = carapace.ActionValuesDescribed([]string{"r", "random", "rd", "random domain", "s", "sequential"}...).Tag("C2 strategy")
 			(*comp)["format"] = generate.FormatCompleter()
 			(*comp)["save"] = carapace.ActionFiles().Tag("directory/file to save implant")

@@ -342,7 +342,6 @@ func (con *SliverConsoleClient) triggerReactions(event *clientpb.Event) {
 		con.ActiveTarget.Set(currentActiveSession, currentActiveBeacon)
 	}()
 
-	// con.ActiveTarget.Set(nil, nil)
 	if event.EventType == consts.SessionOpenedEvent {
 		con.ActiveTarget.Set(nil, nil)
 

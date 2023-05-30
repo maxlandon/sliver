@@ -13,6 +13,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 )
 
+// consoleCmd generates the console with required pre/post runners
 func consoleCmd(con *console.SliverConsoleClient) *cobra.Command {
 	consoleCmd := &cobra.Command{
 		Use:   "console",
@@ -42,7 +43,7 @@ func consoleRunnerCmd(con *console.SliverConsoleClient, run bool) (pre, post fun
 			return nil
 		}
 
-		// Don't clobber output when running a command from system shell.
+		// Don't clobber output when simply running an implant command from system shell.
 		if run {
 			fmt.Printf("Connecting to %s:%d ...\n", config.LHost, config.LPort)
 		}
@@ -59,7 +60,8 @@ func consoleRunnerCmd(con *console.SliverConsoleClient, run bool) (pre, post fun
 		return console.StartClient(con, rpc, command.ServerCommands(con, nil), command.SliverCommands(con), run)
 	}
 
-	post = func(cmd *cobra.Command, args []string) error {
+	// Close the RPC connection once exiting
+	post = func(_ *cobra.Command, _ []string) error {
 		if ln != nil {
 			return ln.Close()
 		}

@@ -75,6 +75,9 @@ func init() {
 	// command completion/filtering purposes.
 	rootCmd.AddCommand(implantCmd(con))
 
+	// No subcommand invoked means starting the console.
+	rootCmd.RunE, rootCmd.PostRunE = consoleRunnerCmd(con, true)
+
 	// Completions
 	carapace.Gen(rootCmd)
 }
