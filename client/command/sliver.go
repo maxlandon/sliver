@@ -456,7 +456,7 @@ func SliverCommands(con *client.SliverConsoleClient) console.Commands {
 		}
 		sliver.AddCommand(executeCmd)
 		Flags("", false, executeCmd, func(f *pflag.FlagSet) {
-			f.BoolP("token", "T", false, "execute command with current token (windows only)")
+			f.BoolP("token", "T", false, "execute command with current token (Windows only)")
 			f.BoolP("output", "o", false, "capture command output")
 			f.BoolP("save", "s", false, "save output to a file")
 			f.BoolP("loot", "X", false, "save output as loot")
@@ -465,6 +465,7 @@ func SliverCommands(con *client.SliverConsoleClient) console.Commands {
 			f.StringP("stderr", "E", "", "remote path to redirect STDERR to")
 			f.StringP("name", "n", "", "name to assign loot (optional)")
 			f.Uint32P("ppid", "P", 0, "parent process id (optional, Windows only)")
+			f.BoolP("hidden", "H", false, "hide the window of the spawned process (Windows only)")
 
 			f.Int64P("timeout", "t", defaultTimeout, "grpc timeout in seconds")
 		})
@@ -786,6 +787,25 @@ func SliverCommands(con *client.SliverConsoleClient) console.Commands {
 			f.Int64P("timeout", "t", defaultTimeout, "grpc timeout in seconds")
 		})
 		carapace.Gen(mvCmd).PositionalCompletion(
+			carapace.ActionValues().Usage("path to source file (required)"),
+			carapace.ActionValues().Usage("path to dest file (required)"),
+		)
+
+		cpCmd := &cobra.Command{
+			Use:   consts.CpStr,
+			Short: "Copy a file",
+			Long:  help.GetHelpFor([]string{consts.CpStr}),
+			Args:  cobra.ExactArgs(2),
+			Run: func(cmd *cobra.Command, args []string) {
+				filesystem.CpCmd(cmd, con, args)
+			},
+			GroupID: consts.FilesystemHelpGroup,
+		}
+		sliver.AddCommand(cpCmd)
+		Flags("", false, cpCmd, func(f *pflag.FlagSet) {
+			f.Int64P("timeout", "t", defaultTimeout, "grpc timeout in seconds")
+		})
+		carapace.Gen(cpCmd).PositionalCompletion(
 			carapace.ActionValues().Usage("path to source file (required)"),
 			carapace.ActionValues().Usage("path to dest file (required)"),
 		)
