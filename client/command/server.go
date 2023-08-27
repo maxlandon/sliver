@@ -27,23 +27,28 @@ import (
 	"github.com/bishopfox/sliver/client/command/armory"
 	"github.com/bishopfox/sliver/client/command/beacons"
 	"github.com/bishopfox/sliver/client/command/builders"
-	"github.com/bishopfox/sliver/client/command/c2profiles"
 	"github.com/bishopfox/sliver/client/command/crack"
 	"github.com/bishopfox/sliver/client/command/creds"
+	"github.com/bishopfox/sliver/client/command/dns"
 	"github.com/bishopfox/sliver/client/command/exit"
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/command/hosts"
+	"github.com/bishopfox/sliver/client/command/http"
+	"github.com/bishopfox/sliver/client/command/https"
 	"github.com/bishopfox/sliver/client/command/info"
 	"github.com/bishopfox/sliver/client/command/jobs"
 	"github.com/bishopfox/sliver/client/command/licenses"
 	"github.com/bishopfox/sliver/client/command/loot"
 	"github.com/bishopfox/sliver/client/command/monitor"
+	"github.com/bishopfox/sliver/client/command/mtls"
 	operator "github.com/bishopfox/sliver/client/command/prelude-operator"
 	"github.com/bishopfox/sliver/client/command/reaction"
 	"github.com/bishopfox/sliver/client/command/sessions"
 	"github.com/bishopfox/sliver/client/command/settings"
 	sgn "github.com/bishopfox/sliver/client/command/shikata-ga-nai"
 	"github.com/bishopfox/sliver/client/command/taskmany"
+	"github.com/bishopfox/sliver/client/command/tcp"
+	"github.com/bishopfox/sliver/client/command/transports"
 	"github.com/bishopfox/sliver/client/command/update"
 	"github.com/bishopfox/sliver/client/command/use"
 	"github.com/bishopfox/sliver/client/command/websites"
@@ -101,10 +106,15 @@ func ServerCommands(con *client.SliverClient, serverCmds SliverBinder) console.C
 
 		// C2 Network
 		bind(consts.NetworkHelpGroup,
+			transports.Commands,
 			jobs.Commands,
-			websites.Commands,
+			mtls.Commands,
+			dns.Commands,
+			http.Commands,
+			https.Commands,
+			tcp.Commands,
 			wireguard.Commands,
-			c2profiles.Commands,
+			websites.Commands,
 		)
 
 		// Payloads

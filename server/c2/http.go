@@ -74,9 +74,7 @@ const (
 	minPollTimeout         = time.Second
 )
 
-var (
-	serverVersionHeader string
-)
+var serverVersionHeader string
 
 // HTTPSession - Holds data related to a sliver c2 session
 type HTTPSession struct {
@@ -117,11 +115,30 @@ func (s *HTTPSessions) Remove(sessionID string) {
 // HTTPHandler - Path mapped to a handler function
 type HTTPHandler func(resp http.ResponseWriter, req *http.Request)
 
+// HTTPServerConfig - Config data for servers
+type HTTPServerConfig struct {
+	Addr    string
+	LPort   uint16
+	Domain  string
+	Website string
+	Secure  bool
+	Cert    []byte
+	Key     []byte
+	ACME    bool
+
+	MaxRequestLength int
+
+	LongPollTimeout time.Duration
+	LongPollJitter  time.Duration
+	RandomizeJARM   bool
+}
+
 // SliverHTTPC2 - Holds refs to all the C2 objects
 type SliverHTTPC2 struct {
 	HTTPServer   *http.Server
 	ServerConf   *clientpb.HTTPListenerReq // Server config (user args)
 	HTTPSessions *HTTPSessions
+	SliverStage  []byte
 	Cleanup      func()
 
 	c2Config []*clientpb.HTTPC2Config // C2 configs
@@ -255,28 +272,28 @@ func getHTTPSConfig(req *clientpb.HTTPListenerReq) *tls.Config {
 
 	// Randomize the cipher suites
 	allCipherSuites := []uint16{
-		tls.TLS_RSA_WITH_RC4_128_SHA,                      //uint16 = 0x0005 1
-		tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,                 //uint16 = 0x000a 2
-		tls.TLS_RSA_WITH_AES_128_CBC_SHA,                  //uint16 = 0x002f 3
-		tls.TLS_RSA_WITH_AES_256_CBC_SHA,                  //uint16 = 0x0035 4
-		tls.TLS_RSA_WITH_AES_128_CBC_SHA256,               //uint16 = 0x003c 5
-		tls.TLS_RSA_WITH_AES_128_GCM_SHA256,               //uint16 = 0x009c 6
-		tls.TLS_RSA_WITH_AES_256_GCM_SHA384,               //uint16 = 0x009d 7
-		tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,              //uint16 = 0xc007 8
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,          //uint16 = 0xc009 9
-		tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,          //uint16 = 0xc00a 10
-		tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,                //uint16 = 0xc011 11
-		tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,           //uint16 = 0xc012 12
-		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,            //uint16 = 0xc013 13
-		tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,            //uint16 = 0xc014 14
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,       //uint16 = 0xc023 15
-		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,         //uint16 = 0xc027 16
-		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,         //uint16 = 0xc02f 17
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,       //uint16 = 0xc02b 18
-		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,         //uint16 = 0xc030 19
-		tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,       //uint16 = 0xc02c 20
-		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,   //uint16 = 0xcca8 21
-		tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, //uint16 = 0xcca9 22
+		tls.TLS_RSA_WITH_RC4_128_SHA,                      // uint16 = 0x0005 1
+		tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,                 // uint16 = 0x000a 2
+		tls.TLS_RSA_WITH_AES_128_CBC_SHA,                  // uint16 = 0x002f 3
+		tls.TLS_RSA_WITH_AES_256_CBC_SHA,                  // uint16 = 0x0035 4
+		tls.TLS_RSA_WITH_AES_128_CBC_SHA256,               // uint16 = 0x003c 5
+		tls.TLS_RSA_WITH_AES_128_GCM_SHA256,               // uint16 = 0x009c 6
+		tls.TLS_RSA_WITH_AES_256_GCM_SHA384,               // uint16 = 0x009d 7
+		tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,              // uint16 = 0xc007 8
+		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,          // uint16 = 0xc009 9
+		tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,          // uint16 = 0xc00a 10
+		tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,                // uint16 = 0xc011 11
+		tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,           // uint16 = 0xc012 12
+		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,            // uint16 = 0xc013 13
+		tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,            // uint16 = 0xc014 14
+		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,       // uint16 = 0xc023 15
+		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,         // uint16 = 0xc027 16
+		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,         // uint16 = 0xc02f 17
+		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,       // uint16 = 0xc02b 18
+		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,         // uint16 = 0xc030 19
+		tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,       // uint16 = 0xc02c 20
+		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,   // uint16 = 0xcca8 21
+		tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, // uint16 = 0xcca9 22
 	}
 	// CipherSuites ignores the order of the ciphers, this random shuffle
 	// is truncated resulting in a random selection from all ciphers
@@ -290,10 +307,10 @@ func getHTTPSConfig(req *clientpb.HTTPListenerReq) *tls.Config {
 	// compatibility we need to make sure we always choose at least one modern RSA
 	// option.
 	modernCiphers := []uint16{
-		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,       //uint16 = 0xc027 16
-		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,       //uint16 = 0xc02f 17
-		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,       //uint16 = 0xc030 19
-		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, //uint16 = 0xcca8 21
+		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,       // uint16 = 0xc027 16
+		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,       // uint16 = 0xc02f 17
+		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,       // uint16 = 0xc030 19
+		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, // uint16 = 0xcca8 21
 	}
 
 	found := false
@@ -315,7 +332,6 @@ func getHTTPSConfig(req *clientpb.HTTPListenerReq) *tls.Config {
 }
 
 func (s *SliverHTTPC2) loadServerHTTPC2Configs() *clientpb.HTTPC2Configs {
-
 	ret := clientpb.HTTPC2Configs{}
 	// load config names
 	httpc2Configs, err := db.LoadHTTPC2s()

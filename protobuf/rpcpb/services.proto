@@ -58,6 +58,8 @@ service SliverRPC {
   // *** Stager Listener ***
   rpc StartTCPStagerListener(clientpb.StagerListenerReq)
       returns (clientpb.StagerListener);
+  rpc StartHTTPStagerListener(clientpb.StagerListenerReq)
+      returns (clientpb.StagerListener);
 
   // *** Loot ***
   rpc LootAdd(clientpb.Loot) returns (clientpb.Loot);

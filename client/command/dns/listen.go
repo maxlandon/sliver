@@ -1,4 +1,4 @@
-package jobs
+package dns
 
 /*
 	Sliver Implant Framework
@@ -20,6 +20,7 @@ package jobs
 
 import (
 	"context"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -27,20 +28,33 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
-// MTLSListenerCmd - Start an mTLS listener.
-func MTLSListenerCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
+// ListenCmd - Start a DNS lisenter.
+func ListenCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
+	domainsF, _ := cmd.Flags().GetString("domains")
+	domains := strings.Split(domainsF, ",")
+	for index, domain := range domains {
+		if !strings.HasSuffix(domain, ".") {
+			domains[index] += "."
+		}
+	}
+
 	lhost, _ := cmd.Flags().GetString("lhost")
 	lport, _ := cmd.Flags().GetUint32("lport")
+	canaries, _ := cmd.Flags().GetBool("no-canaries")
+	enforceOTP, _ := cmd.Flags().GetBool("disable-otp")
 
-	con.PrintInfof("Starting mTLS listener ...\n")
-	mtls, err := con.Rpc.StartMTLSListener(context.Background(), &clientpb.MTLSListenerReq{
-		Host: lhost,
-		Port: lport,
+	con.PrintInfof("Starting DNS listener with parent domain(s) %v ...\n", domains)
+	dns, err := con.Rpc.StartDNSListener(context.Background(), &clientpb.DNSListenerReq{
+		Domains:    domains,
+		Host:       lhost,
+		Port:       lport,
+		Canaries:   !canaries,
+		EnforceOTP: !enforceOTP,
 	})
 	con.Println()
 	if err != nil {
 		con.PrintErrorf("%s\n", con.UnwrapServerErr(err))
 	} else {
-		con.PrintInfof("Successfully started job #%d\n", mtls.JobID)
+		con.PrintInfof("Successfully started job #%d\n", dns.JobID)
 	}
 }

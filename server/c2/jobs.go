@@ -38,9 +38,7 @@ import (
 	"golang.zx2c4.com/wireguard/device"
 )
 
-var (
-	jobLog = log.NamedLogger("c2", "jobs")
-)
+var jobLog = log.NamedLogger("c2", "jobs")
 
 // StartMTLSListenerJob - Start an mTLS listener as a job
 func StartMTLSListenerJob(mtlsListener *clientpb.MTLSListenerReq) (*core.Job, error) {
@@ -93,7 +91,6 @@ func StartWGListenerJob(wgListener *clientpb.WGListenerReq) (*core.Job, error) {
 	go func(dev *device.Device) {
 		for event := range core.EventBroker.Subscribe() {
 			switch event.EventType {
-
 			case consts.WireGuardNewPeer:
 				buf := bytes.NewBuffer(nil)
 				fmt.Fprintf(buf, "%s", event.Data)
@@ -184,7 +181,7 @@ func StartHTTPListenerJob(req *clientpb.HTTPListenerReq) (*core.Job, error) {
 		ID:          core.NextJobID(),
 		Name:        name,
 		Description: fmt.Sprintf("%s for domain %s", name, req.Domain),
-		Protocol:    constants.TCPListenerStr,
+		Protocol:    constants.HttpStr,
 		Port:        uint16(req.Port),
 		JobCtrl:     make(chan bool),
 		Domains:     []string{req.Domain},
@@ -209,6 +206,65 @@ func StartHTTPListenerJob(req *clientpb.HTTPListenerReq) (*core.Job, error) {
 				err = server.HTTPServer.ListenAndServeTLS("", "") // ACME manager pulls the certs under the hood
 			} else {
 				err = listenAndServeTLS(server.HTTPServer, req.Cert, req.Key)
+			}
+		} else {
+			err = server.HTTPServer.ListenAndServe()
+		}
+		if err != nil {
+			jobLog.Errorf("%s listener error %v", name, err)
+			once.Do(func() { cleanup(err) })
+			job.JobCtrl <- true // Cleanup other goroutine
+		}
+	}()
+
+	go func() {
+		<-job.JobCtrl
+		once.Do(func() { cleanup(nil) })
+	}()
+
+	return job, nil
+}
+
+// StartHTTPStagerListenerJob - Start an HTTP(S) stager payload listener
+func StartHTTPStagerListenerJob(conf *clientpb.HTTPListenerReq, profileName string, data []byte) (*core.Job, error) {
+	server, err := StartHTTPListener(conf)
+	if err != nil {
+		return nil, err
+	}
+	name := "http"
+	if conf.Secure {
+		name = "https"
+	}
+	server.SliverStage = data
+	job := &core.Job{
+		ID:          core.NextJobID(),
+		Name:        name,
+		Description: fmt.Sprintf("Stager handler %s for domain %s", name, conf.Domain),
+		Protocol:    "tcp",
+		Port:        uint16(conf.Port),
+		ProfileName: profileName,
+		JobCtrl:     make(chan bool),
+	}
+	core.Jobs.Add(job)
+
+	cleanup := func(err error) {
+		server.Cleanup()
+		core.Jobs.Remove(job)
+		core.EventBroker.Publish(core.Event{
+			Job:       job,
+			EventType: consts.JobStoppedEvent,
+			Err:       err,
+		})
+	}
+	once := &sync.Once{}
+
+	go func() {
+		var err error
+		if server.ServerConf.Secure {
+			if server.ServerConf.ACME {
+				err = server.HTTPServer.ListenAndServeTLS("", "") // ACME manager pulls the certs under the hood
+			} else {
+				err = listenAndServeTLS(server.HTTPServer, conf.Cert, conf.Key)
 			}
 		} else {
 			err = server.HTTPServer.ListenAndServe()

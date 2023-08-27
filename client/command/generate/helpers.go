@@ -125,58 +125,6 @@ func FormatCompleter() carapace.Action {
 	})
 }
 
-// TrafficEncoderCompleter - Completes the names of traffic encoders.
-func TrafficEncodersCompleter(con *console.SliverClient) carapace.Action {
-	return carapace.ActionCallback(func(c carapace.Context) carapace.Action {
-		if msg, err := con.PreRunComplete(); err != nil {
-			return msg
-		}
-
-		grpcCtx, cancel := con.GrpcContext(nil)
-		defer cancel()
-		trafficEncoders, err := con.Rpc.TrafficEncoderMap(grpcCtx, &commonpb.Empty{})
-		if err != nil {
-			return carapace.ActionMessage("failed to fetch traffic encoders: %s", con.UnwrapServerErr(err))
-		}
-
-		results := []string{}
-		for _, encoder := range trafficEncoders.Encoders {
-			results = append(results, encoder.Wasm.Name)
-			skipTests := ""
-			if encoder.SkipTests {
-				skipTests = "[skip-tests]"
-			}
-			desc := fmt.Sprintf("(Wasm: %s) %s", encoder.Wasm.Name, skipTests)
-			results = append(results, desc)
-		}
-
-		return carapace.ActionValuesDescribed(results...).Tag("traffic encoders").
-			Invoke(c).Filter(c.Args...).ToA()
-	}).Cache(completers.CacheCompilerInfo)
-}
-
-// HTTPC2Completer - Completes the HTTP C2 PROFILES
-func HTTPC2Completer(con *console.SliverClient) carapace.Action {
-	return carapace.ActionCallback(func(_ carapace.Context) carapace.Action {
-		if msg, err := con.PreRunComplete(); err != nil {
-			return msg
-		}
-
-		grpcCtx, cancel := con.GrpcContext(nil)
-		defer cancel()
-		httpC2Profiles, err := con.Rpc.GetHTTPC2Profiles(grpcCtx, &commonpb.Empty{})
-		if err != nil {
-			return carapace.ActionMessage("failed to fetch HTTP C2 profiles: %s", err.Error())
-		}
-
-		var results []string
-		for _, profile := range httpC2Profiles.Configs {
-			results = append(results, profile.Name)
-		}
-		return carapace.ActionValues(results...).Tag("HTTP C2 Profiles")
-	})
-}
-
 // MsfFormatCompleter completes MsfVenom stager formats.
 func MsfFormatCompleter(con *console.SliverClient) carapace.Action {
 	return carapace.ActionCallback(func(_ carapace.Context) carapace.Action {

