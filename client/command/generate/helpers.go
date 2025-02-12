@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/rsteube/carapace"
-	"github.com/rsteube/carapace/pkg/cache"
+	cache "github.com/rsteube/carapace/pkg/cache/key"
 	"github.com/rsteube/carapace/pkg/style"
 
 	"github.com/bishopfox/sliver/client/command/completers"

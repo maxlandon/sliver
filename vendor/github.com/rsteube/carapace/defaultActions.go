@@ -66,7 +66,6 @@ func ActionExecCommandE(name string, arg ...string) func(f func(output []byte, e
 			cmd := c.Command(name, arg...)
 			cmd.Stdout = &stdout
 			cmd.Stderr = &stderr
-			LOG.Printf("executing %#v", cmd.String())
 			if err := cmd.Run(); err != nil {
 				if exitErr, ok := err.(*exec.ExitError); ok {
 					exitErr.Stderr = stderr.Bytes() // seems this needs to be set manually due to stdout being collected?
@@ -150,7 +149,9 @@ func ActionValues(values ...string) Action {
 	return ActionCallback(func(c Context) Action {
 		vals := make([]common.RawValue, 0, len(values))
 		for _, val := range values {
-			vals = append(vals, common.RawValue{Value: val, Display: val})
+			if val != "" {
+				vals = append(vals, common.RawValue{Value: val, Display: val})
+			}
 		}
 		return Action{rawValues: vals}
 	})

@@ -107,7 +107,8 @@ func sliverServerCLI(team *server.Server, con *client.SliverClient) (root *cobra
 	// but the command yielders we pass as arguments don't: this is because we only
 	// need one connection for the entire lifetime of the console.
 	// consoleCommand := consoleCmd.Command(con, server)
-	// consoleCommand.PreRunE = preRunServerListeners(team, con)
+	// consoleCommand.PreRunE = preRunListeners(team, con)
+	// root.AddCommand(consoleCommand)
 	root.AddCommand(consoleCmd.Command(con, server))
 
 	// The server is also a client of itself, so add our sliver-server
@@ -135,16 +136,13 @@ func preRunServerS(teamserver *server.Server, con *client.SliverClient) clientCo
 		cryptography.AgeServerKeyPair()
 		cryptography.MinisignServerPrivateKey()
 
-		// But we don't start Sliver-specific C2 listeners unless
-		// we are being ran in daemon mode, or in the console.
-		// We don't always have access to a command, such when
-		if cmd != nil {
-			if (cmd.Name() == "daemon" && cmd.Parent().Name() == "teamserver") ||
-				cmd.Name() == "console" {
-				err := teamserver.ListenerStartPersistents()
-				if err != nil {
-					con.PrintWarnf("Persistent jobs restart error: %s", err)
-				}
+		// Only start the teamservers when the console being
+		// ran is the console itself: the daemon command will
+		// start them on its own, since the config is different.
+		if cmd.Name() == "console" {
+			err := teamserver.ListenerStartPersistents()
+			if err != nil {
+				con.PrintWarnf("Persistent jobs restart error: %s", err)
 			}
 		}
 
@@ -152,40 +150,3 @@ func preRunServerS(teamserver *server.Server, con *client.SliverClient) clientCo
 		return teamserver.Serve(con.Teamclient)
 	}
 }
-
-// preRunServer is the server-binary-specific pre-run; it ensures that the server
-// has everything it needs to perform any client-side command/task.
-// func preRunServer(teamserver *server.Server, con *client.SliverClient) func() error {
-// 	return func() error {
-// 		// Ensure the server has what it needs.
-// 		assets.Setup(false, true)
-// 		encoders.Setup()
-// 		certs.SetupCAs()
-// 		certs.SetupWGKeys()
-// 		cryptography.AgeServerKeyPair()
-// 		cryptography.MinisignServerPrivateKey()
-//
-// 		// TODO: Move this out of here.
-// 		serverConfig := configs.GetServerConfig()
-// 		c2.StartPersistentJobs(serverConfig)
-//
-// 		// Let our in-memory teamclient be served.
-// 		return teamserver.Serve(con.Teamclient)
-// 	}
-// }
-
-// 	preRun := func(cmd *cobra.Command, _ []string) error {
-//
-// 		// Start persistent implant/c2 jobs (not teamservers)
-// 		// serverConfig := configs.GetServerConfig()
-// 		// c2.StartPersistentJobs(serverConfig)
-//
-// 		// Only start the teamservers when the console being
-// 		// ran is the console itself: the daemon command will
-// 		// start them on its own, since the config is different.
-// 		// if cmd.Name() == "console" {
-// 		// 	teamserver.ListenerStartPersistents() // Automatically logged errors.
-// 		// 	// 	console.StartPersistentJobs(serverConfig) // Old alternative
-// 		// }
-// 		return nil
-// 	}

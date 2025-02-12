@@ -72,6 +72,7 @@ func (p *Parser) Parse(stream io.Reader, handler Handler) error {
 		case 0, '\r', '\n', '#':
 			continue
 		}
+
 		// next
 		if err = p.next(handler, line, pos, end); err != nil {
 			p.errs = append(p.errs, err)
@@ -531,6 +532,7 @@ func grab(r []rune, i, end int) rune {
 func decodeKey(seq []rune, pos, end int) (string, int, error) {
 	// seek end of sequence
 	start := pos
+
 	for c := grab(seq, pos+1, end); pos < end && c != ':' && c != '#' && !unicode.IsSpace(c) && !unicode.IsControl(c); pos++ {
 		c = grab(seq, pos+1, end)
 	}
@@ -619,6 +621,10 @@ func decodeRunes(r []rune, i, end int) string {
 func unescapeRunes(r []rune, i, end int) string {
 	var seq []rune
 	var char0, char1, char2, char3, char4, char5 rune
+
+	if len(r) == 1 {
+		return string(r)
+	}
 
 	for ; i < end; i++ {
 		if char0 = r[i]; char0 == '\\' {
