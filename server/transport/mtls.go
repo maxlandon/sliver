@@ -34,9 +34,9 @@ import (
 type teamserver struct {
 	*server.Server
 
-	options []grpc.ServerOption
-	conn    *bufconn.Listener
-	mutex   *sync.RWMutex
+	options       []grpc.ServerOption
+	localListener *bufconn.Listener
+	mutex         *sync.RWMutex
 }
 
 // newTeamserverTLS returns a vanilla tcp+mtls gRPC teamserver listener backend.
@@ -88,7 +88,7 @@ func (h *teamserver) Init(team *server.Server) (err error) {
 // this teamserver uses a tcp+TLS (mutual) listener to serve remote clients.
 func (h *teamserver) Listen(addr string) (ln net.Listener, err error) {
 	// In-memory connection are not authenticated.
-	if h.conn == nil {
+	if h.localListener == nil {
 		ln, err = net.Listen("tcp", addr)
 		if err != nil {
 			return nil, err
@@ -103,8 +103,8 @@ func (h *teamserver) Listen(addr string) (ln net.Listener, err error) {
 		h.options = append(h.options, tlsOptions...)
 	} else {
 		h.mutex.Lock()
-		ln = h.conn
-		h.conn = nil
+		ln = h.localListener
+		h.localListener = nil
 		h.mutex.Unlock()
 	}
 

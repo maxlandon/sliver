@@ -68,7 +68,7 @@ func SliverCLI(con *client.SliverClient) (root *cobra.Command) {
 	}
 
 	// Generate a single tree instance of server commands:
-	// These are used as the primary, one-exec-only CLI of Sliver, and will be equipped
+	// These are used as the primary, one-exec-only CLI of Sliver, and will be equiped
 	// with a pre-runner ensuring the server and its teamclient are set up and connected.
 	server := command.ServerCommands(con, teamclientCmds)
 

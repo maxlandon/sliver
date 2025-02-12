@@ -102,7 +102,7 @@ func clientOptionsFor(server *teamserver, opts ...grpc.DialOption) []grpc.DialOp
 
 	// The server will use this conn as a listener.
 	// The reference is dropped after server start.
-	server.conn = conn
+	server.localListener = conn
 
 	return opts
 }

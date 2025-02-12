@@ -22,7 +22,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 
+	"github.com/reeflective/team"
 	"github.com/reeflective/team/server"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
@@ -38,7 +40,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
-	"github.com/bishopfox/sliver/server/db/models"
 )
 
 // bufferingOptions returns a list of server options with max send/receive
@@ -131,15 +132,15 @@ func (ts *teamserver) initAuthMiddleware() ([]grpc.ServerOption, error) {
 	var streamOpts []grpc.StreamServerInterceptor
 
 	// Authentication interceptors.
-	if ts.conn == nil {
+	if ts.localListener == nil {
 		// All remote connections are users who need authentication.
 		requestOpts = append(requestOpts,
-			// ts.permissionsUnaryServerInterceptor(),
+			ts.permissionsUnaryServerInterceptor(),
 			grpc_auth.UnaryServerInterceptor(ts.tokenAuthFunc),
 		)
 
 		streamOpts = append(streamOpts,
-			// ts.permissionsStreamServerInterceptor(),
+			ts.permissionsStreamServerInterceptor(),
 			grpc_auth.StreamServerInterceptor(ts.tokenAuthFunc),
 		)
 	} else {
@@ -167,8 +168,12 @@ const (
 )
 
 func serverAuthFunc(ctx context.Context) (context.Context, error) {
-	newCtx := context.WithValue(ctx, Transport, "local")
-	newCtx = context.WithValue(newCtx, Operator, "server")
+	serverUser := team.User{
+		Name:        "server",
+		Permissions: []string{"all"},
+	}
+	newCtx := context.WithValue(ctx, Transport, &serverUser)
+	newCtx = context.WithValue(newCtx, Operator, &serverUser)
 
 	return newCtx, nil
 }
@@ -176,7 +181,6 @@ func serverAuthFunc(ctx context.Context) (context.Context, error) {
 // tokenAuthFunc uses the core reeflective/team/server to authenticate user requests.
 func (ts *teamserver) tokenAuthFunc(ctx context.Context) (context.Context, error) {
 	log := ts.NamedLogger("transport", "grpc")
-	log.Debugf("Auth interceptor checking user token ...")
 
 	rawToken, err := grpc_auth.AuthFromMD(ctx, "Bearer")
 	if err != nil {
@@ -187,16 +191,26 @@ func (ts *teamserver) tokenAuthFunc(ctx context.Context) (context.Context, error
 	// Let our core teamserver driver authenticate the user.
 	// The teamserver has its credentials, tokens and everything in database.
 	user, authorized, err := ts.UserAuthenticate(rawToken)
-	if err != nil || !authorized || user == "" {
+	if err != nil || !authorized || user.Name == "" {
 		log.Errorf("Authentication failure: %s", err)
 		return nil, status.Error(codes.Unauthenticated, "Authentication failure")
 	}
 
-	newCtx := context.WithValue(ctx, Transport, "mtls")
+	// Fetch the user in database for permissions.
+
+	newCtx := context.WithValue(ctx, Transport, user)
 	newCtx = context.WithValue(newCtx, Operator, user)
 
 	return newCtx, nil
 }
+
+type Permission string
+
+const (
+	All          Permission = "all"
+	Builder      Permission = "builder"
+	Crackstation Permission = "crackstation"
+)
 
 var (
 	// Builder - Allowed methods
@@ -232,19 +246,26 @@ func (ts *teamserver) permissionsUnaryServerInterceptor() grpc.UnaryServerInterc
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (_ interface{}, err error) {
 		log := ts.NamedLogger("transport", "middleware")
 
-		operator := ctx.Value(Operator).(*models.Operator)
+		// Ask the teamserver core for our list of users,
+		// and check any of the permissions.
+		operator := ctx.Value(Operator).(*team.User)
 		if operator == nil {
 			return nil, status.Error(codes.Unauthenticated, "Authentication failure")
 		}
-		if operator.PermissionAll {
+
+		operatorPermissions := operator.Permissions
+
+		if slices.Contains(operatorPermissions, string(All)) {
 			return handler(ctx, req)
 		}
-		if operator.PermissionBuilder {
+
+		if slices.Contains(operatorPermissions, string(Builder)) {
 			if ok, _ := builderMethods[info.FullMethod]; ok {
 				return handler(ctx, req)
 			}
 		}
-		if operator.PermissionCrackstation {
+
+		if slices.Contains(operatorPermissions, string(Crackstation)) {
 			if ok, _ := crackstationMethods[info.FullMethod]; ok {
 				return handler(ctx, req)
 			}
@@ -258,23 +279,31 @@ func (ts *teamserver) permissionsStreamServerInterceptor() grpc.StreamServerInte
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		log := ts.NamedLogger("transport", "middleware")
 
-		operator := ss.Context().Value(Operator).(*models.Operator)
+		// Ask the teamserver core for our list of users,
+		// and check any of the permissions.
+		operator := ss.Context().Value(Operator).(*team.User)
 		if operator == nil {
 			return status.Error(codes.Unauthenticated, "Authentication failure")
 		}
-		if operator.PermissionAll {
+
+		operatorPermissions := operator.Permissions
+
+		if slices.Contains(operatorPermissions, string(All)) {
 			return handler(srv, ss)
 		}
-		if operator.PermissionBuilder {
+
+		if slices.Contains(operatorPermissions, string(Builder)) {
 			if ok, _ := builderMethods[info.FullMethod]; ok {
 				return handler(srv, ss)
 			}
 		}
-		if operator.PermissionCrackstation {
+
+		if slices.Contains(operatorPermissions, string(Crackstation)) {
 			if ok, _ := crackstationMethods[info.FullMethod]; ok {
 				return handler(srv, ss)
 			}
 		}
+
 		log.Warnf("Permission denied for %s attempting to access %s", operator.Name, info.FullMethod)
 		return status.Error(codes.PermissionDenied, "Token has insufficient permissions")
 	}
