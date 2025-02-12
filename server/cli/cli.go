@@ -106,6 +106,8 @@ func sliverServerCLI(team *server.Server, con *client.SliverClient) (root *cobra
 	// The console shares the same setup/connection pre-runners as other commands,
 	// but the command yielders we pass as arguments don't: this is because we only
 	// need one connection for the entire lifetime of the console.
+	// consoleCommand := consoleCmd.Command(con, server)
+	// consoleCommand.PreRunE = preRunServerListeners(team, con)
 	root.AddCommand(consoleCmd.Command(con, server))
 
 	// The server is also a client of itself, so add our sliver-server
@@ -136,16 +138,16 @@ func preRunServerS(teamserver *server.Server, con *client.SliverClient) clientCo
 		// But we don't start Sliver-specific C2 listeners unless
 		// we are being ran in daemon mode, or in the console.
 		// We don't always have access to a command, such when
-		// if cmd != nil {
-		// 	if (cmd.Name() == "daemon" && cmd.Parent().Name() == "teamserver") ||
-		// 		cmd.Name() == "console" {
-		// 		serverConfig := configs.GetServerConfig()
-		// 		err := c2.StartPersistentJobs(serverConfig)
-		// 		if err != nil {
-		// 			con.PrintWarnf("Persistent jobs restart error: %s", err)
-		// 		}
-		// 	}
-		// }
+		if cmd != nil {
+			if (cmd.Name() == "daemon" && cmd.Parent().Name() == "teamserver") ||
+				cmd.Name() == "console" {
+				err := teamserver.ListenerStartPersistents()
+				if err != nil {
+					con.PrintWarnf("Persistent jobs restart error: %s", err)
+				}
+			}
+		}
+
 		// Let our in-memory teamclient be served.
 		return teamserver.Serve(con.Teamclient)
 	}
