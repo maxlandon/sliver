@@ -171,7 +171,7 @@ func ArmoryCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	}
 }
 
-func refresh(clientConfig ArmoryHTTPConfig) {
+func refresh(clientConfig ArmoryHTTPConfig) error {
 	armoriesConfig := assets.GetArmoriesConfig()
 	indexes := fetchIndexes(armoriesConfig, clientConfig)
 	fetchPackageSignatures(indexes, clientConfig)
@@ -180,7 +180,7 @@ func refresh(clientConfig ArmoryHTTPConfig) {
 	// This is only for completion purposes, so this
 	// does not include ANY cryptographic or remote
 	// information on the packages.
-	saveArmoryCompletionCache()
+	return saveArmoryCompletionCache()
 }
 
 func packagesInCache() ([]*alias.AliasManifest, []*extensions.ExtensionManifest) {

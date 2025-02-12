@@ -34,7 +34,10 @@ import (
 func ArmoryUpdateCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	con.PrintInfof("Refreshing package cache ... ")
 	clientConfig := parseArmoryHTTPConfig(cmd)
-	refresh(clientConfig)
+	if err := refresh(clientConfig); err != nil {
+		con.PrintErrorf("Failed to update completion cache: %s\n", err)
+	}
+
 	con.Printf(console.Clearln + "\r")
 
 	// Aliases
