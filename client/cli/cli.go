@@ -24,20 +24,17 @@ import (
 	"os"
 	"path"
 
+	"github.com/bishopfox/sliver/client/assets"
+	"github.com/bishopfox/sliver/client/console"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
-
-	"github.com/bishopfox/sliver/client/console"
-	"github.com/bishopfox/sliver/client/version"
 )
 
 const (
 	logFileName = "sliver-client.log"
 )
 
-var sliverServerVersion = fmt.Sprintf("v%s", version.FullVersion())
-
-// Initialize logging
+// Initialize logging.
 func initLogging(appDir string) *os.File {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	logFile, err := os.OpenFile(path.Join(appDir, logFileName), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o600)
@@ -49,6 +46,10 @@ func initLogging(appDir string) *os.File {
 }
 
 func init() {
+	appDir := assets.GetRootAppDir()
+	logFile := initLogging(appDir)
+	defer logFile.Close()
+
 	rootCmd.TraverseChildren = true
 
 	// Create the console client, without any RPC or commands bound to it yet.
@@ -88,10 +89,10 @@ var rootCmd = &cobra.Command{
 	Long:  ``,
 }
 
-// Execute - Execute root command
+// Execute - Execute root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Printf("root command: %s\n", err)
 		os.Exit(1)
 	}
 }

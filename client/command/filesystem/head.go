@@ -29,7 +29,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func HeadCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string, head bool) {
+func HeadCmd(cmd *cobra.Command, con *console.SliverClient, args []string, head bool) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -63,7 +63,7 @@ func HeadCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string
 		} else {
 			operationName = "bytes"
 		}
-	} else if cmd.Flags().Changed("lines") {
+	} else {
 		fetchBytes = false
 		fetchSize, _ = cmd.Flags().GetInt64("lines")
 		if fetchSize < 0 {
@@ -76,9 +76,6 @@ func HeadCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string
 		} else {
 			operationName = "lines"
 		}
-	} else {
-		con.PrintErrorf("A number of bytes or a number of lines must be specified.")
-		return
 	}
 
 	ctrl := make(chan bool)
@@ -118,10 +115,10 @@ func HeadCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string
 				con.PrintErrorf("Failed to decode response %s\n", err)
 				return
 			}
-			PrintCat(download, cmd, con)
+			PrintCat(filePath, download, cmd, con)
 		})
 		con.PrintAsyncResponse(download.Response)
 	} else {
-		PrintCat(download, cmd, con)
+		PrintCat(filePath, download, cmd, con)
 	}
 }

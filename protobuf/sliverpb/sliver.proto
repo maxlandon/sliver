@@ -327,6 +327,28 @@ message Grep {
   commonpb.Response Response = 9;
 }
 
+message MountReq {
+  commonpb.Request Request = 9;
+}
+
+message MountInfo {
+  string VolumeName = 1;
+  string VolumeType = 2;
+  string MountPoint = 3;
+  string Label = 4;
+  string FileSystem = 5;
+  uint64 UsedSpace = 6;
+  uint64 FreeSpace = 7;
+  uint64 TotalSpace = 8;
+  string MountOptions = 9;
+}
+
+message Mount {
+  repeated MountInfo Info = 1;
+
+  commonpb.Response Response = 9;
+}
+
 message ProcessDumpReq {
   int32 Pid = 1;
   int32 Timeout = 2;
@@ -339,6 +361,7 @@ message ProcessDump {
 
   commonpb.Response Response = 9;
 }
+
 
 message RunAsReq {
   string Username = 1;
@@ -428,7 +451,7 @@ message Task {
 
 message ExecuteAssemblyReq {
   bytes Assembly = 1;
-  string Arguments = 2;
+  repeated string Arguments = 2;
   string Process = 3;
   bool IsDLL = 4;
   string Arch = 5;
@@ -472,12 +495,14 @@ message ExecuteAssembly {
 message InvokeMigrateReq {
   uint32 Pid = 1;
   bytes Data = 2;
+  string ProcName = 3;
 
   commonpb.Request Request = 9;
 }
 
 message Migrate {
   bool Success = 1;
+  uint32 Pid = 2;
 
   commonpb.Response Response = 9;
 }
@@ -518,7 +543,7 @@ message Execute {
 message SideloadReq {
   bytes Data = 1;
   string ProcessName = 2;
-  string Args = 3;
+  repeated string Args = 3;
   string EntryPoint = 4;
   bool Kill = 5;
   bool isDLL = 6;
@@ -538,7 +563,7 @@ message Sideload {
 message InvokeSpawnDllReq {
   bytes Data = 1;
   string ProcessName = 2;
-  string Args = 3;
+  repeated string Args = 3;
   string EntryPoint = 4;
   bool Kill = 5;
   uint32 PPid = 10;
@@ -551,7 +576,7 @@ message SpawnDllReq {
   bytes Data = 1;
   string ProcessName = 2;
   uint32 Offset = 3;
-  string Args = 4;
+  repeated string Args = 4;
   bool Kill = 5;
   uint32 PPid = 10;
   repeated string ProcessArgs = 11;
@@ -620,20 +645,6 @@ message UnsetEnvReq {
 
 message UnsetEnv {
   commonpb.Response Response = 9;
-}
-
-// DNS Specific messages
-message DNSSessionInit {
-  bytes Key = 1;
-}
-
-message DNSPoll {
-  repeated DNSBlockHeader blocks = 1;
-}
-
-message DNSBlockHeader {
-  string ID = 1;
-  uint32 Size = 2;
 }
 
 // HTTP Sepecific message
@@ -769,6 +780,19 @@ message RegistryListValuesReq {
 
 message RegistryValuesList {
   repeated string ValueNames = 1;
+
+  commonpb.Response Response = 9;
+}
+
+message RegistryReadHiveReq {
+  string RootHive = 1;
+  string RequestedHive = 2;
+  commonpb.Request Request = 9;
+}
+
+message RegistryReadHive {
+  bytes Data = 1;
+  string Encoder = 2;
 
   commonpb.Response Response = 9;
 }
@@ -1285,4 +1309,46 @@ message ExecWasmExtension {
   uint32 ExitCode = 3;
 
   commonpb.Response Response = 9;
+}
+
+message ServicesReq {
+  string Hostname = 1;
+
+  commonpb.Request Request = 9;
+}
+
+message ServiceDetailReq {
+  ServiceInfoReq ServiceInfo = 1;
+
+  commonpb.Request Request = 9;
+}
+
+message ServiceDetails {
+  string Name = 1;
+  string DisplayName = 2;
+  string Description = 3;
+  uint32 Status = 4;
+  uint32 StartupType = 5;
+  string BinPath = 6;
+  string Account = 7;
+}
+
+message Services {
+  repeated ServiceDetails Details = 1;
+  string Error = 2;
+
+  commonpb.Response Response = 9;
+}
+
+message ServiceDetail {
+  ServiceDetails Detail = 1;
+  string Message = 2;
+
+  commonpb.Response Response = 9;
+}
+
+message StartServiceByNameReq {
+  ServiceInfoReq ServiceInfo = 1;
+
+  commonpb.Request Request = 9;
 }

@@ -46,6 +46,10 @@ var knownSecurityTools = map[string][]string{
 	"RepUx.exe":                       {console.Red, "Carbon Black Cloud Sensor"},    // Carbon Black Cloud Sensor
 	"RepWSC.exe":                      {console.Red, "Carbon Black Cloud Sensor"},    // Carbon Black Cloud Sensor
 	"scanhost.exe":                    {console.Red, "Carbon Black Cloud Sensor"},    // Carbon Black Cloud Sensor
+	"elastic-agent.exe":               {console.Red, "Elastic Agent"},                // Elastic Agent
+	"elastic-endpoint.exe":            {console.Red, "Elastic Agent"},                // Elastic Agent
+	"filebeat.exe":                    {console.Red, "Elastic Agent"},                // Elastic Agent - log shipper
+	"metricbeat.exe":                  {console.Red, "Elastic Agent"},                // Elastic Agent - metric shipper
 	"smartscreen.exe":                 {console.Red, "Windows Smart Screen"},         // Windows Defender Smart Screen
 	"MpCmdRun.exe":                    {console.Red, "Windows Defender"},             // Windows Defender Command-line
 	"MonitoringHost.exe":              {console.Red, "Windows Defender"},             // Microsoft Monitoring Agent
@@ -99,7 +103,7 @@ var knownSecurityTools = map[string][]string{
 }
 
 // PsCmd - List processes on the remote system
-func PsCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
+func PsCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
 		return
@@ -147,7 +151,7 @@ func getOS(session *clientpb.Session, beacon *clientpb.Beacon) string {
 }
 
 // PrintPS - Prints the process list
-func PrintPS(os string, ps *sliverpb.Ps, interactive bool, flags *pflag.FlagSet, con *console.SliverConsoleClient) {
+func PrintPS(os string, ps *sliverpb.Ps, interactive bool, flags *pflag.FlagSet, con *console.SliverClient) {
 	pidFilter, _ := flags.GetInt("pid")
 	exeFilter, _ := flags.GetString("exe")
 	ownerFilter, _ := flags.GetString("owner")
@@ -226,7 +230,7 @@ func findKnownSecurityProducts(ps *sliverpb.Ps) []string {
 }
 
 // procRow - Stylizes the process information
-func procRow(tw table.Writer, proc *commonpb.Process, cmdLine bool, con *console.SliverConsoleClient) table.Row {
+func procRow(tw table.Writer, proc *commonpb.Process, cmdLine bool, con *console.SliverClient) table.Row {
 	session, beacon := con.ActiveTarget.GetInteractive()
 
 	color := console.Normal
@@ -301,7 +305,7 @@ func procRow(tw table.Writer, proc *commonpb.Process, cmdLine bool, con *console
 }
 
 // GetPIDByName - Get a PID by name from the active session
-func GetPIDByName(cmd *cobra.Command, name string, con *console.SliverConsoleClient) int {
+func GetPIDByName(cmd *cobra.Command, name string, con *console.SliverClient) int {
 	ps, err := con.Rpc.Ps(context.Background(), &sliverpb.PsReq{
 		Request: con.ActiveTarget.Request(cmd),
 	})

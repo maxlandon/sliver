@@ -20,16 +20,13 @@ package generate
 
 import (
 	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/spf13/cobra"
 )
 
-// ProfilesGenerateCmd - Generate an implant binary based on a profile
-func ProfilesGenerateCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
+// ProfilesGenerateCmd - Generate an implant binary based on a profile.
+func ProfilesGenerateCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	var name string
 	if len(args) > 0 {
 		name = args[0]
@@ -49,15 +46,11 @@ func ProfilesGenerateCmd(cmd *cobra.Command, con *console.SliverConsoleClient, a
 		if SGNDisabled, _ := cmd.Flags().GetBool("disable-sgn"); SGNDisabled {
 			profile.Config.SGNEnabled = !SGNDisabled
 		}
-		_, err := compile(profile.Config, save, con)
+		_, err := compile(name, profile.Config, save, con)
 		if err != nil {
 			return
 		}
 	} else {
 		con.PrintErrorf("No profile with name '%s'", name)
 	}
-}
-
-func buildImplantName(name string) string {
-	return strings.TrimSuffix(name, filepath.Ext(name))
 }

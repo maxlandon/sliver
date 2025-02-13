@@ -29,7 +29,7 @@ import (
 )
 
 // ArmorySearchCmd - Search for packages by name
-func ArmorySearchCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
+func ArmorySearchCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	con.PrintInfof("Refreshing package cache ... ")
 	clientConfig := parseArmoryHTTPConfig(cmd)
 	refresh(clientConfig)
@@ -47,7 +47,7 @@ func ArmorySearchCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args 
 		return
 	}
 
-	aliases, exts := packagesInCache()
+	aliases, exts := packageManifestsInCache()
 	matchedAliases := []*alias.AliasManifest{}
 	for _, a := range aliases {
 		if nameExpr.MatchString(a.CommandName) {

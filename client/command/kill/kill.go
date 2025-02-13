@@ -26,13 +26,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
 // KillCmd - Kill the active session (not to be confused with TerminateCmd)
-func KillCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
+func KillCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	// Confirm with the user, just in case they confused kill with terminate
 	confirm := false
@@ -67,12 +68,22 @@ func KillCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string
 	con.PrintErrorf("No active session or beacon\n")
 }
 
-func KillSession(session *clientpb.Session, cmd *cobra.Command, con *console.SliverConsoleClient) error {
+func KillSession(session *clientpb.Session, cmd *cobra.Command, con *console.SliverClient) error {
 	if session == nil {
 		return errors.New("session does not exist")
 	}
 	timeout, _ := cmd.Flags().GetInt64("timeout")
 	force, _ := cmd.Flags().GetBool("force")
+
+	// remove any active socks proxies
+	socks := core.SocksProxies.List()
+	if len(socks) != 0 {
+		for _, p := range socks {
+			if p.SessionID == session.ID {
+				core.SocksProxies.Remove(p.ID)
+			}
+		}
+	}
 
 	_, err := con.Rpc.Kill(context.Background(), &sliverpb.KillReq{
 		Request: &commonpb.Request{
@@ -84,7 +95,7 @@ func KillSession(session *clientpb.Session, cmd *cobra.Command, con *console.Sli
 	return err
 }
 
-func KillBeacon(beacon *clientpb.Beacon, cmd *cobra.Command, con *console.SliverConsoleClient) error {
+func KillBeacon(beacon *clientpb.Beacon, cmd *cobra.Command, con *console.SliverClient) error {
 	if beacon == nil {
 		return errors.New("session does not exist")
 	}

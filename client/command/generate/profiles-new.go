@@ -20,14 +20,13 @@ package generate
 import (
 	"context"
 
-	"github.com/spf13/cobra"
-
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/spf13/cobra"
 )
 
-// ProfilesNewCmd - Create a new implant profile
-func ProfilesNewCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
+// ProfilesNewCmd - Create a new implant profile.
+func ProfilesNewCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	var name string
 	if len(args) > 0 {
 		name = args[0]
@@ -49,8 +48,8 @@ func ProfilesNewCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args [
 	}
 }
 
-// ProfilesNewBeaconCmd - Create a new beacon profile
-func ProfilesNewBeaconCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
+// ProfilesNewBeaconCmd - Create a new beacon profile.
+func ProfilesNewBeaconCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	var name string
 	if len(args) > 0 {
 		name = args[0]
@@ -65,7 +64,7 @@ func ProfilesNewBeaconCmd(cmd *cobra.Command, con *console.SliverConsoleClient, 
 		return
 	}
 	config.IsBeacon = true
-	err := parseBeaconFlags(cmd, con, config)
+	err := parseBeaconFlags(cmd, config)
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
 		return

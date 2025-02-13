@@ -21,6 +21,8 @@ package extensions
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,26 +34,26 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	appConsole "github.com/reeflective/console"
-	"github.com/rsteube/carapace"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"google.golang.org/protobuf/proto"
-
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/command/help"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/core"
+	"github.com/bishopfox/sliver/client/packages"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/util"
+	appConsole "github.com/reeflective/console"
+	"github.com/rsteube/carapace"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
 	defaultTimeout = 60
 
-	// ManifestFileName - Extension manifest file name
+	// ManifestFileName - Extension manifest file name.
 	ManifestFileName = "extension.json"
 )
 
@@ -85,17 +87,21 @@ type ExtensionManifest struct {
 
 	ExtCommand []*ExtCommand `json:"commands"`
 
-	RootPath string `json:"-"`
+	RootPath   string `json:"-"`
+	ArmoryName string `json:"-"`
+	ArmoryPK   string `json:"-"`
 }
 
 type ExtCommand struct {
-	CommandName string               `json:"command_name"`
-	Help        string               `json:"help"`
-	LongHelp    string               `json:"long_help"`
-	Files       []*extensionFile     `json:"files"`
-	Arguments   []*extensionArgument `json:"arguments"`
-	Entrypoint  string               `json:"entrypoint"`
-	DependsOn   string               `json:"depends_on"`
+	CommandName string                 `json:"command_name"`
+	Help        string                 `json:"help"`
+	LongHelp    string                 `json:"long_help"`
+	Files       []*extensionFile       `json:"files"`
+	Arguments   []*extensionArgument   `json:"arguments"`
+	Entrypoint  string                 `json:"entrypoint"`
+	DependsOn   string                 `json:"depends_on"`
+	Init        string                 `json:"init"`
+	Schema      *packages.OutputSchema `json:"schema"`
 
 	Manifest *ExtensionManifest
 }
@@ -134,17 +140,17 @@ func (e *ExtCommand) getFileForTarget(targetOS string, targetArch string) (strin
 	return filePath, nil
 }
 
-// ExtensionLoadCmd - Load extension command
-func ExtensionLoadCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
+// ExtensionLoadCmd - Load extension command.
+func ExtensionLoadCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	dirPath := args[0]
 	// dirPath := ctx.Args.String("dir-path")
-	manyfest, err := LoadExtensionManifest(filepath.Join(dirPath, ManifestFileName))
+	manifest, err := LoadExtensionManifest(filepath.Join(dirPath, ManifestFileName))
 	if err != nil {
 		return
 	}
 	// do not add if the command already exists
 	sliverMenu := con.App.Menu("implant")
-	for _, extCmd := range manyfest.ExtCommand {
+	for _, extCmd := range manifest.ExtCommand {
 		if CmdExists(extCmd.CommandName, sliverMenu.Command) {
 			con.PrintErrorf("%s command already exists\n", extCmd.CommandName)
 			confirm := false
@@ -159,7 +165,7 @@ func ExtensionLoadCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args
 	}
 }
 
-// LoadExtensionManifest - Parse extension files
+// LoadExtensionManifest - Parse extension files.
 func LoadExtensionManifest(manifestPath string) (*ExtensionManifest, error) {
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -181,7 +187,7 @@ func LoadExtensionManifest(manifestPath string) (*ExtensionManifest, error) {
 
 func convertOldManifest(old *ExtensionManifest_) *ExtensionManifest {
 	ret := &ExtensionManifest{
-		Name:            old.CommandName, //treating old commandname as the manifest name to avoid weird chars mostly
+		Name:            old.CommandName, //treating old command name as the manifest name to avoid weird chars mostly
 		Version:         old.Version,
 		ExtensionAuthor: old.ExtensionAuthor,
 		OriginalAuthor:  old.OriginalAuthor,
@@ -197,6 +203,7 @@ func convertOldManifest(old *ExtensionManifest_) *ExtensionManifest {
 				Entrypoint:  old.Entrypoint,
 				Files:       old.Files,
 				Arguments:   old.Arguments,
+				Schema:      nil,
 			},
 		},
 	}
@@ -212,7 +219,9 @@ func ParseExtensionManifest(data []byte) (*ExtensionManifest, error) {
 	err := json.Unmarshal(data, &extManifest)
 	if err != nil || len(extManifest.ExtCommand) == 0 { //extensions must have at least one command to be sensible
 		//maybe it's an old manifest
-		log.Println(err)
+		if err != nil {
+			log.Printf("extension load error: %s", err)
+		}
 		oldmanifest := &ExtensionManifest_{}
 		err := json.Unmarshal(data, &oldmanifest)
 		if err != nil {
@@ -222,9 +231,13 @@ func ParseExtensionManifest(data []byte) (*ExtensionManifest, error) {
 		//yes, ok, lets jigger it to a new manifest
 		extManifest = convertOldManifest(oldmanifest)
 	}
-	//pass ref to manifest to each command
+	//pass ref to manifest to each command and initialize output schema if applicable
 	for i := range extManifest.ExtCommand {
-		extManifest.ExtCommand[i].Manifest = extManifest
+		command := extManifest.ExtCommand[i]
+		command.Manifest = extManifest
+		if command.Schema != nil {
+			command.Schema.IngestColumns()
+		}
 	}
 	return extManifest, validManifest(extManifest)
 }
@@ -257,12 +270,17 @@ func validManifest(manifest *ExtensionManifest) error {
 		if extManifest.Help == "" {
 			return errors.New("missing `help` field in extension manifest")
 		}
+		if extManifest.Schema != nil {
+			if !packages.IsValidSchemaType(extManifest.Schema.Name) {
+				return fmt.Errorf("%s is not a valid schema type", extManifest.Schema.Name)
+			}
+		}
 	}
 	return nil
 }
 
 // ExtensionRegisterCommand - Register a new extension command
-func ExtensionRegisterCommand(extCmd *ExtCommand, cmd *cobra.Command, con *console.SliverConsoleClient) {
+func ExtensionRegisterCommand(extCmd *ExtCommand, cmd *cobra.Command, con *console.SliverClient) {
 	if errInvalidArgs := checkExtensionArgs(extCmd); errInvalidArgs != nil {
 		con.PrintErrorf(errInvalidArgs.Error())
 		return
@@ -345,7 +363,7 @@ func ExtensionRegisterCommand(extCmd *ExtCommand, cmd *cobra.Command, con *conso
 	cmd.AddCommand(extensionCmd)
 }
 
-func loadExtension(goos string, goarch string, checkCache bool, ext *ExtCommand, cmd *cobra.Command, con *console.SliverConsoleClient) error {
+func loadExtension(goos string, goarch string, checkCache bool, ext *ExtCommand, cmd *cobra.Command, con *console.SliverClient) error {
 	var extensionList []string
 	binPath, err := ext.getFileForTarget(goos, goarch)
 	if err != nil {
@@ -366,27 +384,50 @@ func loadExtension(goos string, goarch string, checkCache bool, ext *ExtCommand,
 		}
 		extensionList = extList.Names
 	}
-	depLoaded := false
-	for _, extName := range extensionList {
-		if !depLoaded {
-			if extN, ok := loadedExtensions[cmd.Name()]; ok && extName == extN.DependsOn {
-				depLoaded = true
+	//extensionList contains all *implant* loaded extensions. Is a sha256 sum of the relevant file.
+
+	//get the file hash to compare against implant extensions later
+	toberunfilepath, err := ext.getFileForTarget(goos, goarch)
+	if err != nil {
+		return err
+	}
+	//we need to check the dependent if it's a bof
+	if ext.DependsOn != "" {
+		//verify extension is in loaded list
+		if extension, found := loadedExtensions[ext.DependsOn]; found {
+			toberunfilepath, err = extension.getFileForTarget(goos, goarch)
+			if err != nil {
+				return err
 			}
+		} else {
+			// handle error
+			return fmt.Errorf("attempted to load non-existing extension: %s", ext.DependsOn)
 		}
-		if extN, ok := loadedExtensions[cmd.Name()]; ok && extN.CommandName == extName {
+	}
+
+	//todo, maybe cache these values somewhere
+	toberunfiledata, err := os.ReadFile(toberunfilepath)
+	if err != nil {
+		return err
+	}
+	if len(toberunfiledata) == 0 {
+		//read an empty file, bail out
+		return errors.New("read empty extension file content")
+	}
+	bd := sha256.Sum256(toberunfiledata)
+	toberunhash := hex.EncodeToString(bd[:])
+
+	for _, extName := range extensionList {
+		//check if extension we are trying to run (ext.CommandName or ext.DependsOn, for bofs) is already loaded
+		if extName == toberunhash {
+			//exists on the other side, exit early
 			return nil
 		}
 	}
 	// Extension not found, let's load it
-	if filepath.Ext(binPath) == ".o" {
-		// BOFs are not loaded by the DLL loader, but we make sure the loader itself is loaded
-		// Auto load the coff loader if we have it
-		if !depLoaded {
-			if errLoad := loadDep(goos, goarch, ext.DependsOn, cmd, con); errLoad != nil {
-				return errLoad
-			}
-		}
-		return nil
+	// BOFs are not loaded by the DLL loader, but we need to load the loader (more load more good)
+	if ext.DependsOn != "" {
+		return loadDep(goos, goarch, ext.DependsOn, cmd, con)
 	}
 	binData, err := os.ReadFile(binPath)
 	if err != nil {
@@ -398,14 +439,45 @@ func loadExtension(goos string, goarch string, checkCache bool, ext *ExtCommand,
 	return nil
 }
 
-func registerExtension(goos string, ext *ExtCommand, binData []byte, cmd *cobra.Command, con *console.SliverConsoleClient) error {
+func registerExtension(goos string, ext *ExtCommand, binData []byte, cmd *cobra.Command, con *console.SliverClient) error {
+	//set extension name to a hash of the data to avoid loading more than one instance
+	bd := sha256.Sum256(binData)
+	name := hex.EncodeToString(bd[:])
+	sess, beac := con.ActiveTarget.GetInteractive()
+	ctrl := make(chan bool)
+	//first time run of an extension will require some waiting depending on the size
+	if sess != nil {
+		msg := fmt.Sprintf("Sending %s to implant ...", ext.CommandName)
+		con.SpinUntil(msg, ctrl)
+	}
+	//don't block if we are in beacon mode
+	if beac != nil && sess == nil {
+		go func() {
+			registerResp, err := con.Rpc.RegisterExtension(context.Background(), &sliverpb.RegisterExtensionReq{
+				Name:    name,
+				Data:    binData,
+				OS:      goos,
+				Init:    ext.Init,
+				Request: con.ActiveTarget.Request(cmd),
+			})
+			if err != nil {
+				con.PrintErrorf("Error registering extension: %s\n", err)
+			}
+			if registerResp.Response != nil && registerResp.Response.Err != "" {
+				con.PrintErrorf("Error registering extension: %s\n", errors.New(registerResp.Response.Err))
+			}
+		}()
+		return nil
+	}
+	//session mode (hopefully)
 	registerResp, err := con.Rpc.RegisterExtension(context.Background(), &sliverpb.RegisterExtensionReq{
-		Name: ext.CommandName,
-		Data: binData,
-		OS:   goos,
-		//Init:    ext.Init, ?
+		Name:    name,
+		Data:    binData,
+		OS:      goos,
 		Request: con.ActiveTarget.Request(cmd),
 	})
+	ctrl <- true
+	<-ctrl
 	if err != nil {
 		return err
 	}
@@ -415,7 +487,7 @@ func registerExtension(goos string, ext *ExtCommand, binData []byte, cmd *cobra.
 	return nil
 }
 
-func loadDep(goos string, goarch string, depName string, cmd *cobra.Command, con *console.SliverConsoleClient) error {
+func loadDep(goos string, goarch string, depName string, cmd *cobra.Command, con *console.SliverClient) error {
 	depExt, ok := loadedExtensions[depName]
 	if ok {
 		depBinPath, err := depExt.getFileForTarget(goos, goarch)
@@ -431,7 +503,7 @@ func loadDep(goos string, goarch string, depName string, cmd *cobra.Command, con
 	return fmt.Errorf("missing dependency %s", depName)
 }
 
-func runExtensionCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
+func runExtensionCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	var (
 		err           error
 		extensionArgs []byte
@@ -488,16 +560,10 @@ func runExtensionCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args 
 		entryPoint = loadedExtensions[extName].Entrypoint // should exist at this point
 	} else {
 		// Regular DLL
-		// extArgs := strings.Join(args, " ")
-		//legacy case - single string arg
-		if len(ext.Arguments) == 1 && ext.Arguments[0].Type == "string" {
-			extensionArgs = []byte(strings.Join(args, " "))
-		} else {
-			extensionArgs, err = getExtArgs(cmd, args, binPath, ext)
-			if err != nil {
-				con.PrintErrorf("ext args error: %s\n", err)
-				return
-			}
+		extensionArgs, err = getExtArgs(cmd, args, binPath, ext)
+		if err != nil {
+			con.PrintErrorf("ext args error: %s\n", err)
+			return
 		}
 		extName = ext.CommandName
 		entryPoint = ext.Entrypoint
@@ -506,8 +572,41 @@ func runExtensionCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args 
 	ctrl := make(chan bool)
 	msg := fmt.Sprintf("Executing %s ...", cmd.Name())
 	con.SpinUntil(msg, ctrl)
+	extdata, err := os.ReadFile(binPath)
+	if err != nil {
+		con.PrintErrorf("ext read file error: %s\n", err)
+	}
+	bd := sha256.Sum256(extdata)
+	name := hex.EncodeToString(bd[:])
+	if isBOF {
+		//if we are using a bof, we are actually calling the coffloader extension - so get the file from dep ref and use that shasum
+
+		if extension, found := loadedExtensions[ext.DependsOn]; found {
+			dep, err := extension.getFileForTarget(goos, goarch)
+			if err != nil {
+				con.PrintErrorf("could not get file for extension %s", ext.DependsOn)
+				return
+			}
+			depdata, err := os.ReadFile(dep)
+			if err != nil {
+				con.PrintErrorf("dep read file error: %s\n", err)
+				return
+			}
+			if len(depdata) == 0 {
+				con.PrintErrorf("read empty file: %s\n", dep)
+				return
+			}
+			bd = sha256.Sum256(depdata)
+			name = hex.EncodeToString(bd[:])
+		} else {
+			// handle error
+			con.PrintErrorf("attempted to load non-existing extension: %s", ext.DependsOn)
+			return
+		}
+
+	}
 	callExtResp, err := con.Rpc.CallExtension(context.Background(), &sliverpb.CallExtensionReq{
-		Name:    extName,
+		Name:    name,
 		Export:  entryPoint,
 		Args:    extensionArgs,
 		Request: con.ActiveTarget.Request(cmd),
@@ -526,23 +625,38 @@ func runExtensionCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args 
 				con.PrintErrorf("Failed to decode call ext response %s\n", err)
 				return
 			}
-			PrintExtOutput(extName, ext.CommandName, callExtResp, con)
+			PrintExtOutput(extName, ext.CommandName, ext.Schema, callExtResp, con)
 		})
 		con.PrintAsyncResponse(callExtResp.Response)
 	} else {
-		PrintExtOutput(extName, ext.CommandName, callExtResp, con)
+		PrintExtOutput(extName, ext.CommandName, ext.Schema, callExtResp, con)
 	}
 }
 
-// PrintExtOutput - Print the ext execution output
-func PrintExtOutput(extName string, commandName string, callExtension *sliverpb.CallExtension, con *console.SliverConsoleClient) {
+// PrintExtOutput - Print the ext execution output.
+func PrintExtOutput(extName string, commandName string, outputSchema *packages.OutputSchema, callExtension *sliverpb.CallExtension, con *console.SliverClient) {
 	if extName == commandName {
-		con.PrintInfof("Successfully executed %s", extName)
+		con.PrintInfof("Successfully executed %s\n", extName)
 	} else {
-		con.PrintInfof("Successfully executed %s (%s)", commandName, extName)
+		con.PrintInfof("Successfully executed %s (%s)\n", commandName, extName)
 	}
 	if 0 < len(string(callExtension.Output)) {
-		con.PrintInfof("Got output:\n%s", callExtension.Output)
+		if outputSchema == nil {
+			con.PrintInfof("Got output:\n%s", callExtension.Output)
+		} else {
+			// Get output schema
+			schema := packages.GetNewPackageOutput(outputSchema.Name)
+			if schema != nil {
+				ingestErr := schema.IngestData(callExtension.Output, outputSchema.Columns(), outputSchema.GroupBy)
+				if ingestErr != nil {
+					con.PrintInfof("Got output:\n%s", callExtension.Output)
+				} else {
+					con.Printf("%s\n", schema.CreateTable())
+				}
+			} else {
+				con.PrintInfof("Got output:\n%s", callExtension.Output)
+			}
+		}
 	}
 	if callExtension.Response != nil && callExtension.Response.Err != "" {
 		con.PrintErrorf(callExtension.Response.Err)
@@ -550,7 +664,7 @@ func PrintExtOutput(extName string, commandName string, callExtension *sliverpb.
 	}
 }
 
-func getExtArgs(cmd *cobra.Command, args []string, binPath string, ext *ExtCommand) ([]byte, error) {
+func getExtArgs(_ *cobra.Command, args []string, _ string, ext *ExtCommand) ([]byte, error) {
 	var err error
 	argsBuffer := core.BOFArgsBuffer{
 		Buffer: new(bytes.Buffer),
@@ -558,6 +672,12 @@ func getExtArgs(cmd *cobra.Command, args []string, binPath string, ext *ExtComma
 
 	// Parse BOF arguments from grumble
 	missingRequiredArgs := make([]string, 0)
+
+	// If we have an extension that expects a single string, but more than one has been parsed, combine them
+	if len(ext.Arguments) == 1 && strings.Contains(ext.Arguments[0].Type, "string") && len(args) > 0 {
+		// The loop below will only read the first element of args because ext.Arguments is 1
+		args[0] = strings.Join(args, " ")
+	}
 
 	for _, arg := range ext.Arguments {
 		// If we don't have any positional words left to consume,
@@ -666,7 +786,7 @@ func getBOFArgs(cmd *cobra.Command, args []string, binPath string, ext *ExtComma
 	return extensionArgs, nil
 }
 
-// CmdExists - checks if a command exists
+// CmdExists - checks if a command exists.
 func CmdExists(name string, cmd *cobra.Command) bool {
 	for _, c := range cmd.Commands() {
 		if name == c.Name() {

@@ -54,6 +54,7 @@ message Session {
   int64 PeerID = 25;
   string Locale = 26;
   int64 FirstContact = 27;
+  string Integrity = 28;
 }
 
 message Beacon {
@@ -88,6 +89,8 @@ message Beacon {
 
   string Locale = 28;
   int64 FirstContact = 29;
+
+  string Integrity = 30;
 }
 
 message Beacons { repeated Beacon Beacons = 2; }
@@ -107,6 +110,11 @@ message BeaconTask {
 message BeaconTasks {
   string BeaconID = 1;
   repeated BeaconTask Tasks = 2;
+}
+
+message BeaconIntegrity {
+  string BeaconID = 1;
+  string Integrity = 2;
 }
 
 message ImplantC2 {
@@ -217,6 +225,7 @@ message ExternalImplantConfig {
   ImplantConfig Config = 1;
   ImplantBuild Build = 2;
   HTTPC2Config HTTPC2 = 3;
+  map<string, uint64> encoders = 4;
 }
 
 message ExternalImplantBinary {
@@ -504,7 +513,6 @@ message MsfStagerReq {
   string OS = 5; // reserved for future usage
   StageProtocol Protocol = 6;
   repeated string BadChars = 7;
-  string AdvOptions = 8;
   string HTTPC2ConfigName = 9;
 }
 
@@ -527,6 +535,7 @@ message MigrateReq {
   ImplantConfig Config = 2;
   ShellcodeEncoder Encoder = 3;
   string Name = 4;
+  string ProcName = 5;
 
   commonpb.Request Request = 9;
 }
@@ -1299,4 +1308,25 @@ message ResourceID {
   string Type = 2;
   string Name = 3;
   uint64 Value = 4;
+}
+
+// [ Certificates ] ----------------------------------------
+
+message CertificatesReq {
+  uint32 CategoryFilters = 1;
+  string CN = 2;
+}
+
+message CertificateData {
+  string CN = 1;
+  string CreationTime = 2;
+  string ValidityStart = 3;
+  string ValidityExpiry = 4;
+  string Type = 5;
+  string KeyAlgorithm = 6;
+  string ID = 7;
+}
+
+message CertificateInfo {
+  repeated CertificateData info = 1;  
 }

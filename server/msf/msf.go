@@ -21,7 +21,6 @@ package msf
 import (
 	"bytes"
 	"fmt"
-	"net/url"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -83,6 +82,7 @@ var (
 		"dw":            true,
 		"dword":         true,
 		"exe":           true,
+		"exe-service":   true,
 		"hex":           true,
 		"java":          true,
 		"js_be":         true,
@@ -115,7 +115,6 @@ type VenomConfig struct {
 	BadChars   []string
 	Format     string
 	Luri       string
-	AdvOptions string
 }
 
 // Version - Return the version of MSFVenom
@@ -163,20 +162,6 @@ func VenomPayload(config VenomConfig) ([]byte, error) {
 		luri = fmt.Sprintf("LURI=%s", luri)
 	}
 
-	// Parse advanced options
-	advancedOptions := make(map[string]string)
-	if config.AdvOptions != "" {
-		options, err := url.ParseQuery(config.AdvOptions)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse provided advanced options: %s", err.Error())
-		}
-		for option, value := range options {
-			// Options should only be specified once,
-			// so if a given option is specified more than once, use the last value
-			advancedOptions[option] = value[len(value)-1]
-		}
-	}
-
 	args := []string{
 		"--platform", config.Os,
 		"--arch", config.Arch,
@@ -185,10 +170,6 @@ func VenomPayload(config VenomConfig) ([]byte, error) {
 		fmt.Sprintf("LHOST=%s", config.LHost),
 		fmt.Sprintf("LPORT=%d", config.LPort),
 		"EXITFUNC=thread",
-	}
-
-	for optionName, optionValue := range advancedOptions {
-		args = append(args, fmt.Sprintf("%s=%s", optionName, optionValue))
 	}
 
 	if luri != "" {
@@ -221,10 +202,10 @@ func VenomPayload(config VenomConfig) ([]byte, error) {
 func venomCmd(args []string) ([]byte, error) {
 	msfLog.Printf("%s %v", venomBin, args)
 	cmd := exec.Command(venomBin, args...)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	err := cmd.Run()
 	msfLog.Println(cmd.String())
 	if err != nil {
@@ -239,10 +220,10 @@ func venomCmd(args []string) ([]byte, error) {
 // consoleCmd - Execute a msfvenom command
 func consoleCmd(args []string) ([]byte, error) {
 	cmd := exec.Command(consoleBin, args...)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	err := cmd.Run()
 	if err != nil {
 		msfLog.Printf("--- stdout ---\n%s\n", stdout.String())

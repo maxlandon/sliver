@@ -31,7 +31,7 @@ jobs:
         run: make servers
 
       - name: Server Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: servers
           path: ./sliver-server_*
@@ -42,10 +42,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Go 1.21
+      - name: Go 1.22
         uses: actions/setup-go@v5
         with:
-          go-version: "^1.21"
+          go-version: "^1.22"
 
       - name: Check Out Code
         uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
         run: make clients
 
       - name: Client Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: clients
           path: ./sliver-client_*
@@ -72,7 +72,7 @@ jobs:
 
     steps:
       - run: mkdir -p ./builds
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           path: ./builds
 

@@ -5,10 +5,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/spf13/cobra"
-
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -17,13 +16,13 @@ var (
 )
 
 // GenerateBeaconCmd - The main command used to generate implant binaries
-func GenerateBeaconCmd(cmd *cobra.Command, con *console.SliverConsoleClient, args []string) {
+func GenerateBeaconCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	name, config := parseCompileFlags(cmd, con)
 	if config == nil {
 		return
 	}
 	config.IsBeacon = true
-	err := parseBeaconFlags(cmd, con, config)
+	err := parseBeaconFlags(cmd, config)
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
 		return
@@ -33,13 +32,13 @@ func GenerateBeaconCmd(cmd *cobra.Command, con *console.SliverConsoleClient, arg
 		save, _ = os.Getwd()
 	}
 	if external, _ := cmd.Flags().GetBool("external-builder"); !external {
-		compile(config, save, con)
+		compile(name, config, save, con)
 	} else {
 		externalBuild(name, config, save, con)
 	}
 }
 
-func parseBeaconFlags(cmd *cobra.Command, con *console.SliverConsoleClient, config *clientpb.ImplantConfig) error {
+func parseBeaconFlags(cmd *cobra.Command, config *clientpb.ImplantConfig) error {
 	days, _ := cmd.Flags().GetInt64("days")
 	hours, _ := cmd.Flags().GetInt64("hours")
 	minutes, _ := cmd.Flags().GetInt64("minutes")
