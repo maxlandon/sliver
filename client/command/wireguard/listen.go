@@ -36,9 +36,9 @@ func ListenCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 
 	con.PrintInfof("Starting Wireguard listener ...\n")
 	wg, err := con.Rpc.StartWGListener(context.Background(), &clientpb.WGListenerReq{
-		Port:       lport,
-		NPort:      nport,
-		KeyPort:    keyExchangePort,
+		Port:    lport,
+		NPort:   nport,
+		KeyPort: keyExchangePort,
 		// Persistent: persistent,
 	})
 	if err != nil {
