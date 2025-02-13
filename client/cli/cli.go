@@ -28,7 +28,6 @@ import (
 	"github.com/reeflective/team/client/commands"
 
 	"github.com/bishopfox/sliver/client/command"
-	"github.com/bishopfox/sliver/client/command/completers"
 	sliverConsole "github.com/bishopfox/sliver/client/command/console"
 	client "github.com/bishopfox/sliver/client/console"
 )
@@ -92,14 +91,8 @@ func SliverCLI(con *client.SliverClient) (root *cobra.Command) {
 	command.BindPreRun(root, con.PreRunConnect)
 	command.BindPostRun(root, con.PostRunDisconnect)
 
-	// Add a CLI-specific flag for allowing users to force a specific remote
-	// Sliver server configuration to be used, instead of prompting user to choose.
-	root.Flags().StringP("config", "c", "", "Force connecting to a specific Sliver server")
-	completers.NewFlagCompsFor(root, func(comp *carapace.ActionMap) {
-		(*comp)["config"] = carapace.ActionCallback(func(c carapace.Context) carapace.Action {
-			return commands.ConfigsAppCompleter(con.Teamclient, "configs")
-		})
-	})
+    // Let the user target a specific Sliver server to run on.
+	bindServerConfig(con, root)
 
 	// Generate the root completion command.
 	carapace.Gen(root)

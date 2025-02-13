@@ -19,14 +19,17 @@ package command
 */
 
 import (
+	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 
 	"github.com/reeflective/console"
+	"github.com/reeflective/team/client/commands"
 
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/armory"
 	"github.com/bishopfox/sliver/client/command/beacons"
 	"github.com/bishopfox/sliver/client/command/builders"
+	"github.com/bishopfox/sliver/client/command/completers"
 	"github.com/bishopfox/sliver/client/command/crack"
 	"github.com/bishopfox/sliver/client/command/creds"
 	"github.com/bishopfox/sliver/client/command/dns"
@@ -246,4 +249,15 @@ func BindPostRun(root *cobra.Command, runs ...CobraRunnerE) {
 		// Bind
 		cmd.PostRunE = cRun
 	}
+}
+
+// bindServerConfig adds a CLI-specific flag for allowing users to force a specific
+// remote Sliver server configuration to be used, instead of prompting user to choose.
+func bindServerConfig(con *client.SliverClient, root *cobra.Command) {
+	root.Flags().StringP("config", "c", "", "Force connecting to a specific Sliver server")
+	completers.NewFlagCompsFor(root, func(comp *carapace.ActionMap) {
+		(*comp)["config"] = carapace.ActionCallback(func(c carapace.Context) carapace.Action {
+			return commands.ConfigsAppCompleter(con.Teamclient, "configs")
+		})
+	})
 }
