@@ -120,6 +120,72 @@ func (con *SliverClient) GetActiveSessionConfig() *clientpb.ImplantConfig {
 		IsSharedLib:         true,
 		C2:                  c2s,
 	}
+
+	/* If this config will be used to build an implant,
+	we need to make sure to include the correct transport
+	for the build */
+	switch session.Transport {
+	case "mtls":
+		config.IncludeMTLS = true
+	case "http(s)":
+		config.IncludeHTTP = true
+	case "dns":
+		config.IncludeDNS = true
+	case "wg":
+		config.IncludeWG = true
+	case "namedpipe":
+		config.IncludeNamePipe = true
+	case "tcppivot":
+		config.IncludeTCP = true
+	}
+	return config
+}
+
+func (con *SliverClient) GetActiveBeaconConfig() *clientpb.ImplantConfig {
+	beacon := con.ActiveTarget.GetBeacon()
+	if beacon == nil {
+		return nil
+	}
+
+	c2s := []*clientpb.ImplantC2{}
+	c2s = append(c2s, &clientpb.ImplantC2{
+		URL:      beacon.ActiveC2,
+		Priority: uint32(0),
+	})
+
+	config := &clientpb.ImplantConfig{
+		ID:                  beacon.ID,
+		GOOS:                beacon.OS,
+		GOARCH:              beacon.Arch,
+		Debug:               false,
+		IsBeacon:            true,
+		BeaconInterval:      beacon.Interval,
+		BeaconJitter:        beacon.Jitter,
+		Evasion:             beacon.Evasion,
+		MaxConnectionErrors: uint32(1000),
+		ReconnectInterval:   int64(60),
+		Format:              clientpb.OutputFormat_SHELLCODE,
+		IsSharedLib:         true,
+		C2:                  c2s,
+	}
+
+	/* If this config will be used to build an implant,
+	we need to make sure to include the correct transport
+	for the build */
+	switch beacon.Transport {
+	case "mtls":
+		config.IncludeMTLS = true
+	case "http":
+		config.IncludeHTTP = true
+	case "dns":
+		config.IncludeDNS = true
+	case "wg":
+		config.IncludeWG = true
+	case "namedpipe":
+		config.IncludeNamePipe = true
+	case "tcppivot":
+		config.IncludeTCP = true
+	}
 	return config
 }
 

@@ -33,7 +33,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// NetstatCmd - Display active network connections on the remote system.
+// NetstatCmd - Display active network connections on the remote system
 func NetstatCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {

@@ -342,6 +342,16 @@ const (
 
 	// MsgGrepReq - Request to grep for data
 	MsgGrepReq
+
+	// Services messages
+	MsgServicesReq
+	MsgServiceDetailReq
+	MsgStartServiceByNameReq
+
+	MsgRegistryReadHiveReq
+
+	// MsgMountReq - Request filesystem mounts
+	MsgMountReq
 )
 
 // Constants to replace enums
@@ -588,8 +598,12 @@ func MsgNumber(request proto.Message) uint32 {
 	case *GrepReq:
 		return MsgGrepReq
 
+	case *MountReq:
+		return MsgMountReq
+
 	case *MemfilesListReq:
 		return MsgMemfilesListReq
+
 	case *MemfilesAddReq:
 		return MsgMemfilesAddReq
 	case *MemfilesAdd:
@@ -608,6 +622,17 @@ func MsgNumber(request proto.Message) uint32 {
 	case *ExecWasmExtensionReq:
 		return MsgExecWasmExtensionReq
 
+	case *ServicesReq:
+		return MsgServicesReq
+
+	case *ServiceDetailReq:
+		return MsgServiceDetailReq
+
+	case *StartServiceByNameReq:
+		return MsgStartServiceByNameReq
+
+	case *RegistryReadHiveReq:
+		return MsgRegistryReadHiveReq
 	}
 	return uint32(0)
 }

@@ -34,7 +34,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// ProcdumpCmd - Dump the memory of a remote process.
+// ProcdumpCmd - Dump the memory of a remote process
 func ProcdumpCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -104,7 +104,7 @@ func ProcdumpCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	}
 }
 
-// PrintProcessDump - Handle the results of a process dump.
+// PrintProcessDump - Handle the results of a process dump
 func PrintProcessDump(dump *sliverpb.ProcessDump, saveTo string, hostname string, pid int, con *console.SliverClient) {
 	var err error
 	var saveToFile *os.File

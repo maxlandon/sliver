@@ -35,15 +35,14 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/cheggaaa/pb/v3"
-	"github.com/spf13/cobra"
-
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/client/version"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/util"
+	"github.com/cheggaaa/pb/v3"
+	"github.com/spf13/cobra"
 )
 
 // UpdateCmd - Check for updates.
@@ -265,11 +264,13 @@ func downloadAsset(client *http.Client, asset *version.Asset, saveTo string) err
 	if err != nil {
 		return err
 	}
+	defer writer.Close()
 
 	resp, err := client.Get(asset.BrowserDownloadURL)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	bar := pb.Full.Start64(limit)
 	barReader := bar.NewProxyReader(resp.Body)

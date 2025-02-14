@@ -251,6 +251,9 @@ func displayTrafficEncoderTests(running bool, tests *clientpb.TrafficEncoderTest
 
 // TrafficEncodersRemoveCmd - Remove a traffic encoder.
 func TrafficEncodersRemoveCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
+	_, cancel := con.GrpcContext(cmd)
+	defer cancel()
+
 	var name string
 	if len(args) > 0 {
 		for _, name := range args {

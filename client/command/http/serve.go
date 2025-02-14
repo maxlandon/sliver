@@ -36,7 +36,6 @@ import (
 	"github.com/bishopfox/sliver/util/encoders"
 )
 
-// ServeStageCmd --url [tcp://ip:port | http://ip:port ] --profile name.
 func ServeStageCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	profileName, _ := cmd.Flags().GetString("profile")
 	listenerURL, _ := cmd.Flags().GetString("url")

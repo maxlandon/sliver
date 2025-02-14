@@ -35,7 +35,7 @@ type NameValueProbability struct {
 	Name        string `json:"name"`
 	Value       string `json:"value"`
 	Probability int    `json:"probability"`
-	Methods     []string
+	Method      string `json:"method"`
 }
 
 // HTTPC2ImplantConfig - Implant configuration options

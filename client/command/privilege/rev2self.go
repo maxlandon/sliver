@@ -29,7 +29,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// RevToSelfCmd - Drop any impersonated tokens.
+// RevToSelfCmd - Drop any impersonated tokens
 func RevToSelfCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -58,7 +58,7 @@ func RevToSelfCmd(cmd *cobra.Command, con *console.SliverClient, args []string) 
 	}
 }
 
-// PrintRev2Self - Print the result of revert to self.
+// PrintRev2Self - Print the result of revert to self
 func PrintRev2Self(revert *sliverpb.RevToSelf, con *console.SliverClient) {
 	if revert.Response != nil && revert.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", revert.Response.GetErr())

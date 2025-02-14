@@ -91,7 +91,6 @@ func split(input string, hl bool) (words []string, remainder string, err error) 
 			}
 
 			input = input[l:]
-
 			continue
 		} else if c == escapeChar {
 			// Look ahead for escaped newline so we can skip over it
@@ -100,12 +99,9 @@ func split(input string, hl bool) (words []string, remainder string, err error) 
 				if hl {
 					remainder = string(escapeChar)
 				}
-
 				err = errUnterminatedEscape
-
-				return words, remainder, err
+				return
 			}
-
 			c2, l2 := utf8.DecodeRuneInString(next)
 			if c2 == '\n' {
 				if hl {
@@ -115,25 +111,20 @@ func split(input string, hl bool) (words []string, remainder string, err error) 
 						words[len(words)-1] += string(c) + string(c2)
 					}
 				}
-
 				input = next[l2:]
-
 				continue
 			}
 		}
 
 		var word string
-
 		word, input, err = splitWord(input, &buf, hl)
 		if err != nil {
 			remainder = input
-			return words, remainder, err
+			return
 		}
-
 		words = append(words, word)
 	}
-
-	return words, remainder, err
+	return
 }
 
 // splitWord has been modified to return the remainder of the input (the part that has not been
@@ -194,7 +185,6 @@ escape:
 		}
 		input = input[l:]
 	}
-
 	goto raw
 
 single:
@@ -276,17 +266,4 @@ func trimSpacesMatch(remain []string) (trimmed []string) {
 	}
 
 	return
-}
-
-func (c *Console) lineEmpty(line string) bool {
-	empty := true
-
-	for _, r := range line {
-		if !strings.ContainsRune(string(c.EmptyChars), r) {
-			empty = false
-			break
-		}
-	}
-
-	return empty
 }

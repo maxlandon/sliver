@@ -14,6 +14,7 @@ import (
 
 // Commands returns the `jobs` command and its subcommands.
 func Commands(con *console.SliverClient) []*cobra.Command {
+	// Job control
 	jobsCmd := &cobra.Command{
 		Use:   consts.JobsStr,
 		Short: "Job control",

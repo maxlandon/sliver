@@ -19,6 +19,8 @@ package command
 */
 
 import (
+	"fmt"
+
 	"github.com/reeflective/console"
 	"github.com/spf13/cobra"
 
@@ -157,7 +159,9 @@ func SliverCommands(con *client.SliverClient) console.Commands {
 			mext, err := extensions.LoadExtensionManifest(manifest)
 			// Absorb error in case there's no extensions manifest
 			if err != nil {
-				con.PrintErrorf("Failed to load extension: %s", err)
+				// con doesn't appear to be initialised here?
+				// con.PrintErrorf("Failed to load extension: %s", err)
+				fmt.Printf("Failed to load extension: %s\n", err)
 				continue
 			}
 			for _, ext := range mext.ExtCommand {

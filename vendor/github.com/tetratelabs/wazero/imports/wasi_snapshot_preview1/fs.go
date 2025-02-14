@@ -7,7 +7,6 @@ import (
 	"math"
 	"path"
 	"strings"
-	"syscall"
 	"unsafe"
 
 	"github.com/tetratelabs/wazero/api"
@@ -465,7 +464,7 @@ var fdFilestatSetSize = newHostFunc(wasip1.FdFilestatSetSizeName, fdFilestatSetS
 
 func fdFilestatSetSizeFn(_ context.Context, mod api.Module, params []uint64) experimentalsys.Errno {
 	fd := int32(params[0])
-	size := uint32(params[1])
+	size := int64(params[1])
 
 	fsc := mod.(*wasm.ModuleInstance).Sys.FS()
 
@@ -473,7 +472,7 @@ func fdFilestatSetSizeFn(_ context.Context, mod api.Module, params []uint64) exp
 	if f, ok := fsc.LookupFile(fd); !ok {
 		return experimentalsys.EBADF
 	} else {
-		return f.File.Truncate(int64(size))
+		return f.File.Truncate(size)
 	}
 }
 
@@ -1463,7 +1462,7 @@ func pathFilestatSetTimesFn(_ context.Context, mod api.Module, params []uint64) 
 		return preopen.Utimens(pathName, atim, mtim)
 	}
 	// Otherwise, we need to emulate don't follow by opening the file by path.
-	if f, errno := preopen.OpenFile(pathName, syscall.O_WRONLY, 0); errno != 0 {
+	if f, errno := preopen.OpenFile(pathName, experimentalsys.O_WRONLY, 0); errno != 0 {
 		return errno
 	} else {
 		defer f.Close()
@@ -1597,6 +1596,10 @@ func pathOpenFn(_ context.Context, mod api.Module, params []uint64) experimental
 		return errno
 	}
 
+	if pathLen == 0 {
+		return experimentalsys.EINVAL
+	}
+
 	fileOpenFlags := openFlags(dirflags, oflags, fdflags, rights)
 	isDir := fileOpenFlags&experimentalsys.O_DIRECTORY != 0
 
@@ -1705,7 +1708,6 @@ func openFlags(dirflags, oflags, fdflags uint16, rights uint32) (openFlags exper
 	}
 	if oflags&wasip1.O_DIRECTORY != 0 {
 		openFlags |= experimentalsys.O_DIRECTORY
-		return // Early return for directories as the rest of flags doesn't make sense for it.
 	} else if oflags&wasip1.O_EXCL != 0 {
 		openFlags |= experimentalsys.O_EXCL
 	}
@@ -1795,6 +1797,10 @@ func pathReadlinkFn(_ context.Context, mod api.Module, params []uint64) experime
 	dst, errno := preopen.Readlink(p)
 	if errno != 0 {
 		return errno
+	}
+
+	if len(dst) > int(bufLen) {
+		return experimentalsys.ERANGE
 	}
 
 	if ok := mem.WriteString(buf, dst); !ok {
@@ -1948,23 +1954,17 @@ func pathSymlinkFn(_ context.Context, mod api.Module, params []uint64) experimen
 		return experimentalsys.EFAULT
 	}
 
-	newPathBuf, ok := mem.Read(newPath, newPathLen)
-	if !ok {
-		return experimentalsys.EFAULT
+	_, newPathName, errno := atPath(fsc, mod.Memory(), fd, newPath, newPathLen)
+	if errno != 0 {
+		return errno
 	}
 
 	return dir.FS.Symlink(
 		// Do not join old path since it's only resolved when dereference the link created here.
 		// And the dereference result depends on the opening directory's file descriptor at that point.
-		bufToStr(oldPathBuf),
-		path.Join(dir.Name, bufToStr(newPathBuf)),
+		unsafe.String(&oldPathBuf[0], int(oldPathLen)),
+		newPathName,
 	)
-}
-
-// bufToStr converts the given byte slice as string unsafely.
-func bufToStr(buf []byte) string {
-	// TODO: use unsafe.String after flooring Go 1.20.
-	return *(*string)(unsafe.Pointer(&buf))
 }
 
 // pathUnlinkFile is the WASI function named PathUnlinkFileName which unlinks a

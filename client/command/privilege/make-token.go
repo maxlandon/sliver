@@ -39,7 +39,7 @@ var logonTypes = map[string]uint32{
 	"LOGON_NEW_CREDENTIALS":   9,
 }
 
-// MakeTokenCmd - Windows only, create a token using "valid" credentials.
+// MakeTokenCmd - Windows only, create a token using "valid" credentails
 func MakeTokenCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -57,7 +57,7 @@ func MakeTokenCmd(cmd *cobra.Command, con *console.SliverClient, args []string) 
 	}
 
 	if username == "" || password == "" {
-		con.PrintErrorf("Pou must provide a username and password\n")
+		con.PrintErrorf("You must provide a username and password\n")
 		return
 	}
 
@@ -92,7 +92,7 @@ func MakeTokenCmd(cmd *cobra.Command, con *console.SliverClient, args []string) 
 	}
 }
 
-// PrintMakeToken - Print the results of attempting to make a token.
+// PrintMakeToken - Print the results of attempting to make a token
 func PrintMakeToken(makeToken *sliverpb.MakeToken, domain string, username string, con *console.SliverClient) {
 	if makeToken.Response != nil && makeToken.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", makeToken.Response.GetErr())

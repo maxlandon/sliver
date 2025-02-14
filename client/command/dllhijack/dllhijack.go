@@ -33,7 +33,7 @@ import (
 // dllhijack --ref-path c:\windows\system32\msasn1.dll --profile dll  TARGET_PATH
 // dllhijack --ref-path c:\windows\system32\msasn1.dll --ref-file /tmp/ref.dll --profile dll  TARGET_PATH
 
-// DllHijackCmd -- implements the dllhijack command.
+// DllHijackCmd -- implements the dllhijack command
 func DllHijackCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	var (
 		localRefData  []byte

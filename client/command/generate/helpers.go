@@ -3,10 +3,8 @@ package generate
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/rsteube/carapace"
-	cache "github.com/rsteube/carapace/pkg/cache/key"
 	"github.com/rsteube/carapace/pkg/style"
 
 	"github.com/bishopfox/sliver/client/command/completers"
@@ -15,7 +13,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
-// GetSliverBinary - Get the binary of an implant based on it's profile
 func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverClient) ([]byte, error) {
 	var data []byte
 
@@ -32,6 +29,22 @@ func GetSliverBinary(profile *clientpb.ImplantProfile, con *console.SliverClient
 		return data, err
 	}
 	data = generated.GetFile().GetData()
+
+	if profile.Config.Format == clientpb.OutputFormat_SHELLCODE && profile.Config.SGNEnabled {
+		encodeResp, err := con.Rpc.ShellcodeEncoder(context.Background(), &clientpb.ShellcodeEncodeReq{
+			Encoder:      clientpb.ShellcodeEncoder_SHIKATA_GA_NAI,
+			Architecture: profile.Config.GOARCH,
+			Iterations:   1,
+			BadChars:     []byte{},
+			Data:         data,
+		})
+		if err != nil {
+			con.PrintErrorf("Error encoding shellcode")
+			return nil, err
+		}
+		data = encodeResp.Data
+	}
+
 	_, err = con.Rpc.SaveImplantProfile(context.Background(), profile)
 	if err != nil {
 		con.PrintErrorf("Error updating implant profile\n")
@@ -125,59 +138,47 @@ func FormatCompleter() carapace.Action {
 	})
 }
 
-// MsfFormatCompleter completes MsfVenom stager formats.
-func MsfFormatCompleter(con *console.SliverClient) carapace.Action {
-	return carapace.ActionCallback(func(_ carapace.Context) carapace.Action {
-		if msg, err := con.PreRunComplete(); err != nil {
-			return msg
-		}
-
-		info, err := con.Rpc.GetMetasploitCompiler(context.Background(), &commonpb.Empty{})
+// HTTPC2Completer - Completes the HTTP C2 PROFILES
+func HTTPC2Completer(con *console.SliverClient) carapace.Action {
+	return carapace.ActionCallback(func(c carapace.Context) carapace.Action {
+		grpcCtx, cancel := con.GrpcContext(nil)
+		defer cancel()
+		httpC2Profiles, err := con.Rpc.GetHTTPC2Profiles(grpcCtx, &commonpb.Empty{})
 		if err != nil {
-			return carapace.ActionMessage("failed to fetch Metasploit info: %s", con.UnwrapServerErr(err))
+			return carapace.ActionMessage("failed to fetch HTTP C2 profiles: %s", err.Error())
 		}
 
 		var results []string
-
-		for _, fmt := range info.Formats {
-			fmt = strings.TrimSpace(fmt)
-			if fmt == "" {
-				continue
-			}
-
-			results = append(results, fmt)
-
+		for _, profile := range httpC2Profiles.Configs {
+			results = append(results, profile.Name)
 		}
-
-		return carapace.ActionValues(results...).Tag("msfvenom formats")
-	}).Cache(completers.CacheMsf)
+		return carapace.ActionValues(results...).Tag("HTTP C2 Profiles")
+	})
 }
 
-// MsfArchCompleter completes MsfVenom stager architectures.
-func MsfArchCompleter(con *console.SliverClient) carapace.Action {
-	return carapace.ActionCallback(func(_ carapace.Context) carapace.Action {
-		if msg, err := con.PreRunComplete(); err != nil {
-			return msg
-		}
-
-		info, err := con.Rpc.GetMetasploitCompiler(context.Background(), &commonpb.Empty{})
+// TrafficEncoderCompleter - Completes the names of traffic encoders.
+func TrafficEncodersCompleter(con *console.SliverClient) carapace.Action {
+	return carapace.ActionCallback(func(c carapace.Context) carapace.Action {
+		grpcCtx, cancel := con.GrpcContext(nil)
+		defer cancel()
+		trafficEncoders, err := con.Rpc.TrafficEncoderMap(grpcCtx, &commonpb.Empty{})
 		if err != nil {
-			return carapace.ActionMessage("failed to fetch Metasploit info: %s", con.UnwrapServerErr(err))
+			return carapace.ActionMessage("failed to fetch traffic encoders: %s", err.Error())
 		}
 
-		var results []string
-
-		for _, arch := range info.Archs {
-			arch = strings.TrimSpace(arch)
-			if arch == "" {
-				continue
+		results := []string{}
+		for _, encoder := range trafficEncoders.Encoders {
+			results = append(results, encoder.Wasm.Name)
+			skipTests := ""
+			if encoder.SkipTests {
+				skipTests = "[skip-tests]"
 			}
-
-			results = append(results, arch)
+			desc := fmt.Sprintf("(Wasm: %s) %s", encoder.Wasm.Name, skipTests)
+			results = append(results, desc)
 		}
 
-		return carapace.ActionValues(results...).Tag("msfvenom archs")
-	}).Cache(completers.CacheMsf)
+		return carapace.ActionValuesDescribed(results...).Tag("traffic encoders")
+	})
 }
 
 // MsfFormatCompleter completes MsfVenom stager encoders.
@@ -231,5 +232,6 @@ func MsfPayloadCompleter(con *console.SliverClient) carapace.Action {
 		}
 
 		return carapace.ActionValuesDescribed(results...)
-	}).Cache(completers.CacheMsf, cache.String("payloads")).MultiParts("/").StyleF(style.ForPath)
+	}).MultiParts("/").StyleF(style.ForPath)
+	// }).Cache(completers.CacheMsf, cache.String("payloads")).MultiParts("/").StyleF(style.ForPath)
 }

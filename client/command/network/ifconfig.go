@@ -35,7 +35,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// IfconfigCmd - Display network interfaces on the remote system.
+// IfconfigCmd - Display network interfaces on the remote system
 func IfconfigCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -63,7 +63,7 @@ func IfconfigCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	}
 }
 
-// PrintIfconfig - Print the ifconfig response.
+// PrintIfconfig - Print the ifconfig response
 func PrintIfconfig(ifconfig *sliverpb.Ifconfig, all bool, con *console.SliverClient) {
 	var err error
 	interfaces := ifconfig.NetInterfaces

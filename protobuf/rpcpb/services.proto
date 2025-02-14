@@ -47,6 +47,7 @@ service SliverRPC {
   rpc GetBeaconTasks(clientpb.Beacon) returns (clientpb.BeaconTasks);
   rpc GetBeaconTaskContent(clientpb.BeaconTask) returns (clientpb.BeaconTask);
   rpc CancelBeaconTask(clientpb.BeaconTask) returns (clientpb.BeaconTask);
+  rpc UpdateBeaconIntegrityInformation(clientpb.BeaconIntegrity) returns (commonpb.Empty);
 
 
   // *** Jobs ***
@@ -108,6 +109,9 @@ service SliverRPC {
   rpc BuilderTrigger(clientpb.Event) returns (commonpb.Empty);
   rpc Builders(commonpb.Empty) returns (clientpb.Builders);
 
+  // *** Certificates ***
+  rpc GetCertificateInfo(clientpb.CertificatesReq) returns (clientpb.CertificateInfo);
+
   // *** Crackstation ***
   rpc CrackstationRegister(clientpb.Crackstation)
       returns (stream clientpb.Event);
@@ -135,7 +139,6 @@ service SliverRPC {
   rpc DeleteImplantProfile(clientpb.DeleteReq) returns (commonpb.Empty);
   rpc SaveImplantProfile(clientpb.ImplantProfile)
       returns (clientpb.ImplantProfile);
-  rpc MsfStage(clientpb.MsfStagerReq) returns (clientpb.MsfStager);
   rpc ShellcodeRDI(clientpb.ShellcodeRDIReq) returns (clientpb.ShellcodeRDI);
   rpc GetCompiler(commonpb.Empty) returns (clientpb.Compiler);
   rpc GetMetasploitCompiler(commonpb.Empty) returns (clientpb.MetasploitCompiler);
@@ -180,6 +183,7 @@ service SliverRPC {
   rpc MemfilesList(sliverpb.MemfilesListReq) returns (sliverpb.Ls);
   rpc MemfilesAdd(sliverpb.MemfilesAddReq) returns (sliverpb.MemfilesAdd);
   rpc MemfilesRm(sliverpb.MemfilesRmReq) returns (sliverpb.MemfilesRm);
+  rpc Mount(sliverpb.MountReq) returns (sliverpb.Mount);
   rpc ProcessDump(sliverpb.ProcessDumpReq) returns (sliverpb.ProcessDump);
   rpc RunAs(sliverpb.RunAsReq) returns (sliverpb.RunAs);
   rpc Impersonate(sliverpb.ImpersonateReq) returns (sliverpb.Impersonate);
@@ -198,6 +202,9 @@ service SliverRPC {
   rpc Screenshot(sliverpb.ScreenshotReq) returns (sliverpb.Screenshot);
   rpc CurrentTokenOwner(sliverpb.CurrentTokenOwnerReq)
       returns (sliverpb.CurrentTokenOwner);
+  rpc Services(sliverpb.ServicesReq) returns (sliverpb.Services);
+  rpc ServiceDetail(sliverpb.ServiceDetailReq) returns (sliverpb.ServiceDetail);
+  rpc StartServiceByName(sliverpb.StartServiceByNameReq) returns (sliverpb.ServiceInfo);
 
   // *** Pivots ***
   rpc PivotStartListener(sliverpb.PivotStartListenerReq)
@@ -226,6 +233,7 @@ service SliverRPC {
       returns (sliverpb.RegistrySubKeyList);
   rpc RegistryListValues(sliverpb.RegistryListValuesReq)
       returns (sliverpb.RegistryValuesList);
+  rpc RegistryReadHive(sliverpb.RegistryReadHiveReq) returns (sliverpb.RegistryReadHive);
   rpc RunSSHCommand(sliverpb.SSHCommandReq) returns (sliverpb.SSHCommand);
   rpc HijackDLL(clientpb.DllHijackReq) returns (clientpb.DllHijack);
   rpc GetPrivs(sliverpb.GetPrivsReq) returns (sliverpb.GetPrivs);

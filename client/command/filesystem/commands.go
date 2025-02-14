@@ -1,16 +1,15 @@
 package filesystem
 
 import (
-	"github.com/rsteube/carapace"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-
 	"github.com/bishopfox/sliver/client/command/completers"
 	"github.com/bishopfox/sliver/client/command/flags"
 	"github.com/bishopfox/sliver/client/command/help"
 	"github.com/bishopfox/sliver/client/command/loot"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/rsteube/carapace"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // Commands returns the “ command and its subcommands.
@@ -278,9 +277,9 @@ func Commands(con *console.SliverClient) []*cobra.Command {
 	flags.Bind("", false, uploadCmd, func(f *pflag.FlagSet) {
 		f.BoolP("ioc", "i", false, "track uploaded file as an ioc")
 		f.BoolP("recurse", "r", false, "recursively upload a directory")
-		f.BoolP("overwrite", "o", false, "overwrite files that exist in the destination")
 		f.BoolP("preserve", "p", false, "preserve directory structure when uploading a directory")
 		f.Int64P("timeout", "t", flags.DefaultTimeout, "grpc timeout in seconds")
+		f.BoolP("overwrite", "o", false, "overwrite file if it exists")
 	})
 	carapace.Gen(uploadCmd).PositionalCompletion(
 		carapace.ActionFiles().Usage("local path to the file to upload"),
@@ -323,6 +322,19 @@ func Commands(con *console.SliverClient) []*cobra.Command {
 
 	carapace.Gen(memfilesRmCmd).PositionalCompletion(carapace.ActionValues().Usage("memfile file descriptor"))
 
+	mountCmd := &cobra.Command{
+		Use:   consts.MountStr,
+		Short: "Get information on mounted filesystems",
+		Long:  help.GetHelpFor([]string{consts.MountStr}),
+		Run: func(cmd *cobra.Command, args []string) {
+			MountCmd(cmd, con, args)
+		},
+		GroupID: consts.FilesystemHelpGroup,
+	}
+	flags.Bind("", false, mountCmd, func(f *pflag.FlagSet) {
+		f.Int64P("timeout", "t", flags.DefaultTimeout, "grpc timeout in seconds")
+	})
+
 	return []*cobra.Command{
 		mvCmd,
 		cpCmd,
@@ -338,5 +350,9 @@ func Commands(con *console.SliverClient) []*cobra.Command {
 		tailCmd,
 		uploadCmd,
 		memfilesCmd,
+		mountCmd,
+		grepCmd,
+		headCmd,
+		tailCmd,
 	}
 }

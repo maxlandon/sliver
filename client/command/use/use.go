@@ -40,7 +40,7 @@ import (
 
 var ErrNoSelection = errors.New("no selection")
 
-// UseCmd - Change the active session.
+// UseCmd - Change the active session
 func UseCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	var session *clientpb.Session
 	var beacon *clientpb.Beacon
@@ -70,7 +70,7 @@ func UseCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	}
 }
 
-// SessionOrBeaconByID - Select a session or beacon by ID.
+// SessionOrBeaconByID - Select a session or beacon by ID
 func SessionOrBeaconByID(id string, con *console.SliverClient) (*clientpb.Session, *clientpb.Beacon, error) {
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
@@ -95,7 +95,7 @@ func SessionOrBeaconByID(id string, con *console.SliverClient) (*clientpb.Sessio
 	return nil, nil, fmt.Errorf("no session or beacon found with ID %s", id)
 }
 
-// SelectSessionOrBeacon - Select a session or beacon.
+// SelectSessionOrBeacon - Select a session or beacon
 func SelectSessionOrBeacon(con *console.SliverClient) (*clientpb.Session, *clientpb.Beacon, error) {
 	// Get and sort sessions
 	sessions, err := con.Rpc.GetSessions(context.Background(), &commonpb.Empty{})
@@ -183,7 +183,7 @@ func SelectSessionOrBeacon(con *console.SliverClient) (*clientpb.Session, *clien
 	return nil, nil, nil
 }
 
-// BeaconAndSessionIDCompleter - BeaconAndSessionIDCompleter for beacon / session ids.
+// BeaconAndSessionIDCompleter - BeaconAndSessionIDCompleter for beacon / session ids
 func BeaconAndSessionIDCompleter(con *console.SliverClient) carapace.Action {
 	comps := func(ctx carapace.Context) carapace.Action {
 		var action carapace.Action

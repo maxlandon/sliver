@@ -28,15 +28,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/proto"
-	"gopkg.in/AlecAivazis/survey.v1"
-
 	"github.com/bishopfox/sliver/client/command/loot"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/util/encoders"
+	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
+	"gopkg.in/AlecAivazis/survey.v1"
 )
 
 func DownloadCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
@@ -97,9 +96,7 @@ func prettifyDownloadName(path string) string {
 	filteredString = multipleUnderscoreRegex.ReplaceAllString(filteredString, "_")
 
 	// If there is an underscore at the front of the filename, strip that off
-	if strings.HasPrefix(filteredString, "_") {
-		filteredString = filteredString[1:]
-	}
+	filteredString, _ = strings.CutPrefix(filteredString, "_")
 
 	return filteredString
 }
@@ -118,7 +115,15 @@ func HandleDownloadResponse(download *sliverpb.Download, cmd *cobra.Command, arg
 		}
 	}
 
-	remotePath := args[0]
+	// Use download.Path because a glob matching a single file on the remote will not have the
+	// correct file name - the filename will contain the globs if we use the path from the user
+	// On non-Windows systems, filepath.Base will not see backslashes, so we will replace them
+	// on systems that do not use backslashes as path separators
+	remotePath := download.Path
+	if strings.Contains(download.Path, "\\") && string(os.PathSeparator) != "\\" {
+		remotePath = strings.ReplaceAll(download.Path, "\\", "/")
+	}
+
 	var localPath string
 	if len(args) == 1 {
 		localPath = "."

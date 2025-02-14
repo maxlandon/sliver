@@ -29,7 +29,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// GetSystemCmd - Windows only, attempt to get SYSTEM on the remote system.
+// GetSystemCmd - Windows only, attempt to get SYSTEM on the remote system
 func GetSystemCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -76,7 +76,7 @@ func GetSystemCmd(cmd *cobra.Command, con *console.SliverClient, args []string) 
 	}
 }
 
-// PrintGetSystem - Print the results of get system.
+// PrintGetSystem - Print the results of get system
 func PrintGetSystem(getsystemResp *sliverpb.GetSystem, con *console.SliverClient) {
 	if getsystemResp.Response != nil && getsystemResp.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", getsystemResp.GetResponse().GetErr())

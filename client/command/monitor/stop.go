@@ -27,7 +27,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
-// MonitorStopCmd - Stop monitoring threat intel for implants.
+// MonitorStopCmd - Stop monitoring threat intel for implants
 func MonitorStopCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	_, err := con.Rpc.MonitorStop(context.Background(), &commonpb.Empty{})
 	if err != nil {

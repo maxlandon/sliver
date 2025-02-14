@@ -45,7 +45,6 @@ var (
 		consts.InfoStr:          infoHelp,
 		consts.UseStr:           useHelp,
 		consts.GenerateStr:      generateHelp,
-		consts.MsfStagerStr:     generateStagerHelp,
 		consts.StageListenerStr: stageListenerHelp,
 
 		consts.MsfStr:              msfHelp,
@@ -78,22 +77,25 @@ var (
 		consts.PsExecStr:           psExecHelp,
 		consts.BackdoorStr:         backdoorHelp,
 		consts.SpawnDllStr:         spawnDllHelp,
+		consts.MountStr:            mountHelp,
 
-		consts.WebsitesStr:                  websitesHelp,
-		consts.ScreenshotStr:                screenshotHelp,
-		consts.MakeTokenStr:                 makeTokenHelp,
-		consts.EnvStr:                       getEnvHelp,
-		consts.EnvStr + sep + consts.SetStr: setEnvHelp,
-		consts.RegistryWriteStr:             regWriteHelp,
-		consts.RegistryReadStr:              regReadHelp,
-		consts.RegistryCreateKeyStr:         regCreateKeyHelp,
-		consts.RegistryDeleteKeyStr:         regDeleteKeyHelp,
-		consts.PivotsStr:                    pivotsHelp,
-		consts.WgPortFwdStr:                 wgPortFwdHelp,
-		consts.WgSocksStr:                   wgSocksHelp,
-		consts.SSHStr:                       sshHelp,
-		consts.DLLHijackStr:                 dllHijackHelp,
-		consts.GetPrivsStr:                  getPrivsHelp,
+		consts.WebsitesStr:                                  websitesHelp,
+		consts.ScreenshotStr:                                screenshotHelp,
+		consts.MakeTokenStr:                                 makeTokenHelp,
+		consts.EnvStr:                                       getEnvHelp,
+		consts.EnvStr + sep + consts.SetStr:                 setEnvHelp,
+		consts.RegistryWriteStr:                             regWriteHelp,
+		consts.RegistryReadStr:                              regReadHelp,
+		consts.RegistryCreateKeyStr:                         regCreateKeyHelp,
+		consts.RegistryDeleteKeyStr:                         regDeleteKeyHelp,
+		consts.RegistryReadStr + consts.RegistryReadHiveStr: regReadHiveHelp,
+		consts.PivotsStr:                                    pivotsHelp,
+		consts.WgPortFwdStr:                                 wgPortFwdHelp,
+		consts.WgSocksStr:                                   wgSocksHelp,
+		consts.SSHStr:                                       sshHelp,
+		consts.DLLHijackStr:                                 dllHijackHelp,
+		consts.GetPrivsStr:                                  getPrivsHelp,
+		consts.ServicesStr:                                  servicesHelp,
 
 		// Loot
 		consts.LootStr: lootHelp,
@@ -105,6 +107,7 @@ var (
 		// Profiles
 		consts.ProfilesStr + sep + consts.NewStr:      newProfileHelp,
 		consts.ProfilesStr + sep + consts.GenerateStr: generateProfileHelp,
+		consts.ProfilesStr + sep + consts.StageStr:    generateProfileStageHelp,
 
 		// Reactions
 		consts.ReactionStr:                         reactionHelp,
@@ -118,13 +121,14 @@ var (
 
 		// HTTP C2
 		consts.C2ProfileStr: c2ProfilesHelp,
+		consts.C2ProfileStr + sep + consts.C2GenerateStr: c2GenerateHelp,
 	}
 
 	jobsHelp = `[[.Bold]]Command:[[.Normal]] jobs <options>
 	[[.Bold]]About:[[.Normal]] Manage jobs/listeners.`
 
 	sessionsHelp = `[[.Bold]]Command:[[.Normal]] sessions <options>
-[[.Bold]]About:[[.Normal]] List Sliver sessions, and optionally interact or kill a session.`
+[[.Bold]]About:[[.Normal]] List Sliver sessions, and optionally interact or kill a session. Process integrity information is only available on Windows and is updated each time the getprivs command is executed.`
 
 	backgroundHelp = `[[.Bold]]Command:[[.Normal]] background
 [[.Bold]]About:[[.Normal]] Background the active Sliver.`
@@ -192,33 +196,6 @@ Due to the large number of options and C2s this can be a lot of typing. If you'd
 see 'help profiles new'. All "generate" flags can be saved into a profile, you can view existing profiles with the "profiles"
 command.
 `
-	generateStagerHelp = `[[.Bold]]Command:[[.Normal]] generate msf-stager <options>
-[[.Bold]]About:[[.Normal]] Generate a new sliver stager shellcode and saves the output to the cwd or a path specified with --save, or to stdout using --format.
-
-[[.Bold]][[.Underline]]++ Bad Characters ++[[.Normal]]
-Bad characters must be specified like this for single bytes:
-
-generate msf-stager -b 00
-
-And like this for multiple bytes:
-
-generate msf-stager -b '00 0a cc'
-
-[[.Bold]][[.Underline]]++ Output Formats ++[[.Normal]]
-You can use the --format flag to print out the shellcode to stdout, in one of the following transform formats:
-[[.Bold]]bash c csharp dw dword hex java js_be js_le num perl pl powershell ps1 py python raw rb ruby sh vbapplication vbscript[[.Normal]]
-
-[[.Bold]][[.Underline]]++ Advanced Options ++[[.Normal]]
-If there are any advanced options you need to pass to msfvenom, you can use the --advanced flag to provide them. They must be provided in URI query format: option1=value1&option2=value2 and so on.
-The full list of advanced options is available using "show advanced" in msf for the payload corresponding to the chosen protocol:
-	TCP: meterpreter/reverse_tcp
-	HTTP: custom/reverse_winhttp
-	HTTPS: custom/reverse_winhttps
-
-Example:
-	To tell the stager to use the proxy proxy.corp.com:8080 with the user name "corp_drone" and password "MyPassword", you would pass the following string to --advanced:
-	HttpProxyHost=proxy.corp.com&HttpProxyPort=8080&HttpProxyUser=corp_drone&HttpProxyPass=MyPassword
-`
 	stageListenerHelp = `[[.Bold]]Command:[[.Normal]] stage-listener <options>
 [[.Bold]]About:[[.Normal]] Starts a stager listener bound to a Sliver profile.
 [[.Bold]]Examples:[[.Normal]] 
@@ -245,6 +222,9 @@ settings. Generated implants will still have per-binary certificates/obfuscation
 
 	generateProfileHelp = `[[.Bold]]Command:[[.Normal]] generate [name] <options>
 [[.Bold]]About:[[.Normal]] Generate an implant from a saved profile (see 'profiles new --help').`
+
+	generateProfileStageHelp = `[[.Bold]]Command:[[.Normal]] stage [name] <options>
+	[[.Bold]]About:[[.Normal]] Generate and encrypt or encode an implant from a saved profile (see 'profiles stage --help').`
 
 	msfHelp = `[[.Bold]]Command:[[.Normal]] msf [--lhost] <options>
 [[.Bold]]About:[[.Normal]] Execute a metasploit payload in the current process.`
@@ -378,6 +358,9 @@ On Windows, escaping is disabled. Instead, '\\' is treated as path separator.`
 [[.Bold]]About:[[.Normal]] (Windows Only) Executes the .NET assembly in a child process.
 `
 
+	mountHelp = `[[.Bold]]Command:[[.Normal]] mount
+[[.Bold]]About:[[.Normal]] Displays information about mounted drives on the system, including mount point, space metrics, and filesystem.`
+
 	executeShellcodeHelp = `[[.Bold]]Command:[[.Normal]] execute-shellcode [local path to raw shellcode]
 [[.Bold]]About:[[.Normal]] Executes the given shellcode in the implant's process.
 
@@ -386,8 +369,8 @@ Shellcode files should be binary encoded, you can generate Sliver shellcode file
 	generate --format shellcode
 `
 
-	migrateHelp = `[[.Bold]]Command:[[.Normal]] migrate <pid>
-[[.Bold]]About:[[.Normal]] (Windows Only) Migrates into the process designated by <pid>.`
+	migrateHelp = `[[.Bold]]Command:[[.Normal]] migrate <flags>
+[[.Bold]]About:[[.Normal]] (Windows Only) Migrates into the process designated by <flags>.`
 
 	websitesHelp = `[[.Bold]]Command:[[.Normal]] websites <options> <operation>
 [[.Bold]]About:[[.Normal]] Add content to HTTP(S) C2 websites to make them look more legit.
@@ -571,6 +554,26 @@ When using the binary type, you must either:
 	regDeleteKeyHelp = `[[.Bold]]Command:[[.Normal]] registry delete PATH [name]
 [[.Bold]]About:[[.Normal]] Remove a value from the windows registry
 [[.Bold]]Example:[[.Normal]] registry delete --hive HKLM "software\\google\\chrome\\BLBeacon\\version"
+	`
+
+	regReadHiveHelp = `[[.Bold]]Command:[[.Normal]] registry read hive [name]
+[[.Bold]]About:[[.Normal]] Read the contents of a registry hive into a binary file
+[[.Bold]]Example:[[.Normal]] registry read hive --hive HKLM --save SAM.save SAM
+This command reads the data from a specified registry hive into a binary file, suitable for use with tools like secretsdump.
+The specified hive must be relative to a root hive (such as HKLM or HKCU). For example, if you want to read the SAM hive, the
+root hive is HKLM, and the specified hive is SAM.
+This command requires that the process has or can get the SeBackupPrivilege privilege. If you want to dump the SAM, SECURITY, and
+SYSTEM hives, your process must be running with High integrity (i.e. running as SYSTEM).
+
+Supported root hives are:
+	- HKEY_LOCAL_MACHINE (HKLM, default)
+	- HKEY_CURRENT_USER (HKCU)
+	- HKEY_CURRENT_CONFIG (HKCC)
+	- HKEY_PERFORMANCE_DATA (HKPD)
+	- HKEY_USERS (HKU)
+	- HKEY_CLASSES_ROOT (HKCR)
+The root hive must be specified using its abbreviation, such as HKLM, and not its full name.
+This command will only run against the local machine.
 	`
 
 	pivotsHelp = `[[.Bold]]Command:[[.Normal]] pivots
@@ -1247,13 +1250,17 @@ Sliver uses the same hash identifiers as Hashcat (use the #):
 28200 | Exodus Desktop Wallet (scrypt)                             | Cryptocurrency Wallet
 `
 
-	credsAddFileHelp = fmt.Sprintf(`[[.Bold]]Command:[[.Normal]] creds add file
+	hashNewlineFormat          = "hash"
+	userColonHashNewlineFormat = "user:hash"
+	csvFormat                  = "csv"
+	credsAddFileHelp           = fmt.Sprintf(`[[.Bold]]Command:[[.Normal]] creds add file
 [[.Bold]]About:[[.Normal]] Add a file containing credentials to the database.
 
 [[.Bold]]File Formats:[[.Normal]]
 % 10s - One hash per line.
 % 10s - A file containing lines of 'username:hash' pairs.
 % 10s - A CSV file containing 'username,hash' pairs (additional columns ignored).
+[[.Bold]]About:[[.Normal]] Display details of HTTP C2 profiles loaded into Sliver.
 `, consts.HashNewlineFormat, consts.UserColonHashNewlineFormat, consts.CSVFormat)
 
 	c2ProfilesHelp = `[[.Bold]]Command:[[.Normal]] c2profile
@@ -1262,6 +1269,10 @@ Sliver uses the same hash identifiers as Hashcat (use the #):
 
 	C2ProfileImportStr = `[[.Bold]]Command:[[.Normal]] Import
 	[[.Bold]]About:[[.Normal]] Load custom HTTP C2 profiles.
+	`
+	c2GenerateHelp = `[[.Bold]]Command:[[.Normal]] C2 Profile generate
+[[.Bold]]About:[[.Normal]] Generate C2 profile using a file containing urls.
+Optionaly import profile or use another profile as a base template for the new profile.
 	`
 
 	grepHelp = `[[.Bold]]Command:[[.Normal]] grep [flags / options] <search pattern> <path>
@@ -1290,6 +1301,11 @@ Searches can be filtered using the following patterns:
 
 If you need to match a special character (*, ?, '-', '[', ']', '\\'), place '\\' in front of it (example: \\?).
 On Windows, escaping is disabled. Instead, '\\' is treated as path separator.`
+
+	servicesHelp = `[[.Bold]]Command:[[.Normal]] services [-H <hostname>]
+[[.Bold]]About:[[.Normal]] Get information about services and control them (start, stop).
+	
+To get information about services, you need to be an authenticated user on the system or domain. To control services, you need administrator or higher privileges.`
 )
 
 const (

@@ -27,6 +27,9 @@ import (
 	"github.com/bishopfox/sliver/client/command/armory"
 	"github.com/bishopfox/sliver/client/command/beacons"
 	"github.com/bishopfox/sliver/client/command/builders"
+	"github.com/bishopfox/sliver/client/command/c2profiles"
+	"github.com/bishopfox/sliver/client/command/certificates"
+	"github.com/bishopfox/sliver/client/command/clean"
 	"github.com/bishopfox/sliver/client/command/crack"
 	"github.com/bishopfox/sliver/client/command/creds"
 	"github.com/bishopfox/sliver/client/command/dns"
@@ -41,11 +44,11 @@ import (
 	"github.com/bishopfox/sliver/client/command/loot"
 	"github.com/bishopfox/sliver/client/command/monitor"
 	"github.com/bishopfox/sliver/client/command/mtls"
-	operator "github.com/bishopfox/sliver/client/command/prelude-operator"
 	"github.com/bishopfox/sliver/client/command/reaction"
 	"github.com/bishopfox/sliver/client/command/sessions"
 	"github.com/bishopfox/sliver/client/command/settings"
 	sgn "github.com/bishopfox/sliver/client/command/shikata-ga-nai"
+	"github.com/bishopfox/sliver/client/command/socks"
 	"github.com/bishopfox/sliver/client/command/taskmany"
 	"github.com/bishopfox/sliver/client/command/tcp"
 	"github.com/bishopfox/sliver/client/command/transports"
@@ -99,9 +102,10 @@ func ServerCommands(con *client.SliverClient, serverCmds SliverBinder) console.C
 			alias.Commands,
 			armory.Commands,
 			update.Commands,
-			operator.Commands,
 			creds.Commands,
 			crack.Commands,
+			certificates.Commands,
+			clean.Command,
 		)
 
 		// C2 Network
@@ -115,6 +119,8 @@ func ServerCommands(con *client.SliverClient, serverCmds SliverBinder) console.C
 			tcp.Commands,
 			wireguard.Commands,
 			websites.Commands,
+			c2profiles.Commands,
+			socks.Commands,
 		)
 
 		// Payloads

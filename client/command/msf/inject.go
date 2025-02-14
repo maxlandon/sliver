@@ -22,13 +22,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/proto"
-
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 )
 
 // MsfInjectCmd - Inject a metasploit payload into a remote process.
@@ -50,7 +49,7 @@ func MsfInjectCmd(cmd *cobra.Command, con *console.SliverClient, args []string) 
 		return
 	}
 	if pid == -1 {
-		con.PrintErrorf("Invalid pid '%s', see `help %s`\n", lhost, consts.MsfInjectStr)
+		con.PrintErrorf("Invalid pid '%d', see `help %s`\n", pid, consts.MsfInjectStr)
 		return
 	}
 	var goos string

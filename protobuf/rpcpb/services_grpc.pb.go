@@ -22,185 +22,191 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	SliverRPC_GetVersion_FullMethodName                     = "/rpcpb.SliverRPC/GetVersion"
-	SliverRPC_GetUsers_FullMethodName                       = "/rpcpb.SliverRPC/GetUsers"
-	SliverRPC_ClientLog_FullMethodName                      = "/rpcpb.SliverRPC/ClientLog"
-	SliverRPC_Kill_FullMethodName                           = "/rpcpb.SliverRPC/Kill"
-	SliverRPC_Reconfigure_FullMethodName                    = "/rpcpb.SliverRPC/Reconfigure"
-	SliverRPC_Rename_FullMethodName                         = "/rpcpb.SliverRPC/Rename"
-	SliverRPC_ImplantHistory_FullMethodName                 = "/rpcpb.SliverRPC/ImplantHistory"
-	SliverRPC_GetImplantHistory_FullMethodName              = "/rpcpb.SliverRPC/GetImplantHistory"
-	SliverRPC_GetSessions_FullMethodName                    = "/rpcpb.SliverRPC/GetSessions"
-	SliverRPC_MonitorStart_FullMethodName                   = "/rpcpb.SliverRPC/MonitorStart"
-	SliverRPC_MonitorStop_FullMethodName                    = "/rpcpb.SliverRPC/MonitorStop"
-	SliverRPC_MonitorListConfig_FullMethodName              = "/rpcpb.SliverRPC/MonitorListConfig"
-	SliverRPC_MonitorAddConfig_FullMethodName               = "/rpcpb.SliverRPC/MonitorAddConfig"
-	SliverRPC_MonitorDelConfig_FullMethodName               = "/rpcpb.SliverRPC/MonitorDelConfig"
-	SliverRPC_StartMTLSListener_FullMethodName              = "/rpcpb.SliverRPC/StartMTLSListener"
-	SliverRPC_StartWGListener_FullMethodName                = "/rpcpb.SliverRPC/StartWGListener"
-	SliverRPC_StartDNSListener_FullMethodName               = "/rpcpb.SliverRPC/StartDNSListener"
-	SliverRPC_StartHTTPSListener_FullMethodName             = "/rpcpb.SliverRPC/StartHTTPSListener"
-	SliverRPC_StartHTTPListener_FullMethodName              = "/rpcpb.SliverRPC/StartHTTPListener"
-	SliverRPC_GetBeacons_FullMethodName                     = "/rpcpb.SliverRPC/GetBeacons"
-	SliverRPC_GetBeacon_FullMethodName                      = "/rpcpb.SliverRPC/GetBeacon"
-	SliverRPC_RmBeacon_FullMethodName                       = "/rpcpb.SliverRPC/RmBeacon"
-	SliverRPC_GetBeaconTasks_FullMethodName                 = "/rpcpb.SliverRPC/GetBeaconTasks"
-	SliverRPC_GetBeaconTaskContent_FullMethodName           = "/rpcpb.SliverRPC/GetBeaconTaskContent"
-	SliverRPC_CancelBeaconTask_FullMethodName               = "/rpcpb.SliverRPC/CancelBeaconTask"
-	SliverRPC_GetJobs_FullMethodName                        = "/rpcpb.SliverRPC/GetJobs"
-	SliverRPC_KillJob_FullMethodName                        = "/rpcpb.SliverRPC/KillJob"
-	SliverRPC_RestartJobs_FullMethodName                    = "/rpcpb.SliverRPC/RestartJobs"
-	SliverRPC_StartTCPStagerListener_FullMethodName         = "/rpcpb.SliverRPC/StartTCPStagerListener"
-	SliverRPC_StartHTTPStagerListener_FullMethodName        = "/rpcpb.SliverRPC/StartHTTPStagerListener"
-	SliverRPC_LootAdd_FullMethodName                        = "/rpcpb.SliverRPC/LootAdd"
-	SliverRPC_LootRm_FullMethodName                         = "/rpcpb.SliverRPC/LootRm"
-	SliverRPC_LootUpdate_FullMethodName                     = "/rpcpb.SliverRPC/LootUpdate"
-	SliverRPC_LootContent_FullMethodName                    = "/rpcpb.SliverRPC/LootContent"
-	SliverRPC_LootAll_FullMethodName                        = "/rpcpb.SliverRPC/LootAll"
-	SliverRPC_Creds_FullMethodName                          = "/rpcpb.SliverRPC/Creds"
-	SliverRPC_CredsAdd_FullMethodName                       = "/rpcpb.SliverRPC/CredsAdd"
-	SliverRPC_CredsRm_FullMethodName                        = "/rpcpb.SliverRPC/CredsRm"
-	SliverRPC_CredsUpdate_FullMethodName                    = "/rpcpb.SliverRPC/CredsUpdate"
-	SliverRPC_GetCredByID_FullMethodName                    = "/rpcpb.SliverRPC/GetCredByID"
-	SliverRPC_GetCredsByHashType_FullMethodName             = "/rpcpb.SliverRPC/GetCredsByHashType"
-	SliverRPC_GetPlaintextCredsByHashType_FullMethodName    = "/rpcpb.SliverRPC/GetPlaintextCredsByHashType"
-	SliverRPC_CredsSniffHashType_FullMethodName             = "/rpcpb.SliverRPC/CredsSniffHashType"
-	SliverRPC_Hosts_FullMethodName                          = "/rpcpb.SliverRPC/Hosts"
-	SliverRPC_Host_FullMethodName                           = "/rpcpb.SliverRPC/Host"
-	SliverRPC_HostRm_FullMethodName                         = "/rpcpb.SliverRPC/HostRm"
-	SliverRPC_HostIOCRm_FullMethodName                      = "/rpcpb.SliverRPC/HostIOCRm"
-	SliverRPC_Generate_FullMethodName                       = "/rpcpb.SliverRPC/Generate"
-	SliverRPC_GenerateExternal_FullMethodName               = "/rpcpb.SliverRPC/GenerateExternal"
-	SliverRPC_GenerateExternalSaveBuild_FullMethodName      = "/rpcpb.SliverRPC/GenerateExternalSaveBuild"
-	SliverRPC_GenerateExternalGetBuildConfig_FullMethodName = "/rpcpb.SliverRPC/GenerateExternalGetBuildConfig"
-	SliverRPC_GenerateStage_FullMethodName                  = "/rpcpb.SliverRPC/GenerateStage"
-	SliverRPC_StageImplantBuild_FullMethodName              = "/rpcpb.SliverRPC/StageImplantBuild"
-	SliverRPC_GetHTTPC2Profiles_FullMethodName              = "/rpcpb.SliverRPC/GetHTTPC2Profiles"
-	SliverRPC_GetHTTPC2ProfileByName_FullMethodName         = "/rpcpb.SliverRPC/GetHTTPC2ProfileByName"
-	SliverRPC_SaveHTTPC2Profile_FullMethodName              = "/rpcpb.SliverRPC/SaveHTTPC2Profile"
-	SliverRPC_BuilderRegister_FullMethodName                = "/rpcpb.SliverRPC/BuilderRegister"
-	SliverRPC_BuilderTrigger_FullMethodName                 = "/rpcpb.SliverRPC/BuilderTrigger"
-	SliverRPC_Builders_FullMethodName                       = "/rpcpb.SliverRPC/Builders"
-	SliverRPC_CrackstationRegister_FullMethodName           = "/rpcpb.SliverRPC/CrackstationRegister"
-	SliverRPC_CrackstationTrigger_FullMethodName            = "/rpcpb.SliverRPC/CrackstationTrigger"
-	SliverRPC_CrackstationBenchmark_FullMethodName          = "/rpcpb.SliverRPC/CrackstationBenchmark"
-	SliverRPC_Crackstations_FullMethodName                  = "/rpcpb.SliverRPC/Crackstations"
-	SliverRPC_CrackTaskByID_FullMethodName                  = "/rpcpb.SliverRPC/CrackTaskByID"
-	SliverRPC_CrackTaskUpdate_FullMethodName                = "/rpcpb.SliverRPC/CrackTaskUpdate"
-	SliverRPC_CrackFilesList_FullMethodName                 = "/rpcpb.SliverRPC/CrackFilesList"
-	SliverRPC_CrackFileCreate_FullMethodName                = "/rpcpb.SliverRPC/CrackFileCreate"
-	SliverRPC_CrackFileChunkUpload_FullMethodName           = "/rpcpb.SliverRPC/CrackFileChunkUpload"
-	SliverRPC_CrackFileChunkDownload_FullMethodName         = "/rpcpb.SliverRPC/CrackFileChunkDownload"
-	SliverRPC_CrackFileComplete_FullMethodName              = "/rpcpb.SliverRPC/CrackFileComplete"
-	SliverRPC_CrackFileDelete_FullMethodName                = "/rpcpb.SliverRPC/CrackFileDelete"
-	SliverRPC_Regenerate_FullMethodName                     = "/rpcpb.SliverRPC/Regenerate"
-	SliverRPC_ImplantBuilds_FullMethodName                  = "/rpcpb.SliverRPC/ImplantBuilds"
-	SliverRPC_DeleteImplantBuild_FullMethodName             = "/rpcpb.SliverRPC/DeleteImplantBuild"
-	SliverRPC_Canaries_FullMethodName                       = "/rpcpb.SliverRPC/Canaries"
-	SliverRPC_GenerateWGClientConfig_FullMethodName         = "/rpcpb.SliverRPC/GenerateWGClientConfig"
-	SliverRPC_GenerateUniqueIP_FullMethodName               = "/rpcpb.SliverRPC/GenerateUniqueIP"
-	SliverRPC_ImplantProfiles_FullMethodName                = "/rpcpb.SliverRPC/ImplantProfiles"
-	SliverRPC_DeleteImplantProfile_FullMethodName           = "/rpcpb.SliverRPC/DeleteImplantProfile"
-	SliverRPC_SaveImplantProfile_FullMethodName             = "/rpcpb.SliverRPC/SaveImplantProfile"
-	SliverRPC_MsfStage_FullMethodName                       = "/rpcpb.SliverRPC/MsfStage"
-	SliverRPC_ShellcodeRDI_FullMethodName                   = "/rpcpb.SliverRPC/ShellcodeRDI"
-	SliverRPC_GetCompiler_FullMethodName                    = "/rpcpb.SliverRPC/GetCompiler"
-	SliverRPC_GetMetasploitCompiler_FullMethodName          = "/rpcpb.SliverRPC/GetMetasploitCompiler"
-	SliverRPC_ShellcodeEncoder_FullMethodName               = "/rpcpb.SliverRPC/ShellcodeEncoder"
-	SliverRPC_ShellcodeEncoderMap_FullMethodName            = "/rpcpb.SliverRPC/ShellcodeEncoderMap"
-	SliverRPC_TrafficEncoderMap_FullMethodName              = "/rpcpb.SliverRPC/TrafficEncoderMap"
-	SliverRPC_TrafficEncoderAdd_FullMethodName              = "/rpcpb.SliverRPC/TrafficEncoderAdd"
-	SliverRPC_TrafficEncoderRm_FullMethodName               = "/rpcpb.SliverRPC/TrafficEncoderRm"
-	SliverRPC_Websites_FullMethodName                       = "/rpcpb.SliverRPC/Websites"
-	SliverRPC_Website_FullMethodName                        = "/rpcpb.SliverRPC/Website"
-	SliverRPC_WebsiteRemove_FullMethodName                  = "/rpcpb.SliverRPC/WebsiteRemove"
-	SliverRPC_WebsiteAddContent_FullMethodName              = "/rpcpb.SliverRPC/WebsiteAddContent"
-	SliverRPC_WebsiteUpdateContent_FullMethodName           = "/rpcpb.SliverRPC/WebsiteUpdateContent"
-	SliverRPC_WebsiteRemoveContent_FullMethodName           = "/rpcpb.SliverRPC/WebsiteRemoveContent"
-	SliverRPC_Ping_FullMethodName                           = "/rpcpb.SliverRPC/Ping"
-	SliverRPC_Ps_FullMethodName                             = "/rpcpb.SliverRPC/Ps"
-	SliverRPC_Terminate_FullMethodName                      = "/rpcpb.SliverRPC/Terminate"
-	SliverRPC_Ifconfig_FullMethodName                       = "/rpcpb.SliverRPC/Ifconfig"
-	SliverRPC_Netstat_FullMethodName                        = "/rpcpb.SliverRPC/Netstat"
-	SliverRPC_Ls_FullMethodName                             = "/rpcpb.SliverRPC/Ls"
-	SliverRPC_Cd_FullMethodName                             = "/rpcpb.SliverRPC/Cd"
-	SliverRPC_Pwd_FullMethodName                            = "/rpcpb.SliverRPC/Pwd"
-	SliverRPC_Mv_FullMethodName                             = "/rpcpb.SliverRPC/Mv"
-	SliverRPC_Cp_FullMethodName                             = "/rpcpb.SliverRPC/Cp"
-	SliverRPC_Rm_FullMethodName                             = "/rpcpb.SliverRPC/Rm"
-	SliverRPC_Mkdir_FullMethodName                          = "/rpcpb.SliverRPC/Mkdir"
-	SliverRPC_Download_FullMethodName                       = "/rpcpb.SliverRPC/Download"
-	SliverRPC_Upload_FullMethodName                         = "/rpcpb.SliverRPC/Upload"
-	SliverRPC_Grep_FullMethodName                           = "/rpcpb.SliverRPC/Grep"
-	SliverRPC_Chmod_FullMethodName                          = "/rpcpb.SliverRPC/Chmod"
-	SliverRPC_Chown_FullMethodName                          = "/rpcpb.SliverRPC/Chown"
-	SliverRPC_Chtimes_FullMethodName                        = "/rpcpb.SliverRPC/Chtimes"
-	SliverRPC_MemfilesList_FullMethodName                   = "/rpcpb.SliverRPC/MemfilesList"
-	SliverRPC_MemfilesAdd_FullMethodName                    = "/rpcpb.SliverRPC/MemfilesAdd"
-	SliverRPC_MemfilesRm_FullMethodName                     = "/rpcpb.SliverRPC/MemfilesRm"
-	SliverRPC_ProcessDump_FullMethodName                    = "/rpcpb.SliverRPC/ProcessDump"
-	SliverRPC_RunAs_FullMethodName                          = "/rpcpb.SliverRPC/RunAs"
-	SliverRPC_Impersonate_FullMethodName                    = "/rpcpb.SliverRPC/Impersonate"
-	SliverRPC_RevToSelf_FullMethodName                      = "/rpcpb.SliverRPC/RevToSelf"
-	SliverRPC_GetSystem_FullMethodName                      = "/rpcpb.SliverRPC/GetSystem"
-	SliverRPC_Task_FullMethodName                           = "/rpcpb.SliverRPC/Task"
-	SliverRPC_Msf_FullMethodName                            = "/rpcpb.SliverRPC/Msf"
-	SliverRPC_MsfRemote_FullMethodName                      = "/rpcpb.SliverRPC/MsfRemote"
-	SliverRPC_ExecuteAssembly_FullMethodName                = "/rpcpb.SliverRPC/ExecuteAssembly"
-	SliverRPC_Migrate_FullMethodName                        = "/rpcpb.SliverRPC/Migrate"
-	SliverRPC_Execute_FullMethodName                        = "/rpcpb.SliverRPC/Execute"
-	SliverRPC_ExecuteWindows_FullMethodName                 = "/rpcpb.SliverRPC/ExecuteWindows"
-	SliverRPC_Sideload_FullMethodName                       = "/rpcpb.SliverRPC/Sideload"
-	SliverRPC_SpawnDll_FullMethodName                       = "/rpcpb.SliverRPC/SpawnDll"
-	SliverRPC_Screenshot_FullMethodName                     = "/rpcpb.SliverRPC/Screenshot"
-	SliverRPC_CurrentTokenOwner_FullMethodName              = "/rpcpb.SliverRPC/CurrentTokenOwner"
-	SliverRPC_PivotStartListener_FullMethodName             = "/rpcpb.SliverRPC/PivotStartListener"
-	SliverRPC_PivotStopListener_FullMethodName              = "/rpcpb.SliverRPC/PivotStopListener"
-	SliverRPC_PivotSessionListeners_FullMethodName          = "/rpcpb.SliverRPC/PivotSessionListeners"
-	SliverRPC_PivotGraph_FullMethodName                     = "/rpcpb.SliverRPC/PivotGraph"
-	SliverRPC_StartService_FullMethodName                   = "/rpcpb.SliverRPC/StartService"
-	SliverRPC_StopService_FullMethodName                    = "/rpcpb.SliverRPC/StopService"
-	SliverRPC_RemoveService_FullMethodName                  = "/rpcpb.SliverRPC/RemoveService"
-	SliverRPC_MakeToken_FullMethodName                      = "/rpcpb.SliverRPC/MakeToken"
-	SliverRPC_GetEnv_FullMethodName                         = "/rpcpb.SliverRPC/GetEnv"
-	SliverRPC_SetEnv_FullMethodName                         = "/rpcpb.SliverRPC/SetEnv"
-	SliverRPC_UnsetEnv_FullMethodName                       = "/rpcpb.SliverRPC/UnsetEnv"
-	SliverRPC_Backdoor_FullMethodName                       = "/rpcpb.SliverRPC/Backdoor"
-	SliverRPC_RegistryRead_FullMethodName                   = "/rpcpb.SliverRPC/RegistryRead"
-	SliverRPC_RegistryWrite_FullMethodName                  = "/rpcpb.SliverRPC/RegistryWrite"
-	SliverRPC_RegistryCreateKey_FullMethodName              = "/rpcpb.SliverRPC/RegistryCreateKey"
-	SliverRPC_RegistryDeleteKey_FullMethodName              = "/rpcpb.SliverRPC/RegistryDeleteKey"
-	SliverRPC_RegistryListSubKeys_FullMethodName            = "/rpcpb.SliverRPC/RegistryListSubKeys"
-	SliverRPC_RegistryListValues_FullMethodName             = "/rpcpb.SliverRPC/RegistryListValues"
-	SliverRPC_RunSSHCommand_FullMethodName                  = "/rpcpb.SliverRPC/RunSSHCommand"
-	SliverRPC_HijackDLL_FullMethodName                      = "/rpcpb.SliverRPC/HijackDLL"
-	SliverRPC_GetPrivs_FullMethodName                       = "/rpcpb.SliverRPC/GetPrivs"
-	SliverRPC_StartRportFwdListener_FullMethodName          = "/rpcpb.SliverRPC/StartRportFwdListener"
-	SliverRPC_GetRportFwdListeners_FullMethodName           = "/rpcpb.SliverRPC/GetRportFwdListeners"
-	SliverRPC_StopRportFwdListener_FullMethodName           = "/rpcpb.SliverRPC/StopRportFwdListener"
-	SliverRPC_OpenSession_FullMethodName                    = "/rpcpb.SliverRPC/OpenSession"
-	SliverRPC_CloseSession_FullMethodName                   = "/rpcpb.SliverRPC/CloseSession"
-	SliverRPC_RegisterExtension_FullMethodName              = "/rpcpb.SliverRPC/RegisterExtension"
-	SliverRPC_CallExtension_FullMethodName                  = "/rpcpb.SliverRPC/CallExtension"
-	SliverRPC_ListExtensions_FullMethodName                 = "/rpcpb.SliverRPC/ListExtensions"
-	SliverRPC_RegisterWasmExtension_FullMethodName          = "/rpcpb.SliverRPC/RegisterWasmExtension"
-	SliverRPC_ListWasmExtensions_FullMethodName             = "/rpcpb.SliverRPC/ListWasmExtensions"
-	SliverRPC_ExecWasmExtension_FullMethodName              = "/rpcpb.SliverRPC/ExecWasmExtension"
-	SliverRPC_WGStartPortForward_FullMethodName             = "/rpcpb.SliverRPC/WGStartPortForward"
-	SliverRPC_WGStopPortForward_FullMethodName              = "/rpcpb.SliverRPC/WGStopPortForward"
-	SliverRPC_WGStartSocks_FullMethodName                   = "/rpcpb.SliverRPC/WGStartSocks"
-	SliverRPC_WGStopSocks_FullMethodName                    = "/rpcpb.SliverRPC/WGStopSocks"
-	SliverRPC_WGListForwarders_FullMethodName               = "/rpcpb.SliverRPC/WGListForwarders"
-	SliverRPC_WGListSocksServers_FullMethodName             = "/rpcpb.SliverRPC/WGListSocksServers"
-	SliverRPC_Shell_FullMethodName                          = "/rpcpb.SliverRPC/Shell"
-	SliverRPC_Portfwd_FullMethodName                        = "/rpcpb.SliverRPC/Portfwd"
-	SliverRPC_CreateSocks_FullMethodName                    = "/rpcpb.SliverRPC/CreateSocks"
-	SliverRPC_CloseSocks_FullMethodName                     = "/rpcpb.SliverRPC/CloseSocks"
-	SliverRPC_SocksProxy_FullMethodName                     = "/rpcpb.SliverRPC/SocksProxy"
-	SliverRPC_CreateTunnel_FullMethodName                   = "/rpcpb.SliverRPC/CreateTunnel"
-	SliverRPC_CloseTunnel_FullMethodName                    = "/rpcpb.SliverRPC/CloseTunnel"
-	SliverRPC_TunnelData_FullMethodName                     = "/rpcpb.SliverRPC/TunnelData"
-	SliverRPC_Events_FullMethodName                         = "/rpcpb.SliverRPC/Events"
+	SliverRPC_GetVersion_FullMethodName                       = "/rpcpb.SliverRPC/GetVersion"
+	SliverRPC_GetUsers_FullMethodName                         = "/rpcpb.SliverRPC/GetUsers"
+	SliverRPC_ClientLog_FullMethodName                        = "/rpcpb.SliverRPC/ClientLog"
+	SliverRPC_Kill_FullMethodName                             = "/rpcpb.SliverRPC/Kill"
+	SliverRPC_Reconfigure_FullMethodName                      = "/rpcpb.SliverRPC/Reconfigure"
+	SliverRPC_Rename_FullMethodName                           = "/rpcpb.SliverRPC/Rename"
+	SliverRPC_ImplantHistory_FullMethodName                   = "/rpcpb.SliverRPC/ImplantHistory"
+	SliverRPC_GetImplantHistory_FullMethodName                = "/rpcpb.SliverRPC/GetImplantHistory"
+	SliverRPC_GetSessions_FullMethodName                      = "/rpcpb.SliverRPC/GetSessions"
+	SliverRPC_MonitorStart_FullMethodName                     = "/rpcpb.SliverRPC/MonitorStart"
+	SliverRPC_MonitorStop_FullMethodName                      = "/rpcpb.SliverRPC/MonitorStop"
+	SliverRPC_MonitorListConfig_FullMethodName                = "/rpcpb.SliverRPC/MonitorListConfig"
+	SliverRPC_MonitorAddConfig_FullMethodName                 = "/rpcpb.SliverRPC/MonitorAddConfig"
+	SliverRPC_MonitorDelConfig_FullMethodName                 = "/rpcpb.SliverRPC/MonitorDelConfig"
+	SliverRPC_StartMTLSListener_FullMethodName                = "/rpcpb.SliverRPC/StartMTLSListener"
+	SliverRPC_StartWGListener_FullMethodName                  = "/rpcpb.SliverRPC/StartWGListener"
+	SliverRPC_StartDNSListener_FullMethodName                 = "/rpcpb.SliverRPC/StartDNSListener"
+	SliverRPC_StartHTTPSListener_FullMethodName               = "/rpcpb.SliverRPC/StartHTTPSListener"
+	SliverRPC_StartHTTPListener_FullMethodName                = "/rpcpb.SliverRPC/StartHTTPListener"
+	SliverRPC_GetBeacons_FullMethodName                       = "/rpcpb.SliverRPC/GetBeacons"
+	SliverRPC_GetBeacon_FullMethodName                        = "/rpcpb.SliverRPC/GetBeacon"
+	SliverRPC_RmBeacon_FullMethodName                         = "/rpcpb.SliverRPC/RmBeacon"
+	SliverRPC_GetBeaconTasks_FullMethodName                   = "/rpcpb.SliverRPC/GetBeaconTasks"
+	SliverRPC_GetBeaconTaskContent_FullMethodName             = "/rpcpb.SliverRPC/GetBeaconTaskContent"
+	SliverRPC_CancelBeaconTask_FullMethodName                 = "/rpcpb.SliverRPC/CancelBeaconTask"
+	SliverRPC_UpdateBeaconIntegrityInformation_FullMethodName = "/rpcpb.SliverRPC/UpdateBeaconIntegrityInformation"
+	SliverRPC_GetJobs_FullMethodName                          = "/rpcpb.SliverRPC/GetJobs"
+	SliverRPC_KillJob_FullMethodName                          = "/rpcpb.SliverRPC/KillJob"
+	SliverRPC_RestartJobs_FullMethodName                      = "/rpcpb.SliverRPC/RestartJobs"
+	SliverRPC_StartTCPStagerListener_FullMethodName           = "/rpcpb.SliverRPC/StartTCPStagerListener"
+	SliverRPC_StartHTTPStagerListener_FullMethodName          = "/rpcpb.SliverRPC/StartHTTPStagerListener"
+	SliverRPC_LootAdd_FullMethodName                          = "/rpcpb.SliverRPC/LootAdd"
+	SliverRPC_LootRm_FullMethodName                           = "/rpcpb.SliverRPC/LootRm"
+	SliverRPC_LootUpdate_FullMethodName                       = "/rpcpb.SliverRPC/LootUpdate"
+	SliverRPC_LootContent_FullMethodName                      = "/rpcpb.SliverRPC/LootContent"
+	SliverRPC_LootAll_FullMethodName                          = "/rpcpb.SliverRPC/LootAll"
+	SliverRPC_Creds_FullMethodName                            = "/rpcpb.SliverRPC/Creds"
+	SliverRPC_CredsAdd_FullMethodName                         = "/rpcpb.SliverRPC/CredsAdd"
+	SliverRPC_CredsRm_FullMethodName                          = "/rpcpb.SliverRPC/CredsRm"
+	SliverRPC_CredsUpdate_FullMethodName                      = "/rpcpb.SliverRPC/CredsUpdate"
+	SliverRPC_GetCredByID_FullMethodName                      = "/rpcpb.SliverRPC/GetCredByID"
+	SliverRPC_GetCredsByHashType_FullMethodName               = "/rpcpb.SliverRPC/GetCredsByHashType"
+	SliverRPC_GetPlaintextCredsByHashType_FullMethodName      = "/rpcpb.SliverRPC/GetPlaintextCredsByHashType"
+	SliverRPC_CredsSniffHashType_FullMethodName               = "/rpcpb.SliverRPC/CredsSniffHashType"
+	SliverRPC_Hosts_FullMethodName                            = "/rpcpb.SliverRPC/Hosts"
+	SliverRPC_Host_FullMethodName                             = "/rpcpb.SliverRPC/Host"
+	SliverRPC_HostRm_FullMethodName                           = "/rpcpb.SliverRPC/HostRm"
+	SliverRPC_HostIOCRm_FullMethodName                        = "/rpcpb.SliverRPC/HostIOCRm"
+	SliverRPC_Generate_FullMethodName                         = "/rpcpb.SliverRPC/Generate"
+	SliverRPC_GenerateExternal_FullMethodName                 = "/rpcpb.SliverRPC/GenerateExternal"
+	SliverRPC_GenerateExternalSaveBuild_FullMethodName        = "/rpcpb.SliverRPC/GenerateExternalSaveBuild"
+	SliverRPC_GenerateExternalGetBuildConfig_FullMethodName   = "/rpcpb.SliverRPC/GenerateExternalGetBuildConfig"
+	SliverRPC_GenerateStage_FullMethodName                    = "/rpcpb.SliverRPC/GenerateStage"
+	SliverRPC_StageImplantBuild_FullMethodName                = "/rpcpb.SliverRPC/StageImplantBuild"
+	SliverRPC_GetHTTPC2Profiles_FullMethodName                = "/rpcpb.SliverRPC/GetHTTPC2Profiles"
+	SliverRPC_GetHTTPC2ProfileByName_FullMethodName           = "/rpcpb.SliverRPC/GetHTTPC2ProfileByName"
+	SliverRPC_SaveHTTPC2Profile_FullMethodName                = "/rpcpb.SliverRPC/SaveHTTPC2Profile"
+	SliverRPC_BuilderRegister_FullMethodName                  = "/rpcpb.SliverRPC/BuilderRegister"
+	SliverRPC_BuilderTrigger_FullMethodName                   = "/rpcpb.SliverRPC/BuilderTrigger"
+	SliverRPC_Builders_FullMethodName                         = "/rpcpb.SliverRPC/Builders"
+	SliverRPC_GetCertificateInfo_FullMethodName               = "/rpcpb.SliverRPC/GetCertificateInfo"
+	SliverRPC_CrackstationRegister_FullMethodName             = "/rpcpb.SliverRPC/CrackstationRegister"
+	SliverRPC_CrackstationTrigger_FullMethodName              = "/rpcpb.SliverRPC/CrackstationTrigger"
+	SliverRPC_CrackstationBenchmark_FullMethodName            = "/rpcpb.SliverRPC/CrackstationBenchmark"
+	SliverRPC_Crackstations_FullMethodName                    = "/rpcpb.SliverRPC/Crackstations"
+	SliverRPC_CrackTaskByID_FullMethodName                    = "/rpcpb.SliverRPC/CrackTaskByID"
+	SliverRPC_CrackTaskUpdate_FullMethodName                  = "/rpcpb.SliverRPC/CrackTaskUpdate"
+	SliverRPC_CrackFilesList_FullMethodName                   = "/rpcpb.SliverRPC/CrackFilesList"
+	SliverRPC_CrackFileCreate_FullMethodName                  = "/rpcpb.SliverRPC/CrackFileCreate"
+	SliverRPC_CrackFileChunkUpload_FullMethodName             = "/rpcpb.SliverRPC/CrackFileChunkUpload"
+	SliverRPC_CrackFileChunkDownload_FullMethodName           = "/rpcpb.SliverRPC/CrackFileChunkDownload"
+	SliverRPC_CrackFileComplete_FullMethodName                = "/rpcpb.SliverRPC/CrackFileComplete"
+	SliverRPC_CrackFileDelete_FullMethodName                  = "/rpcpb.SliverRPC/CrackFileDelete"
+	SliverRPC_Regenerate_FullMethodName                       = "/rpcpb.SliverRPC/Regenerate"
+	SliverRPC_ImplantBuilds_FullMethodName                    = "/rpcpb.SliverRPC/ImplantBuilds"
+	SliverRPC_DeleteImplantBuild_FullMethodName               = "/rpcpb.SliverRPC/DeleteImplantBuild"
+	SliverRPC_Canaries_FullMethodName                         = "/rpcpb.SliverRPC/Canaries"
+	SliverRPC_GenerateWGClientConfig_FullMethodName           = "/rpcpb.SliverRPC/GenerateWGClientConfig"
+	SliverRPC_GenerateUniqueIP_FullMethodName                 = "/rpcpb.SliverRPC/GenerateUniqueIP"
+	SliverRPC_ImplantProfiles_FullMethodName                  = "/rpcpb.SliverRPC/ImplantProfiles"
+	SliverRPC_DeleteImplantProfile_FullMethodName             = "/rpcpb.SliverRPC/DeleteImplantProfile"
+	SliverRPC_SaveImplantProfile_FullMethodName               = "/rpcpb.SliverRPC/SaveImplantProfile"
+	SliverRPC_ShellcodeRDI_FullMethodName                     = "/rpcpb.SliverRPC/ShellcodeRDI"
+	SliverRPC_GetCompiler_FullMethodName                      = "/rpcpb.SliverRPC/GetCompiler"
+	SliverRPC_GetMetasploitCompiler_FullMethodName            = "/rpcpb.SliverRPC/GetMetasploitCompiler"
+	SliverRPC_ShellcodeEncoder_FullMethodName                 = "/rpcpb.SliverRPC/ShellcodeEncoder"
+	SliverRPC_ShellcodeEncoderMap_FullMethodName              = "/rpcpb.SliverRPC/ShellcodeEncoderMap"
+	SliverRPC_TrafficEncoderMap_FullMethodName                = "/rpcpb.SliverRPC/TrafficEncoderMap"
+	SliverRPC_TrafficEncoderAdd_FullMethodName                = "/rpcpb.SliverRPC/TrafficEncoderAdd"
+	SliverRPC_TrafficEncoderRm_FullMethodName                 = "/rpcpb.SliverRPC/TrafficEncoderRm"
+	SliverRPC_Websites_FullMethodName                         = "/rpcpb.SliverRPC/Websites"
+	SliverRPC_Website_FullMethodName                          = "/rpcpb.SliverRPC/Website"
+	SliverRPC_WebsiteRemove_FullMethodName                    = "/rpcpb.SliverRPC/WebsiteRemove"
+	SliverRPC_WebsiteAddContent_FullMethodName                = "/rpcpb.SliverRPC/WebsiteAddContent"
+	SliverRPC_WebsiteUpdateContent_FullMethodName             = "/rpcpb.SliverRPC/WebsiteUpdateContent"
+	SliverRPC_WebsiteRemoveContent_FullMethodName             = "/rpcpb.SliverRPC/WebsiteRemoveContent"
+	SliverRPC_Ping_FullMethodName                             = "/rpcpb.SliverRPC/Ping"
+	SliverRPC_Ps_FullMethodName                               = "/rpcpb.SliverRPC/Ps"
+	SliverRPC_Terminate_FullMethodName                        = "/rpcpb.SliverRPC/Terminate"
+	SliverRPC_Ifconfig_FullMethodName                         = "/rpcpb.SliverRPC/Ifconfig"
+	SliverRPC_Netstat_FullMethodName                          = "/rpcpb.SliverRPC/Netstat"
+	SliverRPC_Ls_FullMethodName                               = "/rpcpb.SliverRPC/Ls"
+	SliverRPC_Cd_FullMethodName                               = "/rpcpb.SliverRPC/Cd"
+	SliverRPC_Pwd_FullMethodName                              = "/rpcpb.SliverRPC/Pwd"
+	SliverRPC_Mv_FullMethodName                               = "/rpcpb.SliverRPC/Mv"
+	SliverRPC_Cp_FullMethodName                               = "/rpcpb.SliverRPC/Cp"
+	SliverRPC_Rm_FullMethodName                               = "/rpcpb.SliverRPC/Rm"
+	SliverRPC_Mkdir_FullMethodName                            = "/rpcpb.SliverRPC/Mkdir"
+	SliverRPC_Download_FullMethodName                         = "/rpcpb.SliverRPC/Download"
+	SliverRPC_Upload_FullMethodName                           = "/rpcpb.SliverRPC/Upload"
+	SliverRPC_Grep_FullMethodName                             = "/rpcpb.SliverRPC/Grep"
+	SliverRPC_Chmod_FullMethodName                            = "/rpcpb.SliverRPC/Chmod"
+	SliverRPC_Chown_FullMethodName                            = "/rpcpb.SliverRPC/Chown"
+	SliverRPC_Chtimes_FullMethodName                          = "/rpcpb.SliverRPC/Chtimes"
+	SliverRPC_MemfilesList_FullMethodName                     = "/rpcpb.SliverRPC/MemfilesList"
+	SliverRPC_MemfilesAdd_FullMethodName                      = "/rpcpb.SliverRPC/MemfilesAdd"
+	SliverRPC_MemfilesRm_FullMethodName                       = "/rpcpb.SliverRPC/MemfilesRm"
+	SliverRPC_Mount_FullMethodName                            = "/rpcpb.SliverRPC/Mount"
+	SliverRPC_ProcessDump_FullMethodName                      = "/rpcpb.SliverRPC/ProcessDump"
+	SliverRPC_RunAs_FullMethodName                            = "/rpcpb.SliverRPC/RunAs"
+	SliverRPC_Impersonate_FullMethodName                      = "/rpcpb.SliverRPC/Impersonate"
+	SliverRPC_RevToSelf_FullMethodName                        = "/rpcpb.SliverRPC/RevToSelf"
+	SliverRPC_GetSystem_FullMethodName                        = "/rpcpb.SliverRPC/GetSystem"
+	SliverRPC_Task_FullMethodName                             = "/rpcpb.SliverRPC/Task"
+	SliverRPC_Msf_FullMethodName                              = "/rpcpb.SliverRPC/Msf"
+	SliverRPC_MsfRemote_FullMethodName                        = "/rpcpb.SliverRPC/MsfRemote"
+	SliverRPC_ExecuteAssembly_FullMethodName                  = "/rpcpb.SliverRPC/ExecuteAssembly"
+	SliverRPC_Migrate_FullMethodName                          = "/rpcpb.SliverRPC/Migrate"
+	SliverRPC_Execute_FullMethodName                          = "/rpcpb.SliverRPC/Execute"
+	SliverRPC_ExecuteWindows_FullMethodName                   = "/rpcpb.SliverRPC/ExecuteWindows"
+	SliverRPC_Sideload_FullMethodName                         = "/rpcpb.SliverRPC/Sideload"
+	SliverRPC_SpawnDll_FullMethodName                         = "/rpcpb.SliverRPC/SpawnDll"
+	SliverRPC_Screenshot_FullMethodName                       = "/rpcpb.SliverRPC/Screenshot"
+	SliverRPC_CurrentTokenOwner_FullMethodName                = "/rpcpb.SliverRPC/CurrentTokenOwner"
+	SliverRPC_Services_FullMethodName                         = "/rpcpb.SliverRPC/Services"
+	SliverRPC_ServiceDetail_FullMethodName                    = "/rpcpb.SliverRPC/ServiceDetail"
+	SliverRPC_StartServiceByName_FullMethodName               = "/rpcpb.SliverRPC/StartServiceByName"
+	SliverRPC_PivotStartListener_FullMethodName               = "/rpcpb.SliverRPC/PivotStartListener"
+	SliverRPC_PivotStopListener_FullMethodName                = "/rpcpb.SliverRPC/PivotStopListener"
+	SliverRPC_PivotSessionListeners_FullMethodName            = "/rpcpb.SliverRPC/PivotSessionListeners"
+	SliverRPC_PivotGraph_FullMethodName                       = "/rpcpb.SliverRPC/PivotGraph"
+	SliverRPC_StartService_FullMethodName                     = "/rpcpb.SliverRPC/StartService"
+	SliverRPC_StopService_FullMethodName                      = "/rpcpb.SliverRPC/StopService"
+	SliverRPC_RemoveService_FullMethodName                    = "/rpcpb.SliverRPC/RemoveService"
+	SliverRPC_MakeToken_FullMethodName                        = "/rpcpb.SliverRPC/MakeToken"
+	SliverRPC_GetEnv_FullMethodName                           = "/rpcpb.SliverRPC/GetEnv"
+	SliverRPC_SetEnv_FullMethodName                           = "/rpcpb.SliverRPC/SetEnv"
+	SliverRPC_UnsetEnv_FullMethodName                         = "/rpcpb.SliverRPC/UnsetEnv"
+	SliverRPC_Backdoor_FullMethodName                         = "/rpcpb.SliverRPC/Backdoor"
+	SliverRPC_RegistryRead_FullMethodName                     = "/rpcpb.SliverRPC/RegistryRead"
+	SliverRPC_RegistryWrite_FullMethodName                    = "/rpcpb.SliverRPC/RegistryWrite"
+	SliverRPC_RegistryCreateKey_FullMethodName                = "/rpcpb.SliverRPC/RegistryCreateKey"
+	SliverRPC_RegistryDeleteKey_FullMethodName                = "/rpcpb.SliverRPC/RegistryDeleteKey"
+	SliverRPC_RegistryListSubKeys_FullMethodName              = "/rpcpb.SliverRPC/RegistryListSubKeys"
+	SliverRPC_RegistryListValues_FullMethodName               = "/rpcpb.SliverRPC/RegistryListValues"
+	SliverRPC_RegistryReadHive_FullMethodName                 = "/rpcpb.SliverRPC/RegistryReadHive"
+	SliverRPC_RunSSHCommand_FullMethodName                    = "/rpcpb.SliverRPC/RunSSHCommand"
+	SliverRPC_HijackDLL_FullMethodName                        = "/rpcpb.SliverRPC/HijackDLL"
+	SliverRPC_GetPrivs_FullMethodName                         = "/rpcpb.SliverRPC/GetPrivs"
+	SliverRPC_StartRportFwdListener_FullMethodName            = "/rpcpb.SliverRPC/StartRportFwdListener"
+	SliverRPC_GetRportFwdListeners_FullMethodName             = "/rpcpb.SliverRPC/GetRportFwdListeners"
+	SliverRPC_StopRportFwdListener_FullMethodName             = "/rpcpb.SliverRPC/StopRportFwdListener"
+	SliverRPC_OpenSession_FullMethodName                      = "/rpcpb.SliverRPC/OpenSession"
+	SliverRPC_CloseSession_FullMethodName                     = "/rpcpb.SliverRPC/CloseSession"
+	SliverRPC_RegisterExtension_FullMethodName                = "/rpcpb.SliverRPC/RegisterExtension"
+	SliverRPC_CallExtension_FullMethodName                    = "/rpcpb.SliverRPC/CallExtension"
+	SliverRPC_ListExtensions_FullMethodName                   = "/rpcpb.SliverRPC/ListExtensions"
+	SliverRPC_RegisterWasmExtension_FullMethodName            = "/rpcpb.SliverRPC/RegisterWasmExtension"
+	SliverRPC_ListWasmExtensions_FullMethodName               = "/rpcpb.SliverRPC/ListWasmExtensions"
+	SliverRPC_ExecWasmExtension_FullMethodName                = "/rpcpb.SliverRPC/ExecWasmExtension"
+	SliverRPC_WGStartPortForward_FullMethodName               = "/rpcpb.SliverRPC/WGStartPortForward"
+	SliverRPC_WGStopPortForward_FullMethodName                = "/rpcpb.SliverRPC/WGStopPortForward"
+	SliverRPC_WGStartSocks_FullMethodName                     = "/rpcpb.SliverRPC/WGStartSocks"
+	SliverRPC_WGStopSocks_FullMethodName                      = "/rpcpb.SliverRPC/WGStopSocks"
+	SliverRPC_WGListForwarders_FullMethodName                 = "/rpcpb.SliverRPC/WGListForwarders"
+	SliverRPC_WGListSocksServers_FullMethodName               = "/rpcpb.SliverRPC/WGListSocksServers"
+	SliverRPC_Shell_FullMethodName                            = "/rpcpb.SliverRPC/Shell"
+	SliverRPC_Portfwd_FullMethodName                          = "/rpcpb.SliverRPC/Portfwd"
+	SliverRPC_CreateSocks_FullMethodName                      = "/rpcpb.SliverRPC/CreateSocks"
+	SliverRPC_CloseSocks_FullMethodName                       = "/rpcpb.SliverRPC/CloseSocks"
+	SliverRPC_SocksProxy_FullMethodName                       = "/rpcpb.SliverRPC/SocksProxy"
+	SliverRPC_CreateTunnel_FullMethodName                     = "/rpcpb.SliverRPC/CreateTunnel"
+	SliverRPC_CloseTunnel_FullMethodName                      = "/rpcpb.SliverRPC/CloseTunnel"
+	SliverRPC_TunnelData_FullMethodName                       = "/rpcpb.SliverRPC/TunnelData"
+	SliverRPC_Events_FullMethodName                           = "/rpcpb.SliverRPC/Events"
 )
 
 // SliverRPCClient is the client API for SliverRPC service.
@@ -239,6 +245,7 @@ type SliverRPCClient interface {
 	GetBeaconTasks(ctx context.Context, in *clientpb.Beacon, opts ...grpc.CallOption) (*clientpb.BeaconTasks, error)
 	GetBeaconTaskContent(ctx context.Context, in *clientpb.BeaconTask, opts ...grpc.CallOption) (*clientpb.BeaconTask, error)
 	CancelBeaconTask(ctx context.Context, in *clientpb.BeaconTask, opts ...grpc.CallOption) (*clientpb.BeaconTask, error)
+	UpdateBeaconIntegrityInformation(ctx context.Context, in *clientpb.BeaconIntegrity, opts ...grpc.CallOption) (*commonpb.Empty, error)
 	// *** Jobs ***
 	GetJobs(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Jobs, error)
 	KillJob(ctx context.Context, in *clientpb.KillJobReq, opts ...grpc.CallOption) (*clientpb.KillJob, error)
@@ -281,6 +288,8 @@ type SliverRPCClient interface {
 	BuilderRegister(ctx context.Context, in *clientpb.Builder, opts ...grpc.CallOption) (SliverRPC_BuilderRegisterClient, error)
 	BuilderTrigger(ctx context.Context, in *clientpb.Event, opts ...grpc.CallOption) (*commonpb.Empty, error)
 	Builders(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Builders, error)
+	// *** Certificates ***
+	GetCertificateInfo(ctx context.Context, in *clientpb.CertificatesReq, opts ...grpc.CallOption) (*clientpb.CertificateInfo, error)
 	// *** Crackstation ***
 	CrackstationRegister(ctx context.Context, in *clientpb.Crackstation, opts ...grpc.CallOption) (SliverRPC_CrackstationRegisterClient, error)
 	CrackstationTrigger(ctx context.Context, in *clientpb.Event, opts ...grpc.CallOption) (*commonpb.Empty, error)
@@ -304,7 +313,6 @@ type SliverRPCClient interface {
 	ImplantProfiles(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.ImplantProfiles, error)
 	DeleteImplantProfile(ctx context.Context, in *clientpb.DeleteReq, opts ...grpc.CallOption) (*commonpb.Empty, error)
 	SaveImplantProfile(ctx context.Context, in *clientpb.ImplantProfile, opts ...grpc.CallOption) (*clientpb.ImplantProfile, error)
-	MsfStage(ctx context.Context, in *clientpb.MsfStagerReq, opts ...grpc.CallOption) (*clientpb.MsfStager, error)
 	ShellcodeRDI(ctx context.Context, in *clientpb.ShellcodeRDIReq, opts ...grpc.CallOption) (*clientpb.ShellcodeRDI, error)
 	GetCompiler(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Compiler, error)
 	GetMetasploitCompiler(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.MetasploitCompiler, error)
@@ -342,6 +350,7 @@ type SliverRPCClient interface {
 	MemfilesList(ctx context.Context, in *sliverpb.MemfilesListReq, opts ...grpc.CallOption) (*sliverpb.Ls, error)
 	MemfilesAdd(ctx context.Context, in *sliverpb.MemfilesAddReq, opts ...grpc.CallOption) (*sliverpb.MemfilesAdd, error)
 	MemfilesRm(ctx context.Context, in *sliverpb.MemfilesRmReq, opts ...grpc.CallOption) (*sliverpb.MemfilesRm, error)
+	Mount(ctx context.Context, in *sliverpb.MountReq, opts ...grpc.CallOption) (*sliverpb.Mount, error)
 	ProcessDump(ctx context.Context, in *sliverpb.ProcessDumpReq, opts ...grpc.CallOption) (*sliverpb.ProcessDump, error)
 	RunAs(ctx context.Context, in *sliverpb.RunAsReq, opts ...grpc.CallOption) (*sliverpb.RunAs, error)
 	Impersonate(ctx context.Context, in *sliverpb.ImpersonateReq, opts ...grpc.CallOption) (*sliverpb.Impersonate, error)
@@ -358,6 +367,9 @@ type SliverRPCClient interface {
 	SpawnDll(ctx context.Context, in *sliverpb.InvokeSpawnDllReq, opts ...grpc.CallOption) (*sliverpb.SpawnDll, error)
 	Screenshot(ctx context.Context, in *sliverpb.ScreenshotReq, opts ...grpc.CallOption) (*sliverpb.Screenshot, error)
 	CurrentTokenOwner(ctx context.Context, in *sliverpb.CurrentTokenOwnerReq, opts ...grpc.CallOption) (*sliverpb.CurrentTokenOwner, error)
+	Services(ctx context.Context, in *sliverpb.ServicesReq, opts ...grpc.CallOption) (*sliverpb.Services, error)
+	ServiceDetail(ctx context.Context, in *sliverpb.ServiceDetailReq, opts ...grpc.CallOption) (*sliverpb.ServiceDetail, error)
+	StartServiceByName(ctx context.Context, in *sliverpb.StartServiceByNameReq, opts ...grpc.CallOption) (*sliverpb.ServiceInfo, error)
 	// *** Pivots ***
 	PivotStartListener(ctx context.Context, in *sliverpb.PivotStartListenerReq, opts ...grpc.CallOption) (*sliverpb.PivotListener, error)
 	PivotStopListener(ctx context.Context, in *sliverpb.PivotStopListenerReq, opts ...grpc.CallOption) (*commonpb.Empty, error)
@@ -377,6 +389,7 @@ type SliverRPCClient interface {
 	RegistryDeleteKey(ctx context.Context, in *sliverpb.RegistryDeleteKeyReq, opts ...grpc.CallOption) (*sliverpb.RegistryDeleteKey, error)
 	RegistryListSubKeys(ctx context.Context, in *sliverpb.RegistrySubKeyListReq, opts ...grpc.CallOption) (*sliverpb.RegistrySubKeyList, error)
 	RegistryListValues(ctx context.Context, in *sliverpb.RegistryListValuesReq, opts ...grpc.CallOption) (*sliverpb.RegistryValuesList, error)
+	RegistryReadHive(ctx context.Context, in *sliverpb.RegistryReadHiveReq, opts ...grpc.CallOption) (*sliverpb.RegistryReadHive, error)
 	RunSSHCommand(ctx context.Context, in *sliverpb.SSHCommandReq, opts ...grpc.CallOption) (*sliverpb.SSHCommand, error)
 	HijackDLL(ctx context.Context, in *clientpb.DllHijackReq, opts ...grpc.CallOption) (*clientpb.DllHijack, error)
 	GetPrivs(ctx context.Context, in *sliverpb.GetPrivsReq, opts ...grpc.CallOption) (*sliverpb.GetPrivs, error)
@@ -693,6 +706,15 @@ func (c *sliverRPCClient) GetBeaconTaskContent(ctx context.Context, in *clientpb
 func (c *sliverRPCClient) CancelBeaconTask(ctx context.Context, in *clientpb.BeaconTask, opts ...grpc.CallOption) (*clientpb.BeaconTask, error) {
 	out := new(clientpb.BeaconTask)
 	err := c.cc.Invoke(ctx, SliverRPC_CancelBeaconTask_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) UpdateBeaconIntegrityInformation(ctx context.Context, in *clientpb.BeaconIntegrity, opts ...grpc.CallOption) (*commonpb.Empty, error) {
+	out := new(commonpb.Empty)
+	err := c.cc.Invoke(ctx, SliverRPC_UpdateBeaconIntegrityInformation_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1028,6 +1050,15 @@ func (c *sliverRPCClient) Builders(ctx context.Context, in *commonpb.Empty, opts
 	return out, nil
 }
 
+func (c *sliverRPCClient) GetCertificateInfo(ctx context.Context, in *clientpb.CertificatesReq, opts ...grpc.CallOption) (*clientpb.CertificateInfo, error) {
+	out := new(clientpb.CertificateInfo)
+	err := c.cc.Invoke(ctx, SliverRPC_GetCertificateInfo_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sliverRPCClient) CrackstationRegister(ctx context.Context, in *clientpb.Crackstation, opts ...grpc.CallOption) (SliverRPC_CrackstationRegisterClient, error) {
 	stream, err := c.cc.NewStream(ctx, &SliverRPC_ServiceDesc.Streams[3], SliverRPC_CrackstationRegister_FullMethodName, opts...)
 	if err != nil {
@@ -1234,15 +1265,6 @@ func (c *sliverRPCClient) DeleteImplantProfile(ctx context.Context, in *clientpb
 func (c *sliverRPCClient) SaveImplantProfile(ctx context.Context, in *clientpb.ImplantProfile, opts ...grpc.CallOption) (*clientpb.ImplantProfile, error) {
 	out := new(clientpb.ImplantProfile)
 	err := c.cc.Invoke(ctx, SliverRPC_SaveImplantProfile_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *sliverRPCClient) MsfStage(ctx context.Context, in *clientpb.MsfStagerReq, opts ...grpc.CallOption) (*clientpb.MsfStager, error) {
-	out := new(clientpb.MsfStager)
-	err := c.cc.Invoke(ctx, SliverRPC_MsfStage_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1564,6 +1586,15 @@ func (c *sliverRPCClient) MemfilesRm(ctx context.Context, in *sliverpb.MemfilesR
 	return out, nil
 }
 
+func (c *sliverRPCClient) Mount(ctx context.Context, in *sliverpb.MountReq, opts ...grpc.CallOption) (*sliverpb.Mount, error) {
+	out := new(sliverpb.Mount)
+	err := c.cc.Invoke(ctx, SliverRPC_Mount_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sliverRPCClient) ProcessDump(ctx context.Context, in *sliverpb.ProcessDumpReq, opts ...grpc.CallOption) (*sliverpb.ProcessDump, error) {
 	out := new(sliverpb.ProcessDump)
 	err := c.cc.Invoke(ctx, SliverRPC_ProcessDump_FullMethodName, in, out, opts...)
@@ -1702,6 +1733,33 @@ func (c *sliverRPCClient) Screenshot(ctx context.Context, in *sliverpb.Screensho
 func (c *sliverRPCClient) CurrentTokenOwner(ctx context.Context, in *sliverpb.CurrentTokenOwnerReq, opts ...grpc.CallOption) (*sliverpb.CurrentTokenOwner, error) {
 	out := new(sliverpb.CurrentTokenOwner)
 	err := c.cc.Invoke(ctx, SliverRPC_CurrentTokenOwner_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) Services(ctx context.Context, in *sliverpb.ServicesReq, opts ...grpc.CallOption) (*sliverpb.Services, error) {
+	out := new(sliverpb.Services)
+	err := c.cc.Invoke(ctx, SliverRPC_Services_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) ServiceDetail(ctx context.Context, in *sliverpb.ServiceDetailReq, opts ...grpc.CallOption) (*sliverpb.ServiceDetail, error) {
+	out := new(sliverpb.ServiceDetail)
+	err := c.cc.Invoke(ctx, SliverRPC_ServiceDetail_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) StartServiceByName(ctx context.Context, in *sliverpb.StartServiceByNameReq, opts ...grpc.CallOption) (*sliverpb.ServiceInfo, error) {
+	out := new(sliverpb.ServiceInfo)
+	err := c.cc.Invoke(ctx, SliverRPC_StartServiceByName_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1864,6 +1922,15 @@ func (c *sliverRPCClient) RegistryListSubKeys(ctx context.Context, in *sliverpb.
 func (c *sliverRPCClient) RegistryListValues(ctx context.Context, in *sliverpb.RegistryListValuesReq, opts ...grpc.CallOption) (*sliverpb.RegistryValuesList, error) {
 	out := new(sliverpb.RegistryValuesList)
 	err := c.cc.Invoke(ctx, SliverRPC_RegistryListValues_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sliverRPCClient) RegistryReadHive(ctx context.Context, in *sliverpb.RegistryReadHiveReq, opts ...grpc.CallOption) (*sliverpb.RegistryReadHive, error) {
+	out := new(sliverpb.RegistryReadHive)
+	err := c.cc.Invoke(ctx, SliverRPC_RegistryReadHive_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2234,6 +2301,7 @@ type SliverRPCServer interface {
 	GetBeaconTasks(context.Context, *clientpb.Beacon) (*clientpb.BeaconTasks, error)
 	GetBeaconTaskContent(context.Context, *clientpb.BeaconTask) (*clientpb.BeaconTask, error)
 	CancelBeaconTask(context.Context, *clientpb.BeaconTask) (*clientpb.BeaconTask, error)
+	UpdateBeaconIntegrityInformation(context.Context, *clientpb.BeaconIntegrity) (*commonpb.Empty, error)
 	// *** Jobs ***
 	GetJobs(context.Context, *commonpb.Empty) (*clientpb.Jobs, error)
 	KillJob(context.Context, *clientpb.KillJobReq) (*clientpb.KillJob, error)
@@ -2276,6 +2344,8 @@ type SliverRPCServer interface {
 	BuilderRegister(*clientpb.Builder, SliverRPC_BuilderRegisterServer) error
 	BuilderTrigger(context.Context, *clientpb.Event) (*commonpb.Empty, error)
 	Builders(context.Context, *commonpb.Empty) (*clientpb.Builders, error)
+	// *** Certificates ***
+	GetCertificateInfo(context.Context, *clientpb.CertificatesReq) (*clientpb.CertificateInfo, error)
 	// *** Crackstation ***
 	CrackstationRegister(*clientpb.Crackstation, SliverRPC_CrackstationRegisterServer) error
 	CrackstationTrigger(context.Context, *clientpb.Event) (*commonpb.Empty, error)
@@ -2299,7 +2369,6 @@ type SliverRPCServer interface {
 	ImplantProfiles(context.Context, *commonpb.Empty) (*clientpb.ImplantProfiles, error)
 	DeleteImplantProfile(context.Context, *clientpb.DeleteReq) (*commonpb.Empty, error)
 	SaveImplantProfile(context.Context, *clientpb.ImplantProfile) (*clientpb.ImplantProfile, error)
-	MsfStage(context.Context, *clientpb.MsfStagerReq) (*clientpb.MsfStager, error)
 	ShellcodeRDI(context.Context, *clientpb.ShellcodeRDIReq) (*clientpb.ShellcodeRDI, error)
 	GetCompiler(context.Context, *commonpb.Empty) (*clientpb.Compiler, error)
 	GetMetasploitCompiler(context.Context, *commonpb.Empty) (*clientpb.MetasploitCompiler, error)
@@ -2337,6 +2406,7 @@ type SliverRPCServer interface {
 	MemfilesList(context.Context, *sliverpb.MemfilesListReq) (*sliverpb.Ls, error)
 	MemfilesAdd(context.Context, *sliverpb.MemfilesAddReq) (*sliverpb.MemfilesAdd, error)
 	MemfilesRm(context.Context, *sliverpb.MemfilesRmReq) (*sliverpb.MemfilesRm, error)
+	Mount(context.Context, *sliverpb.MountReq) (*sliverpb.Mount, error)
 	ProcessDump(context.Context, *sliverpb.ProcessDumpReq) (*sliverpb.ProcessDump, error)
 	RunAs(context.Context, *sliverpb.RunAsReq) (*sliverpb.RunAs, error)
 	Impersonate(context.Context, *sliverpb.ImpersonateReq) (*sliverpb.Impersonate, error)
@@ -2353,6 +2423,9 @@ type SliverRPCServer interface {
 	SpawnDll(context.Context, *sliverpb.InvokeSpawnDllReq) (*sliverpb.SpawnDll, error)
 	Screenshot(context.Context, *sliverpb.ScreenshotReq) (*sliverpb.Screenshot, error)
 	CurrentTokenOwner(context.Context, *sliverpb.CurrentTokenOwnerReq) (*sliverpb.CurrentTokenOwner, error)
+	Services(context.Context, *sliverpb.ServicesReq) (*sliverpb.Services, error)
+	ServiceDetail(context.Context, *sliverpb.ServiceDetailReq) (*sliverpb.ServiceDetail, error)
+	StartServiceByName(context.Context, *sliverpb.StartServiceByNameReq) (*sliverpb.ServiceInfo, error)
 	// *** Pivots ***
 	PivotStartListener(context.Context, *sliverpb.PivotStartListenerReq) (*sliverpb.PivotListener, error)
 	PivotStopListener(context.Context, *sliverpb.PivotStopListenerReq) (*commonpb.Empty, error)
@@ -2372,6 +2445,7 @@ type SliverRPCServer interface {
 	RegistryDeleteKey(context.Context, *sliverpb.RegistryDeleteKeyReq) (*sliverpb.RegistryDeleteKey, error)
 	RegistryListSubKeys(context.Context, *sliverpb.RegistrySubKeyListReq) (*sliverpb.RegistrySubKeyList, error)
 	RegistryListValues(context.Context, *sliverpb.RegistryListValuesReq) (*sliverpb.RegistryValuesList, error)
+	RegistryReadHive(context.Context, *sliverpb.RegistryReadHiveReq) (*sliverpb.RegistryReadHive, error)
 	RunSSHCommand(context.Context, *sliverpb.SSHCommandReq) (*sliverpb.SSHCommand, error)
 	HijackDLL(context.Context, *clientpb.DllHijackReq) (*clientpb.DllHijack, error)
 	GetPrivs(context.Context, *sliverpb.GetPrivsReq) (*sliverpb.GetPrivs, error)
@@ -2491,6 +2565,9 @@ func (UnimplementedSliverRPCServer) GetBeaconTaskContent(context.Context, *clien
 func (UnimplementedSliverRPCServer) CancelBeaconTask(context.Context, *clientpb.BeaconTask) (*clientpb.BeaconTask, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelBeaconTask not implemented")
 }
+func (UnimplementedSliverRPCServer) UpdateBeaconIntegrityInformation(context.Context, *clientpb.BeaconIntegrity) (*commonpb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateBeaconIntegrityInformation not implemented")
+}
 func (UnimplementedSliverRPCServer) GetJobs(context.Context, *commonpb.Empty) (*clientpb.Jobs, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetJobs not implemented")
 }
@@ -2593,6 +2670,9 @@ func (UnimplementedSliverRPCServer) BuilderTrigger(context.Context, *clientpb.Ev
 func (UnimplementedSliverRPCServer) Builders(context.Context, *commonpb.Empty) (*clientpb.Builders, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Builders not implemented")
 }
+func (UnimplementedSliverRPCServer) GetCertificateInfo(context.Context, *clientpb.CertificatesReq) (*clientpb.CertificateInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCertificateInfo not implemented")
+}
 func (UnimplementedSliverRPCServer) CrackstationRegister(*clientpb.Crackstation, SliverRPC_CrackstationRegisterServer) error {
 	return status.Errorf(codes.Unimplemented, "method CrackstationRegister not implemented")
 }
@@ -2655,9 +2735,6 @@ func (UnimplementedSliverRPCServer) DeleteImplantProfile(context.Context, *clien
 }
 func (UnimplementedSliverRPCServer) SaveImplantProfile(context.Context, *clientpb.ImplantProfile) (*clientpb.ImplantProfile, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveImplantProfile not implemented")
-}
-func (UnimplementedSliverRPCServer) MsfStage(context.Context, *clientpb.MsfStagerReq) (*clientpb.MsfStager, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method MsfStage not implemented")
 }
 func (UnimplementedSliverRPCServer) ShellcodeRDI(context.Context, *clientpb.ShellcodeRDIReq) (*clientpb.ShellcodeRDI, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ShellcodeRDI not implemented")
@@ -2764,6 +2841,9 @@ func (UnimplementedSliverRPCServer) MemfilesAdd(context.Context, *sliverpb.Memfi
 func (UnimplementedSliverRPCServer) MemfilesRm(context.Context, *sliverpb.MemfilesRmReq) (*sliverpb.MemfilesRm, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MemfilesRm not implemented")
 }
+func (UnimplementedSliverRPCServer) Mount(context.Context, *sliverpb.MountReq) (*sliverpb.Mount, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Mount not implemented")
+}
 func (UnimplementedSliverRPCServer) ProcessDump(context.Context, *sliverpb.ProcessDumpReq) (*sliverpb.ProcessDump, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProcessDump not implemented")
 }
@@ -2811,6 +2891,15 @@ func (UnimplementedSliverRPCServer) Screenshot(context.Context, *sliverpb.Screen
 }
 func (UnimplementedSliverRPCServer) CurrentTokenOwner(context.Context, *sliverpb.CurrentTokenOwnerReq) (*sliverpb.CurrentTokenOwner, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CurrentTokenOwner not implemented")
+}
+func (UnimplementedSliverRPCServer) Services(context.Context, *sliverpb.ServicesReq) (*sliverpb.Services, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Services not implemented")
+}
+func (UnimplementedSliverRPCServer) ServiceDetail(context.Context, *sliverpb.ServiceDetailReq) (*sliverpb.ServiceDetail, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ServiceDetail not implemented")
+}
+func (UnimplementedSliverRPCServer) StartServiceByName(context.Context, *sliverpb.StartServiceByNameReq) (*sliverpb.ServiceInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartServiceByName not implemented")
 }
 func (UnimplementedSliverRPCServer) PivotStartListener(context.Context, *sliverpb.PivotStartListenerReq) (*sliverpb.PivotListener, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PivotStartListener not implemented")
@@ -2865,6 +2954,9 @@ func (UnimplementedSliverRPCServer) RegistryListSubKeys(context.Context, *sliver
 }
 func (UnimplementedSliverRPCServer) RegistryListValues(context.Context, *sliverpb.RegistryListValuesReq) (*sliverpb.RegistryValuesList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegistryListValues not implemented")
+}
+func (UnimplementedSliverRPCServer) RegistryReadHive(context.Context, *sliverpb.RegistryReadHiveReq) (*sliverpb.RegistryReadHive, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegistryReadHive not implemented")
 }
 func (UnimplementedSliverRPCServer) RunSSHCommand(context.Context, *sliverpb.SSHCommandReq) (*sliverpb.SSHCommand, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunSSHCommand not implemented")
@@ -3428,6 +3520,24 @@ func _SliverRPC_CancelBeaconTask_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).CancelBeaconTask(ctx, req.(*clientpb.BeaconTask))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_UpdateBeaconIntegrityInformation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.BeaconIntegrity)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).UpdateBeaconIntegrityInformation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SliverRPC_UpdateBeaconIntegrityInformation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).UpdateBeaconIntegrityInformation(ctx, req.(*clientpb.BeaconIntegrity))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4047,6 +4157,24 @@ func _SliverRPC_Builders_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SliverRPC_GetCertificateInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(clientpb.CertificatesReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).GetCertificateInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SliverRPC_GetCertificateInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).GetCertificateInfo(ctx, req.(*clientpb.CertificatesReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SliverRPC_CrackstationRegister_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(clientpb.Crackstation)
 	if err := stream.RecvMsg(m); err != nil {
@@ -4424,24 +4552,6 @@ func _SliverRPC_SaveImplantProfile_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).SaveImplantProfile(ctx, req.(*clientpb.ImplantProfile))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SliverRPC_MsfStage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(clientpb.MsfStagerReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SliverRPCServer).MsfStage(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SliverRPC_MsfStage_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SliverRPCServer).MsfStage(ctx, req.(*clientpb.MsfStagerReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5076,6 +5186,24 @@ func _SliverRPC_MemfilesRm_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SliverRPC_Mount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.MountReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).Mount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SliverRPC_Mount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).Mount(ctx, req.(*sliverpb.MountReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SliverRPC_ProcessDump_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(sliverpb.ProcessDumpReq)
 	if err := dec(in); err != nil {
@@ -5360,6 +5488,60 @@ func _SliverRPC_CurrentTokenOwner_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).CurrentTokenOwner(ctx, req.(*sliverpb.CurrentTokenOwnerReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_Services_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.ServicesReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).Services(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SliverRPC_Services_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).Services(ctx, req.(*sliverpb.ServicesReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_ServiceDetail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.ServiceDetailReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).ServiceDetail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SliverRPC_ServiceDetail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).ServiceDetail(ctx, req.(*sliverpb.ServiceDetailReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_StartServiceByName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.StartServiceByNameReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).StartServiceByName(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SliverRPC_StartServiceByName_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).StartServiceByName(ctx, req.(*sliverpb.StartServiceByNameReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5684,6 +5866,24 @@ func _SliverRPC_RegistryListValues_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SliverRPCServer).RegistryListValues(ctx, req.(*sliverpb.RegistryListValuesReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SliverRPC_RegistryReadHive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(sliverpb.RegistryReadHiveReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SliverRPCServer).RegistryReadHive(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SliverRPC_RegistryReadHive_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SliverRPCServer).RegistryReadHive(ctx, req.(*sliverpb.RegistryReadHiveReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -6329,6 +6529,10 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SliverRPC_CancelBeaconTask_Handler,
 		},
 		{
+			MethodName: "UpdateBeaconIntegrityInformation",
+			Handler:    _SliverRPC_UpdateBeaconIntegrityInformation_Handler,
+		},
+		{
 			MethodName: "GetJobs",
 			Handler:    _SliverRPC_GetJobs_Handler,
 		},
@@ -6461,6 +6665,10 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SliverRPC_Builders_Handler,
 		},
 		{
+			MethodName: "GetCertificateInfo",
+			Handler:    _SliverRPC_GetCertificateInfo_Handler,
+		},
+		{
 			MethodName: "CrackstationTrigger",
 			Handler:    _SliverRPC_CrackstationTrigger_Handler,
 		},
@@ -6539,10 +6747,6 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SaveImplantProfile",
 			Handler:    _SliverRPC_SaveImplantProfile_Handler,
-		},
-		{
-			MethodName: "MsfStage",
-			Handler:    _SliverRPC_MsfStage_Handler,
 		},
 		{
 			MethodName: "ShellcodeRDI",
@@ -6685,6 +6889,10 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SliverRPC_MemfilesRm_Handler,
 		},
 		{
+			MethodName: "Mount",
+			Handler:    _SliverRPC_Mount_Handler,
+		},
+		{
 			MethodName: "ProcessDump",
 			Handler:    _SliverRPC_ProcessDump_Handler,
 		},
@@ -6747,6 +6955,18 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CurrentTokenOwner",
 			Handler:    _SliverRPC_CurrentTokenOwner_Handler,
+		},
+		{
+			MethodName: "Services",
+			Handler:    _SliverRPC_Services_Handler,
+		},
+		{
+			MethodName: "ServiceDetail",
+			Handler:    _SliverRPC_ServiceDetail_Handler,
+		},
+		{
+			MethodName: "StartServiceByName",
+			Handler:    _SliverRPC_StartServiceByName_Handler,
 		},
 		{
 			MethodName: "PivotStartListener",
@@ -6819,6 +7039,10 @@ var SliverRPC_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegistryListValues",
 			Handler:    _SliverRPC_RegistryListValues_Handler,
+		},
+		{
+			MethodName: "RegistryReadHive",
+			Handler:    _SliverRPC_RegistryReadHive_Handler,
 		},
 		{
 			MethodName: "RunSSHCommand",

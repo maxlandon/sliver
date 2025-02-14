@@ -30,7 +30,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// EnvSetCmd - Set a remote environment variable.
+// EnvSetCmd - Set a remote environment variable
 func EnvSetCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -69,7 +69,7 @@ func EnvSetCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	}
 }
 
-// PrintSetEnvInfo - Print the set environment info.
+// PrintSetEnvInfo - Print the set environment info
 func PrintSetEnvInfo(name string, value string, envInfo *sliverpb.SetEnv, con *console.SliverClient) {
 	if envInfo.Response != nil && envInfo.Response.Err != "" {
 		con.PrintErrorf("%s\n", envInfo.Response.Err)

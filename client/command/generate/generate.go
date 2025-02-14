@@ -88,7 +88,7 @@ var (
 	ErrNoValidBuilders   = errors.New("no valid external builders for target")
 )
 
-// GenerateCmd - The main command used to generate implant binaries.
+// GenerateCmd - The main command used to generate implant binaries
 func GenerateCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	name, config := parseCompileFlags(cmd, con)
 	if config == nil {
@@ -99,7 +99,7 @@ func GenerateCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 		save, _ = os.Getwd()
 	}
 	if external, _ := cmd.Flags().GetBool("external-builder"); !external {
-		compile(config, save, con)
+		compile(name, config, save, con)
 	} else {
 		_, err := externalBuild(name, config, save, con)
 		if err != nil {
@@ -181,7 +181,7 @@ func nameOfOutputFormat(value clientpb.OutputFormat) string {
 	}
 }
 
-// Shared function that extracts the compile flags from the grumble context.
+// Shared function that extracts the compile flags from the grumble context
 func parseCompileFlags(cmd *cobra.Command, con *console.SliverClient) (string, *clientpb.ImplantConfig) {
 	var name string
 	if nameF, _ := cmd.Flags().GetString("name"); nameF != "" {
@@ -906,7 +906,7 @@ func externalBuild(name string, config *clientpb.ImplantConfig, save string, con
 	return nil, nil
 }
 
-func compile(config *clientpb.ImplantConfig, save string, con *console.SliverClient) (*commonpb.File, error) {
+func compile(name string, config *clientpb.ImplantConfig, save string, con *console.SliverClient) (*commonpb.File, error) {
 	if config.IsBeacon {
 		interval := time.Duration(config.BeaconInterval)
 		con.PrintInfof("Generating new %s/%s beacon implant binary (%v)\n", config.GOOS, config.GOARCH, interval)
@@ -924,6 +924,7 @@ func compile(config *clientpb.ImplantConfig, save string, con *console.SliverCli
 	con.SpinUntil("Compiling, please wait ...", ctrl)
 
 	generated, err := con.Rpc.Generate(context.Background(), &clientpb.GenerateReq{
+		Name:   name,
 		Config: config,
 	})
 	ctrl <- true
@@ -1010,19 +1011,7 @@ func checkBuildTargetCompatibility(format clientpb.OutputFormat, targetOS string
 		return true
 	}
 
-	if runtime.GOOS != "windows" && targetOS == "windows" {
-		if !hasCC(targetOS, targetArch, compilers.CrossCompilers) {
-			return warnMissingCrossCompiler(format, targetOS, targetArch, con)
-		}
-	}
-
 	if runtime.GOOS != "darwin" && targetOS == "darwin" {
-		if !hasCC(targetOS, targetArch, compilers.CrossCompilers) {
-			return warnMissingCrossCompiler(format, targetOS, targetArch, con)
-		}
-	}
-
-	if runtime.GOOS != "linux" && targetOS == "linux" {
 		if !hasCC(targetOS, targetArch, compilers.CrossCompilers) {
 			return warnMissingCrossCompiler(format, targetOS, targetArch, con)
 		}
@@ -1043,12 +1032,8 @@ func hasCC(targetOS string, targetArch string, crossCompilers []*clientpb.CrossC
 func warnMissingCrossCompiler(format clientpb.OutputFormat, targetOS string, targetArch string, con *console.SliverClient) bool {
 	con.PrintWarnf("Missing cross-compiler for %s on %s/%s\n", nameOfOutputFormat(format), targetOS, targetArch)
 	switch targetOS {
-	case "windows":
-		con.PrintWarnf("The server cannot find an installation of mingw")
 	case "darwin":
 		con.PrintWarnf("The server cannot find an installation of osxcross")
-	case "linux":
-		con.PrintWarnf("The server cannot find an installation of musl-cross")
 	}
 	con.PrintWarnf("For more information please read %s\n", crossCompilerInfoURL)
 
@@ -1084,7 +1069,7 @@ func findExternalBuilders(config *clientpb.ImplantConfig, con *console.SliverCli
 	return validBuilders, nil
 }
 
-func selectExternalBuilder(builders []*clientpb.Builder, con *console.SliverClient) (*clientpb.Builder, error) {
+func selectExternalBuilder(builders []*clientpb.Builder, _ *console.SliverClient) (*clientpb.Builder, error) {
 	choices := []string{}
 	for _, builder := range builders {
 		choices = append(choices, builder.Name)

@@ -21,9 +21,12 @@ package builder
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"syscall"
 
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
@@ -37,8 +40,9 @@ import (
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/client/version"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/bishopfox/sliver/protobuf/rpcpb"
+	"github.com/bishopfox/sliver/server/assets"
 	"github.com/bishopfox/sliver/server/builder"
+	"github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/generate"
 	"github.com/bishopfox/sliver/server/log"
 )
@@ -51,10 +55,14 @@ const (
 	enableTargetFlagStr  = "enable-target"
 	disableTargetFlagStr = "disable-target"
 
-	operatorConfigFlagStr = "config"
-	quietFlagStr          = "quiet"
-	logLevelFlagStr       = "log-level"
+	operatorConfigFlagStr    = "config"
+	operatorConfigDirFlagStr = "config-dir"
+	quietFlagStr             = "quiet"
+	logLevelFlagStr          = "log-level"
 )
+
+// A list of different builders which can run concurrently.
+var builders []*builder.Builder
 
 // Commands returns all commands for using Sliver as a builder backend.
 func Commands(con *console.SliverClient, team *server.Server) []*cobra.Command {
@@ -70,6 +78,7 @@ func Commands(con *console.SliverClient, team *server.Server) []*cobra.Command {
 	builderCmd.Flags().StringP(nameFlagStr, "n", "", "Name of the builder (blank = hostname)")
 	builderCmd.Flags().IntP(logLevelFlagStr, "L", 4, "Logging level: 1/fatal, 2/error, 3/warn, 4/info, 5/debug, 6/trace")
 	builderCmd.Flags().StringP(operatorConfigFlagStr, "c", "", "operator config file path")
+	builderCmd.Flags().StringP(operatorConfigDirFlagStr, "d", "", "operator config directory path")
 	builderCmd.Flags().BoolP(quietFlagStr, "q", false, "do not write any content to stdout")
 
 	// Artifact configuration options
@@ -89,11 +98,17 @@ func runBuilderCmd(cmd *cobra.Command, args []string, team *server.Server, con *
 	configPath, err := cmd.Flags().GetString(operatorConfigFlagStr)
 	if err != nil {
 		builderLog.Errorf("Failed to parse --%s flag %s\n", operatorConfigFlagStr, err)
-		return nil
+		return err
 	}
-	if configPath == "" {
-		builderLog.Errorf("Missing --%s flag\n", operatorConfigFlagStr)
-		return nil
+
+	configDir, err := cmd.Flags().GetString(operatorConfigDirFlagStr)
+	if err != nil {
+		builderLog.Errorf("Failed to parse --%s flag %s\n", operatorConfigDirFlagStr, err)
+		return err
+	}
+	if configPath == "" && configDir == "" {
+		builderLog.Errorf("Missing --%s or --%s flags\n", operatorConfigFlagStr, operatorConfigDirFlagStr)
+		return err
 	}
 
 	quiet, err := cmd.Flags().GetBool(quietFlagStr)
@@ -112,6 +127,7 @@ func runBuilderCmd(cmd *cobra.Command, args []string, team *server.Server, con *
 	}
 	log.RootLogger.SetLevel(log.LevelFrom(level))
 
+	// Catch code crashes if everything fails no matter where.
 	defer func() {
 		if r := recover(); r != nil {
 			builderLog.Printf("panic:\n%s", debug.Stack())
@@ -120,13 +136,127 @@ func runBuilderCmd(cmd *cobra.Command, args []string, team *server.Server, con *
 		}
 	}()
 
-	externalBuilder := parseBuilderConfigFlags(cmd)
-	externalBuilder.Templates = []string{"sliver"}
+	// Setup and configure builders.
+	assets.Setup(true, false)
+	c2.SetupDefaultC2Profiles()
 
+	config := configPath
+	multipleBuilders := (configPath == "" && configDir != "")
+	if multipleBuilders {
+		config = configDir
+	}
+
+	// Start all builders, non-blocking no matter how many builders.
+	startBuilders(cmd, config, multipleBuilders, team, con)
+
+	// Handle SIGHUP to reload builders
+	sigHup := make(chan os.Signal, 1)
+	signal.Notify(sigHup, syscall.SIGHUP)
+	// Handle interupt to stop all builders and exit
+	sigInt := make(chan os.Signal, 1)
+	signal.Notify(sigInt, os.Interrupt)
+	for {
+		select {
+		case <-sigHup:
+			builderLog.Info("Received SIGHUP, reloading builders")
+			reloadBuilders(cmd, config, multipleBuilders, team, con)
+		case <-sigInt:
+			builderLog.Info("Received SIGINT, stopping all builders")
+			for _, builderInst := range builders {
+				builderInst.Stop()
+			}
+		}
+	}
 	// load the client configuration from the filesystem
-	return startBuilderClient(externalBuilder, configPath, team, con)
+	// return startBuilderClient(externalBuilder, configPath, team, con)
+
+	return con.WaitSignal()
 }
 
+// Start all builders if multpile is true or a single builder otherwise.
+func startBuilders(cmd *cobra.Command, config string, multpile bool, team *server.Server, con *console.SliverClient) {
+	// We're passing a mutex to each builder to prevent concurrent builds.
+	// Concurrent build should be fine in theory, but may cause resource
+	// exhaustion on the server.
+	// For single builders, this should have no impact.
+	// Single builder
+	if !multpile {
+		err := startBuilderClientAlt(cmd, config, team, con)
+		// singleBuilder, err := createBuilder(cmd, config, mutex)
+		if err != nil {
+			builderLog.Errorf("Failed to create builder: %s", err)
+			os.Exit(-1)
+		}
+	} else {
+		// Multiple builders
+		builderLog.Infof("Reading config dir: %s", config)
+		err := filepath.Walk(config, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				builderLog.Errorf("Failed to walk config dir: %s", err)
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+			go func() {
+				builderLog.Infof("Starting builder with config file: %s", path)
+				err := startBuilderClientAlt(cmd, path, team, con)
+				// builderInst, err := createBuilder(cmd, path, mutex)
+				if err != nil {
+					builderLog.Errorf("Failed to create builder: %s", err)
+					return
+				}
+				// builders = append(builders, builderInst)
+				// builderInst.Start()
+			}()
+			return nil
+		})
+		if err != nil {
+			builderLog.Errorf("Failed to walk config dir: %s", err)
+			return
+		}
+	}
+}
+
+func reloadBuilders(cmd *cobra.Command, config string, multiple bool, team *server.Server, con *console.SliverClient) {
+	builderLog.Infof("Reloading builders")
+	for _, builderInst := range builders {
+		builderInst.Stop()
+	}
+	builders = nil
+	startBuilders(cmd, config, multiple, team, con)
+}
+
+//	func createBuilder(cmd *cobra.Command, configPath string, mutex *sync.Mutex) (*builder.Builder, error) {
+//		externalBuilder := parseBuilderConfigFlags(cmd)
+//		externalBuilder.Templates = []string{"sliver"}
+//
+//		// load the client configuration from the filesystem
+//		config, err := clientAssets.ReadConfig(configPath)
+//		if err != nil {
+//			builderLog.Fatalf("Invalid config file: %s", err)
+//			return nil, err
+//		}
+//		if externalBuilder.Name == "" {
+//			builderLog.Infof("No builder name was specified, attempting to use hostname")
+//			externalBuilder.Name, err = os.Hostname()
+//			if err != nil {
+//				builderLog.Errorf("Failed to get hostname: %s", err)
+//				externalBuilder.Name = fmt.Sprintf("%s's %s builder", config.Operator, runtime.GOOS)
+//			}
+//		}
+//		builderLog.Infof("Hello my name is: %s", externalBuilder.Name)
+//
+//		// connect to the server
+//		builderLog.Infof("Connecting to %s@%s:%d ...", config.Operator, config.LHost, config.LPort)
+//		rpc, ln, err := transport.MTLSConnect(config)
+//		if err != nil {
+//			builderLog.Errorf("Failed to connect to server %s@%s:%d: %s", config.Operator, config.LHost, config.LPort, err)
+//			return nil, err
+//		}
+//
+//		return builder.NewBuilder(externalBuilder, mutex, rpc, ln), nil
+//	}
 func parseBuilderConfigFlags(cmd *cobra.Command) *clientpb.Builder {
 	externalBuilder := &clientpb.Builder{GOOS: runtime.GOOS, GOARCH: runtime.GOARCH}
 
@@ -257,7 +387,10 @@ func parseForceDisableTargets(cmd *cobra.Command, externalBuilder *clientpb.Buil
 	}
 }
 
-func startBuilderClient(externalBuilder *clientpb.Builder, configPath string, team *server.Server, con *console.SliverClient) error {
+func startBuilderClientAlt(cmd *cobra.Command, configPath string, team *server.Server, con *console.SliverClient) error {
+	cfg := parseBuilderConfigFlags(cmd)
+	cfg.Templates = []string{"sliver"}
+
 	// Simply use our transport+RPC backend.
 	cli := transport.NewClient()
 
@@ -270,16 +403,15 @@ func startBuilderClient(externalBuilder *clientpb.Builder, configPath string, te
 		os.Exit(-1)
 	}
 
-	if externalBuilder.Name == "" {
+	if cfg.Name == "" {
 		builderLog.Infof("No builder name was specified, attempting to use hostname")
-		externalBuilder.Name, err = os.Hostname()
+		cfg.Name, err = os.Hostname()
 		if err != nil {
 			builderLog.Errorf("Failed to get hostname: %s", err)
-			externalBuilder.Name = fmt.Sprintf("%s's %s builder", config.User, runtime.GOOS)
+			cfg.Name = fmt.Sprintf("%s's %s builder", config.User, runtime.GOOS)
 		}
 	}
-	builderLog.Infof("Hello my name is: %s", externalBuilder.Name)
-
+	builderLog.Infof("Hello my name is: %s", cfg.Name)
 	builderLog.Infof("Connecting to %s@%s:%d ...", config.User, config.Host, config.Port)
 
 	// And immediately connect to it.
@@ -288,13 +420,50 @@ func startBuilderClient(externalBuilder *clientpb.Builder, configPath string, te
 		return err
 	}
 
-	rpc := rpcpb.NewSliverRPCClient(cli.Conn)
-
+	buildr := builder.NewBuilder(cfg, con.Rpc, cli.Conn)
 	defer teamclient.Disconnect()
 
-	// Let the builder do its work, blocking.
-	return builder.StartBuilder(externalBuilder, rpc, con)
+	return buildr.Start()
 }
+
+// func startBuilderClient(externalBuilder *clientpb.Builder, configPath string, team *server.Server, con *console.SliverClient) error {
+// 	// Simply use our transport+RPC backend.
+// 	cli := transport.NewClient()
+//
+// 	teamclient := team.Self(client.WithDialer(cli))
+//
+// 	// Now use our teamclient to fetch the configuration.
+// 	config, err := teamclient.ReadConfig(configPath)
+// 	if err != nil {
+// 		builderLog.Fatalf("Invalid config file: %s", err)
+// 		os.Exit(-1)
+// 	}
+//
+// 	if externalBuilder.Name == "" {
+// 		builderLog.Infof("No builder name was specified, attempting to use hostname")
+// 		externalBuilder.Name, err = os.Hostname()
+// 		if err != nil {
+// 			builderLog.Errorf("Failed to get hostname: %s", err)
+// 			externalBuilder.Name = fmt.Sprintf("%s's %s builder", config.User, runtime.GOOS)
+// 		}
+// 	}
+// 	builderLog.Infof("Hello my name is: %s", externalBuilder.Name)
+//
+// 	builderLog.Infof("Connecting to %s@%s:%d ...", config.User, config.Host, config.Port)
+//
+// 	// And immediately connect to it.
+// 	err = teamclient.Connect(client.WithConfig(config))
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	rpc := rpcpb.NewSliverRPCClient(cli.Conn)
+//
+// 	defer teamclient.Disconnect()
+//
+// 	// Let the builder do its work, blocking.
+// 	return builder.StartBuilder(externalBuilder, rpc, con)
+// }
 
 // builderFormatsCompleter completes supported builders architectures.
 func builderFormatsCompleter() carapace.Action {

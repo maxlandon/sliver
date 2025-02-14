@@ -20,78 +20,46 @@ package creds
 
 import (
 	"context"
-	"strings"
-
-	"github.com/spf13/cobra"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/spf13/cobra"
 )
 
 // CredsCmd - Add new credentials.
 func CredsRmCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
+	var id string
 	if len(args) > 0 {
-		creds, err := con.Rpc.Creds(context.Background(), &commonpb.Empty{})
-		if err != nil {
-			con.PrintErrorf("%s\n", con.UnwrapServerErr(err))
-			return
-		}
-
-		if len(creds.Credentials) == 0 {
-			con.PrintInfof("No credentials 🙁\n")
-			return
-		}
-
-		for _, arg := range args {
-			for _, cred := range creds.GetCredentials() {
-				if strings.HasPrefix(cred.ID, arg) {
-					_, err := con.Rpc.CredsRm(context.Background(), &clientpb.Credentials{
-						Credentials: []*clientpb.Credential{
-							{
-								ID: cred.ID,
-							},
-						},
-					})
-					if err != nil {
-						con.PrintErrorf("Failed to delete credential: %s\n", con.UnwrapServerErr(err))
-						return
-					}
-				}
-			}
-		}
-	} else {
-		var id string
-		if id == "" {
-			credential, err := SelectCredential(false, clientpb.HashType_INVALID, con)
-			if err != nil {
-				con.PrintErrorf("%s\n", err)
-				return
-			}
-
-			id = credential.ID
-		}
-		_, err := con.Rpc.CredsRm(context.Background(), &clientpb.Credentials{
-			Credentials: []*clientpb.Credential{
-				{
-					ID: id,
-				},
-			},
-		})
-		if err != nil {
-			con.PrintErrorf("Failed to delete credential: %s\n", con.UnwrapServerErr(err))
-			return
-		}
-
-		creds, err := con.Rpc.Creds(context.Background(), &commonpb.Empty{})
-		if err != nil {
-			con.PrintErrorf("%s\n", con.UnwrapServerErr(err))
-			return
-		}
-		if len(creds.Credentials) == 0 {
-			con.PrintInfof("No credentials 🙁\n")
-			return
-		}
-		PrintCreds(creds.Credentials, con)
+		id = args[0]
 	}
+	if id == "" {
+		credential, err := SelectCredential(false, clientpb.HashType_INVALID, con)
+		if err != nil {
+			con.PrintErrorf("%s\n", err)
+			return
+		}
+		id = credential.ID
+	}
+	_, err := con.Rpc.CredsRm(context.Background(), &clientpb.Credentials{
+		Credentials: []*clientpb.Credential{
+			{
+				ID: id,
+			},
+		},
+	})
+	if err != nil {
+		con.PrintErrorf("%s\n", err)
+		return
+	}
+	creds, err := con.Rpc.Creds(context.Background(), &commonpb.Empty{})
+	if err != nil {
+		con.PrintErrorf("%s\n", err)
+		return
+	}
+	if len(creds.Credentials) == 0 {
+		con.PrintInfof("No credentials 🙁\n")
+		return
+	}
+	PrintCreds(creds.Credentials, con)
 }

@@ -24,14 +24,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/bishopfox/sliver/client/assets"
+	"github.com/bishopfox/sliver/client/command/settings"
+	"github.com/bishopfox/sliver/client/console"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
-
-	"github.com/bishopfox/sliver/client/assets"
-	"github.com/bishopfox/sliver/client/command/settings"
-	"github.com/bishopfox/sliver/client/console"
 )
 
 // ExtensionsCmd - List information about installed extensions.
@@ -128,5 +127,15 @@ func ExtensionsCommandNameCompleter(con *console.SliverClient) carapace.Action {
 		}
 
 		return carapace.ActionValuesDescribed(results...).Tag("extension commands")
+	})
+}
+
+func ManifestCompleter() carapace.Action {
+	return carapace.ActionCallback(func(c carapace.Context) carapace.Action {
+		results := []string{}
+		for k := range loadedManifests {
+			results = append(results, k)
+		}
+		return carapace.ActionValues(results...).Tag("extensions")
 	})
 }

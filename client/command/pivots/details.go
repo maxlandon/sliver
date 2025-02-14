@@ -31,7 +31,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// PivotDetailsCmd - Display pivots for all sessions.
+// PivotDetailsCmd - Display pivots for all sessions
 func PivotDetailsCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {
@@ -76,7 +76,7 @@ func PivotDetailsCmd(cmd *cobra.Command, con *console.SliverClient, args []strin
 	}
 }
 
-// PrintPivotListenerDetails - Print details of a single pivot listener.
+// PrintPivotListenerDetails - Print details of a single pivot listener
 func PrintPivotListenerDetails(listener *sliverpb.PivotListener, con *console.SliverClient) {
 	con.Printf("\n")
 	con.Printf("               ID: %d\n", listener.ID)

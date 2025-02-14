@@ -30,7 +30,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
-// ShikataGaNaiCmd - Command wrapper for the Shikata Ga Nai shellcode encoder.
+// ShikataGaNaiCmd - Command wrapper for the Shikata Ga Nai shellcode encoder
 func ShikataGaNaiCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	shellcodeFile := args[0]
 	rawShellcode, err := os.ReadFile(shellcodeFile)

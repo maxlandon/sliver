@@ -21,9 +21,8 @@ package hosts
 import (
 	"context"
 
-	"github.com/spf13/cobra"
-
 	"github.com/bishopfox/sliver/client/console"
+	"github.com/spf13/cobra"
 )
 
 // HostsRmCmd - Remove a host from the database.

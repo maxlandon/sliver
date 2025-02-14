@@ -26,12 +26,11 @@ import (
 	"text/tabwriter"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/spf13/cobra"
-
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
 )
 
 // HostsIOCCmd - Remove a host from the database.
@@ -64,10 +63,6 @@ func hostIOCsTable(host *clientpb.Host, con *console.SliverClient) string {
 }
 
 func SelectHostIOC(host *clientpb.Host, con *console.SliverClient) (*clientpb.IOC, error) {
-	if len(host.IOCs) == 0 {
-		return nil, ErrNoIOCs
-	}
-
 	// Sort the keys because maps have a randomized order, these keys must be ordered for the selection
 	// to work properly since we rely on the index of the user's selection to find the session in the map
 	var keys []string

@@ -13,7 +13,6 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 )
 
-// Commands returns all payload compilation commands.
 func Commands(con *console.SliverClient) []*cobra.Command {
 	// [ Generate ] --------------------------------------------------------------
 	generateCmd := &cobra.Command{
@@ -50,34 +49,6 @@ func Commands(con *console.SliverClient) []*cobra.Command {
 	coreImplantFlagCompletions(generateBeaconCmd, con)
 
 	generateCmd.AddCommand(generateBeaconCmd)
-
-	generateStagerCmd := &cobra.Command{
-		Use:   consts.MsfStagerStr,
-		Short: "Generate a stager using Metasploit (requires local Metasploit installation)",
-		Long:  help.GetHelpFor([]string{consts.MsfStagerStr}),
-		Run: func(cmd *cobra.Command, args []string) {
-			GenerateStagerCmd(cmd, con, args)
-		},
-	}
-	flags.Bind("stager", false, generateStagerCmd, func(f *pflag.FlagSet) {
-		f.StringP("os", "o", "windows", "operating system")
-		f.StringP("arch", "a", "amd64", "cpu architecture")
-		f.StringP("lhost", "L", "", "Listening host")
-		f.Uint32P("lport", "l", 8443, "Listening port")
-		f.StringP("protocol", "r", "tcp", "Staging protocol (tcp/http/https)")
-		f.StringP("format", "f", "raw", "Output format (msfvenom formats, see help generate msf-stager for the list)")
-		f.StringP("badchars", "b", "", "bytes to exclude from stage shellcode")
-		f.StringP("save", "s", "", "directory to save the generated stager to")
-		f.StringP("advanced", "d", "", "Advanced options for the stager using URI query syntax (option1=value1&option2=value2...)")
-	})
-	completers.NewFlagCompsFor(generateStagerCmd, func(comp *carapace.ActionMap) {
-		(*comp)["save"] = carapace.ActionDirectories()
-		(*comp)["os"] = carapace.ActionValues("windows", "linux", "darwin").Tag("msf stager OS")
-		(*comp)["arch"] = carapace.ActionValues("amd64", "x86").Tag("msf stager archs")
-		(*comp)["format"] = MsfFormatCompleter(con)
-		(*comp)["protocol"] = carapace.ActionValues("http", "https", "tcp").Tag("msf stager protocols")
-	})
-	generateCmd.AddCommand(generateStagerCmd)
 
 	generateInfoCmd := &cobra.Command{
 		Use:   consts.CompilerInfoStr,
@@ -261,15 +232,15 @@ func Commands(con *console.SliverClient) []*cobra.Command {
 	carapace.Gen(implantsRmCmd).PositionalCompletion(ImplantBuildNameCompleter(con))
 	implantBuildsCmd.AddCommand(implantsRmCmd)
 
-	implantStageCmd := &cobra.Command{
+	implantsStageCmd := &cobra.Command{
 		Use:   consts.StageStr,
-		Short: "Serve a previously generated implant",
+		Short: "Serve a previously generated build",
 		Long:  help.GetHelpFor([]string{consts.ImplantBuildsStr, consts.StageStr}),
 		Run: func(cmd *cobra.Command, args []string) {
 			ImplantsStageCmd(cmd, con, args)
 		},
 	}
-	implantBuildsCmd.AddCommand(implantStageCmd)
+	implantBuildsCmd.AddCommand(implantsStageCmd)
 
 	canariesCmd := &cobra.Command{
 		Use:   consts.CanariesStr,
@@ -323,6 +294,7 @@ func coreImplantFlags(name string, cmd *cobra.Command) {
 		f.Int64P("reconnect", "j", DefaultReconnect, "attempt to reconnect every n second(s)")
 		f.Int64P("poll-timeout", "P", DefaultPollTimeout, "long poll request timeout")
 		f.Uint32P("max-errors", "k", DefaultMaxErrors, "max number of connection errors")
+		f.StringP("c2profile", "C", consts.DefaultC2Profile, "HTTP C2 profile to use")
 
 		// Limits
 		f.StringP("limit-datetime", "w", "", "limit execution to before datetime")
@@ -333,7 +305,6 @@ func coreImplantFlags(name string, cmd *cobra.Command) {
 		f.StringP("limit-locale", "L", "", "limit execution to hosts that match this locale")
 
 		f.StringP("format", "f", "exe", "Specifies the output formats, valid values are: 'exe', 'shared' (for dynamic libraries), 'service' (see: `psexec` for more info) and 'shellcode' (windows only)")
-		f.StringP("c2profile", "C", consts.DefaultC2Profile, "HTTP C2 profile to use")
 	})
 }
 

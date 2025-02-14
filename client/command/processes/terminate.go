@@ -30,7 +30,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// TerminateCmd - Terminate a process on the remote system.
+// TerminateCmd - Terminate a process on the remote system
 func TerminateCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -70,7 +70,7 @@ func TerminateCmd(cmd *cobra.Command, con *console.SliverClient, args []string) 
 	}
 }
 
-// PrintTerminate - Print the results of the terminate command.
+// PrintTerminate - Print the results of the terminate command
 func PrintTerminate(terminated *sliverpb.Terminate, con *console.SliverClient) {
 	if terminated.Response != nil && terminated.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", terminated.Response.GetErr())

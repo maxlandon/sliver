@@ -37,7 +37,7 @@ import (
 	"github.com/bishopfox/sliver/util"
 )
 
-// LootCmd - The loot root command.
+// LootCmd - The loot root command
 func LootCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	allLoot, err := con.Rpc.LootAll(context.Background(), &commonpb.Empty{})
 	if err != nil {
@@ -47,7 +47,7 @@ func LootCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	PrintAllFileLootTable(allLoot, con)
 }
 
-// PrintAllFileLootTable - Displays a table of all file loot.
+// PrintAllFileLootTable - Displays a table of all file loot
 func PrintAllFileLootTable(allLoot *clientpb.AllLoot, con *console.SliverClient) {
 	if allLoot == nil || len(allLoot.Loot) == 0 {
 		con.PrintInfof("No loot 🙁\n")
@@ -77,7 +77,7 @@ func PrintAllFileLootTable(allLoot *clientpb.AllLoot, con *console.SliverClient)
 	con.Printf("%s\n", tw.Render())
 }
 
-// PrintLootFile - Display the contents of a piece of loot.
+// PrintLootFile - Display the contents of a piece of loot
 func PrintLootFile(loot *clientpb.Loot, con *console.SliverClient) {
 	if loot.File == nil {
 		return

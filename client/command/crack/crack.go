@@ -32,7 +32,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 )
 
-// CrackCmd - GPU password cracking interface.
+// CrackCmd - GPU password cracking interface
 func CrackCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	if !AreCrackersOnline(con) {
 		PrintNoCrackstations(con)
@@ -57,7 +57,7 @@ func CrackCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	}
 }
 
-// CrackStationsCmd - Manage GPU cracking stations.
+// CrackStationsCmd - Manage GPU cracking stations
 func CrackStationsCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	crackers, err := con.Rpc.Crackstations(context.Background(), &commonpb.Empty{})
 	if err != nil {

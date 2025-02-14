@@ -23,13 +23,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/proto"
-
 	"github.com/bishopfox/sliver/client/command/loot"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 )
 
 // ExecuteCmd - Run a command on the remote system.
@@ -65,7 +64,7 @@ func ExecuteCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	ctrl := make(chan bool)
 	con.SpinUntil(fmt.Sprintf("Executing %s %s ...", cmdPath, strings.Join(args, " ")), ctrl)
 	if token || hidden || ppid != 0 {
-		if session.OS != "windows" {
+		if (session != nil && session.OS != "windows") || (beacon != nil && beacon.OS != "windows") {
 			con.PrintErrorf("The token, hide window, and ppid options are not valid on %s\n", session.OS)
 			return
 		}
@@ -249,7 +248,6 @@ func SaveExecutionOutput(executionOutput string, commandName string, hostName st
 	outFileName := filepath.Base(fmt.Sprintf("%s_%s_%s*.log", commandName, hostName, timeNow))
 
 	outFilePath, err = os.CreateTemp("", outFileName)
-
 	if err != nil {
 		con.PrintErrorf("%s\n", err)
 		return

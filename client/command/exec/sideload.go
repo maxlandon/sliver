@@ -25,12 +25,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/proto"
-
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 )
 
 // SideloadCmd - Sideload a shared library on the remote system.
@@ -40,8 +39,16 @@ func SideloadCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 		return
 	}
 
+	if len(args) < 1 {
+		cmd.Usage()
+		return
+	}
+
 	binPath := args[0]
-	binArgs := strings.Join(args[1:], " ")
+	var binArgs []string
+	if len(args) > 1 {
+		binArgs = args[1:]
+	}
 
 	entryPoint, _ := cmd.Flags().GetString("entry-point")
 	processName, _ := cmd.Flags().GetString("process")
@@ -58,7 +65,7 @@ func SideloadCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	processArgs := strings.Split(processArgsStr, " ")
 	isDLL := (filepath.Ext(binPath) == ".dll")
 	ctrl := make(chan bool)
-	con.SpinUntil(fmt.Sprintf("Sideloading %s ...", binPath), ctrl)
+	con.SpinUntil(fmt.Sprintf("Sideloading %s %v...", binPath, binArgs), ctrl)
 	sideload, err := con.Rpc.Sideload(context.Background(), &sliverpb.SideloadReq{
 		Request:     con.ActiveTarget.Request(cmd),
 		Args:        binArgs,

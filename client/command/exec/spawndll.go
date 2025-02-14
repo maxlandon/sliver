@@ -22,14 +22,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
-
-	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 )
 
 // SpawnDllCmd - Spawn execution of a DLL on the remote system.
@@ -39,7 +37,10 @@ func SpawnDllCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 		return
 	}
 	binPath := args[0]
-	dllArgs := strings.Join(args[1:], " ")
+	var dllArgs []string
+	if len(args) > 1 {
+		dllArgs = args[1:]
+	}
 
 	processName, _ := cmd.Flags().GetString("process")
 	exportName, _ := cmd.Flags().GetString("export")

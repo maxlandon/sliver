@@ -30,7 +30,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// RunAsCmd - Run a command as another user on the remote system.
+// RunAsCmd - Run a command as another user on the remote system
 func RunAsCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -90,7 +90,7 @@ func RunAsCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	}
 }
 
-// PrintRunAs - Print the result of run as.
+// PrintRunAs - Print the result of run as
 func PrintRunAs(runAs *sliverpb.RunAs, process string, args string, name string, con *console.SliverClient) {
 	if runAs.Response != nil && runAs.Response.GetErr() != "" {
 		con.PrintErrorf("%s\n", runAs.Response.GetErr())

@@ -83,24 +83,69 @@ func (f *osFile) SetAppend(enable bool) (errno experimentalsys.Errno) {
 		f.flag &= ^experimentalsys.O_APPEND
 	}
 
-	// Clear any create flag, as we are re-opening, not re-creating.
-	f.flag &= ^experimentalsys.O_CREAT
-
-	// appendMode (bool) cannot be changed later, so we have to re-open the
-	// file. https://github.com/golang/go/blob/go1.20/src/os/file_unix.go#L60
+	// appendMode cannot be changed later, so we have to re-open the file
+	// https://github.com/golang/go/blob/go1.23/src/os/file_unix.go#L60
 	return fileError(f, f.closed, f.reopen())
 }
 
-// compile-time check to ensure osFile.reopen implements reopenFile.
-var _ reopenFile = (*fsFile)(nil).reopen
-
 func (f *osFile) reopen() (errno experimentalsys.Errno) {
-	// Clear any create flag, as we are re-opening, not re-creating.
-	f.flag &= ^experimentalsys.O_CREAT
+	var (
+		isDir  bool
+		offset int64
+		err    error
+	)
 
-	_ = f.close()
-	f.file, errno = OpenFile(f.path, f.flag, f.perm)
-	return
+	isDir, errno = f.IsDir()
+	if errno != 0 {
+		return errno
+	}
+
+	if !isDir {
+		offset, err = f.file.Seek(0, io.SeekCurrent)
+		if err != nil {
+			return experimentalsys.UnwrapOSError(err)
+		}
+	}
+
+	// Clear any create or trunc flag, as we are re-opening, not re-creating.
+	flag := f.flag &^ (experimentalsys.O_CREAT | experimentalsys.O_TRUNC)
+	file, errno := OpenFile(f.path, flag, f.perm)
+	if errno != 0 {
+		return errno
+	}
+	errno = f.checkSameFile(file)
+	if errno != 0 {
+		return errno
+	}
+
+	if !isDir {
+		_, err = file.Seek(offset, io.SeekStart)
+		if err != nil {
+			_ = file.Close()
+			return experimentalsys.UnwrapOSError(err)
+		}
+	}
+
+	// Only update f on success.
+	_ = f.file.Close()
+	f.file = file
+	f.fd = file.Fd()
+	return 0
+}
+
+func (f *osFile) checkSameFile(osf *os.File) experimentalsys.Errno {
+	fi1, err := f.file.Stat()
+	if err != nil {
+		return experimentalsys.UnwrapOSError(err)
+	}
+	fi2, err := osf.Stat()
+	if err != nil {
+		return experimentalsys.UnwrapOSError(err)
+	}
+	if os.SameFile(fi1, fi2) {
+		return 0
+	}
+	return experimentalsys.ENOENT
 }
 
 // IsNonblock implements the same method as documented on fsapi.File
@@ -170,7 +215,7 @@ func (f *osFile) Seek(offset int64, whence int) (newOffset int64, errno experime
 		errno = fileError(f, f.closed, errno)
 
 		// If the error was trying to rewind a directory, re-open it. Notably,
-		// seeking to zero on a directory doesn't work on Windows with Go 1.18.
+		// seeking to zero on a directory doesn't work on Windows with Go 1.19.
 		if errno == experimentalsys.EISDIR && offset == 0 && whence == io.SeekStart {
 			errno = 0
 			f.reopenDir = true

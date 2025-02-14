@@ -28,7 +28,7 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 )
 
-// ArmorySearchCmd - Search for packages by name.
+// ArmorySearchCmd - Search for packages by name
 func ArmorySearchCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	con.PrintInfof("Refreshing package cache ... ")
 	clientConfig := parseArmoryHTTPConfig(cmd)
@@ -47,7 +47,7 @@ func ArmorySearchCmd(cmd *cobra.Command, con *console.SliverClient, args []strin
 		return
 	}
 
-	aliases, exts := packagesInCache()
+	aliases, exts := packageManifestsInCache()
 	matchedAliases := []*alias.AliasManifest{}
 	for _, a := range aliases {
 		if nameExpr.MatchString(a.CommandName) {

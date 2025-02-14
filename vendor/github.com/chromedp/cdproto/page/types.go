@@ -36,84 +36,91 @@ func (t PermissionsPolicyFeature) String() string {
 
 // PermissionsPolicyFeature values.
 const (
-	PermissionsPolicyFeatureAccelerometer               PermissionsPolicyFeature = "accelerometer"
-	PermissionsPolicyFeatureAmbientLightSensor          PermissionsPolicyFeature = "ambient-light-sensor"
-	PermissionsPolicyFeatureAttributionReporting        PermissionsPolicyFeature = "attribution-reporting"
-	PermissionsPolicyFeatureAutoplay                    PermissionsPolicyFeature = "autoplay"
-	PermissionsPolicyFeatureBluetooth                   PermissionsPolicyFeature = "bluetooth"
-	PermissionsPolicyFeatureBrowsingTopics              PermissionsPolicyFeature = "browsing-topics"
-	PermissionsPolicyFeatureCamera                      PermissionsPolicyFeature = "camera"
-	PermissionsPolicyFeatureChDpr                       PermissionsPolicyFeature = "ch-dpr"
-	PermissionsPolicyFeatureChDeviceMemory              PermissionsPolicyFeature = "ch-device-memory"
-	PermissionsPolicyFeatureChDownlink                  PermissionsPolicyFeature = "ch-downlink"
-	PermissionsPolicyFeatureChEct                       PermissionsPolicyFeature = "ch-ect"
-	PermissionsPolicyFeatureChPrefersColorScheme        PermissionsPolicyFeature = "ch-prefers-color-scheme"
-	PermissionsPolicyFeatureChPrefersReducedMotion      PermissionsPolicyFeature = "ch-prefers-reduced-motion"
-	PermissionsPolicyFeatureChRtt                       PermissionsPolicyFeature = "ch-rtt"
-	PermissionsPolicyFeatureChSaveData                  PermissionsPolicyFeature = "ch-save-data"
-	PermissionsPolicyFeatureChUa                        PermissionsPolicyFeature = "ch-ua"
-	PermissionsPolicyFeatureChUaArch                    PermissionsPolicyFeature = "ch-ua-arch"
-	PermissionsPolicyFeatureChUaBitness                 PermissionsPolicyFeature = "ch-ua-bitness"
-	PermissionsPolicyFeatureChUaPlatform                PermissionsPolicyFeature = "ch-ua-platform"
-	PermissionsPolicyFeatureChUaModel                   PermissionsPolicyFeature = "ch-ua-model"
-	PermissionsPolicyFeatureChUaMobile                  PermissionsPolicyFeature = "ch-ua-mobile"
-	PermissionsPolicyFeatureChUaFull                    PermissionsPolicyFeature = "ch-ua-full"
-	PermissionsPolicyFeatureChUaFullVersion             PermissionsPolicyFeature = "ch-ua-full-version"
-	PermissionsPolicyFeatureChUaFullVersionList         PermissionsPolicyFeature = "ch-ua-full-version-list"
-	PermissionsPolicyFeatureChUaPlatformVersion         PermissionsPolicyFeature = "ch-ua-platform-version"
-	PermissionsPolicyFeatureChUaReduced                 PermissionsPolicyFeature = "ch-ua-reduced"
-	PermissionsPolicyFeatureChUaWow64                   PermissionsPolicyFeature = "ch-ua-wow64"
-	PermissionsPolicyFeatureChViewportHeight            PermissionsPolicyFeature = "ch-viewport-height"
-	PermissionsPolicyFeatureChViewportWidth             PermissionsPolicyFeature = "ch-viewport-width"
-	PermissionsPolicyFeatureChWidth                     PermissionsPolicyFeature = "ch-width"
-	PermissionsPolicyFeatureClipboardRead               PermissionsPolicyFeature = "clipboard-read"
-	PermissionsPolicyFeatureClipboardWrite              PermissionsPolicyFeature = "clipboard-write"
-	PermissionsPolicyFeatureComputePressure             PermissionsPolicyFeature = "compute-pressure"
-	PermissionsPolicyFeatureCrossOriginIsolated         PermissionsPolicyFeature = "cross-origin-isolated"
-	PermissionsPolicyFeatureDirectSockets               PermissionsPolicyFeature = "direct-sockets"
-	PermissionsPolicyFeatureDisplayCapture              PermissionsPolicyFeature = "display-capture"
-	PermissionsPolicyFeatureDocumentDomain              PermissionsPolicyFeature = "document-domain"
-	PermissionsPolicyFeatureEncryptedMedia              PermissionsPolicyFeature = "encrypted-media"
-	PermissionsPolicyFeatureExecutionWhileOutOfViewport PermissionsPolicyFeature = "execution-while-out-of-viewport"
-	PermissionsPolicyFeatureExecutionWhileNotRendered   PermissionsPolicyFeature = "execution-while-not-rendered"
-	PermissionsPolicyFeatureFocusWithoutUserActivation  PermissionsPolicyFeature = "focus-without-user-activation"
-	PermissionsPolicyFeatureFullscreen                  PermissionsPolicyFeature = "fullscreen"
-	PermissionsPolicyFeatureFrobulate                   PermissionsPolicyFeature = "frobulate"
-	PermissionsPolicyFeatureGamepad                     PermissionsPolicyFeature = "gamepad"
-	PermissionsPolicyFeatureGeolocation                 PermissionsPolicyFeature = "geolocation"
-	PermissionsPolicyFeatureGyroscope                   PermissionsPolicyFeature = "gyroscope"
-	PermissionsPolicyFeatureHid                         PermissionsPolicyFeature = "hid"
-	PermissionsPolicyFeatureIdentityCredentialsGet      PermissionsPolicyFeature = "identity-credentials-get"
-	PermissionsPolicyFeatureIdleDetection               PermissionsPolicyFeature = "idle-detection"
-	PermissionsPolicyFeatureInterestCohort              PermissionsPolicyFeature = "interest-cohort"
-	PermissionsPolicyFeatureJoinAdInterestGroup         PermissionsPolicyFeature = "join-ad-interest-group"
-	PermissionsPolicyFeatureKeyboardMap                 PermissionsPolicyFeature = "keyboard-map"
-	PermissionsPolicyFeatureLocalFonts                  PermissionsPolicyFeature = "local-fonts"
-	PermissionsPolicyFeatureMagnetometer                PermissionsPolicyFeature = "magnetometer"
-	PermissionsPolicyFeatureMicrophone                  PermissionsPolicyFeature = "microphone"
-	PermissionsPolicyFeatureMidi                        PermissionsPolicyFeature = "midi"
-	PermissionsPolicyFeatureOtpCredentials              PermissionsPolicyFeature = "otp-credentials"
-	PermissionsPolicyFeaturePayment                     PermissionsPolicyFeature = "payment"
-	PermissionsPolicyFeaturePictureInPicture            PermissionsPolicyFeature = "picture-in-picture"
-	PermissionsPolicyFeaturePrivateAggregation          PermissionsPolicyFeature = "private-aggregation"
-	PermissionsPolicyFeaturePublickeyCredentialsGet     PermissionsPolicyFeature = "publickey-credentials-get"
-	PermissionsPolicyFeatureRunAdAuction                PermissionsPolicyFeature = "run-ad-auction"
-	PermissionsPolicyFeatureScreenWakeLock              PermissionsPolicyFeature = "screen-wake-lock"
-	PermissionsPolicyFeatureSerial                      PermissionsPolicyFeature = "serial"
-	PermissionsPolicyFeatureSharedAutofill              PermissionsPolicyFeature = "shared-autofill"
-	PermissionsPolicyFeatureSharedStorage               PermissionsPolicyFeature = "shared-storage"
-	PermissionsPolicyFeatureSharedStorageSelectURL      PermissionsPolicyFeature = "shared-storage-select-url"
-	PermissionsPolicyFeatureSmartCard                   PermissionsPolicyFeature = "smart-card"
-	PermissionsPolicyFeatureStorageAccess               PermissionsPolicyFeature = "storage-access"
-	PermissionsPolicyFeatureSyncXhr                     PermissionsPolicyFeature = "sync-xhr"
-	PermissionsPolicyFeatureTrustTokenRedemption        PermissionsPolicyFeature = "trust-token-redemption"
-	PermissionsPolicyFeatureUnload                      PermissionsPolicyFeature = "unload"
-	PermissionsPolicyFeatureUsb                         PermissionsPolicyFeature = "usb"
-	PermissionsPolicyFeatureVerticalScroll              PermissionsPolicyFeature = "vertical-scroll"
-	PermissionsPolicyFeatureWebShare                    PermissionsPolicyFeature = "web-share"
-	PermissionsPolicyFeatureWindowManagement            PermissionsPolicyFeature = "window-management"
-	PermissionsPolicyFeatureWindowPlacement             PermissionsPolicyFeature = "window-placement"
-	PermissionsPolicyFeatureXrSpatialTracking           PermissionsPolicyFeature = "xr-spatial-tracking"
+	PermissionsPolicyFeatureAccelerometer                PermissionsPolicyFeature = "accelerometer"
+	PermissionsPolicyFeatureAmbientLightSensor           PermissionsPolicyFeature = "ambient-light-sensor"
+	PermissionsPolicyFeatureAttributionReporting         PermissionsPolicyFeature = "attribution-reporting"
+	PermissionsPolicyFeatureAutoplay                     PermissionsPolicyFeature = "autoplay"
+	PermissionsPolicyFeatureBluetooth                    PermissionsPolicyFeature = "bluetooth"
+	PermissionsPolicyFeatureBrowsingTopics               PermissionsPolicyFeature = "browsing-topics"
+	PermissionsPolicyFeatureCamera                       PermissionsPolicyFeature = "camera"
+	PermissionsPolicyFeatureCapturedSurfaceControl       PermissionsPolicyFeature = "captured-surface-control"
+	PermissionsPolicyFeatureChDpr                        PermissionsPolicyFeature = "ch-dpr"
+	PermissionsPolicyFeatureChDeviceMemory               PermissionsPolicyFeature = "ch-device-memory"
+	PermissionsPolicyFeatureChDownlink                   PermissionsPolicyFeature = "ch-downlink"
+	PermissionsPolicyFeatureChEct                        PermissionsPolicyFeature = "ch-ect"
+	PermissionsPolicyFeatureChPrefersColorScheme         PermissionsPolicyFeature = "ch-prefers-color-scheme"
+	PermissionsPolicyFeatureChPrefersReducedMotion       PermissionsPolicyFeature = "ch-prefers-reduced-motion"
+	PermissionsPolicyFeatureChPrefersReducedTransparency PermissionsPolicyFeature = "ch-prefers-reduced-transparency"
+	PermissionsPolicyFeatureChRtt                        PermissionsPolicyFeature = "ch-rtt"
+	PermissionsPolicyFeatureChSaveData                   PermissionsPolicyFeature = "ch-save-data"
+	PermissionsPolicyFeatureChUa                         PermissionsPolicyFeature = "ch-ua"
+	PermissionsPolicyFeatureChUaArch                     PermissionsPolicyFeature = "ch-ua-arch"
+	PermissionsPolicyFeatureChUaBitness                  PermissionsPolicyFeature = "ch-ua-bitness"
+	PermissionsPolicyFeatureChUaPlatform                 PermissionsPolicyFeature = "ch-ua-platform"
+	PermissionsPolicyFeatureChUaModel                    PermissionsPolicyFeature = "ch-ua-model"
+	PermissionsPolicyFeatureChUaMobile                   PermissionsPolicyFeature = "ch-ua-mobile"
+	PermissionsPolicyFeatureChUaFormFactors              PermissionsPolicyFeature = "ch-ua-form-factors"
+	PermissionsPolicyFeatureChUaFullVersion              PermissionsPolicyFeature = "ch-ua-full-version"
+	PermissionsPolicyFeatureChUaFullVersionList          PermissionsPolicyFeature = "ch-ua-full-version-list"
+	PermissionsPolicyFeatureChUaPlatformVersion          PermissionsPolicyFeature = "ch-ua-platform-version"
+	PermissionsPolicyFeatureChUaWow64                    PermissionsPolicyFeature = "ch-ua-wow64"
+	PermissionsPolicyFeatureChViewportHeight             PermissionsPolicyFeature = "ch-viewport-height"
+	PermissionsPolicyFeatureChViewportWidth              PermissionsPolicyFeature = "ch-viewport-width"
+	PermissionsPolicyFeatureChWidth                      PermissionsPolicyFeature = "ch-width"
+	PermissionsPolicyFeatureClipboardRead                PermissionsPolicyFeature = "clipboard-read"
+	PermissionsPolicyFeatureClipboardWrite               PermissionsPolicyFeature = "clipboard-write"
+	PermissionsPolicyFeatureComputePressure              PermissionsPolicyFeature = "compute-pressure"
+	PermissionsPolicyFeatureCrossOriginIsolated          PermissionsPolicyFeature = "cross-origin-isolated"
+	PermissionsPolicyFeatureDirectSockets                PermissionsPolicyFeature = "direct-sockets"
+	PermissionsPolicyFeatureDisplayCapture               PermissionsPolicyFeature = "display-capture"
+	PermissionsPolicyFeatureDocumentDomain               PermissionsPolicyFeature = "document-domain"
+	PermissionsPolicyFeatureEncryptedMedia               PermissionsPolicyFeature = "encrypted-media"
+	PermissionsPolicyFeatureExecutionWhileOutOfViewport  PermissionsPolicyFeature = "execution-while-out-of-viewport"
+	PermissionsPolicyFeatureExecutionWhileNotRendered    PermissionsPolicyFeature = "execution-while-not-rendered"
+	PermissionsPolicyFeatureFocusWithoutUserActivation   PermissionsPolicyFeature = "focus-without-user-activation"
+	PermissionsPolicyFeatureFullscreen                   PermissionsPolicyFeature = "fullscreen"
+	PermissionsPolicyFeatureFrobulate                    PermissionsPolicyFeature = "frobulate"
+	PermissionsPolicyFeatureGamepad                      PermissionsPolicyFeature = "gamepad"
+	PermissionsPolicyFeatureGeolocation                  PermissionsPolicyFeature = "geolocation"
+	PermissionsPolicyFeatureGyroscope                    PermissionsPolicyFeature = "gyroscope"
+	PermissionsPolicyFeatureHid                          PermissionsPolicyFeature = "hid"
+	PermissionsPolicyFeatureIdentityCredentialsGet       PermissionsPolicyFeature = "identity-credentials-get"
+	PermissionsPolicyFeatureIdleDetection                PermissionsPolicyFeature = "idle-detection"
+	PermissionsPolicyFeatureInterestCohort               PermissionsPolicyFeature = "interest-cohort"
+	PermissionsPolicyFeatureJoinAdInterestGroup          PermissionsPolicyFeature = "join-ad-interest-group"
+	PermissionsPolicyFeatureKeyboardMap                  PermissionsPolicyFeature = "keyboard-map"
+	PermissionsPolicyFeatureLocalFonts                   PermissionsPolicyFeature = "local-fonts"
+	PermissionsPolicyFeatureMagnetometer                 PermissionsPolicyFeature = "magnetometer"
+	PermissionsPolicyFeatureMicrophone                   PermissionsPolicyFeature = "microphone"
+	PermissionsPolicyFeatureMidi                         PermissionsPolicyFeature = "midi"
+	PermissionsPolicyFeatureOtpCredentials               PermissionsPolicyFeature = "otp-credentials"
+	PermissionsPolicyFeaturePayment                      PermissionsPolicyFeature = "payment"
+	PermissionsPolicyFeaturePictureInPicture             PermissionsPolicyFeature = "picture-in-picture"
+	PermissionsPolicyFeaturePrivateAggregation           PermissionsPolicyFeature = "private-aggregation"
+	PermissionsPolicyFeaturePrivateStateTokenIssuance    PermissionsPolicyFeature = "private-state-token-issuance"
+	PermissionsPolicyFeaturePrivateStateTokenRedemption  PermissionsPolicyFeature = "private-state-token-redemption"
+	PermissionsPolicyFeaturePublickeyCredentialsCreate   PermissionsPolicyFeature = "publickey-credentials-create"
+	PermissionsPolicyFeaturePublickeyCredentialsGet      PermissionsPolicyFeature = "publickey-credentials-get"
+	PermissionsPolicyFeatureRunAdAuction                 PermissionsPolicyFeature = "run-ad-auction"
+	PermissionsPolicyFeatureScreenWakeLock               PermissionsPolicyFeature = "screen-wake-lock"
+	PermissionsPolicyFeatureSerial                       PermissionsPolicyFeature = "serial"
+	PermissionsPolicyFeatureSharedAutofill               PermissionsPolicyFeature = "shared-autofill"
+	PermissionsPolicyFeatureSharedStorage                PermissionsPolicyFeature = "shared-storage"
+	PermissionsPolicyFeatureSharedStorageSelectURL       PermissionsPolicyFeature = "shared-storage-select-url"
+	PermissionsPolicyFeatureSmartCard                    PermissionsPolicyFeature = "smart-card"
+	PermissionsPolicyFeatureSpeakerSelection             PermissionsPolicyFeature = "speaker-selection"
+	PermissionsPolicyFeatureStorageAccess                PermissionsPolicyFeature = "storage-access"
+	PermissionsPolicyFeatureSubApps                      PermissionsPolicyFeature = "sub-apps"
+	PermissionsPolicyFeatureSyncXhr                      PermissionsPolicyFeature = "sync-xhr"
+	PermissionsPolicyFeatureUnload                       PermissionsPolicyFeature = "unload"
+	PermissionsPolicyFeatureUsb                          PermissionsPolicyFeature = "usb"
+	PermissionsPolicyFeatureUsbUnrestricted              PermissionsPolicyFeature = "usb-unrestricted"
+	PermissionsPolicyFeatureVerticalScroll               PermissionsPolicyFeature = "vertical-scroll"
+	PermissionsPolicyFeatureWebPrinting                  PermissionsPolicyFeature = "web-printing"
+	PermissionsPolicyFeatureWebShare                     PermissionsPolicyFeature = "web-share"
+	PermissionsPolicyFeatureWindowManagement             PermissionsPolicyFeature = "window-management"
+	PermissionsPolicyFeatureWindowPlacement              PermissionsPolicyFeature = "window-placement"
+	PermissionsPolicyFeatureXrSpatialTracking            PermissionsPolicyFeature = "xr-spatial-tracking"
 )
 
 // MarshalEasyJSON satisfies easyjson.Marshaler.
@@ -144,6 +151,8 @@ func (t *PermissionsPolicyFeature) UnmarshalEasyJSON(in *jlexer.Lexer) {
 		*t = PermissionsPolicyFeatureBrowsingTopics
 	case PermissionsPolicyFeatureCamera:
 		*t = PermissionsPolicyFeatureCamera
+	case PermissionsPolicyFeatureCapturedSurfaceControl:
+		*t = PermissionsPolicyFeatureCapturedSurfaceControl
 	case PermissionsPolicyFeatureChDpr:
 		*t = PermissionsPolicyFeatureChDpr
 	case PermissionsPolicyFeatureChDeviceMemory:
@@ -156,6 +165,8 @@ func (t *PermissionsPolicyFeature) UnmarshalEasyJSON(in *jlexer.Lexer) {
 		*t = PermissionsPolicyFeatureChPrefersColorScheme
 	case PermissionsPolicyFeatureChPrefersReducedMotion:
 		*t = PermissionsPolicyFeatureChPrefersReducedMotion
+	case PermissionsPolicyFeatureChPrefersReducedTransparency:
+		*t = PermissionsPolicyFeatureChPrefersReducedTransparency
 	case PermissionsPolicyFeatureChRtt:
 		*t = PermissionsPolicyFeatureChRtt
 	case PermissionsPolicyFeatureChSaveData:
@@ -172,16 +183,14 @@ func (t *PermissionsPolicyFeature) UnmarshalEasyJSON(in *jlexer.Lexer) {
 		*t = PermissionsPolicyFeatureChUaModel
 	case PermissionsPolicyFeatureChUaMobile:
 		*t = PermissionsPolicyFeatureChUaMobile
-	case PermissionsPolicyFeatureChUaFull:
-		*t = PermissionsPolicyFeatureChUaFull
+	case PermissionsPolicyFeatureChUaFormFactors:
+		*t = PermissionsPolicyFeatureChUaFormFactors
 	case PermissionsPolicyFeatureChUaFullVersion:
 		*t = PermissionsPolicyFeatureChUaFullVersion
 	case PermissionsPolicyFeatureChUaFullVersionList:
 		*t = PermissionsPolicyFeatureChUaFullVersionList
 	case PermissionsPolicyFeatureChUaPlatformVersion:
 		*t = PermissionsPolicyFeatureChUaPlatformVersion
-	case PermissionsPolicyFeatureChUaReduced:
-		*t = PermissionsPolicyFeatureChUaReduced
 	case PermissionsPolicyFeatureChUaWow64:
 		*t = PermissionsPolicyFeatureChUaWow64
 	case PermissionsPolicyFeatureChViewportHeight:
@@ -250,6 +259,12 @@ func (t *PermissionsPolicyFeature) UnmarshalEasyJSON(in *jlexer.Lexer) {
 		*t = PermissionsPolicyFeaturePictureInPicture
 	case PermissionsPolicyFeaturePrivateAggregation:
 		*t = PermissionsPolicyFeaturePrivateAggregation
+	case PermissionsPolicyFeaturePrivateStateTokenIssuance:
+		*t = PermissionsPolicyFeaturePrivateStateTokenIssuance
+	case PermissionsPolicyFeaturePrivateStateTokenRedemption:
+		*t = PermissionsPolicyFeaturePrivateStateTokenRedemption
+	case PermissionsPolicyFeaturePublickeyCredentialsCreate:
+		*t = PermissionsPolicyFeaturePublickeyCredentialsCreate
 	case PermissionsPolicyFeaturePublickeyCredentialsGet:
 		*t = PermissionsPolicyFeaturePublickeyCredentialsGet
 	case PermissionsPolicyFeatureRunAdAuction:
@@ -266,18 +281,24 @@ func (t *PermissionsPolicyFeature) UnmarshalEasyJSON(in *jlexer.Lexer) {
 		*t = PermissionsPolicyFeatureSharedStorageSelectURL
 	case PermissionsPolicyFeatureSmartCard:
 		*t = PermissionsPolicyFeatureSmartCard
+	case PermissionsPolicyFeatureSpeakerSelection:
+		*t = PermissionsPolicyFeatureSpeakerSelection
 	case PermissionsPolicyFeatureStorageAccess:
 		*t = PermissionsPolicyFeatureStorageAccess
+	case PermissionsPolicyFeatureSubApps:
+		*t = PermissionsPolicyFeatureSubApps
 	case PermissionsPolicyFeatureSyncXhr:
 		*t = PermissionsPolicyFeatureSyncXhr
-	case PermissionsPolicyFeatureTrustTokenRedemption:
-		*t = PermissionsPolicyFeatureTrustTokenRedemption
 	case PermissionsPolicyFeatureUnload:
 		*t = PermissionsPolicyFeatureUnload
 	case PermissionsPolicyFeatureUsb:
 		*t = PermissionsPolicyFeatureUsb
+	case PermissionsPolicyFeatureUsbUnrestricted:
+		*t = PermissionsPolicyFeatureUsbUnrestricted
 	case PermissionsPolicyFeatureVerticalScroll:
 		*t = PermissionsPolicyFeatureVerticalScroll
+	case PermissionsPolicyFeatureWebPrinting:
+		*t = PermissionsPolicyFeatureWebPrinting
 	case PermissionsPolicyFeatureWebShare:
 		*t = PermissionsPolicyFeatureWebShare
 	case PermissionsPolicyFeatureWindowManagement:
@@ -565,7 +586,7 @@ func (t *DialogType) UnmarshalJSON(buf []byte) error {
 // See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-AppManifestError
 type AppManifestError struct {
 	Message  string `json:"message"`  // Error message.
-	Critical int64  `json:"critical"` // If criticial, this is a non-recoverable parse error.
+	Critical int64  `json:"critical"` // If critical, this is a non-recoverable parse error.
 	Line     int64  `json:"line"`     // Error line.
 	Column   int64  `json:"column"`   // Error column.
 }
@@ -843,7 +864,125 @@ type CompilationCacheParams struct {
 	Eager bool   `json:"eager,omitempty"` // A hint to the backend whether eager compilation is recommended. (the actual compilation mode used is upon backend discretion).
 }
 
-// AutoResponseMode enum of possible auto-response for permissions / prompt
+// FileFilter [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-FileFilter
+type FileFilter struct {
+	Name    string   `json:"name,omitempty"`
+	Accepts []string `json:"accepts,omitempty"`
+}
+
+// FileHandler [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-FileHandler
+type FileHandler struct {
+	Action     string           `json:"action"`
+	Name       string           `json:"name"`
+	Icons      []*ImageResource `json:"icons,omitempty"`
+	Accepts    []*FileFilter    `json:"accepts,omitempty"` // Mimic a map, name is the key, accepts is the value.
+	LaunchType string           `json:"launchType"`        // Won't repeat the enums, using string for easy comparison. Same as the other enums below.
+}
+
+// ImageResource the image definition used in both icon and screenshot.
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-ImageResource
+type ImageResource struct {
+	URL   string `json:"url"` // The src field in the definition, but changing to url in favor of consistency.
+	Sizes string `json:"sizes,omitempty"`
+	Type  string `json:"type,omitempty"`
+}
+
+// LaunchHandler [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-LaunchHandler
+type LaunchHandler struct {
+	ClientMode string `json:"clientMode"`
+}
+
+// ProtocolHandler [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-ProtocolHandler
+type ProtocolHandler struct {
+	Protocol string `json:"protocol"`
+	URL      string `json:"url"`
+}
+
+// RelatedApplication [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-RelatedApplication
+type RelatedApplication struct {
+	ID  string `json:"id,omitempty"`
+	URL string `json:"url"`
+}
+
+// ScopeExtension [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-ScopeExtension
+type ScopeExtension struct {
+	Origin            string `json:"origin"` // Instead of using tuple, this field always returns the serialized string for easy understanding and comparison.
+	HasOriginWildcard bool   `json:"hasOriginWildcard"`
+}
+
+// Screenshot [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-Screenshot
+type Screenshot struct {
+	Image      *ImageResource `json:"image"`
+	FormFactor string         `json:"formFactor"`
+	Label      string         `json:"label,omitempty"`
+}
+
+// ShareTarget [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-ShareTarget
+type ShareTarget struct {
+	Action  string        `json:"action"`
+	Method  string        `json:"method"`
+	Enctype string        `json:"enctype"`
+	Title   string        `json:"title,omitempty"` // Embed the ShareTargetParams
+	Text    string        `json:"text,omitempty"`
+	URL     string        `json:"url,omitempty"`
+	Files   []*FileFilter `json:"files,omitempty"`
+}
+
+// Shortcut [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-Shortcut
+type Shortcut struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+// WebAppManifest [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-WebAppManifest
+type WebAppManifest struct {
+	BackgroundColor           string                `json:"backgroundColor,omitempty"`
+	Description               string                `json:"description,omitempty"` // The extra description provided by the manifest.
+	Dir                       string                `json:"dir,omitempty"`
+	Display                   string                `json:"display,omitempty"`
+	DisplayOverrides          []string              `json:"displayOverrides,omitempty"` // The overrided display mode controlled by the user.
+	FileHandlers              []*FileHandler        `json:"fileHandlers,omitempty"`     // The handlers to open files.
+	Icons                     []*ImageResource      `json:"icons,omitempty"`
+	ID                        string                `json:"id,omitempty"`
+	Lang                      string                `json:"lang,omitempty"`
+	LaunchHandler             *LaunchHandler        `json:"launchHandler,omitempty"` // TODO(crbug.com/1231886): This field is non-standard and part of a Chrome experiment. See: https://github.com/WICG/web-app-launch/blob/main/launch_handler.md
+	Name                      string                `json:"name,omitempty"`
+	Orientation               string                `json:"orientation,omitempty"`
+	PreferRelatedApplications bool                  `json:"preferRelatedApplications,omitempty"`
+	ProtocolHandlers          []*ProtocolHandler    `json:"protocolHandlers,omitempty"` // The handlers to open protocols.
+	RelatedApplications       []*RelatedApplication `json:"relatedApplications,omitempty"`
+	Scope                     string                `json:"scope,omitempty"`
+	ScopeExtensions           []*ScopeExtension     `json:"scopeExtensions,omitempty"` // Non-standard, see https://github.com/WICG/manifest-incubations/blob/gh-pages/scope_extensions-explainer.md
+	Screenshots               []*Screenshot         `json:"screenshots,omitempty"`     // The screenshots used by chromium.
+	ShareTarget               *ShareTarget          `json:"shareTarget,omitempty"`
+	ShortName                 string                `json:"shortName,omitempty"`
+	Shortcuts                 []*Shortcut           `json:"shortcuts,omitempty"`
+	StartURL                  string                `json:"startUrl,omitempty"`
+	ThemeColor                string                `json:"themeColor,omitempty"`
+}
+
+// AutoResponseMode enum of possible auto-response for permission / prompt
 // dialogs.
 //
 // See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-AutoResponseMode
@@ -1006,6 +1145,10 @@ const (
 	BackForwardCacheNotRestoredReasonActivationNavigationsDisallowedForBug1234857             BackForwardCacheNotRestoredReason = "ActivationNavigationsDisallowedForBug1234857"
 	BackForwardCacheNotRestoredReasonErrorDocument                                            BackForwardCacheNotRestoredReason = "ErrorDocument"
 	BackForwardCacheNotRestoredReasonFencedFramesEmbedder                                     BackForwardCacheNotRestoredReason = "FencedFramesEmbedder"
+	BackForwardCacheNotRestoredReasonCookieDisabled                                           BackForwardCacheNotRestoredReason = "CookieDisabled"
+	BackForwardCacheNotRestoredReasonHTTPAuthRequired                                         BackForwardCacheNotRestoredReason = "HTTPAuthRequired"
+	BackForwardCacheNotRestoredReasonCookieFlushed                                            BackForwardCacheNotRestoredReason = "CookieFlushed"
+	BackForwardCacheNotRestoredReasonBroadcastChannelOnMessage                                BackForwardCacheNotRestoredReason = "BroadcastChannelOnMessage"
 	BackForwardCacheNotRestoredReasonWebSocket                                                BackForwardCacheNotRestoredReason = "WebSocket"
 	BackForwardCacheNotRestoredReasonWebTransport                                             BackForwardCacheNotRestoredReason = "WebTransport"
 	BackForwardCacheNotRestoredReasonWebRTC                                                   BackForwardCacheNotRestoredReason = "WebRTC"
@@ -1015,16 +1158,13 @@ const (
 	BackForwardCacheNotRestoredReasonSubresourceHasCacheControlNoCache                        BackForwardCacheNotRestoredReason = "SubresourceHasCacheControlNoCache"
 	BackForwardCacheNotRestoredReasonContainsPlugins                                          BackForwardCacheNotRestoredReason = "ContainsPlugins"
 	BackForwardCacheNotRestoredReasonDocumentLoaded                                           BackForwardCacheNotRestoredReason = "DocumentLoaded"
-	BackForwardCacheNotRestoredReasonDedicatedWorkerOrWorklet                                 BackForwardCacheNotRestoredReason = "DedicatedWorkerOrWorklet"
 	BackForwardCacheNotRestoredReasonOutstandingNetworkRequestOthers                          BackForwardCacheNotRestoredReason = "OutstandingNetworkRequestOthers"
-	BackForwardCacheNotRestoredReasonOutstandingIndexedDBTransaction                          BackForwardCacheNotRestoredReason = "OutstandingIndexedDBTransaction"
 	BackForwardCacheNotRestoredReasonRequestedMIDIPermission                                  BackForwardCacheNotRestoredReason = "RequestedMIDIPermission"
 	BackForwardCacheNotRestoredReasonRequestedAudioCapturePermission                          BackForwardCacheNotRestoredReason = "RequestedAudioCapturePermission"
 	BackForwardCacheNotRestoredReasonRequestedVideoCapturePermission                          BackForwardCacheNotRestoredReason = "RequestedVideoCapturePermission"
 	BackForwardCacheNotRestoredReasonRequestedBackForwardCacheBlockedSensors                  BackForwardCacheNotRestoredReason = "RequestedBackForwardCacheBlockedSensors"
 	BackForwardCacheNotRestoredReasonRequestedBackgroundWorkPermission                        BackForwardCacheNotRestoredReason = "RequestedBackgroundWorkPermission"
 	BackForwardCacheNotRestoredReasonBroadcastChannel                                         BackForwardCacheNotRestoredReason = "BroadcastChannel"
-	BackForwardCacheNotRestoredReasonIndexedDBConnection                                      BackForwardCacheNotRestoredReason = "IndexedDBConnection"
 	BackForwardCacheNotRestoredReasonWebXR                                                    BackForwardCacheNotRestoredReason = "WebXR"
 	BackForwardCacheNotRestoredReasonSharedWorker                                             BackForwardCacheNotRestoredReason = "SharedWorker"
 	BackForwardCacheNotRestoredReasonWebLocks                                                 BackForwardCacheNotRestoredReason = "WebLocks"
@@ -1051,7 +1191,14 @@ const (
 	BackForwardCacheNotRestoredReasonKeepaliveRequest                                         BackForwardCacheNotRestoredReason = "KeepaliveRequest"
 	BackForwardCacheNotRestoredReasonIndexedDBEvent                                           BackForwardCacheNotRestoredReason = "IndexedDBEvent"
 	BackForwardCacheNotRestoredReasonDummy                                                    BackForwardCacheNotRestoredReason = "Dummy"
-	BackForwardCacheNotRestoredReasonAuthorizationHeader                                      BackForwardCacheNotRestoredReason = "AuthorizationHeader"
+	BackForwardCacheNotRestoredReasonJsNetworkRequestReceivedCacheControlNoStoreResource      BackForwardCacheNotRestoredReason = "JsNetworkRequestReceivedCacheControlNoStoreResource"
+	BackForwardCacheNotRestoredReasonWebRTCSticky                                             BackForwardCacheNotRestoredReason = "WebRTCSticky"
+	BackForwardCacheNotRestoredReasonWebTransportSticky                                       BackForwardCacheNotRestoredReason = "WebTransportSticky"
+	BackForwardCacheNotRestoredReasonWebSocketSticky                                          BackForwardCacheNotRestoredReason = "WebSocketSticky"
+	BackForwardCacheNotRestoredReasonSmartCard                                                BackForwardCacheNotRestoredReason = "SmartCard"
+	BackForwardCacheNotRestoredReasonLiveMediaStreamTrack                                     BackForwardCacheNotRestoredReason = "LiveMediaStreamTrack"
+	BackForwardCacheNotRestoredReasonUnloadHandler                                            BackForwardCacheNotRestoredReason = "UnloadHandler"
+	BackForwardCacheNotRestoredReasonParserAborted                                            BackForwardCacheNotRestoredReason = "ParserAborted"
 	BackForwardCacheNotRestoredReasonContentSecurityHandler                                   BackForwardCacheNotRestoredReason = "ContentSecurityHandler"
 	BackForwardCacheNotRestoredReasonContentWebAuthenticationAPI                              BackForwardCacheNotRestoredReason = "ContentWebAuthenticationAPI"
 	BackForwardCacheNotRestoredReasonContentFileChooser                                       BackForwardCacheNotRestoredReason = "ContentFileChooser"
@@ -1077,6 +1224,7 @@ const (
 	BackForwardCacheNotRestoredReasonEmbedderExtensionMessaging                               BackForwardCacheNotRestoredReason = "EmbedderExtensionMessaging"
 	BackForwardCacheNotRestoredReasonEmbedderExtensionMessagingForOpenPort                    BackForwardCacheNotRestoredReason = "EmbedderExtensionMessagingForOpenPort"
 	BackForwardCacheNotRestoredReasonEmbedderExtensionSentMessageToCachedFrame                BackForwardCacheNotRestoredReason = "EmbedderExtensionSentMessageToCachedFrame"
+	BackForwardCacheNotRestoredReasonRequestedByWebViewClient                                 BackForwardCacheNotRestoredReason = "RequestedByWebViewClient"
 )
 
 // MarshalEasyJSON satisfies easyjson.Marshaler.
@@ -1199,6 +1347,14 @@ func (t *BackForwardCacheNotRestoredReason) UnmarshalEasyJSON(in *jlexer.Lexer) 
 		*t = BackForwardCacheNotRestoredReasonErrorDocument
 	case BackForwardCacheNotRestoredReasonFencedFramesEmbedder:
 		*t = BackForwardCacheNotRestoredReasonFencedFramesEmbedder
+	case BackForwardCacheNotRestoredReasonCookieDisabled:
+		*t = BackForwardCacheNotRestoredReasonCookieDisabled
+	case BackForwardCacheNotRestoredReasonHTTPAuthRequired:
+		*t = BackForwardCacheNotRestoredReasonHTTPAuthRequired
+	case BackForwardCacheNotRestoredReasonCookieFlushed:
+		*t = BackForwardCacheNotRestoredReasonCookieFlushed
+	case BackForwardCacheNotRestoredReasonBroadcastChannelOnMessage:
+		*t = BackForwardCacheNotRestoredReasonBroadcastChannelOnMessage
 	case BackForwardCacheNotRestoredReasonWebSocket:
 		*t = BackForwardCacheNotRestoredReasonWebSocket
 	case BackForwardCacheNotRestoredReasonWebTransport:
@@ -1217,12 +1373,8 @@ func (t *BackForwardCacheNotRestoredReason) UnmarshalEasyJSON(in *jlexer.Lexer) 
 		*t = BackForwardCacheNotRestoredReasonContainsPlugins
 	case BackForwardCacheNotRestoredReasonDocumentLoaded:
 		*t = BackForwardCacheNotRestoredReasonDocumentLoaded
-	case BackForwardCacheNotRestoredReasonDedicatedWorkerOrWorklet:
-		*t = BackForwardCacheNotRestoredReasonDedicatedWorkerOrWorklet
 	case BackForwardCacheNotRestoredReasonOutstandingNetworkRequestOthers:
 		*t = BackForwardCacheNotRestoredReasonOutstandingNetworkRequestOthers
-	case BackForwardCacheNotRestoredReasonOutstandingIndexedDBTransaction:
-		*t = BackForwardCacheNotRestoredReasonOutstandingIndexedDBTransaction
 	case BackForwardCacheNotRestoredReasonRequestedMIDIPermission:
 		*t = BackForwardCacheNotRestoredReasonRequestedMIDIPermission
 	case BackForwardCacheNotRestoredReasonRequestedAudioCapturePermission:
@@ -1235,8 +1387,6 @@ func (t *BackForwardCacheNotRestoredReason) UnmarshalEasyJSON(in *jlexer.Lexer) 
 		*t = BackForwardCacheNotRestoredReasonRequestedBackgroundWorkPermission
 	case BackForwardCacheNotRestoredReasonBroadcastChannel:
 		*t = BackForwardCacheNotRestoredReasonBroadcastChannel
-	case BackForwardCacheNotRestoredReasonIndexedDBConnection:
-		*t = BackForwardCacheNotRestoredReasonIndexedDBConnection
 	case BackForwardCacheNotRestoredReasonWebXR:
 		*t = BackForwardCacheNotRestoredReasonWebXR
 	case BackForwardCacheNotRestoredReasonSharedWorker:
@@ -1289,8 +1439,22 @@ func (t *BackForwardCacheNotRestoredReason) UnmarshalEasyJSON(in *jlexer.Lexer) 
 		*t = BackForwardCacheNotRestoredReasonIndexedDBEvent
 	case BackForwardCacheNotRestoredReasonDummy:
 		*t = BackForwardCacheNotRestoredReasonDummy
-	case BackForwardCacheNotRestoredReasonAuthorizationHeader:
-		*t = BackForwardCacheNotRestoredReasonAuthorizationHeader
+	case BackForwardCacheNotRestoredReasonJsNetworkRequestReceivedCacheControlNoStoreResource:
+		*t = BackForwardCacheNotRestoredReasonJsNetworkRequestReceivedCacheControlNoStoreResource
+	case BackForwardCacheNotRestoredReasonWebRTCSticky:
+		*t = BackForwardCacheNotRestoredReasonWebRTCSticky
+	case BackForwardCacheNotRestoredReasonWebTransportSticky:
+		*t = BackForwardCacheNotRestoredReasonWebTransportSticky
+	case BackForwardCacheNotRestoredReasonWebSocketSticky:
+		*t = BackForwardCacheNotRestoredReasonWebSocketSticky
+	case BackForwardCacheNotRestoredReasonSmartCard:
+		*t = BackForwardCacheNotRestoredReasonSmartCard
+	case BackForwardCacheNotRestoredReasonLiveMediaStreamTrack:
+		*t = BackForwardCacheNotRestoredReasonLiveMediaStreamTrack
+	case BackForwardCacheNotRestoredReasonUnloadHandler:
+		*t = BackForwardCacheNotRestoredReasonUnloadHandler
+	case BackForwardCacheNotRestoredReasonParserAborted:
+		*t = BackForwardCacheNotRestoredReasonParserAborted
 	case BackForwardCacheNotRestoredReasonContentSecurityHandler:
 		*t = BackForwardCacheNotRestoredReasonContentSecurityHandler
 	case BackForwardCacheNotRestoredReasonContentWebAuthenticationAPI:
@@ -1341,6 +1505,8 @@ func (t *BackForwardCacheNotRestoredReason) UnmarshalEasyJSON(in *jlexer.Lexer) 
 		*t = BackForwardCacheNotRestoredReasonEmbedderExtensionMessagingForOpenPort
 	case BackForwardCacheNotRestoredReasonEmbedderExtensionSentMessageToCachedFrame:
 		*t = BackForwardCacheNotRestoredReasonEmbedderExtensionSentMessageToCachedFrame
+	case BackForwardCacheNotRestoredReasonRequestedByWebViewClient:
+		*t = BackForwardCacheNotRestoredReasonRequestedByWebViewClient
 
 	default:
 		in.AddError(fmt.Errorf("unknown BackForwardCacheNotRestoredReason value: %v", v))
@@ -1401,6 +1567,16 @@ func (t *BackForwardCacheNotRestoredReasonType) UnmarshalJSON(buf []byte) error 
 	return easyjson.Unmarshal(buf, t)
 }
 
+// BackForwardCacheBlockingDetails [no description].
+//
+// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-BackForwardCacheBlockingDetails
+type BackForwardCacheBlockingDetails struct {
+	URL          string `json:"url,omitempty"`      // Url of the file where blockage happened. Optional because of tests.
+	Function     string `json:"function,omitempty"` // Function name where blockage happened. Optional because of anonymous functions and tests.
+	LineNumber   int64  `json:"lineNumber"`         // Line number in the script (0-based).
+	ColumnNumber int64  `json:"columnNumber"`       // Column number in the script (0-based).
+}
+
 // BackForwardCacheNotRestoredExplanation [no description].
 //
 // See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-BackForwardCacheNotRestoredExplanation
@@ -1408,6 +1584,7 @@ type BackForwardCacheNotRestoredExplanation struct {
 	Type    BackForwardCacheNotRestoredReasonType `json:"type"`              // Type of the reason
 	Reason  BackForwardCacheNotRestoredReason     `json:"reason"`            // Not restored reason
 	Context string                                `json:"context,omitempty"` // Context associated with the reason. The meaning of this context is dependent on the reason: - EmbedderExtensionSentMessageToCachedFrame: the extension ID.
+	Details []*BackForwardCacheBlockingDetails    `json:"details,omitempty"`
 }
 
 // BackForwardCacheNotRestoredExplanationTree [no description].
@@ -1417,272 +1594,6 @@ type BackForwardCacheNotRestoredExplanationTree struct {
 	URL          string                                        `json:"url"`          // URL of each frame
 	Explanations []*BackForwardCacheNotRestoredExplanation     `json:"explanations"` // Not restored reasons of each frame
 	Children     []*BackForwardCacheNotRestoredExplanationTree `json:"children"`     // Array of children frame
-}
-
-// PrerenderFinalStatus list of FinalStatus reasons for Prerender2.
-//
-// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-PrerenderFinalStatus
-type PrerenderFinalStatus string
-
-// String returns the PrerenderFinalStatus as string value.
-func (t PrerenderFinalStatus) String() string {
-	return string(t)
-}
-
-// PrerenderFinalStatus values.
-const (
-	PrerenderFinalStatusActivated                                  PrerenderFinalStatus = "Activated"
-	PrerenderFinalStatusDestroyed                                  PrerenderFinalStatus = "Destroyed"
-	PrerenderFinalStatusLowEndDevice                               PrerenderFinalStatus = "LowEndDevice"
-	PrerenderFinalStatusInvalidSchemeRedirect                      PrerenderFinalStatus = "InvalidSchemeRedirect"
-	PrerenderFinalStatusInvalidSchemeNavigation                    PrerenderFinalStatus = "InvalidSchemeNavigation"
-	PrerenderFinalStatusInProgressNavigation                       PrerenderFinalStatus = "InProgressNavigation"
-	PrerenderFinalStatusNavigationRequestBlockedByCsp              PrerenderFinalStatus = "NavigationRequestBlockedByCsp"
-	PrerenderFinalStatusMainFrameNavigation                        PrerenderFinalStatus = "MainFrameNavigation"
-	PrerenderFinalStatusMojoBinderPolicy                           PrerenderFinalStatus = "MojoBinderPolicy"
-	PrerenderFinalStatusRendererProcessCrashed                     PrerenderFinalStatus = "RendererProcessCrashed"
-	PrerenderFinalStatusRendererProcessKilled                      PrerenderFinalStatus = "RendererProcessKilled"
-	PrerenderFinalStatusDownload                                   PrerenderFinalStatus = "Download"
-	PrerenderFinalStatusTriggerDestroyed                           PrerenderFinalStatus = "TriggerDestroyed"
-	PrerenderFinalStatusNavigationNotCommitted                     PrerenderFinalStatus = "NavigationNotCommitted"
-	PrerenderFinalStatusNavigationBadHTTPStatus                    PrerenderFinalStatus = "NavigationBadHttpStatus"
-	PrerenderFinalStatusClientCertRequested                        PrerenderFinalStatus = "ClientCertRequested"
-	PrerenderFinalStatusNavigationRequestNetworkError              PrerenderFinalStatus = "NavigationRequestNetworkError"
-	PrerenderFinalStatusMaxNumOfRunningPrerendersExceeded          PrerenderFinalStatus = "MaxNumOfRunningPrerendersExceeded"
-	PrerenderFinalStatusCancelAllHostsForTesting                   PrerenderFinalStatus = "CancelAllHostsForTesting"
-	PrerenderFinalStatusDidFailLoad                                PrerenderFinalStatus = "DidFailLoad"
-	PrerenderFinalStatusStop                                       PrerenderFinalStatus = "Stop"
-	PrerenderFinalStatusSslCertificateError                        PrerenderFinalStatus = "SslCertificateError"
-	PrerenderFinalStatusLoginAuthRequested                         PrerenderFinalStatus = "LoginAuthRequested"
-	PrerenderFinalStatusUaChangeRequiresReload                     PrerenderFinalStatus = "UaChangeRequiresReload"
-	PrerenderFinalStatusBlockedByClient                            PrerenderFinalStatus = "BlockedByClient"
-	PrerenderFinalStatusAudioOutputDeviceRequested                 PrerenderFinalStatus = "AudioOutputDeviceRequested"
-	PrerenderFinalStatusMixedContent                               PrerenderFinalStatus = "MixedContent"
-	PrerenderFinalStatusTriggerBackgrounded                        PrerenderFinalStatus = "TriggerBackgrounded"
-	PrerenderFinalStatusEmbedderTriggeredAndCrossOriginRedirected  PrerenderFinalStatus = "EmbedderTriggeredAndCrossOriginRedirected"
-	PrerenderFinalStatusMemoryLimitExceeded                        PrerenderFinalStatus = "MemoryLimitExceeded"
-	PrerenderFinalStatusFailToGetMemoryUsage                       PrerenderFinalStatus = "FailToGetMemoryUsage"
-	PrerenderFinalStatusDataSaverEnabled                           PrerenderFinalStatus = "DataSaverEnabled"
-	PrerenderFinalStatusHasEffectiveURL                            PrerenderFinalStatus = "HasEffectiveUrl"
-	PrerenderFinalStatusActivatedBeforeStarted                     PrerenderFinalStatus = "ActivatedBeforeStarted"
-	PrerenderFinalStatusInactivePageRestriction                    PrerenderFinalStatus = "InactivePageRestriction"
-	PrerenderFinalStatusStartFailed                                PrerenderFinalStatus = "StartFailed"
-	PrerenderFinalStatusTimeoutBackgrounded                        PrerenderFinalStatus = "TimeoutBackgrounded"
-	PrerenderFinalStatusCrossSiteRedirect                          PrerenderFinalStatus = "CrossSiteRedirect"
-	PrerenderFinalStatusCrossSiteNavigation                        PrerenderFinalStatus = "CrossSiteNavigation"
-	PrerenderFinalStatusSameSiteCrossOriginRedirect                PrerenderFinalStatus = "SameSiteCrossOriginRedirect"
-	PrerenderFinalStatusSameSiteCrossOriginNavigation              PrerenderFinalStatus = "SameSiteCrossOriginNavigation"
-	PrerenderFinalStatusSameSiteCrossOriginRedirectNotOptIn        PrerenderFinalStatus = "SameSiteCrossOriginRedirectNotOptIn"
-	PrerenderFinalStatusSameSiteCrossOriginNavigationNotOptIn      PrerenderFinalStatus = "SameSiteCrossOriginNavigationNotOptIn"
-	PrerenderFinalStatusActivationNavigationParameterMismatch      PrerenderFinalStatus = "ActivationNavigationParameterMismatch"
-	PrerenderFinalStatusActivatedInBackground                      PrerenderFinalStatus = "ActivatedInBackground"
-	PrerenderFinalStatusEmbedderHostDisallowed                     PrerenderFinalStatus = "EmbedderHostDisallowed"
-	PrerenderFinalStatusActivationNavigationDestroyedBeforeSuccess PrerenderFinalStatus = "ActivationNavigationDestroyedBeforeSuccess"
-	PrerenderFinalStatusTabClosedByUserGesture                     PrerenderFinalStatus = "TabClosedByUserGesture"
-	PrerenderFinalStatusTabClosedWithoutUserGesture                PrerenderFinalStatus = "TabClosedWithoutUserGesture"
-	PrerenderFinalStatusPrimaryMainFrameRendererProcessCrashed     PrerenderFinalStatus = "PrimaryMainFrameRendererProcessCrashed"
-	PrerenderFinalStatusPrimaryMainFrameRendererProcessKilled      PrerenderFinalStatus = "PrimaryMainFrameRendererProcessKilled"
-	PrerenderFinalStatusActivationFramePolicyNotCompatible         PrerenderFinalStatus = "ActivationFramePolicyNotCompatible"
-	PrerenderFinalStatusPreloadingDisabled                         PrerenderFinalStatus = "PreloadingDisabled"
-	PrerenderFinalStatusBatterySaverEnabled                        PrerenderFinalStatus = "BatterySaverEnabled"
-	PrerenderFinalStatusActivatedDuringMainFrameNavigation         PrerenderFinalStatus = "ActivatedDuringMainFrameNavigation"
-	PrerenderFinalStatusPreloadingUnsupportedByWebContents         PrerenderFinalStatus = "PreloadingUnsupportedByWebContents"
-)
-
-// MarshalEasyJSON satisfies easyjson.Marshaler.
-func (t PrerenderFinalStatus) MarshalEasyJSON(out *jwriter.Writer) {
-	out.String(string(t))
-}
-
-// MarshalJSON satisfies json.Marshaler.
-func (t PrerenderFinalStatus) MarshalJSON() ([]byte, error) {
-	return easyjson.Marshal(t)
-}
-
-// UnmarshalEasyJSON satisfies easyjson.Unmarshaler.
-func (t *PrerenderFinalStatus) UnmarshalEasyJSON(in *jlexer.Lexer) {
-	v := in.String()
-	switch PrerenderFinalStatus(v) {
-	case PrerenderFinalStatusActivated:
-		*t = PrerenderFinalStatusActivated
-	case PrerenderFinalStatusDestroyed:
-		*t = PrerenderFinalStatusDestroyed
-	case PrerenderFinalStatusLowEndDevice:
-		*t = PrerenderFinalStatusLowEndDevice
-	case PrerenderFinalStatusInvalidSchemeRedirect:
-		*t = PrerenderFinalStatusInvalidSchemeRedirect
-	case PrerenderFinalStatusInvalidSchemeNavigation:
-		*t = PrerenderFinalStatusInvalidSchemeNavigation
-	case PrerenderFinalStatusInProgressNavigation:
-		*t = PrerenderFinalStatusInProgressNavigation
-	case PrerenderFinalStatusNavigationRequestBlockedByCsp:
-		*t = PrerenderFinalStatusNavigationRequestBlockedByCsp
-	case PrerenderFinalStatusMainFrameNavigation:
-		*t = PrerenderFinalStatusMainFrameNavigation
-	case PrerenderFinalStatusMojoBinderPolicy:
-		*t = PrerenderFinalStatusMojoBinderPolicy
-	case PrerenderFinalStatusRendererProcessCrashed:
-		*t = PrerenderFinalStatusRendererProcessCrashed
-	case PrerenderFinalStatusRendererProcessKilled:
-		*t = PrerenderFinalStatusRendererProcessKilled
-	case PrerenderFinalStatusDownload:
-		*t = PrerenderFinalStatusDownload
-	case PrerenderFinalStatusTriggerDestroyed:
-		*t = PrerenderFinalStatusTriggerDestroyed
-	case PrerenderFinalStatusNavigationNotCommitted:
-		*t = PrerenderFinalStatusNavigationNotCommitted
-	case PrerenderFinalStatusNavigationBadHTTPStatus:
-		*t = PrerenderFinalStatusNavigationBadHTTPStatus
-	case PrerenderFinalStatusClientCertRequested:
-		*t = PrerenderFinalStatusClientCertRequested
-	case PrerenderFinalStatusNavigationRequestNetworkError:
-		*t = PrerenderFinalStatusNavigationRequestNetworkError
-	case PrerenderFinalStatusMaxNumOfRunningPrerendersExceeded:
-		*t = PrerenderFinalStatusMaxNumOfRunningPrerendersExceeded
-	case PrerenderFinalStatusCancelAllHostsForTesting:
-		*t = PrerenderFinalStatusCancelAllHostsForTesting
-	case PrerenderFinalStatusDidFailLoad:
-		*t = PrerenderFinalStatusDidFailLoad
-	case PrerenderFinalStatusStop:
-		*t = PrerenderFinalStatusStop
-	case PrerenderFinalStatusSslCertificateError:
-		*t = PrerenderFinalStatusSslCertificateError
-	case PrerenderFinalStatusLoginAuthRequested:
-		*t = PrerenderFinalStatusLoginAuthRequested
-	case PrerenderFinalStatusUaChangeRequiresReload:
-		*t = PrerenderFinalStatusUaChangeRequiresReload
-	case PrerenderFinalStatusBlockedByClient:
-		*t = PrerenderFinalStatusBlockedByClient
-	case PrerenderFinalStatusAudioOutputDeviceRequested:
-		*t = PrerenderFinalStatusAudioOutputDeviceRequested
-	case PrerenderFinalStatusMixedContent:
-		*t = PrerenderFinalStatusMixedContent
-	case PrerenderFinalStatusTriggerBackgrounded:
-		*t = PrerenderFinalStatusTriggerBackgrounded
-	case PrerenderFinalStatusEmbedderTriggeredAndCrossOriginRedirected:
-		*t = PrerenderFinalStatusEmbedderTriggeredAndCrossOriginRedirected
-	case PrerenderFinalStatusMemoryLimitExceeded:
-		*t = PrerenderFinalStatusMemoryLimitExceeded
-	case PrerenderFinalStatusFailToGetMemoryUsage:
-		*t = PrerenderFinalStatusFailToGetMemoryUsage
-	case PrerenderFinalStatusDataSaverEnabled:
-		*t = PrerenderFinalStatusDataSaverEnabled
-	case PrerenderFinalStatusHasEffectiveURL:
-		*t = PrerenderFinalStatusHasEffectiveURL
-	case PrerenderFinalStatusActivatedBeforeStarted:
-		*t = PrerenderFinalStatusActivatedBeforeStarted
-	case PrerenderFinalStatusInactivePageRestriction:
-		*t = PrerenderFinalStatusInactivePageRestriction
-	case PrerenderFinalStatusStartFailed:
-		*t = PrerenderFinalStatusStartFailed
-	case PrerenderFinalStatusTimeoutBackgrounded:
-		*t = PrerenderFinalStatusTimeoutBackgrounded
-	case PrerenderFinalStatusCrossSiteRedirect:
-		*t = PrerenderFinalStatusCrossSiteRedirect
-	case PrerenderFinalStatusCrossSiteNavigation:
-		*t = PrerenderFinalStatusCrossSiteNavigation
-	case PrerenderFinalStatusSameSiteCrossOriginRedirect:
-		*t = PrerenderFinalStatusSameSiteCrossOriginRedirect
-	case PrerenderFinalStatusSameSiteCrossOriginNavigation:
-		*t = PrerenderFinalStatusSameSiteCrossOriginNavigation
-	case PrerenderFinalStatusSameSiteCrossOriginRedirectNotOptIn:
-		*t = PrerenderFinalStatusSameSiteCrossOriginRedirectNotOptIn
-	case PrerenderFinalStatusSameSiteCrossOriginNavigationNotOptIn:
-		*t = PrerenderFinalStatusSameSiteCrossOriginNavigationNotOptIn
-	case PrerenderFinalStatusActivationNavigationParameterMismatch:
-		*t = PrerenderFinalStatusActivationNavigationParameterMismatch
-	case PrerenderFinalStatusActivatedInBackground:
-		*t = PrerenderFinalStatusActivatedInBackground
-	case PrerenderFinalStatusEmbedderHostDisallowed:
-		*t = PrerenderFinalStatusEmbedderHostDisallowed
-	case PrerenderFinalStatusActivationNavigationDestroyedBeforeSuccess:
-		*t = PrerenderFinalStatusActivationNavigationDestroyedBeforeSuccess
-	case PrerenderFinalStatusTabClosedByUserGesture:
-		*t = PrerenderFinalStatusTabClosedByUserGesture
-	case PrerenderFinalStatusTabClosedWithoutUserGesture:
-		*t = PrerenderFinalStatusTabClosedWithoutUserGesture
-	case PrerenderFinalStatusPrimaryMainFrameRendererProcessCrashed:
-		*t = PrerenderFinalStatusPrimaryMainFrameRendererProcessCrashed
-	case PrerenderFinalStatusPrimaryMainFrameRendererProcessKilled:
-		*t = PrerenderFinalStatusPrimaryMainFrameRendererProcessKilled
-	case PrerenderFinalStatusActivationFramePolicyNotCompatible:
-		*t = PrerenderFinalStatusActivationFramePolicyNotCompatible
-	case PrerenderFinalStatusPreloadingDisabled:
-		*t = PrerenderFinalStatusPreloadingDisabled
-	case PrerenderFinalStatusBatterySaverEnabled:
-		*t = PrerenderFinalStatusBatterySaverEnabled
-	case PrerenderFinalStatusActivatedDuringMainFrameNavigation:
-		*t = PrerenderFinalStatusActivatedDuringMainFrameNavigation
-	case PrerenderFinalStatusPreloadingUnsupportedByWebContents:
-		*t = PrerenderFinalStatusPreloadingUnsupportedByWebContents
-
-	default:
-		in.AddError(fmt.Errorf("unknown PrerenderFinalStatus value: %v", v))
-	}
-}
-
-// UnmarshalJSON satisfies json.Unmarshaler.
-func (t *PrerenderFinalStatus) UnmarshalJSON(buf []byte) error {
-	return easyjson.Unmarshal(buf, t)
-}
-
-// PreloadingStatus preloading status values, see also
-// PreloadingTriggeringOutcome. This status is shared by prefetchStatusUpdated
-// and prerenderStatusUpdated.
-//
-// See: https://chromedevtools.github.io/devtools-protocol/tot/Page#type-PreloadingStatus
-type PreloadingStatus string
-
-// String returns the PreloadingStatus as string value.
-func (t PreloadingStatus) String() string {
-	return string(t)
-}
-
-// PreloadingStatus values.
-const (
-	PreloadingStatusPending      PreloadingStatus = "Pending"
-	PreloadingStatusRunning      PreloadingStatus = "Running"
-	PreloadingStatusReady        PreloadingStatus = "Ready"
-	PreloadingStatusSuccess      PreloadingStatus = "Success"
-	PreloadingStatusFailure      PreloadingStatus = "Failure"
-	PreloadingStatusNotSupported PreloadingStatus = "NotSupported"
-)
-
-// MarshalEasyJSON satisfies easyjson.Marshaler.
-func (t PreloadingStatus) MarshalEasyJSON(out *jwriter.Writer) {
-	out.String(string(t))
-}
-
-// MarshalJSON satisfies json.Marshaler.
-func (t PreloadingStatus) MarshalJSON() ([]byte, error) {
-	return easyjson.Marshal(t)
-}
-
-// UnmarshalEasyJSON satisfies easyjson.Unmarshaler.
-func (t *PreloadingStatus) UnmarshalEasyJSON(in *jlexer.Lexer) {
-	v := in.String()
-	switch PreloadingStatus(v) {
-	case PreloadingStatusPending:
-		*t = PreloadingStatusPending
-	case PreloadingStatusRunning:
-		*t = PreloadingStatusRunning
-	case PreloadingStatusReady:
-		*t = PreloadingStatusReady
-	case PreloadingStatusSuccess:
-		*t = PreloadingStatusSuccess
-	case PreloadingStatusFailure:
-		*t = PreloadingStatusFailure
-	case PreloadingStatusNotSupported:
-		*t = PreloadingStatusNotSupported
-
-	default:
-		in.AddError(fmt.Errorf("unknown PreloadingStatus value: %v", v))
-	}
-}
-
-// UnmarshalJSON satisfies json.Unmarshaler.
-func (t *PreloadingStatus) UnmarshalJSON(buf []byte) error {
-	return easyjson.Unmarshal(buf, t)
 }
 
 // FileChooserOpenedMode input mode.

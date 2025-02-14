@@ -83,12 +83,12 @@ func Command(con *console.SliverClient) []*cobra.Command {
 	return []*cobra.Command{taskmanyCmd}
 }
 
-// TaskmanyCmd - Task many beacons / sessions.
+// TaskmanyCmd - Task many beacons / sessions
 func TaskmanyCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	con.PrintErrorf("Must specify subcommand. See taskmany --help for supported subcommands.\n")
 }
 
-// Helper function to wrap grumble commands with taskmany logic.
+// Helper function to wrap grumble commands with taskmany logic
 func WrapCommand(c *cobra.Command, con *console.SliverClient) *cobra.Command {
 	wc := &cobra.Command{
 		Use:   c.Use,
@@ -102,7 +102,7 @@ func WrapCommand(c *cobra.Command, con *console.SliverClient) *cobra.Command {
 	return wc
 }
 
-// Wrap a function to run it for each beacon / session.
+// Wrap a function to run it for each beacon / session
 func wrapFunctionWithTaskmany(con *console.SliverClient, f func(cmd *cobra.Command, args []string)) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		defer con.Println()

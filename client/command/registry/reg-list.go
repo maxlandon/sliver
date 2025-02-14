@@ -29,7 +29,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// RegListSubKeysCmd - List sub registry keys.
+// RegListSubKeysCmd - List sub registry keys
 func RegListSubKeysCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -74,7 +74,7 @@ func RegListSubKeysCmd(cmd *cobra.Command, con *console.SliverClient, args []str
 	}
 }
 
-// PrintListSubKeys - Print the list sub keys command result.
+// PrintListSubKeys - Print the list sub keys command result
 func PrintListSubKeys(regList *sliverpb.RegistrySubKeyList, hive string, regPath string, con *console.SliverClient) {
 	if regList.Response != nil && regList.Response.Err != "" {
 		con.PrintErrorf("%s\n", regList.Response.Err)
@@ -88,7 +88,7 @@ func PrintListSubKeys(regList *sliverpb.RegistrySubKeyList, hive string, regPath
 	}
 }
 
-// RegListValuesCmd - List registry values.
+// RegListValuesCmd - List registry values
 func RegListValuesCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -124,7 +124,7 @@ func RegListValuesCmd(cmd *cobra.Command, con *console.SliverClient, args []stri
 	}
 }
 
-// PrintListValues - Print the registry list values.
+// PrintListValues - Print the registry list values
 func PrintListValues(regList *sliverpb.RegistryValuesList, hive string, regPath string, con *console.SliverClient) {
 	if regList.Response != nil && regList.Response.Err != "" {
 		con.PrintErrorf("%s\n", regList.Response.Err)

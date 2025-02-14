@@ -1,25 +1,33 @@
 package extensions
 
 import (
-	"github.com/rsteube/carapace"
-	"github.com/spf13/cobra"
-
 	"github.com/bishopfox/sliver/client/command/help"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/rsteube/carapace"
+	"github.com/spf13/cobra"
 )
 
 // Commands returns the “ command and its subcommands.
 func Commands(con *console.SliverClient) []*cobra.Command {
 	extCmd := &cobra.Command{
 		Use:   consts.ExtensionsStr,
-		Short: "List current exts",
+		Short: "Manage extensions",
 		Long:  help.GetHelpFor([]string{consts.ExtensionsStr}),
 		Run: func(cmd *cobra.Command, args []string) {
 			ExtensionsCmd(cmd, con)
 		},
 		GroupID: consts.GenericHelpGroup,
 	}
+
+	extCmd.AddCommand(&cobra.Command{
+		Use:   consts.ListStr,
+		Short: "List extensions loaded in the current session or beacon",
+		Long:  help.GetHelpFor([]string{consts.ExtensionsStr, consts.ListStr}),
+		Run: func(cmd *cobra.Command, args []string) {
+			ExtensionsListCmd(cmd, con, args)
+		},
+	})
 
 	extLoadCmd := &cobra.Command{
 		Use:   consts.LoadStr + " [EXT]",
@@ -52,7 +60,6 @@ func Commands(con *console.SliverClient) []*cobra.Command {
 		Long:  help.GetHelpFor([]string{consts.RmStr}),
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			// alias.AliasesRemoveCmd(cmd, con, args)
 			ExtensionsRemoveCmd(cmd, con, args)
 		},
 	}

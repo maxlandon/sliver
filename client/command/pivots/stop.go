@@ -28,7 +28,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// StopPivotListenerCmd - Start a TCP pivot listener on the remote system.
+// StopPivotListenerCmd - Start a TCP pivot listener on the remote system
 func StopPivotListenerCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session := con.ActiveTarget.GetSessionInteractive()
 	if session == nil {

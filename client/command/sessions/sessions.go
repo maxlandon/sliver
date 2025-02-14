@@ -25,15 +25,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/spf13/cobra"
-	"golang.org/x/term"
-
 	"github.com/bishopfox/sliver/client/command/kill"
 	"github.com/bishopfox/sliver/client/command/settings"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // SessionsCmd - Display/interact with sessions.
@@ -139,19 +138,45 @@ func PrintSessions(sessions map[string]*clientpb.Session, filter string, filterR
 	settings.SetMaxTableSize(tw)
 	wideTermWidth := con.Settings.SmallTermWidth < width
 
+	windowsSessionInList := false
+	for _, session := range sessions {
+		if session.OS == "windows" {
+			windowsSessionInList = true
+		}
+	}
+
 	if wideTermWidth {
-		tw.AppendHeader(table.Row{
-			"ID",
-			"Name",
-			"Transport",
-			"Remote Address",
-			"Hostname",
-			"Username",
-			"Operating System",
-			"Locale",
-			"Last Message",
-			"Health",
-		})
+		if windowsSessionInList {
+			tw.AppendHeader(table.Row{
+				"ID",
+				"Name",
+				"Transport",
+				"Remote Address",
+				"Hostname",
+				"Username",
+				"Process (PID)",
+				"Integrity",
+				"Operating System",
+				"Locale",
+				"Last Message",
+				"Health",
+			})
+		} else {
+			tw.AppendHeader(table.Row{
+				"ID",
+				"Name",
+				"Transport",
+				"Remote Address",
+				"Hostname",
+				"Username",
+				"Process (PID)",
+				"Operating System",
+				"Locale",
+				"Last Message",
+				"Health",
+			})
+		}
+
 	} else {
 		tw.AppendHeader(table.Row{
 			"ID",
@@ -194,11 +219,19 @@ func PrintSessions(sessions map[string]*clientpb.Session, filter string, filterR
 				fmt.Sprintf(color+"%s"+console.Normal, session.RemoteAddress),
 				fmt.Sprintf(color+"%s"+console.Normal, session.Hostname),
 				fmt.Sprintf(color+"%s"+console.Normal, username),
+				fmt.Sprintf(color+"%s (%d)"+console.Normal, session.Filename, session.PID),
+			}
+
+			if windowsSessionInList {
+				rowEntries = append(rowEntries, fmt.Sprintf(color+"%s"+console.Normal, session.Integrity))
+			}
+
+			rowEntries = append(rowEntries, []string{
 				fmt.Sprintf(color+"%s/%s"+console.Normal, session.OS, session.Arch),
 				fmt.Sprintf(color+"%s"+console.Normal, session.Locale),
 				con.FormatDateDelta(time.Unix(session.LastCheckin, 0), wideTermWidth, false),
 				burned + SessionHealth,
-			}
+			}...)
 		} else {
 			rowEntries = []string{
 				fmt.Sprintf(color+"%s"+console.Normal, ShortSessionID(session.ID)),

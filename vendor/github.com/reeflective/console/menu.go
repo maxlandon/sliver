@@ -26,11 +26,6 @@ type Menu struct {
 	// Maps interrupt signals (CtrlC/IOF, etc) to specific error handlers.
 	interruptHandlers map[error]func(c *Console)
 
-	// ErrorHandler is called when an error is encountered.
-	//
-	// If not set, the error is printed to the console on os.Stderr.
-	ErrorHandler ErrorHandler
-
 	// Input/output channels
 	out *bytes.Buffer
 
@@ -65,7 +60,6 @@ func newMenu(name string, console *Console) *Menu {
 		interruptHandlers: make(map[error]func(c *Console)),
 		histories:         make(map[string]readline.History),
 		mutex:             &sync.RWMutex{},
-		ErrorHandler:      defaultErrorHandler,
 	}
 
 	// Add a default in memory history to each menu
@@ -131,7 +125,7 @@ func (m *Menu) DeleteHistorySource(name string) {
 			name = " (" + name + ")"
 		}
 
-		name = "local history" + name
+		name = fmt.Sprintf("local history%s", name)
 	}
 
 	delete(m.histories, name)
@@ -169,7 +163,7 @@ func (m *Menu) TransientPrintf(msg string, args ...any) (n int, err error) {
 	buf := m.out.String()
 	m.out.Reset()
 
-	return m.console.TransientPrintf("%s", buf)
+	return m.console.TransientPrintf(buf)
 }
 
 // Printf prints a message to the console, but only if the current menu
@@ -196,7 +190,7 @@ func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
 	buf := m.out.String()
 	m.out.Reset()
 
-	return m.console.Printf("%s", buf)
+	return m.console.Printf(buf)
 }
 
 // CheckIsAvailable checks if a target command is marked as filtered
@@ -330,7 +324,7 @@ func (m *Menu) defaultHistoryName() string {
 		name = " (" + m.name + ")"
 	}
 
-	return "local history" + name
+	return fmt.Sprintf("local history%s", name)
 }
 
 func (m *Menu) errorFilteredCommandTemplate(filters []string) string {
@@ -347,7 +341,6 @@ func tmpl(w io.Writer, text string, data interface{}) error {
 	t := template.New("top")
 	t.Funcs(templateFuncs)
 	template.Must(t.Parse(text))
-
 	return t.Execute(w, data)
 }
 

@@ -36,19 +36,19 @@ func SocksStopCmd(cmd *cobra.Command, con *console.SliverClient, args []string) 
 		if err != nil {
 			con.PrintErrorf("Failed to parse Socks ID: %s\n", err)
 		}
-
+		socksID, _ = cmd.Flags().GetUint64("id")
 		if socksID < 1 {
-			con.PrintErrorf("Must specify a valid socks5 ID\n")
+			con.PrintErrorf("Must specify a valid socks5 id\n")
 			return
 		}
-
 		found := core.SocksProxies.Remove(socksID)
-
 		if !found {
-			con.PrintErrorf("No socks5 with ID %d\n", socksID)
+			con.PrintErrorf("No socks5 with id %d\n", socksID)
 		} else {
 			con.PrintInfof("Removed socks5\n")
 		}
+
+		found = core.SocksProxies.Remove(socksID)
 
 		// close
 		con.Rpc.CloseSocks(context.Background(), &sliverpb.Socks{})

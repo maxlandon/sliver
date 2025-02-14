@@ -1,16 +1,15 @@
 package exec
 
 import (
-	"github.com/rsteube/carapace"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-
 	"github.com/bishopfox/sliver/client/command/completers"
 	"github.com/bishopfox/sliver/client/command/flags"
 	"github.com/bishopfox/sliver/client/command/generate"
 	"github.com/bishopfox/sliver/client/command/help"
 	"github.com/bishopfox/sliver/client/console"
 	consts "github.com/bishopfox/sliver/client/constants"
+	"github.com/rsteube/carapace"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // Commands returns the “ command and its subcommands.
@@ -164,7 +163,6 @@ func Commands(con *console.SliverClient) []*cobra.Command {
 		Use:   consts.MigrateStr,
 		Short: "Migrate into a remote process",
 		Long:  help.GetHelpFor([]string{consts.MigrateStr}),
-		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			MigrateCmd(cmd, con, args)
 		},

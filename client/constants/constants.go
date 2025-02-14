@@ -137,9 +137,9 @@ const (
 	CancelStr          = "cancel"
 	WaitStr            = "wait"
 	GenerateStr        = "generate"
+	C2GenerateStr      = "generate"
 	RegenerateStr      = "regenerate"
 	CompilerInfoStr    = "info"
-	MsfStagerStr       = "msf-stager"
 	ProfilesStr        = "profiles"
 	BeaconStr          = "beacon"
 	BeaconsStr         = "beacons"
@@ -150,9 +150,12 @@ const (
 	TrafficEncodersStr = "encoders"
 
 	// C2 actions
-	ListenStr = "listen"
-	DialStr   = "dial"
-	ServeStr  = "serve"
+	ListenStr          = "listen"
+	DialStr            = "dial"
+	ServeStr           = "serve"
+	ImportC2ProfileStr = "import"
+	ExportC2ProfileStr = "export"
+	CertificatesStr    = "certificates"
 
 	// Generic.
 
@@ -169,6 +172,11 @@ const (
 	TablesStr  = "tables"
 	DetailsStr = "details"
 	GraphStr   = "graph"
+	EnableStr  = "enable"
+	DisableStr = "disable"
+	ModifyStr  = "modify"
+	RefreshStr = "refresh"
+	ResetStr   = "reset"
 
 	LootStr       = "loot"
 	LootLocalStr  = "local"
@@ -196,10 +204,14 @@ const (
 	MsfStr       = "msf"
 	MsfInjectStr = "inject"
 
-	PsStr        = "ps"
-	PingStr      = "ping"
-	KillStr      = "kill"
-	TerminateStr = "terminate"
+	PsStr            = "ps"
+	PingStr          = "ping"
+	KillStr          = "kill"
+	TerminateStr     = "terminate"
+	ServicesStr      = "services"
+	ServicesInfoStr  = "info"
+	ServicesStopStr  = "stop"
+	ServicesStartStr = "start"
 
 	GetPIDStr = "getpid"
 	GetUIDStr = "getuid"
@@ -228,6 +240,7 @@ const (
 	ChmodStr    = "chmod"
 	ChownStr    = "chown"
 	ChtimesStr  = "chtimes"
+	MountStr    = "mount"
 
 	MemfilesStr = "memfiles"
 
@@ -265,6 +278,7 @@ const (
 	RegistryListValuesStr = "list-values"
 	RegistryCreateKeyStr  = "create"
 	RegistryDeleteKeyStr  = "delete"
+	RegistryReadHiveStr   = "hive"
 	PivotsStr             = "pivots"
 	WgConfigStr           = "config"
 	WgSocksStr            = "wg-socks"
@@ -288,9 +302,8 @@ const (
 
 	LicensesStr = "licenses"
 
-	GetPrivsStr        = "getprivs"
-	PreludeOperatorStr = "prelude-operator"
-	ConnectStr         = "connect"
+	GetPrivsStr = "getprivs"
+	ConnectStr  = "connect"
 
 	ShikataGaNai = "shikata-ga-nai"
 

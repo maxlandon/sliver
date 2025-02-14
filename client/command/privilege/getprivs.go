@@ -32,7 +32,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
-// GetPrivsCmd - Get the current process privileges (Windows only).
+// GetPrivsCmd - Get the current process privileges (Windows only)
 func GetPrivsCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 	session, beacon := con.ActiveTarget.GetInteractive()
 	if session == nil && beacon == nil {
@@ -70,17 +70,22 @@ func GetPrivsCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 				return
 			}
 			PrintGetPrivs(privs, pid, con)
+			err = updateBeaconIntegrityInformation(con, beacon.ID, privs.ProcessIntegrity)
+			if err != nil {
+				con.PrintWarnf("Could not save integrity information for the beacon: %s\n", err)
+				return
+			}
 		})
 	} else {
 		PrintGetPrivs(privs, pid, con)
 	}
 }
 
-// PrintGetPrivs - Print the results of the get privs command.
+// PrintGetPrivs - Print the results of the get privs command
 func PrintGetPrivs(privs *sliverpb.GetPrivs, pid int32, con *console.SliverClient) {
 	// Response is the Envelope (see RPC API), Err is part of it.
 	if privs.Response != nil && privs.Response.Err != "" {
-		con.PrintErrorf("NOTE: Information may be incomplete due to an error:\n")
+		con.PrintErrorf("\nNOTE: Information may be incomplete due to an error:\n")
 		con.PrintErrorf("%s\n", privs.Response.Err)
 	}
 	if privs.PrivInfo == nil {
@@ -111,7 +116,7 @@ func PrintGetPrivs(privs *sliverpb.GetPrivs, pid int32, con *console.SliverClien
 	nameColumnWidth += 1
 	descriptionColumnWidth += 1
 
-	con.Printf("Privilege Information for %s (PID: %d)\n", processName, pid)
+	con.Printf("\nPrivilege Information for %s (PID: %d)\n", processName, pid)
 	con.Println(strings.Repeat("-", introWidth))
 	con.Printf("\nProcess Integrity Level: %s\n\n", privs.ProcessIntegrity)
 	con.Printf("%-*s\t%-*s\t%s\n", nameColumnWidth, "Name", descriptionColumnWidth, "Description", "Attributes")
@@ -156,4 +161,13 @@ func getPID(session *clientpb.Session, beacon *clientpb.Beacon) (int32, error) {
 	}
 
 	return -1, errors.New("no session or beacon")
+}
+
+func updateBeaconIntegrityInformation(con *console.SliverClient, beaconID string, integrity string) error {
+	_, err := con.Rpc.UpdateBeaconIntegrityInformation(context.Background(), &clientpb.BeaconIntegrity{
+		BeaconID:  beaconID,
+		Integrity: integrity,
+	})
+
+	return err
 }

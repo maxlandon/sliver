@@ -110,8 +110,7 @@ func SplitBraces(word *Word) bool {
 					val := elem.Lit()
 					if _, err := strconv.Atoi(val); err == nil {
 					} else if len(val) == 1 &&
-						(('a' <= val[0] && val[0] <= 'z') ||
-							('A' <= val[0] && val[0] <= 'Z')) {
+						'a' <= val[0] && val[0] <= 'z' {
 						chars[i] = true
 					} else {
 						broken = true

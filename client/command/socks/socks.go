@@ -43,6 +43,8 @@ func SocksCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 		return socks[i].ID < socks[j].ID
 	})
 
+	session := con.ActiveTarget.GetSession()
+
 	tw := table.NewWriter()
 	tw.SetStyle(settings.GetTableStyle(con))
 	settings.SetMaxTableSize(tw)
@@ -54,6 +56,10 @@ func SocksCmd(cmd *cobra.Command, con *console.SliverClient, args []string) {
 		"Passwords",
 	})
 	for _, p := range socks {
+		// if we're in an active session, just display socks proxies for the session
+		if session != nil && session.ID != p.SessionID {
+			continue
+		}
 		tw.AppendRow(table.Row{p.ID, p.SessionID, p.BindAddr, p.Username, p.Password})
 	}
 

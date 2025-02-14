@@ -40,7 +40,7 @@ func AliasExtensionOrBundleCompleter() carapace.Action {
 		results := []string{}
 
 		// In-memory packages are newer.
-		aliases, exts := packagesInCache()
+		aliases, exts := packageManifestsInCache()
 		bundles := bundlesInCache()
 
 		// Or load the cache from file if in-memory cache is empty.
@@ -98,7 +98,7 @@ func AliasExtensionOrBundleCompleter() carapace.Action {
 }
 
 func saveArmoryCompletionCache() error {
-	aliases, exts := packagesInCache()
+	aliases, exts := packageManifestsInCache()
 	bundles := bundlesInCache()
 
 	ArmoryCache := struct {

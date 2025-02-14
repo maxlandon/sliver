@@ -1,6 +1,7 @@
 package sqlite3
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 
 // Error wraps an SQLite Error Code.
 //
-// https://www.sqlite.org/c3ref/errcode.html
+// https://sqlite.org/c3ref/errcode.html
 type Error struct {
 	str  string
 	msg  string
@@ -19,14 +20,14 @@ type Error struct {
 
 // Code returns the primary error code for this error.
 //
-// https://www.sqlite.org/rescode.html
+// https://sqlite.org/rescode.html
 func (e *Error) Code() ErrorCode {
 	return ErrorCode(e.code)
 }
 
 // ExtendedCode returns the extended error code for this error.
 //
-// https://www.sqlite.org/rescode.html
+// https://sqlite.org/rescode.html
 func (e *Error) ExtendedCode() ExtendedErrorCode {
 	return ExtendedErrorCode(e.code)
 }
@@ -43,8 +44,7 @@ func (e *Error) Error() string {
 	}
 
 	if e.msg != "" {
-		b.WriteByte(':')
-		b.WriteByte(' ')
+		b.WriteString(": ")
 		b.WriteString(e.msg)
 	}
 
@@ -106,6 +106,11 @@ func (e ErrorCode) Temporary() bool {
 	return e == BUSY
 }
 
+// ExtendedCode returns the extended error code for this error.
+func (e ErrorCode) ExtendedCode() ExtendedErrorCode {
+	return ExtendedErrorCode(e)
+}
+
 // Error implements the error interface.
 func (e ExtendedErrorCode) Error() string {
 	return util.ErrorCodeString(uint32(e))
@@ -134,4 +139,34 @@ func (e ExtendedErrorCode) Temporary() bool {
 // Timeout returns true for [BUSY_TIMEOUT] errors.
 func (e ExtendedErrorCode) Timeout() bool {
 	return e == BUSY_TIMEOUT
+}
+
+// Code returns the primary error code for this error.
+func (e ExtendedErrorCode) Code() ErrorCode {
+	return ErrorCode(e)
+}
+
+func errorCode(err error, def ErrorCode) (msg string, code uint32) {
+	switch code := err.(type) {
+	case nil:
+		return "", _OK
+	case ErrorCode:
+		return "", uint32(code)
+	case xErrorCode:
+		return "", uint32(code)
+	case *Error:
+		return code.msg, uint32(code.code)
+	}
+
+	var ecode ErrorCode
+	var xcode xErrorCode
+	switch {
+	case errors.As(err, &xcode):
+		code = uint32(xcode)
+	case errors.As(err, &ecode):
+		code = uint32(ecode)
+	default:
+		code = uint32(def)
+	}
+	return err.Error(), code
 }

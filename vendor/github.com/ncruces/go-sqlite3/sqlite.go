@@ -4,25 +4,39 @@ package sqlite3
 import (
 	"context"
 	"math"
+	"math/bits"
 	"os"
 	"sync"
+	"unsafe"
+
+	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
 )
 
-// Configure SQLite WASM.
+// Configure SQLite Wasm.
 //
-// Importing package embed initializes these
+// Importing package embed initializes [Binary]
 // with an appropriate build of SQLite:
 //
 //	import _ "github.com/ncruces/go-sqlite3/embed"
 var (
-	Binary []byte // WASM binary to load.
+	Binary []byte // Wasm binary to load.
 	Path   string // Path to load the binary from.
+
+	RuntimeConfig wazero.RuntimeConfig
 )
+
+// Initialize decodes and compiles the SQLite Wasm binary.
+// This is called implicitly when the first connection is openned,
+// but is potentially slow, so you may want to call it at a more convenient time.
+func Initialize() error {
+	instance.once.Do(compileSQLite)
+	return instance.err
+}
 
 var instance struct {
 	runtime  wazero.Runtime
@@ -33,11 +47,22 @@ var instance struct {
 
 func compileSQLite() {
 	ctx := context.Background()
-	instance.runtime = wazero.NewRuntime(ctx)
+	cfg := RuntimeConfig
+	if cfg == nil {
+		cfg = wazero.NewRuntimeConfig()
+		if bits.UintSize >= 64 {
+			cfg = cfg.WithMemoryLimitPages(4096) // 256MB
+		} else {
+			cfg = cfg.WithMemoryLimitPages(512) // 32MB
+		}
+	}
+	cfg = cfg.WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads)
+
+	instance.runtime = wazero.NewRuntimeWithConfig(ctx, cfg)
 
 	env := instance.runtime.NewHostModuleBuilder("env")
 	env = vfs.ExportHostFunctions(env)
-	env = exportHostFunctions(env)
+	env = exportCallbacks(env)
 	_, instance.err = env.Instantiate(ctx)
 	if instance.err != nil {
 		return
@@ -51,7 +76,7 @@ func compileSQLite() {
 		}
 	}
 	if bin == nil {
-		instance.err = util.BinaryErr
+		instance.err = util.NoBinaryErr
 		return
 	}
 
@@ -61,122 +86,29 @@ func compileSQLite() {
 type sqlite struct {
 	ctx   context.Context
 	mod   api.Module
-	api   sqliteAPI
-	stack [8]uint64
+	funcs struct {
+		fn   [32]api.Function
+		id   [32]*byte
+		mask uint32
+	}
+	stack [9]uint64
 }
 
-type sqliteKey struct{}
-
 func instantiateSQLite() (sqlt *sqlite, err error) {
-	instance.once.Do(compileSQLite)
-	if instance.err != nil {
-		return nil, instance.err
+	if err := Initialize(); err != nil {
+		return nil, err
 	}
 
 	sqlt = new(sqlite)
 	sqlt.ctx = util.NewContext(context.Background())
-	sqlt.ctx = context.WithValue(sqlt.ctx, sqliteKey{}, sqlt)
 
 	sqlt.mod, err = instance.runtime.InstantiateModule(sqlt.ctx,
-		instance.compiled, wazero.NewModuleConfig())
+		instance.compiled, wazero.NewModuleConfig().WithName(""))
 	if err != nil {
 		return nil, err
 	}
-
-	getFun := func(name string) api.Function {
-		f := sqlt.mod.ExportedFunction(name)
-		if f == nil {
-			err = util.NoFuncErr + util.ErrorString(name)
-			return nil
-		}
-		return f
-	}
-
-	getVal := func(name string) uint32 {
-		g := sqlt.mod.ExportedGlobal(name)
-		if g == nil {
-			err = util.NoGlobalErr + util.ErrorString(name)
-			return 0
-		}
-		return util.ReadUint32(sqlt.mod, uint32(g.Get()))
-	}
-
-	sqlt.api = sqliteAPI{
-		free:            getFun("free"),
-		malloc:          getFun("malloc"),
-		destructor:      getVal("malloc_destructor"),
-		errcode:         getFun("sqlite3_errcode"),
-		errstr:          getFun("sqlite3_errstr"),
-		errmsg:          getFun("sqlite3_errmsg"),
-		erroff:          getFun("sqlite3_error_offset"),
-		open:            getFun("sqlite3_open_v2"),
-		close:           getFun("sqlite3_close"),
-		closeZombie:     getFun("sqlite3_close_v2"),
-		prepare:         getFun("sqlite3_prepare_v3"),
-		finalize:        getFun("sqlite3_finalize"),
-		reset:           getFun("sqlite3_reset"),
-		step:            getFun("sqlite3_step"),
-		exec:            getFun("sqlite3_exec"),
-		clearBindings:   getFun("sqlite3_clear_bindings"),
-		bindCount:       getFun("sqlite3_bind_parameter_count"),
-		bindIndex:       getFun("sqlite3_bind_parameter_index"),
-		bindName:        getFun("sqlite3_bind_parameter_name"),
-		bindNull:        getFun("sqlite3_bind_null"),
-		bindInteger:     getFun("sqlite3_bind_int64"),
-		bindFloat:       getFun("sqlite3_bind_double"),
-		bindText:        getFun("sqlite3_bind_text64"),
-		bindBlob:        getFun("sqlite3_bind_blob64"),
-		bindZeroBlob:    getFun("sqlite3_bind_zeroblob64"),
-		columnCount:     getFun("sqlite3_column_count"),
-		columnName:      getFun("sqlite3_column_name"),
-		columnType:      getFun("sqlite3_column_type"),
-		columnInteger:   getFun("sqlite3_column_int64"),
-		columnFloat:     getFun("sqlite3_column_double"),
-		columnText:      getFun("sqlite3_column_text"),
-		columnBlob:      getFun("sqlite3_column_blob"),
-		columnBytes:     getFun("sqlite3_column_bytes"),
-		blobOpen:        getFun("sqlite3_blob_open"),
-		blobClose:       getFun("sqlite3_blob_close"),
-		blobReopen:      getFun("sqlite3_blob_reopen"),
-		blobBytes:       getFun("sqlite3_blob_bytes"),
-		blobRead:        getFun("sqlite3_blob_read"),
-		blobWrite:       getFun("sqlite3_blob_write"),
-		backupInit:      getFun("sqlite3_backup_init"),
-		backupStep:      getFun("sqlite3_backup_step"),
-		backupFinish:    getFun("sqlite3_backup_finish"),
-		backupRemaining: getFun("sqlite3_backup_remaining"),
-		backupPageCount: getFun("sqlite3_backup_pagecount"),
-		changes:         getFun("sqlite3_changes64"),
-		lastRowid:       getFun("sqlite3_last_insert_rowid"),
-		autocommit:      getFun("sqlite3_get_autocommit"),
-		anyCollation:    getFun("sqlite3_anycollseq_init"),
-		createCollation: getFun("sqlite3_create_collation_go"),
-		createFunction:  getFun("sqlite3_create_function_go"),
-		createAggregate: getFun("sqlite3_create_aggregate_function_go"),
-		createWindow:    getFun("sqlite3_create_window_function_go"),
-		aggregateCtx:    getFun("sqlite3_aggregate_context"),
-		userData:        getFun("sqlite3_user_data"),
-		setAuxData:      getFun("sqlite3_set_auxdata_go"),
-		getAuxData:      getFun("sqlite3_get_auxdata"),
-		valueType:       getFun("sqlite3_value_type"),
-		valueInteger:    getFun("sqlite3_value_int64"),
-		valueFloat:      getFun("sqlite3_value_double"),
-		valueText:       getFun("sqlite3_value_text"),
-		valueBlob:       getFun("sqlite3_value_blob"),
-		valueBytes:      getFun("sqlite3_value_bytes"),
-		resultNull:      getFun("sqlite3_result_null"),
-		resultInteger:   getFun("sqlite3_result_int64"),
-		resultFloat:     getFun("sqlite3_result_double"),
-		resultText:      getFun("sqlite3_result_text64"),
-		resultBlob:      getFun("sqlite3_result_blob64"),
-		resultZeroBlob:  getFun("sqlite3_result_zeroblob64"),
-		resultError:     getFun("sqlite3_result_error"),
-		resultErrorCode: getFun("sqlite3_result_error_code"),
-		resultErrorMem:  getFun("sqlite3_result_error_nomem"),
-		resultErrorBig:  getFun("sqlite3_result_error_toobig"),
-	}
-	if err != nil {
-		return nil, err
+	if sqlt.getfn("sqlite3_progress_handler_go") == nil {
+		return nil, util.BadBinaryErr
 	}
 	return sqlt, nil
 }
@@ -196,17 +128,19 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 		panic(util.OOMErr)
 	}
 
-	if r := sqlt.call(sqlt.api.errstr, rc); r != 0 {
-		err.str = util.ReadString(sqlt.mod, uint32(r), _MAX_STRING)
+	if r := sqlt.call("sqlite3_errstr", rc); r != 0 {
+		err.str = util.ReadString(sqlt.mod, uint32(r), _MAX_NAME)
 	}
 
-	if r := sqlt.call(sqlt.api.errmsg, uint64(handle)); r != 0 {
-		err.msg = util.ReadString(sqlt.mod, uint32(r), _MAX_STRING)
-	}
+	if handle != 0 {
+		if r := sqlt.call("sqlite3_errmsg", uint64(handle)); r != 0 {
+			err.msg = util.ReadString(sqlt.mod, uint32(r), _MAX_LENGTH)
+		}
 
-	if sql != nil {
-		if r := sqlt.call(sqlt.api.erroff, uint64(handle)); r != math.MaxUint32 {
-			err.sql = sql[0][r:]
+		if len(sql) != 0 {
+			if r := sqlt.call("sqlite3_error_offset", uint64(handle)); r != math.MaxUint32 {
+				err.sql = sql[0][r:]
+			}
 		}
 	}
 
@@ -217,12 +151,42 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 	return &err
 }
 
-func (sqlt *sqlite) call(fn api.Function, params ...uint64) uint64 {
+func (sqlt *sqlite) getfn(name string) api.Function {
+	c := &sqlt.funcs
+	p := unsafe.StringData(name)
+	for i := range c.id {
+		if c.id[i] == p {
+			c.id[i] = nil
+			c.mask &^= uint32(1) << i
+			return c.fn[i]
+		}
+	}
+	return sqlt.mod.ExportedFunction(name)
+}
+
+func (sqlt *sqlite) putfn(name string, fn api.Function) {
+	c := &sqlt.funcs
+	p := unsafe.StringData(name)
+	i := bits.TrailingZeros32(^c.mask)
+	if i < 32 {
+		c.id[i] = p
+		c.fn[i] = fn
+		c.mask |= uint32(1) << i
+	} else {
+		c.id[0] = p
+		c.fn[0] = fn
+		c.mask = uint32(1)
+	}
+}
+
+func (sqlt *sqlite) call(name string, params ...uint64) uint64 {
 	copy(sqlt.stack[:], params)
+	fn := sqlt.getfn(name)
 	err := fn.CallWithStack(sqlt.ctx, sqlt.stack[:])
 	if err != nil {
 		panic(err)
 	}
+	sqlt.putfn(name, fn)
 	return sqlt.stack[0]
 }
 
@@ -230,14 +194,19 @@ func (sqlt *sqlite) free(ptr uint32) {
 	if ptr == 0 {
 		return
 	}
-	sqlt.call(sqlt.api.free, uint64(ptr))
+	sqlt.call("sqlite3_free", uint64(ptr))
 }
 
 func (sqlt *sqlite) new(size uint64) uint32 {
-	if size > _MAX_ALLOCATION_SIZE {
+	ptr := uint32(sqlt.call("sqlite3_malloc64", size))
+	if ptr == 0 && size != 0 {
 		panic(util.OOMErr)
 	}
-	ptr := uint32(sqlt.call(sqlt.api.malloc, size))
+	return ptr
+}
+
+func (sqlt *sqlite) realloc(ptr uint32, size uint64) uint32 {
+	ptr = uint32(sqlt.call("sqlite3_realloc64", uint64(ptr), size))
 	if ptr == 0 && size != 0 {
 		panic(util.OOMErr)
 	}
@@ -245,10 +214,14 @@ func (sqlt *sqlite) new(size uint64) uint32 {
 }
 
 func (sqlt *sqlite) newBytes(b []byte) uint32 {
-	if b == nil {
+	if (*[0]byte)(b) == nil {
 		return 0
 	}
-	ptr := sqlt.new(uint64(len(b)))
+	size := len(b)
+	if size == 0 {
+		size = 1
+	}
+	ptr := sqlt.new(uint64(size))
 	util.WriteBytes(sqlt.mod, ptr, b)
 	return ptr
 }
@@ -260,6 +233,8 @@ func (sqlt *sqlite) newString(s string) uint32 {
 }
 
 func (sqlt *sqlite) newArena(size uint64) arena {
+	// Ensure the arena's size is a multiple of 8.
+	size = (size + 7) &^ 7
 	return arena{
 		sqlt: sqlt,
 		size: uint32(size),
@@ -279,20 +254,32 @@ func (a *arena) free() {
 	if a.sqlt == nil {
 		return
 	}
-	a.reset()
+	for _, ptr := range a.ptrs {
+		a.sqlt.free(ptr)
+	}
 	a.sqlt.free(a.base)
 	a.sqlt = nil
 }
 
-func (a *arena) reset() {
-	for _, ptr := range a.ptrs {
-		a.sqlt.free(ptr)
+func (a *arena) mark() (reset func()) {
+	ptrs := len(a.ptrs)
+	next := a.next
+	return func() {
+		for _, ptr := range a.ptrs[ptrs:] {
+			a.sqlt.free(ptr)
+		}
+		a.ptrs = a.ptrs[:ptrs]
+		a.next = next
 	}
-	a.ptrs = nil
-	a.next = 0
 }
 
 func (a *arena) new(size uint64) uint32 {
+	// Align the next address, to 4 or 8 bytes.
+	if size&7 != 0 {
+		a.next = (a.next + 3) &^ 3
+	} else {
+		a.next = (a.next + 7) &^ 7
+	}
 	if size <= uint64(a.size-a.next) {
 		ptr := a.base + a.next
 		a.next += uint32(size)
@@ -304,7 +291,7 @@ func (a *arena) new(size uint64) uint32 {
 }
 
 func (a *arena) bytes(b []byte) uint32 {
-	if b == nil {
+	if (*[0]byte)(b) == nil {
 		return 0
 	}
 	ptr := a.new(uint64(len(b)))
@@ -318,77 +305,48 @@ func (a *arena) string(s string) uint32 {
 	return ptr
 }
 
-type sqliteAPI struct {
-	free            api.Function
-	malloc          api.Function
-	errcode         api.Function
-	errstr          api.Function
-	errmsg          api.Function
-	erroff          api.Function
-	open            api.Function
-	close           api.Function
-	closeZombie     api.Function
-	prepare         api.Function
-	finalize        api.Function
-	reset           api.Function
-	step            api.Function
-	exec            api.Function
-	clearBindings   api.Function
-	bindCount       api.Function
-	bindIndex       api.Function
-	bindName        api.Function
-	bindNull        api.Function
-	bindInteger     api.Function
-	bindFloat       api.Function
-	bindText        api.Function
-	bindBlob        api.Function
-	bindZeroBlob    api.Function
-	columnCount     api.Function
-	columnName      api.Function
-	columnType      api.Function
-	columnInteger   api.Function
-	columnFloat     api.Function
-	columnText      api.Function
-	columnBlob      api.Function
-	columnBytes     api.Function
-	blobOpen        api.Function
-	blobClose       api.Function
-	blobReopen      api.Function
-	blobBytes       api.Function
-	blobRead        api.Function
-	blobWrite       api.Function
-	backupInit      api.Function
-	backupStep      api.Function
-	backupFinish    api.Function
-	backupRemaining api.Function
-	backupPageCount api.Function
-	changes         api.Function
-	lastRowid       api.Function
-	autocommit      api.Function
-	anyCollation    api.Function
-	createCollation api.Function
-	createFunction  api.Function
-	createAggregate api.Function
-	createWindow    api.Function
-	aggregateCtx    api.Function
-	userData        api.Function
-	setAuxData      api.Function
-	getAuxData      api.Function
-	valueType       api.Function
-	valueInteger    api.Function
-	valueFloat      api.Function
-	valueText       api.Function
-	valueBlob       api.Function
-	valueBytes      api.Function
-	resultNull      api.Function
-	resultInteger   api.Function
-	resultFloat     api.Function
-	resultText      api.Function
-	resultBlob      api.Function
-	resultZeroBlob  api.Function
-	resultError     api.Function
-	resultErrorCode api.Function
-	resultErrorMem  api.Function
-	resultErrorBig  api.Function
-	destructor      uint32
+func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
+	util.ExportFuncII(env, "go_progress_handler", progressCallback)
+	util.ExportFuncIII(env, "go_busy_timeout", timeoutCallback)
+	util.ExportFuncIII(env, "go_busy_handler", busyCallback)
+	util.ExportFuncII(env, "go_commit_hook", commitCallback)
+	util.ExportFuncVI(env, "go_rollback_hook", rollbackCallback)
+	util.ExportFuncVIIIIJ(env, "go_update_hook", updateCallback)
+	util.ExportFuncIIIII(env, "go_wal_hook", walCallback)
+	util.ExportFuncIIIII(env, "go_trace", traceCallback)
+	util.ExportFuncIIIIII(env, "go_autovacuum_pages", autoVacuumCallback)
+	util.ExportFuncIIIIIII(env, "go_authorizer", authorizerCallback)
+	util.ExportFuncVIII(env, "go_log", logCallback)
+	util.ExportFuncVI(env, "go_destroy", destroyCallback)
+	util.ExportFuncVIIII(env, "go_func", funcCallback)
+	util.ExportFuncVIIIII(env, "go_step", stepCallback)
+	util.ExportFuncVIII(env, "go_final", finalCallback)
+	util.ExportFuncVII(env, "go_value", valueCallback)
+	util.ExportFuncVIIII(env, "go_inverse", inverseCallback)
+	util.ExportFuncVIIII(env, "go_collation_needed", collationCallback)
+	util.ExportFuncIIIIII(env, "go_compare", compareCallback)
+	util.ExportFuncIIIIII(env, "go_vtab_create", vtabModuleCallback(xCreate))
+	util.ExportFuncIIIIII(env, "go_vtab_connect", vtabModuleCallback(xConnect))
+	util.ExportFuncII(env, "go_vtab_disconnect", vtabDisconnectCallback)
+	util.ExportFuncII(env, "go_vtab_destroy", vtabDestroyCallback)
+	util.ExportFuncIII(env, "go_vtab_best_index", vtabBestIndexCallback)
+	util.ExportFuncIIIII(env, "go_vtab_update", vtabUpdateCallback)
+	util.ExportFuncIII(env, "go_vtab_rename", vtabRenameCallback)
+	util.ExportFuncIIIII(env, "go_vtab_find_function", vtabFindFuncCallback)
+	util.ExportFuncII(env, "go_vtab_begin", vtabBeginCallback)
+	util.ExportFuncII(env, "go_vtab_sync", vtabSyncCallback)
+	util.ExportFuncII(env, "go_vtab_commit", vtabCommitCallback)
+	util.ExportFuncII(env, "go_vtab_rollback", vtabRollbackCallback)
+	util.ExportFuncIII(env, "go_vtab_savepoint", vtabSavepointCallback)
+	util.ExportFuncIII(env, "go_vtab_release", vtabReleaseCallback)
+	util.ExportFuncIII(env, "go_vtab_rollback_to", vtabRollbackToCallback)
+	util.ExportFuncIIIIII(env, "go_vtab_integrity", vtabIntegrityCallback)
+	util.ExportFuncIII(env, "go_cur_open", cursorOpenCallback)
+	util.ExportFuncII(env, "go_cur_close", cursorCloseCallback)
+	util.ExportFuncIIIIII(env, "go_cur_filter", cursorFilterCallback)
+	util.ExportFuncII(env, "go_cur_next", cursorNextCallback)
+	util.ExportFuncII(env, "go_cur_eof", cursorEOFCallback)
+	util.ExportFuncIIII(env, "go_cur_column", cursorColumnCallback)
+	util.ExportFuncIII(env, "go_cur_rowid", cursorRowIDCallback)
+	return env
 }

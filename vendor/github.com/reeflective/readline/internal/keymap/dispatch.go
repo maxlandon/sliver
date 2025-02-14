@@ -13,16 +13,17 @@ import (
 // Returns the bind if matched, the corresponding command, and if we only matched by prefix.
 func MatchLocal(eng *Engine) (bind inputrc.Bind, command func(), prefix bool) {
 	if eng.local == "" {
-		return bind, command, prefix
+		return
 	}
 
 	// Several local keymaps are empty by default: instead we use restricted
 	// lists of commands, regardless of the key-sequence their bound to.
 	binds := eng.getContextBinds(false)
 	if len(binds) == 0 {
-		return bind, command, prefix
+		return
 	}
 
+	// bind, command, prefix, keys := eng.dispatch(binds)
 	bind, prefix, read, matched := eng.dispatchKeys(binds)
 
 	if !bind.Macro {
@@ -49,14 +50,14 @@ func MatchLocal(eng *Engine) (bind inputrc.Bind, command func(), prefix bool) {
 // Returns the bind if matched, the corresponding command, and if we only matched by prefix.
 func MatchMain(eng *Engine) (bind inputrc.Bind, command func(), prefix bool) {
 	if eng.main == "" {
-		return bind, command, prefix
+		return
 	}
 
 	// Get all binds present in the main keymap. Here, contrary
 	// to the local keymap matching, no keymap should be empty.
 	binds := eng.getContextBinds(true)
 	if len(binds) == 0 {
-		return bind, command, prefix
+		return
 	}
 
 	// Find the target action, macro or command.
@@ -67,7 +68,7 @@ func MatchMain(eng *Engine) (bind inputrc.Bind, command func(), prefix bool) {
 	}
 
 	// In the main menu, all keys that have been tested against
-	// the binds will be dropped after command execution (whether
+	// the binds will be dropped after command execution (wether
 	// or not there's actually a command to execute).
 	if prefix {
 		core.MatchedPrefix(eng.keys, read...)
@@ -101,8 +102,8 @@ func (m *Engine) dispatchKeys(binds map[string]inputrc.Bind) (bind inputrc.Bind,
 		// Read a single byte from the input buffer.
 		// This mimics the way Bash reads input when the inputrc option `byte-oriented` is set.
 		// This is because the default binds map is built with byte sequences, not runes, and this
-		// has some implications if the terminal is sending 8-bit characters (extended alphabet).
-		key, empty := core.PeekKey(m.keys)
+		// has some implications if the terminal is sending 8-bit characters (extanded alphabet).
+		key, empty := core.PopKey(m.keys)
 		if empty {
 			break
 		}
@@ -118,19 +119,8 @@ func (m *Engine) dispatchKeys(binds map[string]inputrc.Bind) (bind inputrc.Bind,
 			m.active = m.prefixed
 			m.prefixed = inputrc.Bind{}
 
-			// FIX related to Github issue #73, where someone
-			// complains not being able to input Unicode characters
-			// correctly. Explanation:
-			// The call to PeekKey at the beginning of this function
-			// used to be PopKey. We don't pop the key unless we have
-			// an empty byte.
-			core.PopKey(m.keys)
-
 			break
 		}
-
-		// FIX related to Github issue #73, also pop the key here.
-		core.PopKey(m.keys)
 
 		// From here, there is at least one bind matched, by prefix
 		// or exactly, so the key we popped is considered matched.
@@ -173,7 +163,6 @@ func (m *Engine) matchBind(keys []byte, binds map[string]inputrc.Bind) (inputrc.
 		if len(sequences[i]) == len(sequences[j]) {
 			return sequences[i] < sequences[j]
 		}
-
 		return len(sequences[i]) < len(sequences[j])
 	})
 
