@@ -495,6 +495,11 @@ github.com/lesnuages/go-winio
 # github.com/lesnuages/snitch v0.6.0
 ## explicit; go 1.16
 github.com/lesnuages/snitch/pkg/snitch
+# github.com/lib/pq v1.10.9
+## explicit; go 1.13
+github.com/lib/pq
+github.com/lib/pq/oid
+github.com/lib/pq/scram
 # github.com/lxn/win v0.0.0-20210218163916-a377121e959e
 ## explicit; go 1.12
 github.com/lxn/win
@@ -555,6 +560,9 @@ github.com/ncruces/go-sqlite3/internal/util
 github.com/ncruces/go-sqlite3/util/osutil
 github.com/ncruces/go-sqlite3/util/sql3util
 github.com/ncruces/go-sqlite3/vfs
+# github.com/ncruces/go-sqlite3/gormlite v0.8.4
+## explicit; go 1.21
+github.com/ncruces/go-sqlite3/gormlite
 # github.com/ncruces/go-strftime v0.1.9
 ## explicit; go 1.17
 github.com/ncruces/go-strftime
@@ -571,12 +579,15 @@ github.com/pierrec/lz4/v4/internal/xxh32
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
-# github.com/reeflective/console v0.1.15
-## explicit; go 1.21
+# github.com/psanford/memfs v0.0.0-20230130182539-4dbf7e3e865e
+## explicit; go 1.16
+github.com/psanford/memfs
+# github.com/reeflective/console v0.1.22
+## explicit; go 1.23.6
 github.com/reeflective/console
 github.com/reeflective/console/commands/readline
-# github.com/reeflective/readline v1.0.14
-## explicit; go 1.21
+# github.com/reeflective/readline v1.1.2
+## explicit; go 1.23.6
 github.com/reeflective/readline
 github.com/reeflective/readline/inputrc
 github.com/reeflective/readline/internal/color
@@ -590,13 +601,28 @@ github.com/reeflective/readline/internal/macro
 github.com/reeflective/readline/internal/strutil
 github.com/reeflective/readline/internal/term
 github.com/reeflective/readline/internal/ui
+# github.com/reeflective/team v0.2.1
+## explicit; go 1.21
+github.com/reeflective/team
+github.com/reeflective/team/client
+github.com/reeflective/team/client/commands
+github.com/reeflective/team/internal/assets
+github.com/reeflective/team/internal/certs
+github.com/reeflective/team/internal/command
+github.com/reeflective/team/internal/db
+github.com/reeflective/team/internal/db/wasmsqlite
+github.com/reeflective/team/internal/log
+github.com/reeflective/team/internal/systemd
+github.com/reeflective/team/internal/version
+github.com/reeflective/team/server
+github.com/reeflective/team/server/commands
 # github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec
 ## explicit; go 1.12
 github.com/remyoudompheng/bigfft
-# github.com/rivo/uniseg v0.4.4
+# github.com/rivo/uniseg v0.4.7
 ## explicit; go 1.18
 github.com/rivo/uniseg
-# github.com/rsteube/carapace v0.46.3-0.20231214181515-27e49f3c3b69
+# github.com/rsteube/carapace v0.50.2
 ## explicit; go 1.15
 github.com/rsteube/carapace
 github.com/rsteube/carapace/internal/cache
@@ -604,6 +630,7 @@ github.com/rsteube/carapace/internal/common
 github.com/rsteube/carapace/internal/config
 github.com/rsteube/carapace/internal/env
 github.com/rsteube/carapace/internal/export
+github.com/rsteube/carapace/internal/log
 github.com/rsteube/carapace/internal/man
 github.com/rsteube/carapace/internal/pflagfork
 github.com/rsteube/carapace/internal/shell
@@ -616,12 +643,13 @@ github.com/rsteube/carapace/internal/shell/ion
 github.com/rsteube/carapace/internal/shell/nushell
 github.com/rsteube/carapace/internal/shell/oil
 github.com/rsteube/carapace/internal/shell/powershell
-github.com/rsteube/carapace/internal/shell/spec
 github.com/rsteube/carapace/internal/shell/tcsh
 github.com/rsteube/carapace/internal/shell/xonsh
 github.com/rsteube/carapace/internal/shell/zsh
+github.com/rsteube/carapace/internal/spec
 github.com/rsteube/carapace/internal/uid
-github.com/rsteube/carapace/pkg/cache
+github.com/rsteube/carapace/pkg/cache/key
+github.com/rsteube/carapace/pkg/execlog
 github.com/rsteube/carapace/pkg/match
 github.com/rsteube/carapace/pkg/ps
 github.com/rsteube/carapace/pkg/style
@@ -637,7 +665,7 @@ github.com/rsteube/carapace/third_party/github.com/elves/elvish/pkg/cli/lscolors
 github.com/rsteube/carapace/third_party/github.com/elves/elvish/pkg/ui
 github.com/rsteube/carapace/third_party/github.com/mitchellh/go-ps
 github.com/rsteube/carapace/third_party/golang.org/x/sys/execabs
-# github.com/rsteube/carapace-shlex v0.1.1
+# github.com/rsteube/carapace-shlex v0.1.2
 ## explicit; go 1.15
 github.com/rsteube/carapace-shlex
 # github.com/safchain/ethtool v0.3.0
@@ -649,7 +677,7 @@ github.com/sirupsen/logrus
 # github.com/spf13/cobra v1.8.1
 ## explicit; go 1.15
 github.com/spf13/cobra
-# github.com/spf13/pflag v1.0.5
+# github.com/spf13/pflag v1.0.6
 ## explicit; go 1.12
 github.com/spf13/pflag
 # github.com/stretchr/testify v1.9.0
@@ -782,7 +810,7 @@ go4.org/mem
 # go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 ## explicit; go 1.18
 go4.org/netipx
-# golang.org/x/crypto v0.32.0
+# golang.org/x/crypto v0.33.0
 ## explicit; go 1.20
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
@@ -813,18 +841,18 @@ golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
-## explicit; go 1.20
+# golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac
+## explicit; go 1.22.0
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
 golang.org/x/exp/slices
 golang.org/x/exp/slog
 golang.org/x/exp/slog/internal
 golang.org/x/exp/slog/internal/buffer
-# golang.org/x/mod v0.17.0
-## explicit; go 1.18
+# golang.org/x/mod v0.23.0
+## explicit; go 1.22.0
 golang.org/x/mod/semver
-# golang.org/x/net v0.33.0
+# golang.org/x/net v0.35.0
 ## explicit; go 1.18
 golang.org/x/net/bpf
 golang.org/x/net/dns/dnsmessage
@@ -835,6 +863,7 @@ golang.org/x/net/http2/h2c
 golang.org/x/net/http2/hpack
 golang.org/x/net/icmp
 golang.org/x/net/idna
+golang.org/x/net/internal/httpcommon
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/internal/socks
@@ -844,11 +873,11 @@ golang.org/x/net/ipv6
 golang.org/x/net/proxy
 golang.org/x/net/route
 golang.org/x/net/trace
-# golang.org/x/sync v0.10.0
+# golang.org/x/sync v0.11.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.29.0
+# golang.org/x/sys v0.30.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9
@@ -857,10 +886,10 @@ golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
 golang.org/x/sys/windows/svc
 golang.org/x/sys/windows/svc/mgr
-# golang.org/x/term v0.28.0
+# golang.org/x/term v0.29.0
 ## explicit; go 1.18
 golang.org/x/term
-# golang.org/x/text v0.21.0
+# golang.org/x/text v0.22.0
 ## explicit; go 1.18
 golang.org/x/text/cases
 golang.org/x/text/encoding
@@ -883,12 +912,12 @@ golang.org/x/text/width
 # golang.org/x/time v0.5.0
 ## explicit; go 1.18
 golang.org/x/time/rate
-# golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
-## explicit; go 1.19
+# golang.org/x/tools v0.30.0
+## explicit; go 1.22.0
 golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
+golang.org/x/tools/go/types/typeutil
 golang.org/x/tools/internal/aliases
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
@@ -899,7 +928,7 @@ golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/packagesinternal
 golang.org/x/tools/internal/pkgbits
 golang.org/x/tools/internal/stdlib
-golang.org/x/tools/internal/tokeninternal
+golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
 # golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2
@@ -1184,8 +1213,8 @@ modernc.org/strutil
 # modernc.org/token v1.1.0
 ## explicit
 modernc.org/token
-# mvdan.cc/sh/v3 v3.7.0
-## explicit; go 1.19
+# mvdan.cc/sh/v3 v3.10.0
+## explicit; go 1.22
 mvdan.cc/sh/v3/fileutil
 mvdan.cc/sh/v3/syntax
 # nhooyr.io/websocket v1.8.10

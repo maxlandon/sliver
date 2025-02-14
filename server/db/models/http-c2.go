@@ -365,7 +365,6 @@ func HTTPC2ConfigFromProtobuf(pbHttpC2Config *clientpb.HTTPC2Config) *HttpC2Conf
 // this is the primary configuration used by the implant generation.
 func RandomizeImplantConfig(h *clientpb.HTTPC2ImplantConfig, goos string, goarch string) *clientpb.HTTPC2ImplantConfig {
 	return &clientpb.HTTPC2ImplantConfig{
-
 		NonceQueryArgChars: h.NonceQueryArgChars,
 		ExtraURLParameters: h.ExtraURLParameters,
 		Headers:            h.Headers,
@@ -440,7 +439,6 @@ func MacOSVer(MacOSVersion string) string {
 }
 
 func RandomPathSegments(h *clientpb.HTTPC2ImplantConfig) []*clientpb.HTTPC2PathSegment {
-
 	var (
 		sessionPaths []*clientpb.HTTPC2PathSegment
 		closePaths   []*clientpb.HTTPC2PathSegment
@@ -504,6 +502,10 @@ func RandomPaths(httpC2PathSegments []*clientpb.HTTPC2PathSegment, minPaths int3
 }
 
 func randomSample(values []*clientpb.HTTPC2PathSegment, min int32, max int32) []*clientpb.HTTPC2PathSegment {
+	if len(values) == 0 {
+		return nil
+	}
+
 	count := int32(insecureRand.Intn(len(values)))
 	if count < min {
 		count = min

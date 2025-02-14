@@ -199,7 +199,7 @@ func beaconTaskResults(beaconID string, taskEnvelopes []*sliverpb.Envelope) *sli
 		dbTask.State = models.COMPLETED
 		dbTask.CompletedAt = time.Now().Unix()
 		dbTask.Response = envelope.Data
-		id, _ := uuid.FromString(dbTask.ID)
+		id, _ := uuid.FromString(dbTask.ID.String())
 		err = db.Session().Model(&models.BeaconTask{}).Where(&models.BeaconTask{
 			ID: id,
 		}).Updates(dbTask).Error
@@ -207,7 +207,7 @@ func beaconTaskResults(beaconID string, taskEnvelopes []*sliverpb.Envelope) *sli
 			beaconHandlerLog.Errorf("Error updating db task: %s", err)
 			continue
 		}
-		eventData, _ := proto.Marshal(dbTask)
+		eventData, _ := proto.Marshal(dbTask.ToProtobuf(true))
 		core.EventBroker.Publish(core.Event{
 			EventType: consts.BeaconTaskResultEvent,
 			Data:      eventData,

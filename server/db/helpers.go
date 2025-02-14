@@ -1069,7 +1069,8 @@ func UpdateBeaconCheckinByID(id string, next int64) error {
 }
 
 // BeaconTasksByEnvelopeID - Select a (sent) BeaconTask by its envelope ID
-func BeaconTaskByEnvelopeID(beaconID string, envelopeID int64) (*clientpb.BeaconTask, error) {
+func BeaconTaskByEnvelopeID(beaconID string, envelopeID int64) (*models.BeaconTask, error) {
+// func BeaconTaskByEnvelopeID(beaconID string, envelopeID int64) (*clientpb.BeaconTask, error) {
 	if len(beaconID) < 1 {
 		return nil, ErrRecordNotFound
 	}
@@ -1085,7 +1086,8 @@ func BeaconTaskByEnvelopeID(beaconID string, envelopeID int64) (*clientpb.Beacon
 			State:      models.SENT,
 		},
 	).First(task).Error
-	return task.ToProtobuf(true), err
+	return task, err
+	// return task.ToProtobuf(true), err
 }
 
 // CountTasksByBeaconID - Select a (sent) BeaconTask by its envelope ID
