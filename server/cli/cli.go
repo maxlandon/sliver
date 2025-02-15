@@ -19,6 +19,7 @@ package cli
 */
 
 import (
+	"fmt"
 	"os"
 
 	// CLI dependencies
@@ -32,6 +33,7 @@ import (
 	clientCommand "github.com/bishopfox/sliver/client/command"
 	consoleCmd "github.com/bishopfox/sliver/client/command/console"
 	client "github.com/bishopfox/sliver/client/console"
+	"github.com/bishopfox/sliver/server/c2"
 	"github.com/bishopfox/sliver/server/command"
 	"github.com/bishopfox/sliver/server/encoders"
 	"github.com/bishopfox/sliver/server/transport"
@@ -139,11 +141,18 @@ func preRunServerS(teamserver *server.Server, con *client.SliverClient) clientCo
 		// Only start the teamservers when the console being
 		// ran is the console itself: the daemon command will
 		// start them on its own, since the config is different.
-		if cmd.Name() == "console" {
+		if cmd.Name() == "console" ||
+			(cmd.Name() == "daemon" && cmd.Parent().Name() == "teamserver") {
 			err := teamserver.ListenerStartPersistents()
 			if err != nil {
 				con.PrintWarnf("Persistent jobs restart error: %s", err)
 			}
+
+			err = c2.StartPersistentJobs()
+			if err != nil {
+				fmt.Println(err)
+			}
+
 		}
 
 		// Let our in-memory teamclient be served.

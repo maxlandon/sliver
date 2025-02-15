@@ -34,6 +34,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/certs"
 	"github.com/bishopfox/sliver/server/core"
+	"github.com/bishopfox/sliver/server/db"
 	"github.com/bishopfox/sliver/server/log"
 	"golang.zx2c4.com/wireguard/device"
 )
@@ -317,6 +318,59 @@ func StartTCPStagerListenerJob(host string, port uint16, profileName string, she
 	core.Jobs.Add(job)
 
 	return job, nil
+}
+
+// StartPersistentJobs starts all C2 listeners saved in the database.
+func StartPersistentJobs() error {
+	listenerJobs, err := db.ListenerJobs()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	if len(listenerJobs) > 0 {
+		// StartPersistentJobs - Start persistent jobs
+		for _, j := range listenerJobs {
+			listenerJob, err := db.ListenerByJobID(j.JobID)
+			if err != nil {
+				return err
+			}
+			switch j.Type {
+			case constants.HttpStr:
+				job, err := StartHTTPListenerJob(listenerJob.HTTPConf)
+				if err != nil {
+					return err
+				}
+				j.JobID = uint32(job.ID)
+			case constants.HttpsStr:
+				job, err := StartHTTPListenerJob(listenerJob.HTTPConf)
+				if err != nil {
+					return err
+				}
+				j.JobID = uint32(job.ID)
+			case constants.MtlsStr:
+				job, err := StartMTLSListenerJob(listenerJob.MTLSConf)
+				if err != nil {
+					return err
+				}
+				j.JobID = uint32(job.ID)
+			case constants.WGStr:
+				job, err := StartWGListenerJob(listenerJob.WGConf)
+				if err != nil {
+					return err
+				}
+				j.JobID = uint32(job.ID)
+			case constants.DnsStr:
+				job, err := StartDNSListenerJob(listenerJob.DNSConf)
+				if err != nil {
+					return err
+				}
+				j.JobID = uint32(job.ID)
+			}
+			db.UpdateHTTPC2Listener(j)
+		}
+	}
+
+	return nil
 }
 
 // Fuck'in Go - https://stackoverflow.com/questions/30815244/golang-https-server-passing-certfile-and-kyefile-in-terms-of-byte-array
