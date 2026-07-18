@@ -53,6 +53,21 @@ var ErrNoTLSCredentials = errors.New("the Teamclient has no TLS credentials to u
 // specifically the "Authorization": "Bearer" key:value pair.
 type TokenAuth string
 
+// init installs the process-global gRPC logger exactly once, at startup, before
+// any gRPC server or client is created. gRPC's global logger (grpclog.SetLoggerV2,
+// which grpc_logrus.ReplaceGrpcLogger wraps) is explicitly not concurrency-safe and
+// must be set before first use; doing it later — as the previous per-dial call did —
+// raced the single-player teamserver's running Serve loop (see tests/teamserver).
+//
+// It is set to a discarding logger, matching this package's existing nil-logger
+// default and keeping gRPC's noisy library internals out of the operator console.
+// Per-RPC activity is still logged by the grpc_logrus interceptors on both ends.
+func init() {
+	discard := logrus.New()
+	discard.SetOutput(io.Discard)
+	grpc_logrus.ReplaceGrpcLogger(logrus.NewEntry(discard))
+}
+
 // LogMiddlewareOptions is an example list of gRPC options with logging middleware set up.
 // The reeflective/team core now emits slog, but the grpc_logrus middleware requires a
 // *logrus.Entry, so the caller (eg. the Sliver console) injects a logrus logger. If none
@@ -68,7 +83,10 @@ func LogMiddlewareOptions(logger *logrus.Logger) []grpc.DialOption {
 		grpc_logrus.WithLevels(codeToLevel),
 	}
 
-	grpc_logrus.ReplaceGrpcLogger(logrusEntry)
+	// NOTE: the process-global gRPC logger is installed once in init() below, not
+	// here. Setting it per-dial is a data race: gRPC's global logger is not
+	// concurrency-safe, and in single-player mode this call executed while the
+	// in-process teamserver's Serve loop was already reading that same global.
 
 	// Intercepting client requests.
 	requestIntercept := func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {

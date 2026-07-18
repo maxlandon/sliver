@@ -65,6 +65,15 @@ func (h *teamserver) Name() string {
 func (h *teamserver) Init(team *server.Server) (err error) {
 	h.Server = team
 
+	// Panic recovery — installed FIRST so it is the outermost interceptor and
+	// wraps every downstream interceptor and RPC handler. A panic in any handler
+	// (e.g. an unchecked slice index) becomes a codes.Internal error with a logged
+	// stack instead of tearing down the entire teamserver process.
+	h.options = append(h.options,
+		grpc.ChainUnaryInterceptor(recoveryUnaryServerInterceptor()),
+		grpc.ChainStreamInterceptor(recoveryStreamServerInterceptor()),
+	)
+
 	// Logging
 	logOptions, err := logMiddlewareOptions(h.Server)
 	if err != nil {

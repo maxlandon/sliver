@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"runtime/debug"
 
 	"github.com/reeflective/team/server"
 
@@ -89,7 +90,13 @@ func logMiddlewareOptions(s *server.Server) ([]grpc.ServerOption, error) {
 		grpc_logrus.WithLevels(codeToLevel),
 	}
 
-	grpc_logrus.ReplaceGrpcLogger(logrusEntry)
+	// NOTE: the process-global gRPC logger (grpclog.SetLoggerV2, via
+	// ReplaceGrpcLogger) is deliberately NOT set here. It is not concurrency-safe
+	// and must be installed once, before any gRPC server/client runs; setting it
+	// during handler Init raced the single-player client's connect (which also set
+	// it) against this server's running Serve loop. It is now installed exactly
+	// once at startup in client/transport (init). The RPC-level interceptors below
+	// still log every call/payload to the Sliver log.
 
 	requestOpts = append(requestOpts,
 		grpc_logrus.UnaryServerInterceptor(logrusEntry, logrusOpts...),
@@ -129,6 +136,38 @@ func tlsAuthMiddlewareOptions(s *server.Server) ([]grpc.ServerOption, error) {
 	return options, nil
 }
 
+// recoveryUnaryServerInterceptor converts a panic in any downstream interceptor
+// or unary RPC handler into a codes.Internal error (logging the method and a full
+// stack), instead of letting it unwind through gRPC and crash the whole teamserver
+// process. It is installed as the OUTERMOST interceptor so it wraps everything.
+func recoveryUnaryServerInterceptor() grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				sliverLog.NamedLogger("transport", "grpc").Errorf(
+					"panic recovered in %s: %v\n%s", info.FullMethod, r, debug.Stack())
+				err = status.Errorf(codes.Internal, "internal server error")
+			}
+		}()
+		return handler(ctx, req)
+	}
+}
+
+// recoveryStreamServerInterceptor is the streaming counterpart of
+// recoveryUnaryServerInterceptor.
+func recoveryStreamServerInterceptor() grpc.StreamServerInterceptor {
+	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				sliverLog.NamedLogger("transport", "grpc").Errorf(
+					"panic recovered in %s: %v\n%s", info.FullMethod, r, debug.Stack())
+				err = status.Errorf(codes.Internal, "internal server error")
+			}
+		}()
+		return handler(srv, ss)
+	}
+}
+
 // initAuthMiddleware - Initialize middleware logger.
 func (ts *teamserver) initAuthMiddleware() ([]grpc.ServerOption, error) {
 	var requestOpts []grpc.UnaryServerInterceptor
@@ -137,14 +176,21 @@ func (ts *teamserver) initAuthMiddleware() ([]grpc.ServerOption, error) {
 	// Authentication interceptors.
 	if ts.localListener == nil {
 		// All remote connections are users who need authentication.
+		//
+		// Order matters: authentication (tokenAuthFunc) MUST run before the
+		// permissions interceptor, because the latter reads the *models.Operator
+		// that the former resolves into the context. Chained interceptors run in
+		// slice order, so grpc_auth is listed first. (Listing permissions first
+		// meant it always saw a nil operator and rejected every authenticated
+		// operator with "Authentication failure".)
 		requestOpts = append(requestOpts,
-			ts.permissionsUnaryServerInterceptor(),
 			grpc_auth.UnaryServerInterceptor(ts.tokenAuthFunc),
+			ts.permissionsUnaryServerInterceptor(),
 		)
 
 		streamOpts = append(streamOpts,
-			ts.permissionsStreamServerInterceptor(),
 			grpc_auth.StreamServerInterceptor(ts.tokenAuthFunc),
+			ts.permissionsStreamServerInterceptor(),
 		)
 	} else {
 		// Local in-memory connections have no auth.

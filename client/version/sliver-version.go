@@ -49,14 +49,20 @@ var (
 
 // SemanticVersion - Get the structured sematic version.
 func SemanticVersion() []int {
-	semVer := []int{}
-	version := Version
-	if strings.HasPrefix(version, "v") {
-		version = version[1:]
-	}
-	for _, part := range strings.Split(version, ".") {
+	// Always return exactly three components (major, minor, patch). When the
+	// build was not stamped with a full X.Y.Z version — plain `go build`, tests,
+	// or a short tag like "v1.5" — the missing components default to 0 and any
+	// extra dot-separated components are ignored. This lets callers index [0],
+	// [1] and [2] unconditionally without risking an out-of-range panic (which
+	// previously crashed GetVersion and the client version handlers).
+	semVer := []int{0, 0, 0}
+	version := strings.TrimPrefix(Version, "v")
+	for i, part := range strings.Split(version, ".") {
+		if i >= len(semVer) {
+			break
+		}
 		number, _ := strconv.Atoi(part)
-		semVer = append(semVer, number)
+		semVer[i] = number
 	}
 	return semVer
 }

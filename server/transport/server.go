@@ -135,5 +135,12 @@ func (h *teamserver) serve(ln net.Listener) {
 		} else {
 			panicked = false
 		}
+
+		// Serve returns once the listener is closed (e.g. via ListenerClose,
+		// which closes the net.Listener). The team core never stops the gRPC
+		// server itself, so without this the per-connection handler goroutines
+		// would leak for the rest of the process every time a listener is closed.
+		// Stop() releases them (cancelling any in-flight RPCs on the dead listener).
+		grpcServer.Stop()
 	}()
 }
