@@ -21,12 +21,27 @@ package rpc
 import (
 	"context"
 	"runtime"
+	"time"
 
 	"github.com/bishopfox/sliver/client/version"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/bishopfox/sliver/server/core"
 )
+
+// operatorOnlineWindow is how recently a user must have been seen (i.e. have made
+// an authenticated RPC) to be reported as "online". This is a deliberately ROUGH
+// liveness signal derived from LastSeen rather than exact connection state:
+// Sliver's live-client registry (core.Clients) only drops an operator when its
+// Events stream cleanly signals context cancellation, which does NOT happen on
+// every console-close path, so a lingering registry entry would pin a departed
+// operator "online" for the life of the server process. LastSeen is refreshed on
+// every authenticated RPC and ages on its own once the operator stops calling, so
+// recency gives a self-healing (if approximate) status with no teardown hook.
+//
+// Caveat: an idle-but-connected console (open, but issuing no RPCs) stops
+// refreshing LastSeen and tips to offline after this window. Keeping such sessions
+// marked online would require a periodic keepalive RPC (a separate change).
+const operatorOnlineWindow = 60 * time.Second
 
 // GetVersion - Get the server version
 func (rpc *Server) GetVersion(ctx context.Context, _ *commonpb.Empty) (*clientpb.Version, error) {
@@ -54,7 +69,7 @@ func (ts *Server) GetUsers(context.Context, *commonpb.Empty) (*clientpb.Users, e
 	for i, user := range users {
 		userspb[i] = &clientpb.User{
 			Name:     user.Name,
-			Online:   isOperatorOnline(user.Name),
+			Online:   isOperatorOnline(user.LastSeen),
 			LastSeen: user.LastSeen.Unix(),
 			Clients:  int32(user.Clients),
 		}
@@ -63,11 +78,13 @@ func (ts *Server) GetUsers(context.Context, *commonpb.Empty) (*clientpb.Users, e
 	return &clientpb.Users{Users: userspb}, err
 }
 
-func isOperatorOnline(commonName string) bool {
-	for _, operator := range core.Clients.ActiveOperators() {
-		if commonName == operator {
-			return true
-		}
+// isOperatorOnline reports a rough liveness status for a user derived from how
+// recently they were last seen: any authenticated RPC refreshes LastSeen, so a
+// user active within operatorOnlineWindow reads as online and otherwise decays to
+// offline on its own. A zero LastSeen (never authenticated) is always offline.
+func isOperatorOnline(lastSeen time.Time) bool {
+	if lastSeen.IsZero() {
+		return false
 	}
-	return false
+	return time.Since(lastSeen) < operatorOnlineWindow
 }
