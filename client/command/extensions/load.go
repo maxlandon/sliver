@@ -105,7 +105,7 @@ type ExtCommand struct {
 	Init        string                 `json:"init"`
 	Schema      *packages.OutputSchema `json:"schema"`
 
-	Manifest *ExtensionManifest
+	Manifest *ExtensionManifest `json:"-"`
 }
 
 type extensionFile struct {
