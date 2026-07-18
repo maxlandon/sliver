@@ -21,6 +21,7 @@ package readline
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/reeflective/readline/inputrc"
@@ -51,22 +52,36 @@ var ErrInterrupt = errors.New(os.Interrupt.String())
 func (rl *Shell) Readline() (string, error) {
 	descriptor := int(os.Stdin.Fd())
 
-	state, err := term.MakeRaw(descriptor)
-	if err != nil {
-		return "", err
+	if term.IsTerminal(descriptor) {
+		state, err := term.MakeRaw(descriptor)
+		if err != nil {
+			return "", err
+		}
+
+		defer func() { _ = term.Restore(descriptor, state) }()
 	}
-	defer term.Restore(descriptor, state)
+
+	if term.IsTerminal(descriptor) && rl.Config.GetBool("enable-bracketed-paste") {
+		term.EnableBracketedPaste()
+		defer term.DisableBracketedPaste()
+	}
 
 	// Prompts and cursor styles
 	rl.Display.PrintPrimaryPrompt()
 	defer rl.Display.RefreshTransient()
-	defer fmt.Print(keymap.CursorStyle("default"))
+	defer term.WriteString(keymap.CursorStyle("default").String())
 
 	rl.init()
 
 	// Terminal resize events
 	resize := display.WatchResize(rl.Display)
 	defer close(resize)
+
+	// Async UI refresh: let background goroutines wake an idle loop (e.g. to
+	// show a transient hint pushed from another goroutine) via the input wake
+	// primitive. Torn down when the call returns.
+	rl.Keys.InitWake()
+	defer rl.Keys.CloseWake()
 
 	for {
 		// Whether or not the command is resolved, let the macro
@@ -79,6 +94,11 @@ func (rl *Shell) Readline() (string, error) {
 		// been consumed but did not match any command.
 		core.FlushUsed(rl.Keys)
 
+		// Apply any async-requested completion regeneration (RefreshCompletions)
+		// here on the main loop, before refreshing, so an active menu rebuilds
+		// in place while rendering stays single-writer.
+		rl.completer.ApplyRegen()
+
 		// Since we always update helpers after being asked to read
 		// for user input again, we do it before actually reading it.
 		rl.Display.Refresh()
@@ -87,6 +107,25 @@ func (rl *Shell) Readline() (string, error) {
 		// These might be read on stdin, or already available because
 		// the macro engine has fed some keys in bulk when running one.
 		core.WaitAvailableKeys(rl.Keys, rl.Config)
+
+		// A non-EOF read failure (e.g. the tty was revoked) is unrecoverable:
+		// return it so the caller can exit cleanly instead of the loop spinning
+		// on the dead input stream.
+		if err := rl.Keys.ReadError(); err != nil {
+			return "", err
+		}
+
+		// If the input is closed, we must return the line
+		// and the error so that the caller can handle it.
+		if rl.Keys.IsEOF() {
+			return "", io.EOF
+		}
+
+		// A bare async-refresh wake leaves no keys to dispatch: loop back to
+		// repaint the (possibly updated) UI and wait for input again.
+		if rl.Keys.Empty() {
+			continue
+		}
 
 		// 1 - Local keymap (Completion/Isearch/Vim operator pending).
 		bind, command, prefixed := keymap.MatchLocal(rl.Keymap)

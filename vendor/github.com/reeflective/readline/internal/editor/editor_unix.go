@@ -3,6 +3,7 @@
 package editor
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -27,12 +28,14 @@ func (reg *Buffers) EditBuffer(buf []rune, filename, filetype string, emacs bool
 
 	args := []string{}
 	if filetype != "" {
-		args = append(args, fmt.Sprintf("-c 'set filetype=%s", filetype))
+		args = append(args, "-c 'set filetype="+filetype)
 	}
 
 	args = append(args, name)
 
-	cmd := exec.Command(editor, args...)
+	// context.Background(): EditBuffer has no caller-supplied context to thread,
+	// and the editor runs for as long as the user keeps it open.
+	cmd := exec.CommandContext(context.Background(), editor, args...)
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

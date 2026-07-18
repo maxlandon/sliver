@@ -49,8 +49,9 @@ func Split(input string) (words []string, err error) {
 			next := input[l:]
 			if len(next) == 0 {
 				err = errUnterminatedEscape
-				return
+				return words, err
 			}
+
 			c2, l2 := utf8.DecodeRuneInString(next)
 			if c2 == '\n' {
 				input = next[l2:]
@@ -59,13 +60,16 @@ func Split(input string) (words []string, err error) {
 		}
 
 		var word string
+
 		word, input, err = splitWord(input, &buf)
 		if err != nil {
-			return
+			return words, err
 		}
+
 		words = append(words, word)
 	}
-	return
+
+	return words, err
 }
 
 func splitWord(input string, buf *bytes.Buffer) (word string, remainder string, err error) {
@@ -77,19 +81,20 @@ raw:
 		for len(cur) > 0 {
 			c, l := utf8.DecodeRuneInString(cur)
 			cur = cur[l:]
-			if c == singleChar {
+			switch {
+			case c == singleChar:
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				input = cur
 				goto single
-			} else if c == doubleChar {
+			case c == doubleChar:
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				input = cur
 				goto double
-			} else if c == escapeChar {
+			case c == escapeChar:
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				input = cur
 				goto escape
-			} else if strings.ContainsRune(splitChars, c) {
+			case strings.ContainsRune(splitChars, c):
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				return buf.String(), cur, nil
 			}
@@ -107,13 +112,13 @@ escape:
 			return "", "", errUnterminatedEscape
 		}
 		c, l := utf8.DecodeRuneInString(input)
-		if c == '\n' {
-			// a backslash-escaped newline is elided from the output entirely
-		} else {
+		// A backslash-escaped newline is elided from the output entirely.
+		if c != '\n' {
 			buf.WriteString(input[:l])
 		}
 		input = input[l:]
 	}
+
 	goto raw
 
 single:
@@ -133,19 +138,19 @@ double:
 		for len(cur) > 0 {
 			c, l := utf8.DecodeRuneInString(cur)
 			cur = cur[l:]
-			if c == doubleChar {
+			switch c {
+			case doubleChar:
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				input = cur
 				goto raw
-			} else if c == escapeChar {
+			case escapeChar:
 				// bash only supports certain escapes in double-quoted strings
 				c2, l2 := utf8.DecodeRuneInString(cur)
 				cur = cur[l2:]
 				if strings.ContainsRune(doubleEscapeChars, c2) {
 					buf.WriteString(input[0 : len(input)-len(cur)-l-l2])
-					if c2 == '\n' {
-						// newline is special, skip the backslash entirely
-					} else {
+					// A newline is special: skip the backslash entirely (write nothing).
+					if c2 != '\n' {
 						buf.WriteRune(c2)
 					}
 					input = cur

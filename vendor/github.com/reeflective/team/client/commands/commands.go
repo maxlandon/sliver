@@ -25,12 +25,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/reeflective/team/client"
-	"github.com/reeflective/team/internal/command"
 	"github.com/carapace-sh/carapace"
 	"github.com/carapace-sh/carapace/pkg/style"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/reeflective/team/client"
+	"github.com/reeflective/team/internal/command"
+	"github.com/reeflective/team/log"
 )
 
 // Generate returns a command tree to embed in client applications connecting
@@ -88,19 +90,46 @@ func PostRun(client *client.Client) command.CobraRunnerE {
 
 func clientCommands(cli *client.Client) *cobra.Command {
 	teamCmd := &cobra.Command{
-		Use:          "teamclient",
-		Short:        "Client-only teamserver commands (import configs, show users, etc)",
+		Use:   "teamclient",
+		Short: "Client-only teamserver commands (import configs, show users, etc)",
+		Long: fmt.Sprintf(`Client-only commands for reaching the %s teamserver.
+
+Import a connection config an administrator gave you, then query the server:
+
+  import   save a *.teamclient.cfg into your client configs directory
+  users    list the team's users and their online status
+  version  show client and server build versions
+
+Commands connect automatically using your imported config. If you have several and
+none is marked default, you'll be prompted to choose one.`, cli.Name()),
 		SilenceUsage: true,
 	}
 
 	teamFlags := pflag.NewFlagSet("teamserver", pflag.ContinueOnError)
-	teamFlags.CountP("verbosity", "v", "Counter flag (-vvv) to increase log verbosity on stdout (1:panic -> 7:debug)")
+	teamFlags.CountP("verbosity", "v", "Increase stdout log verbosity; repeat to go louder (-v, -vv, -vvv)")
+	teamFlags.String("log-format", "", "console log format (console, text, json)")
 	teamCmd.PersistentFlags().AddFlagSet(teamFlags)
+
+	// Apply the chosen console log format (console/text/json) before running.
+	teamCmd.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
+		if format, _ := cmd.Flags().GetString("log-format"); format != "" {
+			cli.SetLogFormat(log.Format(format))
+		}
+
+		return nil
+	}
+
+	carapace.Gen(teamCmd).FlagCompletion(carapace.ActionMap{
+		"log-format": command.LogFormatCompleter(),
+	})
 
 	versionCmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print teamserver client version",
-		RunE:  versionCmd(cli),
+		Long: `Print the client build version and, after connecting to the teamserver, the
+server's version (both include commit and build platform).`,
+		Example: `  teamclient version`,
+		RunE:    versionCmd(cli),
 	}
 
 	teamCmd.AddCommand(versionCmd)
@@ -108,7 +137,12 @@ func clientCommands(cli *client.Client) *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:   "import",
 		Short: "Import a teamserver client configuration file for " + cli.Name(),
-		Run:   importCmd(cli),
+		Long: `Import one or more *.teamclient.cfg connection files (given by an administrator)
+into your client configs directory. Use --default to mark it the default when you
+have none yet.`,
+		Example: `  teamclient import ~/alice_teamserver.example.com.teamclient.cfg
+  teamclient import --default ~/alice_teamserver.example.com.teamclient.cfg`,
+		Run: importCmd(cli),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			return []string{}, cobra.ShellCompDirectiveDefault
 		},
@@ -122,7 +156,7 @@ func clientCommands(cli *client.Client) *cobra.Command {
 	iComps.PositionalCompletion(
 		carapace.Batch(
 			carapace.ActionCallback(ConfigsCompleter(cli, "teamclient/configs", ".teamclient.cfg", "other teamserver apps", true)),
-			carapace.ActionFiles().Tag("server configuration").StyleF(getConfigStyle(".teamclient.cfg")),
+			carapace.ActionFiles().Tag("server configuration").StyleF(GetConfigStyle(".teamclient.cfg")),
 		).ToA(),
 	)
 
@@ -131,7 +165,10 @@ func clientCommands(cli *client.Client) *cobra.Command {
 	usersCmd := &cobra.Command{
 		Use:   "users",
 		Short: "Display a table of teamserver users and their status",
-		RunE:  usersCmd(cli),
+		Long: `Connect to the teamserver and print a table of its users with online status and
+the time since each was last seen.`,
+		Example: `  teamclient users`,
+		RunE:    usersCmd(cli),
 	}
 
 	teamCmd.AddCommand(usersCmd)
@@ -169,7 +206,7 @@ func ConfigsAppCompleter(cli *client.Client, tag string) carapace.Action {
 			results = append(results, fmt.Sprintf("[%s] %s:%d", cfg.User, cfg.Host, cfg.Port))
 		}
 
-		configsAction := carapace.ActionValuesDescribed(results...).StyleF(getConfigStyle(command.ClientConfigExt))
+		configsAction := carapace.ActionValuesDescribed(results...).StyleF(GetConfigStyle(command.ClientConfigExt))
 
 		return carapace.Batch(append(
 			compErrors,
@@ -218,18 +255,20 @@ func ConfigsCompleter(cli *client.Client, filePath, ext, tag string, noSelf bool
 
 					filePath := filepath.Join(configPath, file.Name())
 
-					cfg, err := cli.ReadConfig(filePath)
-					if err != nil || cfg == nil {
-						continue
+					// Teamclient configs parse into something we can describe as
+					// [user] host:port. Other importable files matched by the
+					// extension (eg. CA .pem files) don't parse as a config but
+					// should still be listed, just without that description.
+					if cfg, err := cli.ReadConfig(filePath); err == nil && cfg != nil {
+						results = append(results, filePath, fmt.Sprintf("[%s] %s:%d", cfg.User, cfg.Host, cfg.Port))
+					} else {
+						results = append(results, filePath, "")
 					}
-
-					results = append(results, filePath)
-					results = append(results, fmt.Sprintf("[%s] %s:%d", cfg.User, cfg.Host, cfg.Port))
 				}
 			}
 		}
 
-		configsAction := carapace.ActionValuesDescribed(results...).StyleF(getConfigStyle(ext))
+		configsAction := carapace.ActionValuesDescribed(results...).StyleF(GetConfigStyle(ext))
 
 		if len(compErrors) > 0 {
 			return carapace.Batch(append(compErrors, configsAction)...).ToA()
@@ -240,31 +279,37 @@ func ConfigsCompleter(cli *client.Client, filePath, ext, tag string, noSelf bool
 }
 
 func isConfigDir(cli *client.Client, dir fs.DirEntry, noSelf bool) bool {
-	if !strings.HasPrefix(dir.Name(), ".") {
+	// We look for hidden per-application directories (~/.<app>/...). The caller
+	// then probes a specific subpath inside, which filters out any hidden dir
+	// that is not actually a teamserver application directory.
+	if !dir.IsDir() || !strings.HasPrefix(dir.Name(), ".") {
 		return false
 	}
 
-	if !dir.IsDir() {
-		return false
-	}
-
-	if strings.TrimPrefix(dir.Name(), ".") != cli.Name() {
-		return false
-	}
-
-	if noSelf {
+	// When noSelf is set, exclude the current application's own directory so we
+	// only surface configs belonging to OTHER teamserver applications.
+	if noSelf && strings.TrimPrefix(dir.Name(), ".") == cli.Name() {
 		return false
 	}
 
 	return true
 }
 
-func getConfigStyle(ext string) func(s string, sc style.Context) string {
+// GetConfigStyle returns a carapace style function that highlights files with
+// the given extension (typically a teamserver/teamclient config or CA file), so
+// completion visually distinguishes them from ordinary files. It is exported so
+// that server-side command completers can share the same styling.
+//
+// For files that do not match the extension it falls back to carapace's default
+// path styling (style.ForPath, LS_COLORS): chaining a StyleF onto ActionFiles()
+// replaces that default, so without this fallback ordinary files (directories,
+// executables, ...) would lose all of their coloring.
+func GetConfigStyle(ext string) func(s string, sc style.Context) string {
 	return func(s string, sc style.Context) string {
 		if strings.HasSuffix(s, ext) {
 			return style.Red
 		}
 
-		return s
+		return style.ForPath(s, sc)
 	}
 }

@@ -3,6 +3,7 @@ package readline
 import (
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -12,6 +13,7 @@ import (
 	"github.com/reeflective/readline/inputrc"
 	"github.com/reeflective/readline/internal/color"
 	"github.com/reeflective/readline/internal/completion"
+	"github.com/reeflective/readline/internal/core"
 	"github.com/reeflective/readline/internal/keymap"
 	"github.com/reeflective/readline/internal/strutil"
 	"github.com/reeflective/readline/internal/term"
@@ -58,6 +60,7 @@ func (rl *Shell) standardCommands() commands {
 		"tab-insert":                   rl.tabInsert,
 		"self-insert":                  rl.selfInsert,
 		"bracketed-paste-begin":        rl.bracketedPasteBegin,
+		"skip-csi-sequence":            rl.skipCsiSequence,
 		"transpose-chars":              rl.transposeChars,
 		"transpose-words":              rl.transposeWords,
 		"shell-transpose-words":        rl.shellTransposeWords,
@@ -165,6 +168,12 @@ func (rl *Shell) forwardChar() {
 	// Only exception where we actually don't forward a character.
 	if rl.Config.GetBool("history-autosuggest") && rl.cursor.Pos() >= rl.line.Len()-1 {
 		rl.autosuggestAccept()
+	}
+
+	// Fall back to an application-provided inline suggestion when history
+	// autosuggest accepted nothing and the cursor is at the end of the line.
+	if rl.cursor.Pos() == startPos {
+		rl.acceptInlineSuggestion()
 	}
 
 	if rl.cursor.Pos() > startPos {
@@ -448,8 +457,81 @@ func (rl *Shell) selfInsert() {
 }
 
 func (rl *Shell) bracketedPasteBegin() {
-	// keys, _ := rl.Keys.PeekAllBytes()
-	// fmt.Println(string(keys))
+	// Length of bracketed paste escape code; this is the minimum length
+	// we will see here.
+	sequence := make([]byte, 0, 6)
+
+	for {
+		key, empty := core.PopKey(rl.Keys)
+		if empty {
+			core.WaitAvailableKeys(rl.Keys, rl.Config)
+			// Stop consuming the paste if the input stream died or errored,
+			// otherwise this loop spins forever on a dead tty.
+			if rl.Keys.IsEOF() || rl.Keys.ReadError() != nil {
+				return
+			}
+
+			continue
+		}
+
+		sequence = append(sequence, key)
+
+		if len(sequence) >= 6 && slices.Equal(sequence[len(sequence)-6:], []byte{'\x1b', '[', '2', '0', '1', '~'}) {
+			break
+		}
+	}
+
+	if len(sequence) > 6 {
+		rl.insertPastedText(string(sequence[:len(sequence)-6]))
+	}
+}
+
+func (rl *Shell) insertPastedText(text string) {
+	// Terminals send \r (or \r\n) for line breaks inside a bracketed paste.
+	// Normalise them to \n, otherwise the stray carriage returns corrupt the
+	// line buffer and break multiline display and evaluation.
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
+
+	if rl.PasteTransformer != nil {
+		text = rl.PasteTransformer(text)
+	}
+	if text == "" {
+		return
+	}
+
+	rl.cursor.InsertAt([]rune(text)...)
+}
+
+// skipCsiSequence consumes the remainder of a CSI escape sequence (the GNU
+// readline skip-csi-sequence command). Terminals encode many special keys as
+// "ESC [" followed by parameter/intermediate bytes (0x20-0x3F) and a single
+// final byte (0x40-0x7E) -- e.g. F5 is "\e[15~", Shift-Tab is "\e[Z". When such
+// a key has no binding, its trailing bytes would otherwise be self-inserted as
+// stray characters. Bound to "\e[", this command catches any CSI sequence that
+// no longer/exact binding claimed and swallows the rest of it, so unrecognised
+// keys do nothing.
+//
+// It is intentionally left unbound by default (as in GNU readline); enable it
+// from inputrc by binding the sequence "\e[" to the skip-csi-sequence command.
+func (rl *Shell) skipCsiSequence() {
+	rl.History.SkipSave()
+
+	// Whatever the dispatcher already consumed of the sequence, drain the rest:
+	// keep popping parameter/intermediate bytes, and stop once we consume the
+	// terminating byte (the final byte, or any non-CSI byte). The keys of a CSI
+	// sequence arrive in a single terminal read, so they are already buffered;
+	// if the buffer empties we simply stop rather than block on a partial one.
+	for {
+		key, empty := core.PopKey(rl.Keys)
+		if empty {
+			return
+		}
+
+		if key < 0x20 || key >= 0x40 {
+			return
+		}
+	}
 }
 
 // Drag the character before point forward over the character
@@ -1456,7 +1538,7 @@ func (rl *Shell) dumpVariables() {
 	}()
 
 	// Get all variables and their values, alphabetically sorted.
-	var variables []string
+	variables := make([]string, 0, len(rl.Config.Vars))
 
 	for variable := range rl.Config.Vars {
 		variables = append(variables, variable)

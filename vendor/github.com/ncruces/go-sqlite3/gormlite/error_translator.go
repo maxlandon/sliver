@@ -3,11 +3,13 @@ package gormlite
 import (
 	"errors"
 
-	"github.com/ncruces/go-sqlite3"
 	"gorm.io/gorm"
+
+	"github.com/ncruces/go-sqlite3"
 )
 
-func (dialector Dialector) Translate(err error) error {
+// Translate it will translate the error to native gorm errors.
+func (_Dialector) Translate(err error) error {
 	switch {
 	case
 		errors.Is(err, sqlite3.CONSTRAINT_UNIQUE),

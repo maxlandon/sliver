@@ -19,6 +19,7 @@ package server
 */
 
 import (
+	"fmt"
 	"os/user"
 	"path"
 	"path/filepath"
@@ -47,7 +48,7 @@ func (ts *Server) HomeDir() string {
 
 	err := ts.fs.MkdirAll(dir, assets.DirPerm)
 	if err != nil {
-		ts.log().Errorf("cannot write to %s root dir: %s", dir, err)
+		ts.log().Error(fmt.Sprintf("cannot write to %s root dir: %s", dir, err))
 	}
 
 	return dir
@@ -61,33 +62,34 @@ func (ts *Server) TeamDir() string {
 
 	err := ts.fs.MkdirAll(dir, assets.DirPerm)
 	if err != nil {
-		ts.log().Errorf("cannot write to %s root dir: %s", dir, err)
+		ts.log().Error(fmt.Sprintf("cannot write to %s root dir: %s", dir, err))
 	}
 
 	return dir
 }
 
-// LogsDir returns the log directory of the server (~/.app-server/logs), creating
-// the directory if needed, or logging a fatal event if failing to create it.
+// LogsDir returns the log directory of the server (~/.app/teamserver/logs),
+// creating the directory if needed, or logging a fatal event if failing to create it.
 func (ts *Server) LogsDir() string {
 	logDir := path.Join(ts.TeamDir(), assets.DirLogs)
 
 	err := ts.fs.MkdirAll(logDir, assets.DirPerm)
 	if err != nil {
-		ts.log().Errorf("cannot write to %s root dir: %s", logDir, err)
+		ts.log().Error(fmt.Sprintf("cannot write to %s root dir: %s", logDir, err))
 	}
 
 	return logDir
 }
 
-// Configs returns the configs directory of the server (~/.app-server/logs), creating
-// the directory if needed, or logging a fatal event if failing to create it.
+// ConfigsDir returns the configs directory of the server
+// (~/.app/teamserver/configs), creating the directory if
+// needed, or logging a fatal event if failing to create it.
 func (ts *Server) ConfigsDir() string {
 	logDir := path.Join(ts.TeamDir(), assets.DirConfigs)
 
 	err := ts.fs.MkdirAll(logDir, assets.DirPerm)
 	if err != nil {
-		ts.log().Errorf("cannot write to %s root dir: %s", logDir, err)
+		ts.log().Error(fmt.Sprintf("cannot write to %s root dir: %s", logDir, err))
 	}
 
 	return logDir
@@ -100,7 +102,7 @@ func (ts *Server) CertificatesDir() string {
 
 	err := ts.fs.MkdirAll(certDir, assets.DirPerm)
 	if err != nil {
-		ts.log().Errorf("cannot write to %s root dir: %s", certDir, err)
+		ts.log().Error(fmt.Sprintf("cannot write to %s root dir: %s", certDir, err))
 	}
 
 	return certDir

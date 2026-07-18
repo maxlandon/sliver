@@ -246,15 +246,20 @@ func (c *Cursor) LineMove(lines int) {
 		return
 	}
 
+	// Each step lands the cursor at the target column, or at the end of a
+	// shorter line (on its trailing newline). We deliberately do NOT clamp off
+	// that newline here: LineMove is keymap-agnostic, and the per-command
+	// post-step in Shell.execute already applies CheckCommand in vi-command
+	// mode and CheckAppend otherwise. Clamping here as well double-applied the
+	// command-mode rule, leaving the cursor one column short of the line end in
+	// emacs and vi-insert modes.
 	if lines < 0 {
-		for i := 0; i < -1*lines; i++ {
+		for range -lines {
 			c.moveLineUp()
-			c.CheckCommand()
 		}
 	} else {
-		for i := 0; i < lines; i++ {
+		for range lines {
 			c.moveLineDown()
-			c.CheckCommand()
 		}
 	}
 }
@@ -287,7 +292,7 @@ func (c *Cursor) AtBeginningOfLine() bool {
 
 	newlines := c.line.newlines()
 
-	for line := 0; line < len(newlines); line++ {
+	for line := range newlines {
 		epos := newlines[line][0]
 		if epos == c.pos-1 {
 			return true
@@ -306,7 +311,7 @@ func (c *Cursor) AtEndOfLine() bool {
 
 	newlines := c.line.newlines()
 
-	for line := 0; line < len(newlines); line++ {
+	for line := range newlines {
 		epos := newlines[line][0]
 		if epos == c.pos+1 {
 			return true
@@ -394,7 +399,7 @@ func (c *Cursor) moveLineDown() {
 
 	newlines := c.line.newlines()
 
-	for line := 0; line < len(newlines); line++ {
+	for line := range newlines {
 		end := newlines[line][0]
 		if line < c.LinePos() {
 			begin = end

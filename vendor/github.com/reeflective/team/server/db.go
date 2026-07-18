@@ -25,10 +25,11 @@ import (
 	"path"
 	"path/filepath"
 
+	"gorm.io/gorm"
+
 	"github.com/reeflective/team/internal/assets"
 	"github.com/reeflective/team/internal/command"
 	"github.com/reeflective/team/internal/db"
-	"gorm.io/gorm"
 )
 
 const (
@@ -62,30 +63,23 @@ func (ts *Server) DatabaseConfig() *db.Config {
 // GetDatabaseConfigPath - File path to config.json.
 func (ts *Server) dbConfigPath() string {
 	appDir := ts.ConfigsDir()
-	log := ts.NamedLogger("config", "database")
 	dbFileName := fmt.Sprintf("%s.%s", ts.Name()+"_database", command.ServerConfigExt)
-	databaseConfigPath := filepath.Join(appDir, dbFileName)
-	log.Debugf("Loading config from %s", databaseConfigPath)
 
-	return databaseConfigPath
+	return filepath.Join(appDir, dbFileName)
 }
 
 // Save - Save config file to disk. If the server is configured
 // to run in-memory only, the config is not saved.
 func (ts *Server) saveDatabaseConfig(cfg *db.Config) error {
-	if ts.opts.inMemory {
-		return nil
-	}
-
 	dblog := ts.NamedLogger("config", "database")
 
 	configPath := ts.dbConfigPath()
 	configDir := path.Dir(configPath)
 
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		dblog.Debugf("Creating config dir %s", configDir)
+	if _, err := ts.fs.Stat(configDir); os.IsNotExist(err) {
+		dblog.Debug(fmt.Sprintf("Creating config dir %s", configDir))
 
-		err := os.MkdirAll(configDir, assets.DirPerm)
+		err := ts.fs.MkdirAll(configDir, assets.DirPerm)
 		if err != nil {
 			return err
 		}
@@ -96,9 +90,9 @@ func (ts *Server) saveDatabaseConfig(cfg *db.Config) error {
 		return err
 	}
 
-	dblog.Debugf("Saving config to %s", configPath)
+	dblog.Debug(fmt.Sprintf("Saving config to %s", configPath))
 
-	return os.WriteFile(configPath, data, assets.FileReadPerm)
+	return ts.fs.WriteFile(configPath, data, assets.FileReadPerm)
 }
 
 // getDatabaseConfig returns a working database configuration,
@@ -115,8 +109,10 @@ func (ts *Server) getDatabaseConfig() (*db.Config, error) {
 	}
 
 	configPath := ts.dbConfigPath()
-	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
-		data, err := os.ReadFile(configPath)
+	if _, err := ts.fs.Stat(configPath); !os.IsNotExist(err) {
+		log.Debug(fmt.Sprintf("Loading database config from %s", configPath))
+
+		data, err := ts.fs.ReadFile(configPath)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to read config file %w", err)
 		}
@@ -126,7 +122,7 @@ func (ts *Server) getDatabaseConfig() (*db.Config, error) {
 			return nil, fmt.Errorf("Failed to parse config file %w", err)
 		}
 	} else {
-		log.Warnf("Database: no config file found, using and saving defaults")
+		log.Warn("Database: no config file found, using and saving defaults")
 	}
 
 	if config.MaxIdleConns < 1 {
@@ -141,7 +137,7 @@ func (ts *Server) getDatabaseConfig() (*db.Config, error) {
 	// failing to save is not critical for operation.
 	err := ts.saveDatabaseConfig(config)
 	if err != nil {
-		log.Errorf("Failed to save default config %s", err)
+		log.Error(fmt.Sprintf("Failed to save default config %s", err))
 	}
 
 	return config, nil
@@ -180,6 +176,12 @@ func (ts *Server) initDatabase() (err error) {
 			return
 		}
 
+		// Apply an out-of-band encryption key (never persisted to the config
+		// file) so the on-disk SQLite database is encrypted at rest.
+		if ts.opts.dbKey != "" {
+			ts.opts.dbConfig.EncryptionKey = ts.opts.dbKey
+		}
+
 		ts.db, err = db.NewClient(ts.opts.dbConfig, dbLogger)
 		if err != nil {
 			return
@@ -187,10 +189,4 @@ func (ts *Server) initDatabase() (err error) {
 	})
 
 	return err
-}
-
-func (ts *Server) dbSession() *gorm.DB {
-	return ts.db.Session(&gorm.Session{
-		FullSaveAssociations: true,
-	})
 }

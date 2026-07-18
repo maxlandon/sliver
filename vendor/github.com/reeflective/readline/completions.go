@@ -13,6 +13,8 @@ type Completion = completion.Candidate
 // including usage strings, messages, and suffix matchers for autoremoval.
 // Some of those additional settings will apply to all contained candidates,
 // except when these candidates have their own corresponding settings.
+//
+//nolint:recvcheck // Fluent builder: value-receiver setters; only EachValue/merge/convert use a pointer (intentional).
 type Completions struct {
 	values   completion.RawValues
 	messages completion.Messages
@@ -40,7 +42,11 @@ type Completions struct {
 func CompleteValues(values ...string) Completions {
 	vals := make([]Completion, 0, len(values))
 	for _, val := range values {
-		vals = append(vals, Completion{Value: val, Display: val, Description: ""})
+		vals = append(vals, Completion{
+			Value:       val,
+			Display:     val,
+			Description: "",
+		})
 	}
 
 	return Completions{values: vals}
@@ -54,7 +60,12 @@ func CompleteStyledValues(values ...string) Completions {
 
 	vals := make([]Completion, 0, len(values)/2)
 	for i := 0; i < len(values); i += 2 {
-		vals = append(vals, Completion{Value: values[i], Display: values[i], Description: "", Style: values[i+1]})
+		vals = append(vals, Completion{
+			Value:       values[i],
+			Display:     values[i],
+			Description: "",
+			Style:       values[i+1],
+		})
 	}
 
 	return Completions{values: vals}
@@ -68,7 +79,11 @@ func CompleteValuesDescribed(values ...string) Completions {
 
 	vals := make([]Completion, 0, len(values)/2)
 	for i := 0; i < len(values); i += 2 {
-		vals = append(vals, Completion{Value: values[i], Display: values[i], Description: values[i+1]})
+		vals = append(vals, Completion{
+			Value:       values[i],
+			Display:     values[i],
+			Description: values[i+1],
+		})
 	}
 
 	return Completions{values: vals}
@@ -82,13 +97,18 @@ func CompleteStyledValuesDescribed(values ...string) Completions {
 
 	vals := make([]Completion, 0, len(values)/3)
 	for i := 0; i < len(values); i += 3 {
-		vals = append(vals, Completion{Value: values[i], Display: values[i], Description: values[i+1], Style: values[i+2]})
+		vals = append(vals, Completion{
+			Value:       values[i],
+			Display:     values[i],
+			Description: values[i+1],
+			Style:       values[i+2],
+		})
 	}
 
 	return Completions{values: vals}
 }
 
-// CompleteMessage ads a help message to display along with
+// CompleteMessage adds a help message to display along with
 // or in places where no completions can be generated.
 func CompleteMessage(msg string, args ...any) Completions {
 	comps := Completions{}
@@ -105,19 +125,6 @@ func CompleteMessage(msg string, args ...any) Completions {
 // CompleteRaw directly accepts a list of prepared Completion values.
 func CompleteRaw(values []Completion) Completions {
 	return Completions{values: completion.RawValues(values)}
-}
-
-// Message displays a help messages in places where no completions can be generated.
-func Message(msg string, args ...any) Completions {
-	comps := Completions{}
-
-	if len(args) > 0 {
-		msg = fmt.Sprintf(msg, args...)
-	}
-
-	comps.messages.Add(msg)
-
-	return comps
 }
 
 // Suppress suppresses specific error messages using regular expressions.
@@ -188,7 +195,7 @@ func (c Completions) UsageF(f func() string) Completions {
 //	CompleteValues("yes").Style("35")
 //	CompleteValues("no").Style("255")
 func (c Completions) Style(style string) Completions {
-	return c.StyleF(func(s string) string {
+	return c.StyleF(func(_ string) string {
 		return style
 	})
 }
@@ -221,7 +228,7 @@ func (c Completions) StyleF(f func(s string) string) Completions {
 //
 //	CompleteValues("192.168.1.1", "127.0.0.1").Tag("interfaces").
 func (c Completions) Tag(tag string) Completions {
-	return c.TagF(func(value string) string {
+	return c.TagF(func(_ string) string {
 		return tag
 	})
 }

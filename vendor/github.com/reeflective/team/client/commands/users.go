@@ -23,10 +23,11 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
+	"log/slog"
+
 	"github.com/reeflective/team/client"
 	"github.com/reeflective/team/internal/command"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 func usersCmd(cli *client.Client) func(cmd *cobra.Command, args []string) error {
@@ -34,7 +35,7 @@ func usersCmd(cli *client.Client) func(cmd *cobra.Command, args []string) error 
 		if cmd.Flags().Changed("verbosity") {
 			logLevel, err := cmd.Flags().GetCount("verbosity")
 			if err == nil {
-				cli.SetLogLevel(logLevel + int(logrus.ErrorLevel))
+				cli.SetLogLevel(int(slog.LevelError) - logLevel*4)
 			}
 		}
 

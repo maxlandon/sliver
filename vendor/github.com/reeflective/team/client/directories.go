@@ -19,6 +19,8 @@ package client
 */
 
 import (
+	"fmt"
+	"os"
 	"os/user"
 	"path/filepath"
 
@@ -33,20 +35,16 @@ func (tc *Client) HomeDir() string {
 	var dir string
 
 	// Note: very important not to combine the nested if here.
-	if !tc.opts.inMemory {
-		if tc.homeDir == "" {
-			user, _ := user.Current()
-			dir = filepath.Join(user.HomeDir, "."+tc.name)
-		} else {
-			dir = tc.homeDir
-		}
+	if tc.homeDir == "" {
+		user, _ := user.Current()
+		dir = filepath.Join(user.HomeDir, "."+tc.name)
 	} else {
-		dir = "." + tc.name
+		dir = tc.homeDir
 	}
 
 	err := tc.fs.MkdirAll(dir, assets.DirPerm)
 	if err != nil {
-		tc.log().Errorf("cannot write to %s root dir: %s", dir, err)
+		tc.log().Error(fmt.Sprintf("cannot write to %s root dir: %s", dir, err))
 	}
 
 	return dir
@@ -60,7 +58,7 @@ func (tc *Client) TeamDir() string {
 
 	err := tc.fs.MkdirAll(dir, assets.DirPerm)
 	if err != nil {
-		tc.log().Errorf("cannot write to %s root dir: %s", dir, err)
+		tc.log().Error(fmt.Sprintf("cannot write to %s root dir: %s", dir, err))
 	}
 
 	return dir
@@ -73,7 +71,7 @@ func (tc *Client) LogsDir() string {
 
 	err := tc.fs.MkdirAll(logsDir, assets.DirPerm)
 	if err != nil {
-		tc.log().Errorf("cannot write to %s root dir: %s", logsDir, err)
+		tc.log().Error(fmt.Sprintf("cannot write to %s root dir: %s", logsDir, err))
 	}
 
 	return logsDir
@@ -82,13 +80,15 @@ func (tc *Client) LogsDir() string {
 // ConfigsDir returns the path to the remote teamserver configs directory
 // for this application (~/.app/teamclient/configs), creating the directory
 // if needed, or logging a fatal event if failing to create it.
+//
+// This uses the on-disk filesystem even if the teamclient is in memory mode.
 func (tc *Client) ConfigsDir() string {
 	rootDir, _ := filepath.Abs(tc.TeamDir())
 	dir := filepath.Join(rootDir, assets.DirConfigs)
 
-	err := tc.fs.MkdirAll(dir, assets.DirPerm)
+	err := os.MkdirAll(dir, assets.DirPerm)
 	if err != nil {
-		tc.log().Errorf("cannot write to %s configs dir: %s", dir, err)
+		tc.log().Error(fmt.Sprintf("cannot write to %s configs dir: %s", dir, err))
 	}
 
 	return dir

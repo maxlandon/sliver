@@ -22,10 +22,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/spf13/cobra"
+	"log/slog"
+
 	"github.com/reeflective/team/client"
 	"github.com/reeflective/team/internal/command"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 func importCmd(cli *client.Client) func(cmd *cobra.Command, args []string) {
@@ -33,7 +34,7 @@ func importCmd(cli *client.Client) func(cmd *cobra.Command, args []string) {
 		if cmd.Flags().Changed("verbosity") {
 			logLevel, err := cmd.Flags().GetCount("verbosity")
 			if err == nil {
-				cli.SetLogLevel(logLevel + int(logrus.ErrorLevel))
+				cli.SetLogLevel(int(slog.LevelError) - logLevel*4)
 			}
 		}
 

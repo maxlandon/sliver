@@ -159,7 +159,8 @@ func (p *Parser) readNext(seq []rune, pos, end int) (string, string, token, erro
 	// does not bind a key) if a space follows the key declaration. made a
 	// decision to instead return an error if the : is missing in all cases.
 	// seek :
-	for ; pos < end && seq[pos] != ':'; pos++ {
+	for pos < end && seq[pos] != ':' {
+		pos++
 	}
 
 	if pos == end || seq[pos] != ':' {
@@ -486,8 +487,10 @@ func (tok token) String() string {
 
 // findNonSpace finds first non space rune in r, returning end if not found.
 func findNonSpace(r []rune, i, end int) int {
-	for ; i < end && unicode.IsSpace(r[i]); i++ {
+	for i < end && unicode.IsSpace(r[i]) {
+		i++
 	}
+
 	return i
 }
 
@@ -507,11 +510,11 @@ func findStringEnd(seq []rune, pos, end int) (int, bool) {
 	quote := seq[pos]
 
 	for pos++; pos < end; pos++ {
-		switch char = seq[pos]; {
-		case char == '\\':
+		switch char = seq[pos]; char {
+		case '\\':
 			pos++
 			continue
-		case char == quote:
+		case quote:
 			return pos + 1, true
 		}
 	}
@@ -618,6 +621,8 @@ func decodeRunes(r []rune, i, end int) string {
 */
 
 // unescapeRunes decodes escaped string sequence.
+//
+//nolint:gocognit,gocyclo,cyclop,funlen // Escape-decoding state machine: intentionally dense, splitting it would obscure the cases.
 func unescapeRunes(r []rune, i, end int) string {
 	var seq []rune
 	var char0, char1, char2, char3, char4, char5 rune

@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"sync"
 
+	"github.com/rivo/uniseg"
+
 	"github.com/reeflective/readline/inputrc"
 	"github.com/reeflective/readline/internal/strutil"
 )
@@ -22,7 +24,11 @@ var Stdin io.ReadCloser = os.Stdin
 
 var rxRcvCursorPos = regexp.MustCompile(`\x1b\[([0-9]+);([0-9]+)R`)
 
-// Keys is used read, manage and use keys input by the shell user.
+// errInputWake is returned by the input read when it was interrupted by an
+// async refresh request (RequestRefresh) rather than by actual key input.
+var errInputWake = errors.New("readline: input wake")
+
+// Keys is used to read, manage and use keys input by the shell user.
 type Keys struct {
 	buf       []byte      // Keys read and waiting to be used.
 	matched   []rune      // Keys that have been successfully matched against a bind.
@@ -32,10 +38,17 @@ type Keys struct {
 	reading   bool        // Currently reading keys out of the main loop.
 	keysOnce  chan []byte // Passing keys from the main routine.
 	cursor    chan []byte // Cursor coordinates has been read on stdin.
-	resize    chan bool   // Resize events on Windows are sent on stdin. USED IN WINDOWS
+	resize    chan bool   //nolint:unused // Resize events on Windows are sent on stdin; consumed only by the windows build.
 
-	cfg   *inputrc.Config // Configuration file used for meta key settings
-	mutex sync.RWMutex    // Concurrency safety
+	wakeMu    sync.Mutex // Guards the wake fields against RequestRefresh (other goroutine).
+	wakeR     int        // Read end of the async-refresh wake pipe.
+	wakeW     int        // Write end of the async-refresh wake pipe.
+	wakeReady bool       // Whether the wake pipe is initialized and usable.
+
+	eof     bool            // EOF has been reached.
+	readErr error           // First non-EOF, non-wake input failure (e.g. a revoked tty).
+	cfg     *inputrc.Config // Configuration file used for meta key settings
+	mutex   sync.RWMutex    // Concurrency safety
 }
 
 // WaitAvailableKeys waits until an input key is either read from standard input,
@@ -68,7 +81,26 @@ func WaitAvailableKeys(keys *Keys, cfg *inputrc.Config) {
 		// We will either read keyBuf from user, or an EOF
 		// send by ourselves, because we pause reading.
 		keyBuf, err := keys.readInputFiltered()
-		if err != nil && errors.Is(err, io.EOF) {
+		if err != nil {
+			// Wake: an async refresh was requested (RequestRefresh) — return
+			// with no keys so the main loop repaints the (possibly updated) UI
+			// and waits again. EOF: input stream closed. Any other error (e.g.
+			// a revoked tty) is a real read failure: record it so the main loop
+			// can surface it and exit, instead of spinning on it forever.
+			switch {
+			case errors.Is(err, errInputWake):
+			case errors.Is(err, io.EOF):
+				keys.mutex.Lock()
+				keys.eof = true
+				keys.mutex.Unlock()
+			default:
+				keys.mutex.Lock()
+				if keys.readErr == nil {
+					keys.readErr = err
+				}
+				keys.mutex.Unlock()
+			}
+
 			return
 		}
 
@@ -97,21 +129,33 @@ func WaitAvailableKeys(keys *Keys, cfg *inputrc.Config) {
 	}
 }
 
-// PopKey is used to pop a key off the key stack without
-// yet marking this key as having matched a bind command.
-func PopKey(keys *Keys) (key byte, empty bool) {
-	switch {
-	case len(keys.buf) > 0:
-		key = keys.buf[0]
-		keys.buf = keys.buf[1:]
-	case len(keys.macroKeys) > 0:
-		key = byte(keys.macroKeys[0])
-		keys.macroKeys = keys.macroKeys[1:]
-	default:
-		return byte(0), true
-	}
+// Empty reports whether there are no keys available to dispatch: neither
+// buffered input keys nor macro-fed keys. The main loop uses this to detect a
+// bare async-refresh wake (which returns from WaitAvailableKeys with no keys).
+func (k *Keys) Empty() bool {
+	k.mutex.RLock()
+	defer k.mutex.RUnlock()
 
-	return key, false
+	return len(k.buf) == 0 && len(k.macroKeys) == 0
+}
+
+// IsEOF returns true if the input stream has reached the end.
+func (k *Keys) IsEOF() bool {
+	k.mutex.RLock()
+	defer k.mutex.RUnlock()
+
+	return k.eof
+}
+
+// ReadError returns the first non-EOF input failure observed while reading keys
+// (for instance a revoked tty), or nil. Async-refresh wakes are not errors and
+// are never reported here. The main loop uses this to exit cleanly instead of
+// spinning on an unrecoverable input stream.
+func (k *Keys) ReadError() error {
+	k.mutex.RLock()
+	defer k.mutex.RUnlock()
+
+	return k.readErr
 }
 
 // PeekKey returns the first key in the stack, without removing it.
@@ -120,12 +164,65 @@ func PeekKey(keys *Keys) (key byte, empty bool) {
 	case len(keys.buf) > 0:
 		key = keys.buf[0]
 	case len(keys.macroKeys) > 0:
-		key = byte(keys.macroKeys[0])
+		key = byte(keys.macroKeys[0]) //nolint:gosec // G115: byte-keyed API; macro keys are control bytes, truncation is intentional.
 	default:
 		return byte(0), true
 	}
 
 	return key, false
+}
+
+// PopKey is used to pop a key off the key stack without
+// yet marking this key as having matched a bind command.
+func PopKey(keys *Keys) (key byte, empty bool) {
+	switch {
+	case len(keys.buf) > 0:
+		key = keys.buf[0]
+		keys.buf = keys.buf[1:]
+	case len(keys.macroKeys) > 0:
+		key = byte(keys.macroKeys[0]) //nolint:gosec // G115: byte-keyed API; macro keys are control bytes, truncation is intentional.
+		keys.macroKeys = keys.macroKeys[1:]
+	default:
+		return byte(0), true
+	}
+
+	return key, false
+}
+
+// PeekChar returns the first character in the stack, without
+// removing it (in order to provide Unicode support).
+func PeekChar(keys *Keys) (char []byte, empty bool) {
+	switch {
+	case len(keys.buf) > 0:
+		// Use the uniseg library to correctly determine where each characters stop.
+		char, _, _, _ = uniseg.FirstGraphemeCluster(keys.buf, -1)
+		return char, false
+
+	case len(keys.macroKeys) > 0:
+		// Macros already store keys as runes, just pick one.
+		// Maybe long-term we should find a remedy to this: storing
+		// macro keys as runes is inconsistent with the rest of our code.
+		return []byte(string(keys.macroKeys[0])), false
+
+	default:
+		return nil, true
+	}
+}
+
+// PopChar is used to pop a character off the key stack without
+// yet marking this key as having matched a bind command.
+func PopChar(keys *Keys) (char []byte, empty bool) {
+	switch {
+	case len(keys.buf) > 0:
+		char, keys.buf, _, _ = uniseg.FirstGraphemeCluster(keys.buf, -1)
+	case len(keys.macroKeys) > 0:
+		char = []byte(string(keys.macroKeys[0]))
+		keys.macroKeys = keys.macroKeys[1:]
+	default:
+		return nil, true
+	}
+
+	return char, false
 }
 
 // MatchedKeys is used to indicate how many keys have been evaluated against the shell
@@ -171,7 +268,7 @@ func PopForce(keys *Keys) (key byte, empty bool) {
 		key = keys.buf[0]
 		keys.buf = keys.buf[1:]
 	case len(keys.macroKeys) > 0:
-		key = byte(keys.macroKeys[0])
+		key = byte(keys.macroKeys[0]) //nolint:gosec // G115: byte-keyed API; macro keys are control bytes, truncation is intentional.
 		keys.macroKeys = keys.macroKeys[1:]
 	default:
 		return byte(0), true
@@ -223,9 +320,28 @@ func (k *Keys) ReadKey() (key rune, isAbort bool) {
 
 	case k.waiting:
 		buf := <-k.keysOnce
+		if len(buf) == 0 {
+			return rune(0), true
+		}
+
 		key = []rune(string(buf))[0]
 	default:
-		buf, _ := k.readInputFiltered()
+		// Read until we get an actual key: ignore async-refresh wakes
+		// (errInputWake) and empty reads, which carry no key to return.
+		var buf []byte
+		for len(buf) == 0 {
+			b, err := k.readInputFiltered()
+			if err != nil && !errors.Is(err, errInputWake) {
+				break
+			}
+
+			buf = b
+		}
+
+		if len(buf) == 0 {
+			return rune(0), true
+		}
+
 		key = []rune(string(buf))[0]
 	}
 
@@ -251,7 +367,7 @@ func (k *Keys) Pop() (key byte, empty bool) {
 		key = k.buf[0]
 		k.buf = k.buf[1:]
 	case len(k.macroKeys) > 0:
-		key = byte(k.macroKeys[0])
+		key = byte(k.macroKeys[0]) //nolint:gosec // G115: byte-keyed API; macro keys are control bytes, truncation is intentional.
 		k.macroKeys = k.macroKeys[1:]
 	default:
 		return byte(0), true

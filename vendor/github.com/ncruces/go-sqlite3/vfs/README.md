@@ -48,11 +48,6 @@ On Unix, this package may use `mmap` to implement
 [shared-memory for the WAL-index](https://sqlite.org/wal.html#implementation_of_shared_memory_for_the_wal_index),
 like SQLite.
 
-With [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2)
-a WAL database can only be accessed by a single proccess.
-Other processes that attempt to access a database locked with BSD locks,
-will fail with the [`SQLITE_PROTOCOL`](https://sqlite.org/rescode.html#protocol) error code.
-
 On Windows, this package may use `MapViewOfFile`, like SQLite.
 
 You can also opt into a cross-platform, in-process, memory sharing implementation
@@ -91,7 +86,6 @@ The implementation is compatible with SQLite's
 The VFS can be customized with a few build tags:
 - `sqlite3_flock` forces the use of BSD locks.
 - `sqlite3_dotlk` forces the use of dot-file locks.
-- `sqlite3_nosys` prevents importing [`x/sys`](https://pkg.go.dev/golang.org/x/sys).
 
 > [!IMPORTANT]
 > The default configuration of this package is compatible with the standard

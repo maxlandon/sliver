@@ -23,9 +23,10 @@ import (
 	"net"
 	"strings"
 
+	"github.com/carapace-sh/carapace"
+
 	"github.com/reeflective/team/client"
 	"github.com/reeflective/team/server"
-	"github.com/carapace-sh/carapace"
 )
 
 // interfacesCompleter completes interface addresses on the client host.
@@ -61,9 +62,13 @@ func interfacesCompleter() carapace.Action {
 }
 
 // userCompleter completes usernames of the application teamserver.
-func userCompleter(client *client.Client, server *server.Server) carapace.CompletionCallback {
+//
+// This is a server-side command completer, so it reads the users straight from
+// the teamserver database (server.Users()) instead of going through a teamclient
+// transport, which has no working remote connection during completion.
+func userCompleter(server *server.Server) carapace.CompletionCallback {
 	return func(c carapace.Context) carapace.Action {
-		users, err := client.Users()
+		users, err := server.Users()
 		if err != nil {
 			return carapace.ActionMessage("Failed to get users: %s", err)
 		}

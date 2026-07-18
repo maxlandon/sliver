@@ -21,20 +21,22 @@ package db
 */
 
 import (
-	// Core code.
-	_ "github.com/ncruces/go-sqlite3"
-	// Driver code.
-	_ "github.com/ncruces/go-sqlite3/driver"
 	// Embedded SQLite instance.
 	_ "github.com/ncruces/go-sqlite3/embed"
+	"github.com/ncruces/go-sqlite3/gormlite"
+	// Register the pure-Go adiantum VFS so an encryption key in the DSN
+	// (vfs=adiantum&textkey=...) transparently encrypts the database at rest.
+	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-
-	"github.com/reeflective/team/internal/db/wasmsqlite"
 )
 
 func sqliteClient(dsn string, log logger.Interface) (*gorm.DB, error) {
-	return gorm.Open(wasmsqlite.Open(dsn), &gorm.Config{
+	// Reuse a persistent on-disk cache of the compiled SQLite WASM module, so we
+	// don't pay the ~2s wazero compilation cost on every process start.
+	configureSQLiteRuntime()
+
+	return gorm.Open(gormlite.Open(dsn), &gorm.Config{
 		PrepareStmt: true,
 		Logger:      log,
 	})

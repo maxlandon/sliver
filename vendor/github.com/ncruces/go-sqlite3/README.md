@@ -10,7 +10,7 @@ as well as direct access to most of the [C SQLite API](https://sqlite.org/cintro
 
 It wraps a [Wasm](https://webassembly.org/) [build](embed/) of SQLite,
 and uses [wazero](https://wazero.io/) as the runtime.\
-Go, wazero and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ runtime dependencies.
+Go, wazero and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ direct dependencies.
 
 ### Getting started
 
@@ -74,9 +74,9 @@ This project aims for [high test coverage](https://github.com/ncruces/go-sqlite3
 It also benefits greatly from [SQLite's](https://sqlite.org/testing.html) and
 [wazero's](https://tetrate.io/blog/introducing-wazero-from-tetrate/#:~:text=Rock%2Dsolid%20test%20approach) thorough testing.
 
-Every commit is [tested](https://github.com/ncruces/go-sqlite3/wiki/Test-matrix) on
+Every commit is [tested](https://github.com/ncruces/go-sqlite3/wiki/Support-matrix) on
 Linux (amd64/arm64/386/riscv64/ppc64le/s390x), macOS (amd64/arm64),
-Windows (amd64), FreeBSD (amd64), OpenBSD (amd64), NetBSD (amd64),
+Windows (amd64), FreeBSD (amd64/arm64), OpenBSD (amd64), NetBSD (amd64/arm64),
 DragonFly BSD (amd64), illumos (amd64), and Solaris (amd64).
 
 The Go VFS is tested by running SQLite's

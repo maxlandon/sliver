@@ -40,11 +40,11 @@ func (c *Manager) OpenTLSKeyLogFile() *os.File {
 	if present {
 		keyFile, err := os.OpenFile(keyFilePath, assets.FileWriteOpenMode, assets.FileReadPerm)
 		if err != nil {
-			c.log.Errorf("Failed to open TLS key file %v", err)
+			c.log.Error(fmt.Sprintf("Failed to open TLS key file %v", err))
 			return nil
 		}
 
-		c.log.Warnf("NOTICE: TLS Keys logged to '%s'\n", keyFilePath)
+		c.log.Warn(fmt.Sprintf("NOTICE: TLS Keys logged to '%s'\n", keyFilePath))
 
 		return keyFile
 	}
@@ -60,7 +60,7 @@ func RootOnlyVerifyCertificate(caCertificate string, rawCerts [][]byte) error {
 
 	ok := roots.AppendCertsFromPEM([]byte(caCertificate))
 	if !ok {
-		fmt.Errorf("Failed to parse root certificate")
+		return fmt.Errorf("Failed to parse root certificate")
 	}
 
 	cert, err := x509.ParseCertificate(rawCerts[0]) // We should only get one cert

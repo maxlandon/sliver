@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"math/rand"
 	"net/url"
+	"runtime"
 	"strings"
 	"time"
 
@@ -24,7 +26,6 @@ type Conn struct {
 	interrupt  context.Context
 	pending    *Stmt
 	stmts      []*Stmt
-	timer      *time.Timer
 	busy       func(context.Context, int) bool
 	log        func(xErrorCode, string)
 	collation  func(*Conn, string)
@@ -36,7 +37,9 @@ type Conn struct {
 	rollback   func()
 	arena      arena
 
-	handle uint32
+	busy1st time.Time
+	busylst time.Time
+	handle  uint32
 }
 
 // Open calls [OpenFlags] with [OPEN_READWRITE], [OPEN_CREATE] and [OPEN_URI].
@@ -65,7 +68,7 @@ func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 	return newConn(context.Background(), filename, flags)
 }
 
-type connKey struct{}
+type connKey = util.ConnKey
 
 func newConn(ctx context.Context, filename string, flags OpenFlag) (res *Conn, _ error) {
 	err := ctx.Err()
@@ -373,8 +376,13 @@ func (c *Conn) checkInterrupt(handle uint32) {
 }
 
 func progressCallback(ctx context.Context, mod api.Module, _ uint32) (interrupt uint32) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.interrupt.Err() != nil {
-		interrupt = 1
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok {
+		if c.interrupt.Done() != nil {
+			runtime.Gosched()
+		}
+		if c.interrupt.Err() != nil {
+			interrupt = 1
+		}
 	}
 	return interrupt
 }
@@ -389,38 +397,20 @@ func (c *Conn) BusyTimeout(timeout time.Duration) error {
 }
 
 func timeoutCallback(ctx context.Context, mod api.Module, count, tmout int32) (retry uint32) {
+	// https://fractaledmind.github.io/2024/04/15/sqlite-on-rails-the-how-and-why-of-optimal-performance/
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.interrupt.Err() == nil {
-		const delays = "\x01\x02\x05\x0a\x0f\x14\x19\x19\x19\x32\x32\x64"
-		const totals = "\x00\x01\x03\x08\x12\x21\x35\x4e\x67\x80\xb2\xe4"
-		const ndelay = int32(len(delays) - 1)
-
-		var delay, prior int32
-		if count <= ndelay {
-			delay = int32(delays[count])
-			prior = int32(totals[count])
-		} else {
-			delay = int32(delays[ndelay])
-			prior = int32(totals[ndelay]) + delay*(count-ndelay)
+		switch {
+		case count == 0:
+			c.busy1st = time.Now()
+		case time.Since(c.busy1st) >= time.Duration(tmout)*time.Millisecond:
+			return 0
 		}
-
-		if delay = min(delay, tmout-prior); delay > 0 {
-			delay := time.Duration(delay) * time.Millisecond
-			if c.interrupt.Done() == nil {
-				time.Sleep(delay)
-				return 1
-			}
-			if c.timer == nil {
-				c.timer = time.NewTimer(delay)
-			} else {
-				c.timer.Reset(delay)
-			}
-			select {
-			case <-c.interrupt.Done():
-				c.timer.Stop()
-			case <-c.timer.C:
-				return 1
-			}
+		if time.Since(c.busylst) < time.Millisecond {
+			const sleepIncrement = 2*1024*1024 - 1 // power of two, ~2ms
+			time.Sleep(time.Duration(rand.Int63() & sleepIncrement))
 		}
+		c.busylst = time.Now()
+		return 1
 	}
 	return 0
 }
@@ -501,8 +491,12 @@ func (c *Conn) TableColumnMetadata(schema, table, column string) (declType, coll
 		uint64(declTypePtr), uint64(collSeqPtr),
 		uint64(notNullPtr), uint64(primaryKeyPtr), uint64(autoIncPtr))
 	if err = c.error(r); err == nil && column != "" {
-		declType = util.ReadString(c.mod, util.ReadUint32(c.mod, declTypePtr), _MAX_NAME)
-		collSeq = util.ReadString(c.mod, util.ReadUint32(c.mod, collSeqPtr), _MAX_NAME)
+		if ptr := util.ReadUint32(c.mod, declTypePtr); ptr != 0 {
+			declType = util.ReadString(c.mod, ptr, _MAX_NAME)
+		}
+		if ptr := util.ReadUint32(c.mod, collSeqPtr); ptr != 0 {
+			collSeq = util.ReadString(c.mod, ptr, _MAX_NAME)
+		}
 		notNull = util.ReadUint32(c.mod, notNullPtr) != 0
 		autoInc = util.ReadUint32(c.mod, autoIncPtr) != 0
 		primaryKey = util.ReadUint32(c.mod, primaryKeyPtr) != 0

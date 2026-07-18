@@ -244,6 +244,12 @@ func (rl *Shell) viForwardChar() {
 		return
 	}
 
+	// Application-provided inline suggestion (accepted when the cursor is at
+	// the end of the line, e.g. in vi-insert mode).
+	if rl.acceptInlineSuggestion() {
+		return
+	}
+
 	rl.History.SkipSave()
 
 	// In vi-cmd-mode, we don't go further than the
@@ -666,7 +672,7 @@ func (rl *Shell) viChangeChar() {
 	switch {
 	case rl.selection.Active() && rl.selection.IsVisual():
 		// In visual mode, we replace all chars of the selection
-		rl.selection.ReplaceWith(func(r rune) rune {
+		rl.selection.ReplaceWith(func(_ rune) rune {
 			return key
 		})
 	default:

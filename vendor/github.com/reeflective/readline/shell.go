@@ -57,6 +57,10 @@ type Shell struct {
 	// Once enabled, set to nil to disable again.
 	SyntaxHighlighter func(line []rune) string
 
+	// PasteTransformer, when set, rewrites bracketed paste payloads before
+	// they are inserted into the input buffer.
+	PasteTransformer func(text string) string
+
 	// Completer is a function that produces completions.
 	// It takes the readline line ([]rune) and cursor pos as parameters,
 	// and returns completions with their associated metadata/settings.
@@ -96,7 +100,7 @@ func NewShell(opts ...inputrc.Option) *Shell {
 	shell.Opts = opts
 
 	// User interface
-	hint := new(ui.Hint)
+	hint := ui.NewHint(keys)
 	prompt := ui.NewPrompt(line, cursor, keymaps, config)
 	macros := macro.NewEngine(keys, hint)
 	history := history.NewSources(line, cursor, hint, config)
@@ -145,7 +149,7 @@ func (rl *Shell) Printf(msg string, args ...any) (n int, err error) {
 	// and clear everything below (hints and completions).
 	rl.Display.CursorBelowLine()
 	term.MoveCursorBackwards(term.GetWidth())
-	fmt.Print(term.ClearScreenBelow)
+	term.WriteString(term.ClearScreenBelow)
 
 	// Skip a line, and print the formatted message.
 	n, err = fmt.Printf(msg+"\n", args...)
@@ -165,7 +169,7 @@ func (rl *Shell) PrintTransientf(msg string, args ...any) (n int, err error) {
 	rl.Display.CursorToLineStart()
 	term.MoveCursorBackwards(term.GetWidth())
 	term.MoveCursorUp(rl.Prompt.PrimaryUsed())
-	fmt.Print(term.ClearScreenBelow)
+	term.WriteString(term.ClearScreenBelow)
 
 	// Print the logged message.
 	n, err = fmt.Printf(msg+"\n", args...)
@@ -175,4 +179,58 @@ func (rl *Shell) PrintTransientf(msg string, args ...any) (n int, err error) {
 	rl.Display.Refresh()
 
 	return
+}
+
+// SetInlineSuggestion sets a suggestion to display after the cursor.
+func (rl *Shell) SetInlineSuggestion(suggestion string) {
+	if rl == nil || rl.Display == nil {
+		return
+	}
+
+	rl.Display.SetInlineSuggestion(suggestion)
+}
+
+// ClearInlineSuggestion clears the current inline suggestion.
+func (rl *Shell) ClearInlineSuggestion() {
+	if rl == nil || rl.Display == nil {
+		return
+	}
+
+	rl.Display.ClearInlineSuggestion()
+}
+
+// GetInlineSuggestion returns the current inline suggestion.
+func (rl *Shell) GetInlineSuggestion() string {
+	if rl == nil || rl.Display == nil {
+		return ""
+	}
+
+	return rl.Display.GetInlineSuggestion()
+}
+
+// inlineSuggestAccept (inline-suggest-accept) accepts the entire
+// application-provided inline suggestion into the line buffer.
+func (rl *Shell) inlineSuggestAccept() {
+	rl.acceptInlineSuggestion()
+}
+
+// inlineSuggestAcceptWord (inline-suggest-accept-word) accepts the next word of
+// the inline suggestion, leaving the rest as a suggestion.
+func (rl *Shell) inlineSuggestAcceptWord() {
+	if rl == nil || rl.Display == nil {
+		return
+	}
+
+	rl.Display.AcceptInlineWord(rl.line, rl.cursor)
+}
+
+// acceptInlineSuggestion accepts the inline suggestion if one applies at the
+// cursor, returning whether it did. Movement commands use it to fall back to an
+// application-provided suggestion once history autosuggest has been considered.
+func (rl *Shell) acceptInlineSuggestion() bool {
+	if rl == nil || rl.Display == nil {
+		return false
+	}
+
+	return rl.Display.AcceptInline(rl.line, rl.cursor)
 }

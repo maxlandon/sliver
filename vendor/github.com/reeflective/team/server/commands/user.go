@@ -1,19 +1,25 @@
 package commands
 
 import (
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"log/slog"
+	"net"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/spf13/cobra"
 
 	"github.com/reeflective/team/client"
 	"github.com/reeflective/team/internal/assets"
 	"github.com/reeflective/team/internal/command"
 	"github.com/reeflective/team/server"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 func createUserCmd(serv *server.Server, cli *client.Client) func(cmd *cobra.Command, args []string) {
@@ -21,7 +27,7 @@ func createUserCmd(serv *server.Server, cli *client.Client) func(cmd *cobra.Comm
 		if cmd.Flags().Changed("verbosity") {
 			logLevel, err := cmd.Flags().GetCount("verbosity")
 			if err == nil {
-				serv.SetLogLevel(logLevel + int(logrus.WarnLevel))
+				serv.SetLogLevel(int(slog.LevelWarn) - logLevel*4)
 			}
 		}
 
@@ -30,7 +36,6 @@ func createUserCmd(serv *server.Server, cli *client.Client) func(cmd *cobra.Comm
 		lport, _ := cmd.Flags().GetUint16("port")
 		save, _ := cmd.Flags().GetString("save")
 		system, _ := cmd.Flags().GetBool("system")
-		perms, _ := cmd.Flags().GetStringSlice("permissions")
 
 		if save == "" {
 			save, _ = os.Getwd()
@@ -69,9 +74,9 @@ func createUserCmd(serv *server.Server, cli *client.Client) func(cmd *cobra.Comm
 			}
 		}
 
-		fmt.Fprintf(cmd.OutOrStdout(), command.Info+"Generating new client certificate, please wait ... \n")
-
-		config, err := serv.UserCreate(name, lhost, lport, perms...)
+		// Certificate generation is logged by the teamserver's own (slog) logger,
+		// so it honors the configured --log-format instead of being a raw print.
+		config, err := serv.UserCreate(name, lhost, lport)
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), command.Warn+"%s\n", err)
 			return
@@ -91,8 +96,34 @@ func createUserCmd(serv *server.Server, cli *client.Client) func(cmd *cobra.Comm
 			return
 		}
 
-		fmt.Fprintf(cmd.OutOrStdout(), command.Info+"Saved new client config to: %s\n", saveTo)
+		// Success: report the new identity and its salient details.
+		out := cmd.OutOrStdout()
+		fmt.Fprintf(out, command.Info+"Created new teamclient identity %q\n", config.User)
+		fmt.Fprintf(out, "    server: %s\n", net.JoinHostPort(config.Host, strconv.Itoa(config.Port)))
+
+		if expiry, ok := certExpiry(config.Certificate); ok {
+			fmt.Fprintf(out, "    expires: %s\n", expiry.Format(time.RFC1123))
+		}
+
+		fmt.Fprintf(out, "    config: %s\n", saveTo)
 	}
+}
+
+// certExpiry extracts the NotAfter date from a PEM-encoded certificate, so the
+// user command can display when the newly-minted identity will expire. It fails
+// gracefully (ok == false) rather than erroring the whole command.
+func certExpiry(certPEM string) (time.Time, bool) {
+	block, _ := pem.Decode([]byte(certPEM))
+	if block == nil {
+		return time.Time{}, false
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return time.Time{}, false
+	}
+
+	return cert.NotAfter, true
 }
 
 func rmUserCmd(serv *server.Server) func(cmd *cobra.Command, args []string) {
@@ -100,21 +131,21 @@ func rmUserCmd(serv *server.Server) func(cmd *cobra.Command, args []string) {
 		if cmd.Flags().Changed("verbosity") {
 			logLevel, err := cmd.Flags().GetCount("verbosity")
 			if err == nil {
-				serv.SetLogLevel(logLevel + int(logrus.WarnLevel))
+				serv.SetLogLevel(int(slog.LevelWarn) - logLevel*4)
 			}
 		}
 
 		user := args[0]
 
-		fmt.Fprintf(cmd.OutOrStdout(), command.Info+"Removing client certificate(s)/token(s) for %s, please wait ... \n", user)
-
+		// Certificate/token removal is logged by the teamserver's own (slog)
+		// logger, so it honors the configured --log-format.
 		err := serv.UserDelete(user)
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), command.Warn+"Failed to remove the user certificate: %v\n", err)
 			return
 		}
 
-		fmt.Fprintf(cmd.OutOrStdout(), command.Info+"User %s has been deleted from the teamserver, and kicked out.\n", user)
+		fmt.Fprintf(cmd.OutOrStdout(), command.Info+"User %q has been deleted from the teamserver, and kicked out.\n", user)
 	}
 }
 
@@ -123,7 +154,7 @@ func importCACmd(serv *server.Server) func(cmd *cobra.Command, args []string) {
 		if cmd.Flags().Changed("verbosity") {
 			logLevel, err := cmd.Flags().GetCount("verbosity")
 			if err == nil {
-				serv.SetLogLevel(logLevel + int(logrus.WarnLevel))
+				serv.SetLogLevel(int(slog.LevelWarn) - logLevel*4)
 			}
 		}
 
@@ -163,7 +194,7 @@ func exportCACmd(serv *server.Server) func(cmd *cobra.Command, args []string) {
 		if cmd.Flags().Changed("verbosity") {
 			logLevel, err := cmd.Flags().GetCount("verbosity")
 			if err == nil {
-				serv.SetLogLevel(logLevel + int(logrus.WarnLevel))
+				serv.SetLogLevel(int(slog.LevelWarn) - logLevel*4)
 			}
 		}
 

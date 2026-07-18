@@ -11,6 +11,10 @@ import (
 	"github.com/reeflective/readline/internal/core"
 )
 
+// ansiEscapeRegex matches SGR color escape sequences embedded in a line. It is
+// compiled once at package load: getHighlights runs on every display refresh.
+var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]+m`)
+
 // highlightLine applies visual/selection highlighting to a line.
 // The provided line might already have been highlighted by a user-provided
 // highlighter: this function accounts for any embedded color sequences.
@@ -22,21 +26,30 @@ func (e *Engine) highlightLine(line []rune, selection core.Selection) string {
 	var highlighted string
 
 	// And apply highlighting before each rune.
+	var highlightedSb25 strings.Builder
+
 	for i, r := range line {
 		if highlight, found := colors[i]; found {
-			highlighted += string(highlight)
+			highlightedSb25.WriteString(string(highlight))
 		}
 
-		highlighted += string(r)
+		highlightedSb25.WriteRune(r)
 	}
 
-	// Finally, highlight comments using a regex.
-	comment := strings.Trim(e.opts.GetString("comment-begin"), "\"")
-	commentPattern := fmt.Sprintf(`(^|\s)%s.*`, comment)
+	highlighted += highlightedSb25.String()
 
-	if commentsMatch, err := regexp.Compile(commentPattern); err == nil {
+	// Finally, highlight comments using a regex. The pattern only depends on
+	// the comment-begin option, so compile it lazily and reuse it until that
+	// option changes, rather than recompiling on every refresh.
+	comment := strings.Trim(e.opts.GetString("comment-begin"), "\"")
+	if comment != e.commentToken || e.commentRegex == nil {
+		e.commentToken = comment
+		e.commentRegex, _ = regexp.Compile(fmt.Sprintf(`(^|\s)%s.*`, comment))
+	}
+
+	if e.commentRegex != nil {
 		commentColor := color.SGRStart + color.Fg + "244" + color.SGREnd
-		highlighted = commentsMatch.ReplaceAllString(highlighted, fmt.Sprintf("%s${0}%s", commentColor, color.Reset))
+		highlighted = e.commentRegex.ReplaceAllString(highlighted, fmt.Sprintf("%s${0}%s", commentColor, color.Reset))
 	}
 
 	highlighted += color.Reset
@@ -100,10 +113,7 @@ func (e *Engine) getHighlights(line []rune, sorted []core.Selection) map[int][]r
 
 	// Find any highlighting already applied on the line,
 	// and keep the indexes so that we can skip those.
-	var colors [][]int
-
-	colorMatch := regexp.MustCompile(`\x1b\[[0-9;]+m`)
-	colors = colorMatch.FindAllStringIndex(string(line), -1)
+	colors := ansiEscapeRegex.FindAllStringIndex(string(line), -1)
 
 	// marks that started highlighting, but not done yet.
 	regions := make([]core.Selection, 0)
@@ -212,14 +222,6 @@ func (e *Engine) hlReset(regions []core.Selection, line []rune, pos int) ([]core
 			// foreground := e.opts.GetString("active-region-start-color")
 			line = append(line, []rune(color.ReverseReset)...)
 			line = append(line, []rune(color.BgDefault)...)
-			//	if background == "" && foreground == "" && !matcher {
-			//		line = append(line, []rune(color.ReverseReset)...)
-			//	} else {
-			//
-			//		line = append(line, []rune(color.BgDefault)...)
-			//	}
-			//
-			// line = append(line, []rune(color.ReverseReset)...)
 		}
 	}
 
