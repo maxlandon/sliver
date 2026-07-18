@@ -22,9 +22,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"slices"
+	"log/slog"
 
-	"github.com/reeflective/team"
 	"github.com/reeflective/team/server"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
@@ -40,6 +39,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/server/core"
 	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/db/models"
+	sliverLog "github.com/bishopfox/sliver/server/log"
 )
 
 // bufferingOptions returns a list of server options with max send/receive
@@ -80,8 +81,10 @@ func logMiddlewareOptions(s *server.Server) ([]grpc.ServerOption, error) {
 		grpc_tags.StreamServerInterceptor(grpc_tags.WithFieldExtractor(grpc_tags.CodeGenRequestFieldExtractor)),
 	)
 
-	// Logging interceptors
-	logrusEntry := s.NamedLogger("transport", "grpc")
+	// Logging interceptors. The reeflective/team core now emits slog, but the
+	// grpc_logrus middleware requires a *logrus.Entry, so we source it from
+	// Sliver's own logger (which still writes to ~/.sliver/logs/sliver.{log,json}).
+	logrusEntry := sliverLog.NamedLogger("transport", "grpc")
 	logrusOpts := []grpc_logrus.Option{
 		grpc_logrus.WithLevels(codeToLevel),
 	}
@@ -167,20 +170,26 @@ const (
 	Operator
 )
 
+// serverAuthFunc is the local, in-memory console path: it bypasses authentication
+// entirely and injects a synthetic operator holding every permission.
 func serverAuthFunc(ctx context.Context) (context.Context, error) {
-	serverUser := team.User{
-		Name:        "server",
-		Permissions: []string{"all"},
+	serverOperator := &models.Operator{
+		Name:                   "server",
+		PermissionAll:          true,
+		PermissionBuilder:      true,
+		PermissionCrackstation: true,
 	}
-	newCtx := context.WithValue(ctx, Transport, &serverUser)
-	newCtx = context.WithValue(newCtx, Operator, &serverUser)
+	newCtx := context.WithValue(ctx, Transport, serverOperator)
+	newCtx = context.WithValue(newCtx, Operator, serverOperator)
 
 	return newCtx, nil
 }
 
 // tokenAuthFunc uses the core reeflective/team/server to authenticate user requests.
+// The teamserver only proves identity (the user name); Sliver then resolves that
+// name against its own operator table to obtain the typed permissions it enforces.
 func (ts *teamserver) tokenAuthFunc(ctx context.Context) (context.Context, error) {
-	log := ts.NamedLogger("transport", "grpc")
+	log := sliverLog.NamedLogger("transport", "grpc")
 
 	rawToken, err := grpc_auth.AuthFromMD(ctx, "Bearer")
 	if err != nil {
@@ -188,29 +197,26 @@ func (ts *teamserver) tokenAuthFunc(ctx context.Context) (context.Context, error
 		return nil, status.Error(codes.Unauthenticated, "Authentication failure")
 	}
 
-	// Let our core teamserver driver authenticate the user.
-	// The teamserver has its credentials, tokens and everything in database.
-	user, authorized, err := ts.UserAuthenticate(rawToken)
-	if err != nil || !authorized || user.Name == "" {
+	// Authentication: ask the teamserver core WHO is calling (identity only).
+	user, err := ts.Authenticate(rawToken)
+	if err != nil || user == nil || user.Name == "" {
 		log.Errorf("Authentication failure: %s", err)
 		return nil, status.Error(codes.Unauthenticated, "Authentication failure")
 	}
 
-	// Fetch the user in database for permissions.
+	// Authorization: resolve the authenticated name against Sliver's own operator
+	// model to obtain the typed permissions enforced by our interceptors.
+	operator, err := db.OperatorByName(user.Name)
+	if err != nil || operator == nil {
+		log.Errorf("Authorization failure: no operator record for %q: %s", user.Name, err)
+		return nil, status.Error(codes.PermissionDenied, "Operator has no permissions")
+	}
 
 	newCtx := context.WithValue(ctx, Transport, user)
-	newCtx = context.WithValue(newCtx, Operator, user)
+	newCtx = context.WithValue(newCtx, Operator, operator)
 
 	return newCtx, nil
 }
-
-type Permission string
-
-const (
-	All          Permission = "all"
-	Builder      Permission = "builder"
-	Crackstation Permission = "crackstation"
-)
 
 var (
 	// Builder - Allowed methods
@@ -244,29 +250,26 @@ var (
 
 func (ts *teamserver) permissionsUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (_ interface{}, err error) {
-		log := ts.NamedLogger("transport", "middleware")
+		log := sliverLog.NamedLogger("transport", "middleware")
 
-		// Ask the teamserver core for our list of users,
-		// and check any of the permissions.
-		operator := ctx.Value(Operator).(*team.User)
-		if operator == nil {
+		// The operator was resolved from Sliver's own model by the auth interceptor.
+		operator, ok := ctx.Value(Operator).(*models.Operator)
+		if !ok || operator == nil {
 			return nil, status.Error(codes.Unauthenticated, "Authentication failure")
 		}
 
-		operatorPermissions := operator.Permissions
-
-		if slices.Contains(operatorPermissions, string(All)) {
+		if operator.PermissionAll {
 			return handler(ctx, req)
 		}
 
-		if slices.Contains(operatorPermissions, string(Builder)) {
-			if ok, _ := builderMethods[info.FullMethod]; ok {
+		if operator.PermissionBuilder {
+			if ok := builderMethods[info.FullMethod]; ok {
 				return handler(ctx, req)
 			}
 		}
 
-		if slices.Contains(operatorPermissions, string(Crackstation)) {
-			if ok, _ := crackstationMethods[info.FullMethod]; ok {
+		if operator.PermissionCrackstation {
+			if ok := crackstationMethods[info.FullMethod]; ok {
 				return handler(ctx, req)
 			}
 		}
@@ -277,29 +280,26 @@ func (ts *teamserver) permissionsUnaryServerInterceptor() grpc.UnaryServerInterc
 
 func (ts *teamserver) permissionsStreamServerInterceptor() grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		log := ts.NamedLogger("transport", "middleware")
+		log := sliverLog.NamedLogger("transport", "middleware")
 
-		// Ask the teamserver core for our list of users,
-		// and check any of the permissions.
-		operator := ss.Context().Value(Operator).(*team.User)
-		if operator == nil {
+		// The operator was resolved from Sliver's own model by the auth interceptor.
+		operator, ok := ss.Context().Value(Operator).(*models.Operator)
+		if !ok || operator == nil {
 			return status.Error(codes.Unauthenticated, "Authentication failure")
 		}
 
-		operatorPermissions := operator.Permissions
-
-		if slices.Contains(operatorPermissions, string(All)) {
+		if operator.PermissionAll {
 			return handler(srv, ss)
 		}
 
-		if slices.Contains(operatorPermissions, string(Builder)) {
-			if ok, _ := builderMethods[info.FullMethod]; ok {
+		if operator.PermissionBuilder {
+			if ok := builderMethods[info.FullMethod]; ok {
 				return handler(srv, ss)
 			}
 		}
 
-		if slices.Contains(operatorPermissions, string(Crackstation)) {
-			if ok, _ := crackstationMethods[info.FullMethod]; ok {
+		if operator.PermissionCrackstation {
+			if ok := crackstationMethods[info.FullMethod]; ok {
 				return handler(srv, ss)
 			}
 		}
@@ -318,8 +318,8 @@ type auditUnaryLogMsg struct {
 	User     string `json:"user"`
 }
 
-func auditLogUnaryServerInterceptor(ts *server.Server, auditLog *logrus.Logger) grpc.UnaryServerInterceptor {
-	log := ts.NamedLogger("grpc", "audit")
+func auditLogUnaryServerInterceptor(ts *server.Server, auditLog *slog.Logger) grpc.UnaryServerInterceptor {
+	log := sliverLog.NamedLogger("grpc", "audit")
 
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (_ interface{}, err error) {
 		rawRequest, err := json.Marshal(req)

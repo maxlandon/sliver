@@ -29,7 +29,7 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/client/core"
-	"github.com/rsteube/carapace"
+	"github.com/carapace-sh/carapace"
 )
 
 const (

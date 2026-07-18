@@ -63,13 +63,13 @@ func NewTeamserver() (team *server.Server, clientOpts []grpc.DialOption, err err
 	serverOpts = append(serverOpts,
 		// Core directories/loggers.
 		server.WithHomeDirectory(assets.GetRootAppDir()), // ~/.sliver/
-		server.WithLogger(log.RootLogger),                // Logs to ~/.sliver/logs/sliver.{log,json} and audit.json
+		server.WithLogger(log.RootSlogHandler()),         // Logs to ~/.sliver/logs/sliver.json (team core speaks slog now)
 		server.WithDatabase(db.Client),                   // Uses our traditional ~/.sliver/sliver.db for storing users.
 
 		// Network options/stacks
-		server.WithDefaultPort(31337),          // Our now famous port.
-		server.WithListener(tlsListener),       // Our legacy TCP+MTLS gRPC stack.
-		server.WithListener(tailscaleListener), // And our new Tailscale variant.
+		server.WithDefaultPort(31337),         // Our now famous port.
+		server.WithHandler(tlsListener),       // Our legacy TCP+MTLS gRPC stack.
+		server.WithHandler(tailscaleListener), // And our new Tailscale variant.
 	)
 
 	// Create the application teamserver.
@@ -113,7 +113,7 @@ func clientOptionsFor(server *teamserver, opts ...grpc.DialOption) []grpc.DialOp
 func (h *teamserver) serve(ln net.Listener) {
 	grpcServer := grpc.NewServer(h.options...)
 
-	rpcLog := h.NamedLogger("transport", "gRPC")
+	rpcLog := log.NamedLogger("transport", "gRPC")
 
 	// Teamserver/Sliver services
 	sliverServer := rpc.NewServer(h.Server)

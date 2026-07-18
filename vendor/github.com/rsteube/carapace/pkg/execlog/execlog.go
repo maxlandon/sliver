@@ -1,9 +1,9 @@
 package execlog
 
 import (
-	shlex "github.com/rsteube/carapace-shlex"
-	"github.com/rsteube/carapace/internal/log"
-	"github.com/rsteube/carapace/third_party/golang.org/x/sys/execabs"
+	shlex "github.com/carapace-sh/carapace-shlex"
+	"github.com/carapace-sh/carapace/internal/log"
+	"github.com/carapace-sh/carapace/third_party/golang.org/x/sys/execabs"
 )
 
 type Cmd struct {

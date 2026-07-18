@@ -25,7 +25,7 @@ import (
 	cli "github.com/reeflective/team/client/commands"
 	"github.com/reeflective/team/internal/command"
 	"github.com/reeflective/team/server"
-	"github.com/rsteube/carapace"
+	"github.com/carapace-sh/carapace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )

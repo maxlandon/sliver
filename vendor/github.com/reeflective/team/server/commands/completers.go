@@ -25,7 +25,7 @@ import (
 
 	"github.com/reeflective/team/client"
 	"github.com/reeflective/team/server"
-	"github.com/rsteube/carapace"
+	"github.com/carapace-sh/carapace"
 )
 
 // interfacesCompleter completes interface addresses on the client host.

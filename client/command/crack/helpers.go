@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rsteube/carapace"
+	"github.com/carapace-sh/carapace"
 
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"

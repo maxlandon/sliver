@@ -24,7 +24,7 @@ import (
 	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/rsteube/carapace"
+	"github.com/carapace-sh/carapace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 

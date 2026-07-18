@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	stdslog "log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -154,17 +155,23 @@ func NewSliverClient(opts ...grpc.DialOption) (con *SliverClient, err error) {
 	// Our reeflective/team.Client needs our gRPC stack.
 	con.dialer = transport.NewClient(opts...)
 
+	// The team core now speaks slog, but our gRPC logging middleware still needs a
+	// logrus logger. Keep a single log file: the logrus logger drives the middleware
+	// and a slog handler over the same writer feeds the team core.
+	tclog := initTeamclientLog()
+	con.dialer.Log = tclog
+
 	var clientOpts []client.Options
 	clientOpts = append(clientOpts,
 		client.WithHomeDirectory(assets.GetRootAppDir()),
 		client.WithDialer(con.dialer),
-		client.WithLogger(initTeamclientLog()),
+		client.WithLogger(stdslog.NewTextHandler(tclog.Out, &stdslog.HandlerOptions{})),
 	)
 
 	// Create a new reeflective/team.Client, which is in charge of selecting,
 	// and connecting with, remote Sliver teamserver configurations, etc.
 	// Includes client backend logging, authentication, core teamclient methods...
-	con.Teamclient, err = client.New("sliver", con, clientOpts...)
+	con.Teamclient, err = client.New("sliver", clientOpts...)
 	if err != nil {
 		return nil, err
 	}

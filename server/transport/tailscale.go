@@ -31,16 +31,17 @@ import (
 	"github.com/reeflective/team/server"
 
 	"github.com/bishopfox/sliver/server/assets"
+	"github.com/bishopfox/sliver/server/log"
 )
 
 // tailscaleTeamserver is unexported since we only need it as
-// a reeflective/team/server.Listener interface implementation.
+// a reeflective/team/server.Handler interface implementation.
 type tailscaleTeamserver struct {
 	*teamserver
 }
 
 // newTeamserverTailScale returns a Sliver teamserver backend using Tailscale.
-func newTeamserverTailScale(opts ...grpc.ServerOption) server.Listener {
+func newTeamserverTailScale(opts ...grpc.ServerOption) server.Handler {
 	core := newTeamserverTLS(opts...)
 
 	return &tailscaleTeamserver{core}
@@ -55,7 +56,7 @@ func (ts *tailscaleTeamserver) Name() string {
 // Instead of serving a classic TCP+TLS listener,
 // we start a tailscale stack and create the listener out of it.
 func (ts *tailscaleTeamserver) Listen(addr string) (ln net.Listener, err error) {
-	tsNetLog := ts.NamedLogger("transport", "tailscale")
+	tsNetLog := log.NamedLogger("transport", "tailscale")
 
 	url, err := url.Parse(fmt.Sprintf("ts://%s", addr))
 	if err != nil {

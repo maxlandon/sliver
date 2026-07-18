@@ -21,6 +21,7 @@ package log
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/user"
 	"path"
@@ -47,6 +48,19 @@ func NamedLogger(pkg, stream string) *logrus.Entry {
 		"pkg":    pkg,
 		"stream": stream,
 	})
+}
+
+// RootSlogHandler - Returns an slog.Handler writing JSON records to the same
+// root log file (sliver.json) used by the logrus RootLogger. This lets us feed
+// dependencies that speak slog (e.g. the reeflective/team core, which dropped
+// logrus in favor of slog) while keeping all server logs in one place.
+func RootSlogHandler() slog.Handler {
+	jsonFilePath := filepath.Join(GetLogDir(), "sliver.json")
+	jsonFile, err := os.OpenFile(jsonFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to open log file %v", err))
+	}
+	return slog.NewJSONHandler(jsonFile, &slog.HandlerOptions{Level: slog.LevelDebug})
 }
 
 // GetRootAppDir - Get the Sliver app dir, default is: ~/.sliver/.

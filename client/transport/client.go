@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	"github.com/reeflective/team/client"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -35,6 +36,11 @@ type TeamClient struct {
 	team    *client.Client
 	options []grpc.DialOption
 	Conn    *grpc.ClientConn
+
+	// Log is the logrus logger used by the gRPC logging middleware. The
+	// reeflective/team core now emits slog, so callers (eg. the Sliver console)
+	// inject a logrus logger here to keep the grpc_logrus middleware working.
+	Log *logrus.Logger
 }
 
 // NewClient creates a teamclient transport with specific gRPC options.
@@ -61,7 +67,7 @@ func (h *TeamClient) Init(cli *client.Client) error {
 	)
 
 	// Logging/audit
-	options := LogMiddlewareOptions(cli)
+	options := LogMiddlewareOptions(h.Log)
 	h.options = append(h.options, options...)
 
 	// If the configuration has no credentials, we are an

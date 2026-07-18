@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"time"
 
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
@@ -53,10 +54,16 @@ var ErrNoTLSCredentials = errors.New("the Teamclient has no TLS credentials to u
 type TokenAuth string
 
 // LogMiddlewareOptions is an example list of gRPC options with logging middleware set up.
-// This function uses the core teamclient loggers to log the gRPC stack/requests events.
-// The Teamclient of this package uses them by default.
-func LogMiddlewareOptions(cli *client.Client) []grpc.DialOption {
-	logrusEntry := cli.NamedLogger("transport", "grpc")
+// The reeflective/team core now emits slog, but the grpc_logrus middleware requires a
+// *logrus.Entry, so the caller (eg. the Sliver console) injects a logrus logger. If none
+// is provided, a no-op logger discarding all output is used.
+func LogMiddlewareOptions(logger *logrus.Logger) []grpc.DialOption {
+	if logger == nil {
+		logger = logrus.New()
+		logger.SetOutput(io.Discard)
+	}
+
+	logrusEntry := logrus.NewEntry(logger)
 	logrusOpts := []grpc_logrus.Option{
 		grpc_logrus.WithLevels(codeToLevel),
 	}

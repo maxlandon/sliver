@@ -31,7 +31,7 @@ import (
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/rsteube/carapace"
+	"github.com/carapace-sh/carapace"
 )
 
 var (

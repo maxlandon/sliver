@@ -30,7 +30,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bishopfox/sliver/client/console"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/rsteube/carapace"
+	"github.com/carapace-sh/carapace"
 )
 
 // SelectPivotListener - Interactive menu to select a pivot listener.

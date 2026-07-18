@@ -32,11 +32,11 @@ import (
 type Operator struct {
 	ID                     uuid.UUID `gorm:"primaryKey;->;<-:create;type:uuid;"`
 	CreatedAt              time.Time `gorm:"->;<-:create;"`
-	Name                   string
-	Token                  string `gorm:"uniqueIndex"`   // NOTE: This is the SHA256 of the token
-	PermissionAll          bool   `gorm:"default:false"` // Access all gRPC APIs
-	PermissionBuilder      bool   `gorm:"default:false"` // Access Builder gRPC APIs
-	PermissionCrackstation bool   `gorm:"default:false"` // Access Crackstation gRPC APIs
+	Name                   string    `gorm:"uniqueIndex"`   // Authenticated user name (resolved from the teamserver)
+	Token                  string    // NOTE: legacy SHA256 of the token; auth is now owned by the teamserver
+	PermissionAll          bool      `gorm:"default:false"` // Access all gRPC APIs
+	PermissionBuilder      bool      `gorm:"default:false"` // Access Builder gRPC APIs
+	PermissionCrackstation bool      `gorm:"default:false"` // Access Crackstation gRPC APIs
 }
 
 // BeforeCreate - GORM hook

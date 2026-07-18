@@ -29,7 +29,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/gofrs/uuid"
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/rsteube/carapace"
+	"github.com/carapace-sh/carapace"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

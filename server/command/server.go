@@ -19,6 +19,9 @@ package command
 */
 
 import (
+	"os/user"
+	"strings"
+
 	"github.com/spf13/cobra"
 
 	"github.com/reeflective/team/server"
@@ -31,9 +34,14 @@ import (
 	"github.com/bishopfox/sliver/server/command/builder"
 	"github.com/bishopfox/sliver/server/command/certs"
 	"github.com/bishopfox/sliver/server/command/version"
+	"github.com/bishopfox/sliver/server/db"
+	"github.com/bishopfox/sliver/server/db/models"
+	"github.com/bishopfox/sliver/server/log"
 )
 
 var permissionsFlagStr = "permissions"
+
+var operatorCmdLog = log.NamedLogger("command", "operator")
 
 // TeamserverCommands is the equivalent of client/command.ServerCommands(), but for server-binary only ones.
 func TeamserverCommands(team *server.Server, con *console.SliverClient) command.SliverBinder {
@@ -47,6 +55,18 @@ func TeamserverCommands(team *server.Server, con *console.SliverClient) command.
 		operatorCmd, _, _ := teamclientCmds.Find([]string{"teamserver", "user"})
 		operatorCmd.Flags().StringSliceP(permissionsFlagStr, "P", []string{}, "grant permissions to the operator profile (all, builder, crackstation)")
 
+		// The teamserver core only stores identity/credentials; Sliver owns
+		// authorization. Wrap the user-creation command so that, once the core
+		// has minted the user, we persist the operator's permissions (from -P)
+		// into Sliver's own operator table, keyed by the user name.
+		coreRun := operatorCmd.Run
+		operatorCmd.Run = func(cmd *cobra.Command, args []string) {
+			if coreRun != nil {
+				coreRun(cmd, args)
+			}
+			saveOperatorPermissions(cmd)
+		}
+
 		// Sliver-specific
 		cmds = append(cmds, version.Commands(con)...)
 		cmds = append(cmds, assets.Commands()...)
@@ -56,5 +76,43 @@ func TeamserverCommands(team *server.Server, con *console.SliverClient) command.
 		cmds = append(cmds, builder.Commands(con, team)...)
 
 		return cmds
+	}
+}
+
+// saveOperatorPermissions persists (or updates) the operator record in Sliver's
+// own operator table with the permissions requested via the -P/--permissions
+// flag, keyed by the created user name. This is what the permission interceptors
+// enforce at RPC time, now that the teamserver core no longer stores permissions.
+func saveOperatorPermissions(cmd *cobra.Command) {
+	name, _ := cmd.Flags().GetString("name")
+
+	// The core command uses the current OS user name when --system is set.
+	if system, _ := cmd.Flags().GetBool("system"); system {
+		if u, err := user.Current(); err == nil {
+			name = u.Username
+		}
+	}
+
+	if strings.TrimSpace(name) == "" {
+		return
+	}
+
+	operator := &models.Operator{Name: name}
+
+	perms, _ := cmd.Flags().GetStringSlice(permissionsFlagStr)
+	for _, perm := range perms {
+		switch strings.ToLower(strings.TrimSpace(perm)) {
+		case "all":
+			operator.PermissionAll = true
+		case "builder":
+			operator.PermissionBuilder = true
+		case "crackstation":
+			operator.PermissionCrackstation = true
+		}
+	}
+
+	if err := db.SaveOperator(operator); err != nil {
+		operatorCmdLog.Errorf("Failed to persist operator permissions for %q: %s", name, err)
+		cmd.PrintErrf("Failed to persist operator permissions: %s\n", err)
 	}
 }

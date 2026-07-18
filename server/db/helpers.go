@@ -1115,16 +1115,32 @@ func CountTasksByBeaconID(beaconID string) (int64, int64, error) {
 	return allTasks, completedTasks, err
 }
 
-// OperatorByToken - Select an operator by token value
-func OperatorByToken(value string) (*models.Operator, error) {
-	if len(value) < 1 {
+// OperatorByName - Select an operator by its (authenticated) user name.
+// The teamserver owns authentication and hands us a user name; Sliver resolves
+// that name against its own operator table to obtain the typed permissions.
+func OperatorByName(name string) (*models.Operator, error) {
+	if len(name) < 1 {
 		return nil, ErrRecordNotFound
 	}
 	operator := &models.Operator{}
 	err := Session().Where(&models.Operator{
-		Token: value,
+		Name: name,
 	}).First(operator).Error
 	return operator, err
+}
+
+// SaveOperator - Persist an operator (and its permissions) keyed by name,
+// creating it or updating the permissions of an existing record.
+func SaveOperator(operator *models.Operator) error {
+	if operator == nil || operator.Name == "" {
+		return ErrRecordNotFound
+	}
+	return Session().Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "name"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"permission_all", "permission_builder", "permission_crackstation",
+		}),
+	}).Create(operator).Error
 }
 
 // OperatorAll - Select all operators from the database

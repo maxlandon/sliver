@@ -22,7 +22,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/rsteube/carapace"
+	"github.com/carapace-sh/carapace"
 	"github.com/spf13/cobra"
 
 	"github.com/reeflective/team/client/commands"
