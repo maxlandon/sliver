@@ -169,6 +169,7 @@ func NewSliverClient(opts ...grpc.DialOption) (con *SliverClient, err error) {
 	clientOpts = append(clientOpts,
 		client.WithHomeDirectory(assets.GetRootAppDir()),
 		client.WithDialer(con.dialer),
+		client.WithTeamClient(con),
 	)
 
 	// Create a new reeflective/team.Client, which is in charge of selecting,

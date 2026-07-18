@@ -172,8 +172,8 @@ func (con *SliverClient) PostRunDisconnect(cmd *cobra.Command, args []string) er
 // If the gRPC teamclient is not connected or does not have an RPC client,
 // an ErrNoRPC is returned.
 func (con *SliverClient) Users() (users []team.User, err error) {
-	if con.Rpc == nil {
-		return nil, errors.New("No Sliver client RPC")
+	if err = con.ensureRPC(); err != nil {
+		return nil, err
 	}
 
 	res, err := con.Rpc.GetUsers(context.Background(), &commonpb.Empty{})
@@ -213,8 +213,8 @@ func (con *SliverClient) VersionClient() (v team.Version, err error) {
 // VersionServer returns the version information of the server to which
 // the client is connected, or nil and an error if it could not retrieve it.
 func (con *SliverClient) VersionServer() (version team.Version, err error) {
-	if con.Rpc == nil {
-		return version, errors.New("No Sliver client RPC")
+	if err = con.ensureRPC(); err != nil {
+		return version, err
 	}
 
 	ver, err := con.Rpc.GetVersion(context.Background(), &commonpb.Empty{})
@@ -232,6 +232,23 @@ func (con *SliverClient) VersionServer() (version team.Version, err error) {
 		OS:         ver.OS,
 		Arch:       ver.Arch,
 	}, nil
+}
+
+// ensureRPC lazily builds the Sliver RPC client from the teamclient dialer
+// connection when it has not been set up yet. The team-library `teamclient
+// version`/`users` runners call teamclient.Connect() (which dials and sets
+// con.dialer.Conn) but never run con.connect(), so con.Rpc would otherwise
+// stay nil for those commands. Operator commands still build con.Rpc via
+// connect(); this only fills the gap for the team-management commands.
+func (con *SliverClient) ensureRPC() error {
+	if con.Rpc != nil {
+		return nil
+	}
+	if con.dialer == nil || con.dialer.Conn == nil {
+		return errors.New("No Sliver client RPC")
+	}
+	con.Rpc = rpcpb.NewSliverRPCClient(con.dialer.Conn)
+	return nil
 }
 
 // connect requires a working gRPC connection to the sliver server.

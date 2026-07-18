@@ -82,13 +82,10 @@ func (h *teamserver) Init(team *server.Server) (err error) {
 
 	h.options = append(h.options, logOptions...)
 
-	// Authentication/audit
-	authOptions, err := h.initAuthMiddleware()
-	if err != nil {
-		return err
-	}
-
-	h.options = append(h.options, authOptions...)
+	// NOTE: operator authentication middleware is installed in Listen(), not here.
+	// Whether a connection needs real authentication depends on the listener kind
+	// (a TCP daemon/remote listener does; the in-memory bufconn does not), and that
+	// is only known once Listen() is given a concrete address.
 
 	return nil
 }
@@ -96,26 +93,50 @@ func (h *teamserver) Init(team *server.Server) (err error) {
 // Listen implements team/server.Handler.Listen().
 // this teamserver uses a tcp+TLS (mutual) listener to serve remote clients.
 func (h *teamserver) Listen(addr string) (ln net.Listener, err error) {
-	// In-memory connection are not authenticated.
-	if h.localListener == nil {
-		ln, err = net.Listen("tcp", addr)
-		if err != nil {
-			return nil, err
-		}
-
-		// Encryption.
-		tlsOptions, err := tlsAuthMiddlewareOptions(h.Server)
-		if err != nil {
-			return nil, err
-		}
-
-		h.options = append(h.options, tlsOptions...)
-	} else {
-		h.mutex.Lock()
+	// Only the in-memory (single-player) serve uses the bufconn shim: the team
+	// core drives it with an empty host and port 0, i.e. addr ":0". Every other
+	// address is a real daemon/remote listener that MUST bind an actual TCP
+	// socket -- otherwise the server has no network presence and remote clients
+	// time out. (This used to key off localListener != nil, but that field is set
+	// at construction for the in-memory client and is never cleared in daemon
+	// mode, so the daemon wrongly served the bufconn and never bound TCP.)
+	h.mutex.Lock()
+	inMemory := h.localListener != nil && addr == ":0"
+	if inMemory {
 		ln = h.localListener
-		h.localListener = nil
-		h.mutex.Unlock()
 	}
+	// Consume the reference either way: past this point the handler is committed
+	// to a listener kind, and a nil localListener makes the auth middleware treat
+	// connections as remote users requiring authentication.
+	h.localListener = nil
+	h.mutex.Unlock()
+
+	if inMemory {
+		// In-memory conn: no TLS, no authentication.
+		h.serve(ln)
+		return ln, nil
+	}
+
+	// Real TCP listener (daemon / remote multiplayer).
+	ln, err = net.Listen("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Encryption (mutual TLS).
+	tlsOptions, err := tlsAuthMiddlewareOptions(h.Server)
+	if err != nil {
+		return nil, err
+	}
+	h.options = append(h.options, tlsOptions...)
+
+	// Operator authentication/authorization (real tokenAuthFunc + permissions,
+	// since localListener is now nil).
+	authOptions, err := h.initAuthMiddleware()
+	if err != nil {
+		return nil, err
+	}
+	h.options = append(h.options, authOptions...)
 
 	h.serve(ln)
 

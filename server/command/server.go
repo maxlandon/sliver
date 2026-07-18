@@ -52,7 +52,7 @@ func TeamserverCommands(team *server.Server, con *console.SliverClient) command.
 		cmds = append(cmds, teamclientCmds)
 
 		// Sliver-specific teamserver stuff
-		operatorCmd, _, _ := teamclientCmds.Find([]string{"teamserver", "user"})
+		operatorCmd, _, _ := teamclientCmds.Find([]string{"user"})
 		operatorCmd.Flags().StringSliceP(permissionsFlagStr, "P", []string{}, "grant permissions to the operator profile (all, builder, crackstation)")
 
 		// The teamserver core only stores identity/credentials; Sliver owns
