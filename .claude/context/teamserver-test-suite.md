@@ -96,6 +96,53 @@ build tmp must live off the 1 GB `/tmp` tmpfs: `export GOTMPDIR=/home/user/.cach
    `TestListenerCloseInvalidID` pins the deterministic not-found path; the double-close
    race is documented but not reproduced (flaky, and unfixable from Sliver).
 
+6. **[FIXED] `UserCreate` inserted a duplicate identity on every call.**
+   `internal/db.User.Name` has no unique index and `UserCreate` did a plain `Save`
+   with a zero primary key, so each `teamserver user --name X` re-provisioning
+   INSERTED a brand-new row. The teamserver authorization model is keyed by Name,
+   so N rows sharing a name make all per-name state ambiguous: `updateLastSeen(name)`
+   and Sliver's `isOperatorOnline(name)` both match EVERY row of that name, so the
+   duplicates move in lockstep (all "0s", all Offline) — exactly the garbled
+   `teamclient users` table. Fix (team `server/users.go` `UserCreate`): delete any
+   user(s) already holding the requested name before Save, so re-creating a user
+   ROTATES its credentials in place and collapses pre-existing duplicates to a single
+   row; the token cache is reset so the old token stops authenticating. Deliberately
+   did NOT add a `uniqueIndex` on Name — an existing DB that already has duplicates
+   would fail AutoMigrate and the server would refuse to start.
+
+7. **[FIXED] Server certificate not revalidated after a users-CA rotation.**
+   `UsersTLSConfig` only regenerated the server cert on `ErrCertDoesNotExist`, so
+   after the users-CA was rotated the daemon kept presenting an orphaned cert that no
+   longer chained to the live CA — every remote handshake failed `tls: bad
+   certificate` while clients (whose bundles carry the NEW CA) rejected the old cert.
+   Fix (team `server/users.go`): after loading the key pair, verify the leaf still
+   chains to the current users-CA and is within its validity window
+   (`serverCertValidFor` — `CheckSignatureFrom` + NotBefore/NotAfter); regenerate and
+   reload otherwise, so the daemon self-heals on restart.
+
+### Users/operator display semantics (NOT bugs — read before "fixing" the table)
+- **`Online` requires a live event stream.** Sliver derives it from
+  `core.Clients.ActiveOperators()`, populated ONLY while a client holds an open
+  `Events` RPC stream (`server/rpc/rpc-events.go` adds on subscribe, removes on
+  disconnect). A one-shot `teamclient users` (or any non-console RPC) authenticates
+  but never opens `Events`, so it is legitimately `Offline`. Only a full interactive
+  `slc` console shows as Online. The operator name comes from the TLS client-cert
+  CommonName (`getClientCommonName`), which team sets to the user name.
+- **`LastSeen` is stamped on every authenticated RPC** (team `Authenticate` →
+  `updateLastSeen`, on both the cache-hit and DB paths). So a freshly-queried user
+  reads `0s ago`; the renderer now prints `never` for a zero `LastSeen` (a user that
+  never authenticated) instead of the raw `Mon, 01 Jan 0001 ... LMT` zero-time
+  (`time.Unix(zeroTime.Unix(),0).IsZero()` is true, so `IsZero` is the right
+  discriminator across the Unix-seconds round-trip). Fixed in team
+  `client/commands/users.go`.
+
+Related Sliver-side fix (already committed, `server/transport/mtls.go`): the daemon
+selects bufconn-vs-TCP by ADDRESS (`addr == ":0"` is the in-memory sentinel), not by
+the consumable `localListener` flag. Previously the daemon reused the in-memory
+bufconn and never bound TCP unless a persistent listener happened to exist — remote
+clients timed out with `context deadline exceeded`. Any real `host:port` now always
+`net.Listen("tcp")` + mTLS + tokenAuth.
+
 ## Coverage
 
 - **Single-player (bufconn):** `tests/teamserver` — connect+`GetVersion`, repeated
@@ -108,7 +155,19 @@ build tmp must live off the 1 GB `/tmp` tmpfs: `export GOTMPDIR=/home/user/.cach
   `authz_e2e_test.go` (permission matrix).
 
 ## Constraint
-`reeflective/team` is a workspace sibling but is **read-only / finished** — do not
-modify it. Findings 2–4 are all fixable in Sliver-owned code (`client/transport`,
-`server/transport`). Finding 4 is partly rooted in team-lib listener lifecycle, so a
-Sliver-side wrapper is the right layer.
+`reeflective/team` is a workspace sibling. It was long treated as **read-only /
+finished** (findings 2–5 were all fixed in Sliver-owned code — `client/transport`,
+`server/transport`), but findings 6–7 could ONLY be fixed in the team lib (the cert
+regeneration path and the user-record write are behind team's unexported `ts.certs`
+and `db.User`), and were done there with explicit user direction.
+
+When editing the team lib, mirror the change into BOTH:
+- the sibling `/home/user/code/github.com/reeflective/team` (what `make`/workspace
+  builds compile), and
+- `vendor/github.com/reeflective/team/...` (what `-mod=vendor` and the deploy pipeline
+  build) — keep the two byte-identical (`diff` them).
+
+This vendor mirror is NOT durable: `go.mod` still pins team at a pseudo-version, so a
+plain `go mod vendor` reverts the hand-edit. To ship for real (e.g. a BishopFox PR):
+publish the team commit, re-pin `go.mod`, then regenerate vendor. Do NOT add `replace`
+directives or switch the build to `-mod=vendor` (project constraint).
