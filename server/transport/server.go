@@ -63,8 +63,12 @@ func NewTeamserver() (team *server.Server, clientOpts []grpc.DialOption, err err
 	serverOpts = append(serverOpts,
 		// Core directories/loggers.
 		server.WithHomeDirectory(assets.GetRootAppDir()), // ~/.sliver/
-		server.WithLogger(log.RootSlogHandler()),         // Logs to ~/.sliver/logs/sliver.json (team core speaks slog now)
-		server.WithDatabase(db.Client),                   // Uses our traditional ~/.sliver/sliver.db for storing users.
+		// No WithLogger(): let the team core own its logging via its native API.
+		// It writes its own console (Warn+ split across stdout/stderr) and a file
+		// logger (~/.sliver/teamserver/logs/sliver.teamserver.log, Info by default),
+		// so the `--log-format` flag and the `-v/-vv/-vvv` verbosity (SetLogLevel)
+		// actually take effect. Sliver keeps its own logrus stack for its subsystems.
+		server.WithDatabase(db.Client), // Uses our traditional ~/.sliver/sliver.db for storing users.
 
 		// Network options/stacks
 		server.WithDefaultPort(31337),         // Our now famous port.
